@@ -52,6 +52,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .badge-pendiente{background:var(--amarillo-tenue);color:var(--amarillo);}
 .badge-en_proceso{background:var(--verde-tenue);color:var(--verde-mid);}
 .badge-completada{background:var(--verde-tenue);color:var(--verde);}
+.orden-badge-rol{font-size:.65rem;font-weight:700;padding:.2rem .55rem;border-radius:20px;text-transform:uppercase;}
 .orden-meta{font-size:.78rem;color:var(--gris-3);line-height:1.7;}
 .orden-meta strong{color:var(--negro);}
 .orden-actions{display:flex;gap:8px;margin-top:.75rem;}
@@ -511,7 +512,7 @@ function renderConfig(){
   };
     var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><div class="seccion-titulo" style="margin:0">Usuarios</div><button class="btn-sm btn-completar" id="btn-nuevo-usuario">+ Nuevo</button></div>';
     html+=users.map(function(u){
-      return '<div class="orden-card" style="border-left-color:var(--verde-mid)"><div class="orden-header"><div class="orden-labor">'+u.nombre+'</div><span class="orden-badge badge-en_proceso">'+roles[u.rol]+'</span></div><div class="orden-actions"><button class="btn-sm btn-iniciar" data-edit="'+u.id+'" data-nombre="'+u.nombre+'" data-rol="'+u.rol+'">Editar</button><button class="btn-sm btn-completar" data-pin="'+u.id+'" data-pnombre="'+u.nombre+'">Cambiar PIN</button>'+(u.activo?'<button class="btn-sm btn-cancelar" data-baja="'+u.id+'">Dar de baja</button>':'<button class="btn-sm btn-iniciar" data-alta="'+u.id+'">Reactivar</button>')+'</div></div>';
+      return '<div class="orden-card" style="border-left-color:var(--verde-mid)"><div class="orden-header"><div class="orden-labor">'+u.nombre+'</div><span class="orden-badge orden-badge-rol" style="'+roleColors[u.rol]+'">'+roles[u.rol]+'</span></div><div class="orden-actions"><button class="btn-sm btn-iniciar" data-edit="'+u.id+'" data-nombre="'+u.nombre+'" data-rol="'+u.rol+'">Editar</button><button class="btn-sm btn-completar" data-pin="'+u.id+'" data-pnombre="'+u.nombre+'">Cambiar PIN</button>'+(u.activo?'<button class="btn-sm btn-cancelar" data-baja="'+u.id+'">Dar de baja</button>':'<button class="btn-sm btn-iniciar" data-alta="'+u.id+'">Reactivar</button>')+'</div></div>';
     }).join('');
     body.innerHTML=html;
     document.getElementById('btn-nuevo-usuario').addEventListener('click',renderFormNuevoUsuario);
