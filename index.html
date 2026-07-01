@@ -501,6 +501,14 @@ function renderConfig(){
   body.innerHTML='<div class="loading">Cargando usuarios...</div>';
   from('usuarios').select('id,nombre,rol,activo').order('nombre').get().then(function(users){
     var roles={admin:'Admin',encargado:'Encargado',operario:'Operario',ingeniero:'Ingeniero','dueño':'Dueño',inversionista:'Inversionista'};
+  var roleColors={
+    admin:'background:#1a3a2a;color:#fff',
+    encargado:'background:#2980b9;color:#fff',
+    operario:'background:#e6a817;color:#fff',
+    ingeniero:'background:#6c3483;color:#fff',
+    'dueño':'background:#c0392b;color:#fff',
+    inversionista:'background:#e67e22;color:#fff'
+  };
     var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><div class="seccion-titulo" style="margin:0">Usuarios</div><button class="btn-sm btn-completar" id="btn-nuevo-usuario">+ Nuevo</button></div>';
     html+=users.map(function(u){
       return '<div class="orden-card" style="border-left-color:var(--verde-mid)"><div class="orden-header"><div class="orden-labor">'+u.nombre+'</div><span class="orden-badge badge-en_proceso">'+roles[u.rol]+'</span></div><div class="orden-actions"><button class="btn-sm btn-iniciar" data-edit="'+u.id+'" data-nombre="'+u.nombre+'" data-rol="'+u.rol+'">Editar</button><button class="btn-sm btn-completar" data-pin="'+u.id+'" data-pnombre="'+u.nombre+'">Cambiar PIN</button>'+(u.activo?'<button class="btn-sm btn-cancelar" data-baja="'+u.id+'">Dar de baja</button>':'<button class="btn-sm btn-iniciar" data-alta="'+u.id+'">Reactivar</button>')+'</div></div>';
