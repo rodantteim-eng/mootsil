@@ -1,17 +1,583 @@
-🫐 Mootsil
-Rancho · Módulo de Labores
-Ingresa tu PIN
-Toca los 4 dígitos para entrar
-1
-2
-3
-4
-5
-6
-7
-8
-9
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>Mootsil · Labores</title>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="format-detection" content="telephone=no"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --verde:#1a3a2a;--verde-mid:#2d6644;--verde-claro:#4a9a6a;--verde-tenue:#e8f4ee;
+  --tierra:#c17f3a;--tierra-tenue:#fdf3e7;--rojo:#c0392b;--rojo-tenue:#fdf0ee;
+  --amarillo:#e6a817;--amarillo-tenue:#fef9ec;
+  --blanco:#ffffff;--gris-1:#f5f5f3;--gris-2:#e0e0db;--gris-3:#9a9a94;--negro:#1a1a18;
+  --radio:14px;--radio-sm:8px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--verde);min-height:100vh;color:var(--negro);}
+.screen{display:none;min-height:100vh;flex-direction:column;}
+.screen.active{display:flex;}
+#screen-login{background:var(--verde);align-items:center;justify-content:center;padding:2rem;}
+.login-logo{text-align:center;margin-bottom:2.5rem;}
+.login-logo h1{color:var(--blanco);font-size:2rem;font-weight:700;}
+.login-logo p{color:rgba(255,255,255,.55);font-size:.85rem;margin-top:.3rem;}
+.login-card{background:var(--blanco);border-radius:20px;padding:1.75rem 1.5rem;width:100%;max-width:340px;}
+.login-card h2{font-size:1rem;font-weight:600;margin-bottom:.3rem;}
+.login-card .sub{font-size:.8rem;color:var(--gris-3);margin-bottom:1.25rem;}
+.pin-display{display:flex;gap:10px;justify-content:center;margin-bottom:1.5rem;}
+.pin-dot{width:48px;height:48px;border-radius:50%;border:2px solid var(--gris-2);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700;color:var(--verde);}
+.pin-dot.filled{background:var(--verde);border-color:var(--verde);color:var(--blanco);}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.pin-btn{background:var(--gris-1);border:2px solid var(--gris-2);border-radius:var(--radio);height:64px;font-size:1.4rem;font-weight:600;cursor:pointer;color:var(--negro);}
+.pin-btn:active{background:var(--gris-2);}
+.pin-btn.del{background:var(--tierra-tenue);color:var(--tierra);border-color:var(--tierra-tenue);}
+.pin-error{text-align:center;font-size:.8rem;color:var(--rojo);margin-top:.75rem;min-height:1.4rem;font-weight:500;}
+.app-header{background:var(--verde);padding:1rem 1.25rem .75rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.app-header h1{color:var(--blanco);font-size:1rem;font-weight:600;}
+.header-sub{color:rgba(255,255,255,.6);font-size:.75rem;margin-top:.1rem;}
+.btn-salir{background:rgba(255,255,255,.15);border:none;border-radius:20px;color:var(--blanco);font-size:.75rem;padding:.4rem .9rem;cursor:pointer;}
+.tabs{background:var(--verde-mid);display:flex;flex-shrink:0;}
+.tab{flex:1;padding:.75rem .5rem;text-align:center;font-size:.8rem;font-weight:600;color:rgba(255,255,255,.6);border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;}
+.tab.active{color:var(--blanco);border-bottom-color:var(--blanco);}
+.app-body{background:var(--gris-1);flex:1;overflow-y:auto;padding:1rem;}
+.orden-card{background:var(--blanco);border-radius:var(--radio);padding:1rem;margin-bottom:.75rem;border-left:4px solid var(--gris-2);}
+.orden-card.pendiente{border-left-color:var(--amarillo);}
+.orden-card.en_proceso{border-left-color:var(--verde-claro);}
+.orden-card.completada{border-left-color:var(--verde-mid);opacity:.75;}
+.orden-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.5rem;}
+.orden-labor{font-weight:700;font-size:.95rem;}
+.orden-badge{font-size:.65rem;font-weight:700;padding:.2rem .55rem;border-radius:20px;text-transform:uppercase;}
+.badge-pendiente{background:var(--amarillo-tenue);color:var(--amarillo);}
+.badge-en_proceso{background:var(--verde-tenue);color:var(--verde-mid);}
+.badge-completada{background:var(--verde-tenue);color:var(--verde);}
+.orden-meta{font-size:.78rem;color:var(--gris-3);line-height:1.7;}
+.orden-meta strong{color:var(--negro);}
+.orden-actions{display:flex;gap:8px;margin-top:.75rem;}
+.btn-sm{padding:.45rem .9rem;border-radius:var(--radio-sm);border:none;font-size:.78rem;font-weight:600;cursor:pointer;}
+.btn-iniciar{background:var(--verde-tenue);color:var(--verde-mid);}
+.btn-completar{background:var(--verde-mid);color:var(--blanco);}
+.btn-cancelar{background:var(--rojo-tenue);color:var(--rojo);}
+.form-card{background:var(--blanco);border-radius:var(--radio);padding:1.1rem;margin-bottom:.75rem;}
+.form-card h3{font-size:.9rem;font-weight:700;margin-bottom:1rem;}
+.form-group{margin-bottom:.85rem;}
+.form-group label{display:block;font-size:.75rem;font-weight:600;color:var(--gris-3);margin-bottom:.35rem;text-transform:uppercase;letter-spacing:.04em;}
+.form-group select,.form-group input{width:100%;padding:.65rem .75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;background:var(--gris-1);color:var(--negro);}
+.surcos-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:.4rem;}
+.surco-btn{padding:.5rem 0;border-radius:6px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.8rem;font-weight:700;cursor:pointer;text-align:center;}
+.surco-btn.sel{border-color:var(--verde-mid);background:var(--verde-tenue);color:var(--verde);}
+.btn-primary{width:100%;padding:.9rem;border:none;border-radius:var(--radio);background:var(--verde-mid);color:var(--blanco);font-size:.95rem;font-weight:700;cursor:pointer;margin-top:.5rem;}
+.tarea-card{background:var(--blanco);border-radius:var(--radio);padding:1.1rem;margin-bottom:.75rem;border-left:4px solid var(--amarillo);}
+.tarea-title{font-weight:700;font-size:1rem;margin-bottom:.35rem;}
+.tarea-meta{font-size:.8rem;color:var(--gris-3);line-height:1.7;}
+.steps-bar{display:flex;gap:5px;margin-bottom:1rem;}
+.step-seg{flex:1;height:4px;border-radius:2px;background:var(--gris-2);}
+.step-seg.done{background:var(--verde-claro);}
+.step-seg.active{background:var(--verde-mid);}
+.step-label{font-size:.7rem;color:var(--gris-3);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.06em;}
+.step-title{font-size:1.05rem;font-weight:700;margin-bottom:1rem;}
+.cantidad-row{display:flex;align-items:center;gap:12px;background:var(--blanco);border-radius:var(--radio);padding:1rem;margin-bottom:1rem;}
+.cant-btn{width:52px;height:52px;border-radius:50%;border:2px solid var(--gris-2);background:var(--gris-1);font-size:1.5rem;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;}
+.cant-val{flex:1;text-align:center;font-size:2.2rem;font-weight:700;}
+.cant-unit{text-align:center;font-size:.75rem;color:var(--gris-3);}
+.foto-btn{width:100%;padding:2rem 0;border:2.5px dashed var(--gris-2);border-radius:var(--radio);background:var(--blanco);display:flex;flex-direction:column;align-items:center;gap:10px;cursor:pointer;}
+.foto-btn.captured{border-style:solid;border-color:var(--verde-claro);background:var(--verde-tenue);}
+.foto-ic{font-size:2.5rem;}
+.foto-lb{font-size:.85rem;color:var(--gris-3);font-weight:500;}
+.foto-btn.captured .foto-lb{color:var(--verde);}
+.nav-row{display:flex;gap:10px;margin-top:1.25rem;}
+.btn-back{flex:1;padding:.85rem;border:2px solid var(--gris-2);border-radius:var(--radio);background:var(--blanco);font-size:.9rem;font-weight:600;cursor:pointer;}
+.btn-next{flex:2;padding:.85rem;border:none;border-radius:var(--radio);background:var(--verde-mid);color:var(--blanco);font-size:.9rem;font-weight:700;cursor:pointer;}
+.btn-next:disabled{background:var(--gris-2);color:var(--gris-3);}
+.resumen-card{background:var(--blanco);border-radius:var(--radio);padding:1rem 1.1rem;margin-bottom:.75rem;}
+.resumen-row{display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--gris-1);}
+.resumen-row:last-child{border-bottom:none;}
+.resumen-key{color:var(--gris-3);}
+.resumen-val{font-weight:600;text-align:right;max-width:60%;}
+.notif-item{background:var(--blanco);border-radius:var(--radio);padding:.85rem 1rem;margin-bottom:.6rem;display:flex;gap:.75rem;border-left:3px solid var(--tierra);}
+.notif-ic{font-size:1.3rem;flex-shrink:0;}
+.notif-texto{font-size:.82rem;line-height:1.5;}
+.notif-texto strong{display:block;font-size:.85rem;color:var(--negro);}
+.notif-tiempo{font-size:.7rem;color:var(--gris-3);margin-top:.2rem;}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1rem;}
+.stat-card{background:var(--blanco);border-radius:var(--radio-sm);padding:.75rem;text-align:center;}
+.stat-num{font-size:1.6rem;font-weight:700;}
+.stat-lbl{font-size:.65rem;color:var(--gris-3);text-transform:uppercase;letter-spacing:.04em;margin-top:.2rem;}
+.stat-am{color:var(--amarillo);}
+.stat-vd{color:var(--verde-mid);}
+.stat-az{color:#2980b9;}
+#screen-exito{background:var(--verde);align-items:center;justify-content:center;padding:2rem;text-align:center;}
+.exito-ic{font-size:5rem;margin-bottom:1.5rem;}
+.exito-tit{color:var(--blanco);font-size:1.6rem;font-weight:700;margin-bottom:.5rem;}
+.exito-sub{color:rgba(255,255,255,.65);font-size:.9rem;margin-bottom:2rem;line-height:1.6;}
+.btn-nuevo{background:var(--blanco);color:var(--verde);border:none;border-radius:var(--radio);padding:1rem 2rem;font-size:1rem;font-weight:700;cursor:pointer;}
+.hint{font-size:.75rem;color:var(--gris-3);margin-top:.6rem;}
+.loading{text-align:center;color:var(--gris-3);padding:3rem 1rem;font-size:.9rem;}
+.seccion-titulo{font-size:.75rem;font-weight:700;color:var(--gris-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem;}
+.empty{text-align:center;padding:2.5rem 1rem;color:var(--gris-3);font-size:.88rem;line-height:1.6;}
+</style>
+</head>
+<body>
 
-0
-⌫
+<div id="screen-login" class="screen active">
+  <div class="login-logo">
+    <h1>🫐 Mootsil</h1>
+    <p>Rancho · Módulo de Labores</p>
+  </div>
+  <div class="login-card">
+    <h2>Ingresa tu PIN</h2>
+    <p class="sub">Toca los 4 dígitos para entrar</p>
+    <div class="pin-display">
+      <div class="pin-dot" id="d0"></div><div class="pin-dot" id="d1"></div>
+      <div class="pin-dot" id="d2"></div><div class="pin-dot" id="d3"></div>
+    </div>
+    <div class="pin-pad">
+      <button class="pin-btn" id="p1">1</button><button class="pin-btn" id="p2">2</button><button class="pin-btn" id="p3">3</button>
+      <button class="pin-btn" id="p4">4</button><button class="pin-btn" id="p5">5</button><button class="pin-btn" id="p6">6</button>
+      <button class="pin-btn" id="p7">7</button><button class="pin-btn" id="p8">8</button><button class="pin-btn" id="p9">9</button>
+      <button class="pin-btn" style="visibility:hidden"></button>
+      <button class="pin-btn" id="p0">0</button>
+      <button class="pin-btn del" id="pdel">⌫</button>
+    </div>
+    <div class="pin-error" id="pin-error"></div>
+  </div>
+</div>
 
+<div id="screen-encargado" class="screen">
+  <div class="app-header">
+    <div><h1>🫐 Mootsil</h1><div class="header-sub" id="enc-nombre">Encargado</div></div>
+    <button class="btn-salir" id="btn-salir-enc">Salir</button>
+  </div>
+  <div class="tabs" id="enc-tabs">
+    <button class="tab active" id="tab-tablero">Tablero</button>
+    <button class="tab" id="tab-asignar">+ Asignar</button>
+    <button class="tab" id="tab-notif">Avisos</button>
+    <button class="tab" id="tab-config" style="display:none">⚙️</button>
+  </div>
+  <div class="app-body" id="enc-body"><div class="loading">Cargando...</div></div>
+</div>
+
+<div id="screen-operario" class="screen">
+  <div class="app-header">
+    <div><h1>🫐 Mootsil</h1><div class="header-sub" id="op-nombre">Operario</div></div>
+    <button class="btn-salir" id="btn-salir-op">Salir</button>
+  </div>
+  <div class="tabs">
+    <button class="tab active" id="tab-tareas">Mis tareas</button>
+    <button class="tab" id="tab-op-notif">Avisos</button>
+  </div>
+  <div class="app-body" id="op-body"><div class="loading">Cargando tareas...</div></div>
+</div>
+
+<div id="screen-exito" class="screen">
+  <div class="exito-ic">✅</div>
+  <div class="exito-tit">¡Labor completada!</div>
+  <div class="exito-sub" id="exito-sub">El registro se guardó correctamente.</div>
+  <button class="btn-nuevo" id="btn-volver">Ver mis tareas</button>
+</div>
+
+<script>
+// API REST directa — sin librerías externas
+var URL = 'https://ypreafyqnckswvoaerbe.supabase.co';
+var KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwcmVhZnlxbmNrc3d2b2FlcmJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NDE0NjAsImV4cCI6MjA5ODQxNzQ2MH0.2Bwg1HdUXKlw9U3a3-3FvpeNV3iKktJchkL6xbD51DU';
+
+function api(path, opts) {
+  opts = opts || {};
+  return fetch(URL + path, {
+    method: opts.method || 'GET',
+    headers: Object.assign({'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Content-Type': 'application/json', 'Prefer': opts.prefer || ''}, opts.headers || {}),
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  }).then(function(r) {
+    if(!r.ok) return r.json().then(function(e){ throw new Error(e.message||r.status); });
+    return r.status === 204 ? {} : r.json();
+  });
+}
+
+function rpc(fn, params) {
+  return api('/rest/v1/rpc/' + fn, {method:'POST', body: params});
+}
+
+function from(table) {
+  return {
+    _table: table, _filters: [], _select: '*', _order: '', _limit: '',
+    select: function(s){ this._select = s; return this; },
+    eq: function(col, val){ this._filters.push(col + '=eq.' + val); return this; },
+    in: function(col, vals){ this._filters.push(col + '=in.("' + vals.join('","') + '")'); return this; },
+    order: function(col, opts){ this._order = '&order=' + col + (opts&&opts.ascending===false?'.desc':'.asc'); return this; },
+    limit: function(n){ this._limit = '&limit=' + n; return this; },
+    get: function(){
+      var q = '/rest/v1/' + this._table + '?select=' + encodeURIComponent(this._select);
+      if(this._filters.length) q += '&' + this._filters.join('&');
+      q += this._order + this._limit;
+      return api(q);
+    },
+    single: function(){
+      return this.get().then(function(d){ return Array.isArray(d) ? d[0] : d; });
+    },
+    insert: function(data){ return api('/rest/v1/' + this._table, {method:'POST', body: data, prefer:'return=representation'}); },
+    update: function(data){ 
+      var filters = this._filters;
+      var q = '/rest/v1/' + this._table + '?' + filters.join('&');
+      return api(q, {method:'PATCH', body: data, prefer:'return=representation'});
+    }
+  };
+}
+
+// ESTADO
+var pin = '';
+var usuario = null;
+var cats = {plantaciones:[], tablas:[], tiposLabor:[], subtiposLabor:[], operarios:[]};
+var ordenEjecutando = null;
+var pasoEjec = 1;
+var capturaEjec = {surcos:[], cantidad:0, foto:false};
+var formSurcos = [];
+var ICONOS = {'Via riego':'💧','Foliar':'🌿','Drench':'🧪','Poda':'✂️','Deshierbado':'🌱','Enrejado':'🔲','Desbrozadora':'🔧','Infraestructura':'🏗️','Sistema de riego':'🚿'};
+
+function mostrar(id) {
+  document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+  document.getElementById(id).classList.add('active');
+}
+
+// PIN
+function pinDigit(d) {
+  if(pin.length >= 4) return;
+  pin += d;
+  dibujarPin();
+  if(pin.length === 4) verificarPin();
+}
+
+function pinBorrar() {
+  pin = pin.slice(0, -1);
+  setError('');
+  dibujarPin();
+}
+
+function dibujarPin() {
+  for(var i = 0; i < 4; i++) {
+    var el = document.getElementById('d' + i);
+    if(i < pin.length) { el.textContent = '•'; el.classList.add('filled'); }
+    else { el.textContent = ''; el.classList.remove('filled'); }
+  }
+}
+
+function setError(msg) { document.getElementById('pin-error').textContent = msg; }
+
+function verificarPin() {
+  setError('Verificando...');
+  rpc('verificar_pin', {p_pin: pin}).then(function(data) {
+    if(!data || data.length === 0) { setError('PIN incorrecto.'); pin = ''; dibujarPin(); return; }
+    usuario = {id: data[0].usuario_id, nombre: data[0].nombre, rol: data[0].rol};
+    setError('Cargando...');
+    cargarCatalogos().then(function() {
+      setError('');
+      if(usuario.rol === 'operario') {
+        document.getElementById('op-nombre').textContent = usuario.nombre + ' · operario';
+        mostrar('screen-operario');
+        cargarTareas();
+      } else {
+        document.getElementById('enc-nombre').textContent = usuario.nombre + ' · ' + usuario.rol;
+        mostrar('screen-encargado');
+        renderTablero();
+      }
+    });
+  }).catch(function(e) { setError('Error: ' + e.message); pin = ''; dibujarPin(); });
+}
+
+function cargarCatalogos() {
+  return Promise.all([
+    from('plantaciones').select('*').order('nombre').get(),
+    from('tablas').select('*').order('nombre').get(),
+    from('tipos_labor').select('*').order('nombre').get(),
+    from('subtipos_labor').select('*').get(),
+    from('usuarios').select('id,nombre,rol').eq('rol', 'operario').get()
+  ]).then(function(r) {
+    cats.plantaciones = r[0]; cats.tablas = r[1]; cats.tiposLabor = r[2];
+    cats.subtiposLabor = r[3]; cats.operarios = r[4];
+  });
+}
+
+// ENCARGADO
+function tabEncargado(tab) {
+  ['tablero','asignar','notif'].forEach(function(t){ document.getElementById('tab-'+t).classList.remove('active'); });
+  document.getElementById('tab-'+tab).classList.add('active');
+  if(tab==='tablero') renderTablero();
+  else if(tab==='asignar') renderFormAsignar();
+  else if(tab==='notif') renderNotifs('enc-body');
+  else if(tab==='config') renderConfig();
+}
+
+function renderTablero() {
+  var body = document.getElementById('enc-body');
+  body.innerHTML = '<div class="loading">Cargando...</div>';
+  from('ordenes_trabajo')
+    .select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre),subtipo:subtipos_labor(nombre)')
+    .order('creado_en', {ascending:false})
+    .get().then(function(todas) {
+      var pend = todas.filter(function(o){ return o.estado==='pendiente'; }).length;
+      var enP = todas.filter(function(o){ return o.estado==='en_proceso'; }).length;
+      var comp = todas.filter(function(o){ return o.estado==='completada'; }).length;
+      var html = '<div class="stats-row"><div class="stat-card"><div class="stat-num stat-am">'+pend+'</div><div class="stat-lbl">Pendientes</div></div><div class="stat-card"><div class="stat-num stat-vd">'+enP+'</div><div class="stat-lbl">En proceso</div></div><div class="stat-card"><div class="stat-num stat-az">'+comp+'</div><div class="stat-lbl">Completadas</div></div></div>';
+      if(!todas.length) { html += '<div class="empty">No hay órdenes.<br/>Toca "+ Asignar" para crear una.</div>'; }
+      else {
+        var act = todas.filter(function(o){ return o.estado!=='completada'&&o.estado!=='cancelada'; });
+        var cer = todas.filter(function(o){ return o.estado==='completada'||o.estado==='cancelada'; });
+        if(act.length) html += '<div class="seccion-titulo">Activas</div>' + act.map(cardHtml).join('');
+        if(cer.length) html += '<div class="seccion-titulo" style="margin-top:1rem">Cerradas</div>' + cer.map(cardHtml).join('');
+      }
+      body.innerHTML = html;
+      body.querySelectorAll('[data-can]').forEach(function(b){ b.addEventListener('click', function(){ cambiarEstado(this.dataset.can,'cancelada'); }); });
+      body.querySelectorAll('[data-com]').forEach(function(b){ b.addEventListener('click', function(){ cambiarEstado(this.dataset.com,'completada'); }); });
+    }).catch(function(e){ body.innerHTML='<div class="loading">Error: '+e.message+'</div>'; });
+}
+
+function cardHtml(o) {
+  var p = cats.plantaciones.find(function(x){ return x.id===o.tabla.plantacion_id; });
+  var ic = ICONOS[o.tipo_labor.nombre]||'🔧';
+  var bl = {pendiente:'badge-pendiente',en_proceso:'badge-en_proceso',completada:'badge-completada',cancelada:'badge-completada'};
+  var lb = {pendiente:'Pendiente',en_proceso:'En proceso',completada:'Completada',cancelada:'Cancelada'};
+  var ac = '';
+  if(o.estado==='pendiente') ac = '<button class="btn-sm btn-cancelar" data-can="'+o.id+'">Cancelar</button>';
+  if(o.estado==='en_proceso') ac = '<button class="btn-sm btn-completar" data-com="'+o.id+'">Marcar completa</button> <button class="btn-sm btn-cancelar" data-can="'+o.id+'">Cancelar</button>';
+  return '<div class="orden-card '+o.estado+'"><div class="orden-header"><div class="orden-labor">'+ic+' '+o.tipo_labor.nombre+(o.subtipo?' · '+o.subtipo.nombre:'')+'</div><span class="orden-badge '+bl[o.estado]+'">'+lb[o.estado]+'</span></div><div class="orden-meta"><strong>'+o.operario.nombre+'</strong> · '+(p?p.nombre:'')+' '+o.tabla.nombre+'<br/>Surcos: '+((o.surcos_asignados||[]).join(', ')||'todos')+' · '+(o.duracion==='dia'?'Solo hoy':'Labor completa')+'</div>'+(ac?'<div class="orden-actions">'+ac+'</div>':'')+'</div>';
+}
+
+function cambiarEstado(id, estado) {
+  from('ordenes_trabajo').eq('id',id).update({estado:estado}).then(function(){
+    if(estado==='completada'){
+      from('notificaciones').insert({titulo:'✅ Labor completada',cuerpo:'Una orden fue marcada como completada.',icono:'✅',leida:false,para_rol:'encargado'}).then(function(){ renderTablero(); });
+    } else { renderTablero(); }
+  });
+}
+
+function renderFormAsignar() {
+  var body = document.getElementById('enc-body');
+  var opO = cats.operarios.map(function(o){ return '<label style="display:flex;align-items:center;gap:6px;padding:.6rem .75rem;background:var(--gris-1);border-radius:8px;cursor:pointer;font-size:.9rem;"><input type="checkbox" class="op-check" value="'+o.id+'" style="width:18px;height:18px;accent-color:#2d6644;flex-shrink:0;"/> '+o.nombre+'</label>'; }).join('');
+  var pO = cats.plantaciones.map(function(p){ return '<option value="'+p.id+'">'+p.nombre+'</option>'; }).join('');
+  var lO = cats.tiposLabor.map(function(l){ return '<option value="'+l.id+'">'+l.nombre+'</option>'; }).join('');
+  body.innerHTML = '<div class="form-card"><h3>Nueva orden de trabajo</h3><div class="form-group"><label>Operario</label><select id="fop"><option value="">Selecciona...</option>'+opO+'</select></div><div class="form-group"><label>Plantación</label><select id="fpl"><option value="">Selecciona...</option>'+pO+'</select></div><div class="form-group"><label>Tabla</label><select id="ftb"><option value="">Primero elige plantación</option></select></div><div class="form-group"><label>Labor</label><select id="flb"><option value="">Selecciona...</option>'+lO+'</select></div><div class="form-group" id="fsg" style="display:none"><label>Detalle</label><select id="fsb"><option value="">Selecciona...</option></select></div><div class="form-group" id="fcg" style="display:none"><label>Cantidad esperada</label><input type="number" id="fca" placeholder="0" min="0"/></div><div class="form-group"><label>Surcos</label><div class="surcos-grid" id="fsc"></div><p class="hint">Sin selección = todos</p></div><div class="form-group"><label>Duración</label><select id="fdu"><option value="dia">Solo hoy</option><option value="labor_completa">Labor completa</option></select></div><div class="form-group"><label>Fecha</label><input type="date" id="ffe" value="'+new Date().toISOString().slice(0,10)+'"/></div><div class="form-group"><label>Notas</label><input type="text" id="fno" placeholder="Opcional..."/></div><button class="btn-primary" id="fgo">Asignar orden</button></div>';
+  formSurcos = [];
+  document.getElementById('fpl').addEventListener('change', function(){
+    var tablas = cats.tablas.filter(function(t){ return t.plantacion_id===this.value; }.bind(this));
+    document.getElementById('ftb').innerHTML = '<option value="">Selecciona...</option>' + tablas.map(function(t){ return '<option value="'+t.id+'">'+t.nombre+'</option>'; }).join('');
+    renderSurcosForm();
+  });
+  document.getElementById('ftb').addEventListener('change', renderSurcosForm);
+  document.getElementById('flb').addEventListener('change', function(){
+    var lb = cats.tiposLabor.find(function(l){ return l.id===document.getElementById('flb').value; });
+    var sbs = cats.subtiposLabor.filter(function(s){ return s.tipo_labor_id===document.getElementById('flb').value; });
+    if(sbs.length){ document.getElementById('fsb').innerHTML='<option value="">Selecciona...</option>'+sbs.map(function(s){ return '<option value="'+s.id+'">'+s.nombre+'</option>'; }).join(''); document.getElementById('fsg').style.display=''; }
+    else document.getElementById('fsg').style.display='none';
+    document.getElementById('fcg').style.display = (lb&&lb.requiere_cantidad_insumo)?'':'none';
+  });
+  document.getElementById('fgo').addEventListener('click', guardarOrden);
+}
+
+function renderSurcosForm(){
+  var tid = document.getElementById('ftb').value;
+  var t = cats.tablas.find(function(x){ return x.id===tid; });
+  var n = (t&&t.cantidad_surcos) ? t.cantidad_surcos : 12;
+  formSurcos = [];
+  var h = '';
+  for(var i=1;i<=n;i++) h += '<button class="surco-btn" data-n="'+i+'">'+i+'</button>';
+  var g = document.getElementById('fsc');
+  if(g){ g.innerHTML=h; g.querySelectorAll('.surco-btn').forEach(function(b){ b.addEventListener('click',function(e){ e.preventDefault(); var n=parseInt(this.dataset.n); var idx=formSurcos.indexOf(n); if(idx>-1){formSurcos.splice(idx,1);this.classList.remove('sel');}else{formSurcos.push(n);this.classList.add('sel');} }); }); }
+}
+
+function guardarOrden(){
+  var opIds=Array.from(document.querySelectorAll('.op-check:checked')).map(function(c){return c.value;}), opId=opIds[0], tbId=document.getElementById('ftb').value, lbId=document.getElementById('flb').value;
+  if(!opIds||!opIds.length||!tbId||!lbId){alert('Selecciona al menos un operario.');return;}
+  var sub=document.getElementById('fsb').value||null;
+  var cant=parseFloat(document.getElementById('fca').value)||null;
+  var lb=cats.tiposLabor.find(function(l){return l.id===lbId;}), tb=cats.tablas.find(function(t){return t.id===tbId;});
+  var dur=document.getElementById('fdu').value, fec=document.getElementById('ffe').value, not=document.getElementById('fno').value||null;
+  var promesas=opIds.map(function(oid){
+    return from('ordenes_trabajo').insert({asignado_por:usuario.id,operario_id:oid,tabla_id:tbId,tipo_labor_id:lbId,subtipo_labor_id:sub,surcos_asignados:formSurcos,cantidad_insumo_esperada:cant,duracion:dur,fecha_asignacion:fec,notas_encargado:not,estado:'pendiente'});
+  });
+  Promise.all(promesas).then(function(){
+    var notifs=opIds.map(function(oid){ return from('notificaciones').insert({titulo:'📋 Nueva tarea asignada',cuerpo:usuario.nombre+' asignó: '+(lb?lb.nombre:'')+' en '+(tb?tb.nombre:''),icono:'📋',leida:false,para_rol:'operario',para_usuario:oid}); });
+    Promise.all(notifs).then(function(){ tabEncargado('tablero'); });
+  }).catch(function(e){ alert('Error: '+e.message); });
+}
+
+function renderNotifs(bodyId){
+  var body=document.getElementById(bodyId);
+  body.innerHTML='<div class="loading">Cargando avisos...</div>';
+  from('notificaciones').select('*').order('creado_en',{ascending:false}).limit(30).get().then(function(data){
+    if(!data||!data.length){body.innerHTML='<div class="empty">📭 Sin avisos por ahora</div>';return;}
+    body.innerHTML=data.map(function(n){
+      var diff=Math.floor((Date.now()-new Date(n.creado_en))/1000);
+      var t=diff<60?'hace un momento':diff<3600?'hace '+Math.floor(diff/60)+' min':diff<86400?'hace '+Math.floor(diff/3600)+' h':'hace '+Math.floor(diff/86400)+' días';
+      return '<div class="notif-item"><div class="notif-ic">'+(n.icono||'🔔')+'</div><div class="notif-texto"><strong>'+n.titulo+'</strong>'+n.cuerpo+'<div class="notif-tiempo">'+t+'</div></div></div>';
+    }).join('');
+  });
+}
+
+// OPERARIO
+function tabOperario(tab){
+  document.getElementById('tab-tareas').classList.remove('active');
+  document.getElementById('tab-op-notif').classList.remove('active');
+  if(tab==='tareas'){document.getElementById('tab-tareas').classList.add('active');cargarTareas();}
+  else{document.getElementById('tab-op-notif').classList.add('active');renderNotifs('op-body');}
+}
+
+function cargarTareas(){
+  var body=document.getElementById('op-body');
+  body.innerHTML='<div class="loading">Cargando tus tareas...</div>';
+  from('ordenes_trabajo')
+    .select('*,tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_cantidad_insumo,unidad_insumo),subtipo:subtipos_labor(nombre)')
+    .eq('operario_id',usuario.id)
+    .in('estado',['pendiente','en_proceso'])
+    .order('creado_en',{ascending:false})
+    .get().then(function(tareas){
+      if(!tareas||!tareas.length){body.innerHTML='<div class="empty">🌱 No tienes tareas asignadas.<br/>El encargado te asignará labores aquí.</div>';return;}
+      var html='<div class="seccion-titulo">Tus tareas</div>';
+      html+=tareas.map(function(t){
+        var p=cats.plantaciones.find(function(x){return x.id===t.tabla.plantacion_id;});
+        var ic=ICONOS[t.tipo_labor.nombre]||'🔧';
+        var su=(t.surcos_asignados&&t.surcos_asignados.length)?t.surcos_asignados.join(', '):'Todos';
+        return '<div class="tarea-card"><div class="tarea-title">'+ic+' '+t.tipo_labor.nombre+(t.subtipo?' · '+t.subtipo.nombre:'')+'</div><div class="tarea-meta">📍 '+(p?p.nombre:'')+' · '+t.tabla.nombre+'<br/>🔢 Surcos: '+su+(t.notas_encargado?'<br/>📝 '+t.notas_encargado:'')+'</div><div style="margin-top:.75rem;display:flex;gap:8px;">'+(t.estado==='pendiente'?'<button class="btn-sm btn-iniciar" data-ini="'+t.id+'">▶ Iniciar</button>':'')+(t.estado==='en_proceso'?'<button class="btn-sm btn-completar" data-eje="'+t.id+'">✅ Registrar avance</button>':'')+'</div></div>';
+      }).join('');
+      body.innerHTML=html;
+      body.querySelectorAll('[data-ini]').forEach(function(b){ b.addEventListener('click',function(){ from('ordenes_trabajo').eq('id',this.dataset.ini).update({estado:'en_proceso'}).then(function(){cargarTareas();}); }); });
+      body.querySelectorAll('[data-eje]').forEach(function(b){ b.addEventListener('click',function(){ iniciarEjecucion(this.dataset.eje); }); });
+    });
+}
+
+function iniciarEjecucion(oid){
+  from('ordenes_trabajo')
+    .select('*,tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_cantidad_insumo,unidad_insumo),subtipo:subtipos_labor(nombre)')
+    .eq('id',oid).single().then(function(o){ ordenEjecutando=o; pasoEjec=1; capturaEjec={surcos:[],cantidad:0,foto:false}; renderEjec(); });
+}
+
+function renderEjec(){
+  var body=document.getElementById('op-body');
+  var labor=ordenEjecutando.tipo_labor, tabla=ordenEjecutando.tabla;
+  var planta=cats.plantaciones.find(function(p){return p.id===tabla.plantacion_id;});
+  var tot=labor.requiere_cantidad_insumo?3:2;
+  var bar='<div class="steps-bar">'+[1,2,3].slice(0,tot).map(function(i){return '<div class="step-seg '+(i<pasoEjec?'done':i===pasoEjec?'active':'')+'"></div>';}).join('')+'</div>';
+  var html=bar;
+  if(pasoEjec===1){
+    var n=tabla.cantidad_surcos||12, asig=ordenEjecutando.surcos_asignados||[];
+    var lista=asig.length?asig:Array.from({length:n},function(_,i){return i+1;});
+    html+='<div class="step-label">Paso 1 de '+tot+'</div><div class="step-title">Surcos trabajados</div><p class="hint" style="margin-bottom:.75rem">📍 '+(planta?planta.nombre:'')+' · '+tabla.nombre+'</p><div class="surcos-grid" style="grid-template-columns:repeat(4,1fr);">';
+    lista.forEach(function(n){html+='<button class="surco-btn '+(capturaEjec.surcos.indexOf(n)>-1?'sel':'')+'" data-s="'+n+'">'+n+'</button>';});
+    html+='</div><p class="hint">Toca los surcos trabajados.</p><div class="nav-row"><button class="btn-back" id="ecan">← Cancelar</button><button class="btn-next" id="esig" '+(capturaEjec.surcos.length?'':'disabled')+'>Siguiente →</button></div>';
+    body.innerHTML=html;
+    body.querySelectorAll('[data-s]').forEach(function(b){b.addEventListener('click',function(){var n=parseInt(this.dataset.s),i=capturaEjec.surcos.indexOf(n);if(i>-1){capturaEjec.surcos.splice(i,1);this.classList.remove('sel');}else{capturaEjec.surcos.push(n);this.classList.add('sel');}document.getElementById('esig').disabled=!capturaEjec.surcos.length;});});
+    document.getElementById('ecan').addEventListener('click',function(){ordenEjecutando=null;cargarTareas();});
+    document.getElementById('esig').addEventListener('click',function(){pasoEjec++;renderEjec();});
+  } else if(pasoEjec===2&&labor.requiere_cantidad_insumo){
+    html+='<div class="step-label">Paso 2 de '+tot+'</div><div class="step-title">Cantidad aplicada</div><div class="cantidad-row"><button class="cant-btn" id="em">−</button><div><div class="cant-val" id="cv">'+capturaEjec.cantidad+'</div><div class="cant-unit">'+(labor.unidad_insumo||'litros')+'</div></div><button class="cant-btn" id="ep">+</button></div><div class="nav-row"><button class="btn-back" id="eat">← Atrás</button><button class="btn-next" id="es2">Siguiente →</button></div>';
+    body.innerHTML=html;
+    document.getElementById('em').addEventListener('click',function(){capturaEjec.cantidad=Math.max(0,capturaEjec.cantidad-1);document.getElementById('cv').textContent=capturaEjec.cantidad;});
+    document.getElementById('ep').addEventListener('click',function(){capturaEjec.cantidad++;document.getElementById('cv').textContent=capturaEjec.cantidad;});
+    document.getElementById('eat').addEventListener('click',function(){pasoEjec--;renderEjec();});
+    document.getElementById('es2').addEventListener('click',function(){pasoEjec++;renderEjec();});
+  } else {
+    html+='<div class="step-label">Último paso</div><div class="step-title">Foto de evidencia</div><button class="foto-btn '+(capturaEjec.foto?'captured':'')+'" id="efoto"><div class="foto-ic">'+(capturaEjec.foto?'✅':'📷')+'</div><div class="foto-lb">'+(capturaEjec.foto?'Foto capturada':'Tomar foto de evidencia')+'</div></button><div class="resumen-card" style="margin-top:1rem;"><div class="resumen-row"><span class="resumen-key">Labor</span><span class="resumen-val">'+labor.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Área</span><span class="resumen-val">'+(planta?planta.nombre:'')+' · '+tabla.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Surcos</span><span class="resumen-val">'+capturaEjec.surcos.join(', ')+'</span></div>'+(labor.requiere_cantidad_insumo?'<div class="resumen-row"><span class="resumen-key">Cantidad</span><span class="resumen-val">'+capturaEjec.cantidad+' '+(labor.unidad_insumo||'litros')+'</span></div>':'')+'</div><div class="nav-row"><button class="btn-back" id="ea2">← Atrás</button><button class="btn-next" id="egu" style="background:var(--tierra)">✅ Guardar</button></div>';
+    body.innerHTML=html;
+    document.getElementById('efoto').addEventListener('click',function(){capturaEjec.foto=!capturaEjec.foto;renderEjec();});
+    document.getElementById('ea2').addEventListener('click',function(){pasoEjec--;renderEjec();});
+    document.getElementById('egu').addEventListener('click',guardarEjec);
+  }
+}
+
+function guardarEjec(){
+  var o=ordenEjecutando;
+  from('registros_labor').insert({usuario_id:usuario.id,tabla_id:o.tabla_id,tipo_labor_id:o.tipo_labor_id,subtipo_labor_id:o.subtipo_labor_id||null,surcos_trabajados:capturaEjec.surcos,cantidad_insumo:capturaEjec.cantidad||null,foto_url:capturaEjec.foto?'pendiente':null,capturado_en:new Date().toISOString(),orden_id:o.id}).then(function(){
+    from('ordenes_trabajo').eq('id',o.id).update({estado:'completada'}).then(function(){
+      var lb=cats.tiposLabor.find(function(l){return l.id===o.tipo_labor_id;}), tb=cats.tablas.find(function(t){return t.id===o.tabla_id;});
+      from('notificaciones').insert({titulo:'✅ Labor completada',cuerpo:usuario.nombre+' completó '+(lb?lb.nombre:'')+' en '+(tb?tb.nombre:'')+' — Surcos: '+capturaEjec.surcos.join(', '),icono:'✅',leida:false,para_rol:'encargado'}).then(function(){
+        document.getElementById('exito-sub').textContent='Registro guardado. El encargado recibirá un aviso.';
+        mostrar('screen-exito'); ordenEjecutando=null;
+      });
+    });
+  }).catch(function(e){alert('Error: '+e.message);});
+}
+
+function renderConfig(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="loading">Cargando usuarios...</div>';
+  from('usuarios').select('id,nombre,rol,activo').order('nombre').get().then(function(users){
+    var roles={admin:'Admin',encargado:'Encargado',operario:'Operario',ingeniero:'Ingeniero'};
+    var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><div class="seccion-titulo" style="margin:0">Usuarios</div><button class="btn-sm btn-completar" id="btn-nuevo-usuario">+ Nuevo</button></div>';
+    html+=users.map(function(u){
+      return '<div class="orden-card" style="border-left-color:var(--verde-mid)"><div class="orden-header"><div class="orden-labor">'+u.nombre+'</div><span class="orden-badge badge-en_proceso">'+roles[u.rol]+'</span></div><div class="orden-actions"><button class="btn-sm btn-iniciar" data-edit="'+u.id+'" data-nombre="'+u.nombre+'" data-rol="'+u.rol+'">Editar</button><button class="btn-sm btn-completar" data-pin="'+u.id+'" data-pnombre="'+u.nombre+'">Cambiar PIN</button>'+(u.activo?'<button class="btn-sm btn-cancelar" data-baja="'+u.id+'">Dar de baja</button>':'<button class="btn-sm btn-iniciar" data-alta="'+u.id+'">Reactivar</button>')+'</div></div>';
+    }).join('');
+    body.innerHTML=html;
+    document.getElementById('btn-nuevo-usuario').addEventListener('click',renderFormNuevoUsuario);
+    body.querySelectorAll('[data-edit]').forEach(function(b){ b.addEventListener('click',function(){ renderFormEditarUsuario(this.dataset.edit,this.dataset.nombre,this.dataset.rol); }); });
+    body.querySelectorAll('[data-pin]').forEach(function(b){ b.addEventListener('click',function(){ renderFormCambiarPin(this.dataset.pin,this.dataset.pnombre); }); });
+    body.querySelectorAll('[data-baja]').forEach(function(b){ b.addEventListener('click',function(){ if(confirm('¿Dar de baja a este usuario?')) from('usuarios').eq('id',this.dataset.baja).update({activo:false}).then(function(){renderConfig();}); }); });
+    body.querySelectorAll('[data-alta]').forEach(function(b){ b.addEventListener('click',function(){ from('usuarios').eq('id',this.dataset.alta).update({activo:true}).then(function(){renderConfig();}); }); });
+  });
+}
+
+function renderFormNuevoUsuario(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="form-card"><h3>Nuevo usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="nu-nombre" placeholder="Nombre completo"/></div><div class="form-group"><label>Rol</label><select id="nu-rol"><option value="operario">Operario</option><option value="encargado">Encargado</option><option value="ingeniero">Ingeniero</option><option value="admin">Admin</option></select></div><div class="form-group"><label>PIN (4 dígitos)</label><input type="number" id="nu-pin" placeholder="1234" maxlength="4" min="0" max="9999"/></div><div class="nav-row"><button class="btn-back" id="btn-cancel-nu">← Cancelar</button><button class="btn-next" id="btn-save-nu">Guardar</button></div></div>';
+  document.getElementById('btn-cancel-nu').addEventListener('click',renderConfig);
+  document.getElementById('btn-save-nu').addEventListener('click',function(){
+    var nombre=document.getElementById('nu-nombre').value.trim();
+    var rol=document.getElementById('nu-rol').value;
+    var pin=document.getElementById('nu-pin').value.toString().padStart(4,'0');
+    if(!nombre||pin.length!==4){alert('Completa todos los campos.');return;}
+    from('usuarios').insert({nombre:nombre,rol:rol,activo:true}).then(function(data){
+      var uid=Array.isArray(data)?data[0].id:data.id;
+      fetch(URL+'/rest/v1/rpc/set_pin',{method:'POST',headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},body:JSON.stringify({p_usuario_id:uid,p_pin:pin})}).then(function(){
+        cats.operarios=null;
+        cargarCatalogos().then(function(){renderConfig();});
+      });
+    }).catch(function(e){alert('Error: '+e.message);});
+  });
+}
+
+function renderFormEditarUsuario(id,nombre,rol){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="form-card"><h3>Editar usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="eu-nombre" value="'+nombre+'"/></div><div class="form-group"><label>Rol</label><select id="eu-rol"><option value="operario"'+(rol==='operario'?' selected':'')+'>Operario</option><option value="encargado"'+(rol==='encargado'?' selected':'')+'>Encargado</option><option value="ingeniero"'+(rol==='ingeniero'?' selected':'')+'>Ingeniero</option><option value="admin"'+(rol==='admin'?' selected':'')+'>Admin</option></select></div><div class="nav-row"><button class="btn-back" id="btn-cancel-eu">← Cancelar</button><button class="btn-next" id="btn-save-eu">Guardar</button></div></div>';
+  document.getElementById('btn-cancel-eu').addEventListener('click',renderConfig);
+  document.getElementById('btn-save-eu').addEventListener('click',function(){
+    var nn=document.getElementById('eu-nombre').value.trim();
+    var nr=document.getElementById('eu-rol').value;
+    if(!nn){alert('El nombre es obligatorio.');return;}
+    from('usuarios').eq('id',id).update({nombre:nn,rol:nr}).then(function(){
+      cargarCatalogos().then(function(){renderConfig();});
+    });
+  });
+}
+
+function renderFormCambiarPin(id,nombre){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="form-card"><h3>Cambiar PIN — '+nombre+'</h3><div class="form-group"><label>Nuevo PIN (4 dígitos)</label><input type="number" id="cp-pin" placeholder="0000" min="0" max="9999"/></div><div class="nav-row"><button class="btn-back" id="btn-cancel-cp">← Cancelar</button><button class="btn-next" id="btn-save-cp">Guardar PIN</button></div></div>';
+  document.getElementById('btn-cancel-cp').addEventListener('click',renderConfig);
+  document.getElementById('btn-save-cp').addEventListener('click',function(){
+    var pin=document.getElementById('cp-pin').value.toString().padStart(4,'0');
+    if(pin.length!==4){alert('El PIN debe tener 4 dígitos.');return;}
+    fetch(URL+'/rest/v1/rpc/set_pin',{method:'POST',headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},body:JSON.stringify({p_usuario_id:id,p_pin:pin})}).then(function(){
+      alert('PIN actualizado correctamente.');
+      renderConfig();
+    });
+  });
+}
+
+function salir(){usuario=null;pin='';dibujarPin();setError('');mostrar('screen-login');}
+
+document.addEventListener('DOMContentLoaded', function(){
+  ['1','2','3','4','5','6','7','8','9','0'].forEach(function(n){
+    document.getElementById('p'+n).addEventListener('click',function(){pinDigit(n);});
+  });
+  document.getElementById('pdel').addEventListener('click', pinBorrar);
+  document.getElementById('btn-salir-enc').addEventListener('click', salir);
+  document.getElementById('btn-salir-op').addEventListener('click', salir);
+  document.getElementById('btn-volver').addEventListener('click', function(){mostrar('screen-operario');cargarTareas();});
+  document.getElementById('tab-tablero').addEventListener('click',function(){tabEncargado('tablero');});
+  document.getElementById('tab-asignar').addEventListener('click',function(){tabEncargado('asignar');});
+  document.getElementById('tab-notif').addEventListener('click',function(){tabEncargado('notif');});
+  document.getElementById('tab-config').addEventListener('click',function(){tabEncargado('config');});
+  document.getElementById('tab-tareas').addEventListener('click',function(){tabOperario('tareas');});
+  document.getElementById('tab-op-notif').addEventListener('click',function(){tabOperario('notif');});
+});
+</script>
+</body>
+</html>
