@@ -728,7 +728,7 @@ function abrirCamara(){ var el=document.getElementById('inp-cam'); if(el) el.cli
 function abrirGaleria(){ var el=document.getElementById('inp-ev'); if(el) el.click(); }
 function salir(){usuario=null;pin='';dibujarPin();setError('');mostrar('screen-login');}
 
-document.addEventListener('DOMContentLoaded', function(){
+window.onload = function(){
   ['1','2','3','4','5','6','7','8','9','0'].forEach(function(n){
     document.getElementById('p'+n).addEventListener('click',function(){pinDigit(n);});
   });
@@ -743,7 +743,7 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('tab-config').addEventListener('click',function(){tabEncargado('config');});
   document.getElementById('tab-tareas').addEventListener('click',function(){tabOperario('tareas');});
   document.getElementById('tab-op-notif').addEventListener('click',function(){tabOperario('notif');});
-});
+};
 
 function renderEvidenciaPaso(html, labor, planta, tabla, cap) {
   var body = document.getElementById('op-body');
