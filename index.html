@@ -228,6 +228,34 @@ function from(table) {
 
 // ESTADO
 var pin = '';
+var colaOffline = JSON.parse(localStorage.getItem('mootsil_cola')||'[]');
+
+function actualizarEstadoRed(){
+  var offline = !navigator.onLine;
+  ['offline-enc','offline-op'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el) el.style.display=offline?'inline':'none';
+  });
+}
+window.addEventListener('online', function(){ actualizarEstadoRed(); sincronizarCola(); });
+window.addEventListener('offline', actualizarEstadoRed);
+
+function guardarEnCola(registro){
+  colaOffline.push(registro);
+  localStorage.setItem('mootsil_cola', JSON.stringify(colaOffline));
+}
+
+function sincronizarCola(){
+  if(!colaOffline.length) return;
+  var pendientes = colaOffline.slice();
+  colaOffline = [];
+  localStorage.setItem('mootsil_cola','[]');
+  pendientes.forEach(function(r){
+    from('registros_labor').insert(r).catch(function(){
+      guardarEnCola(r);
+    });
+  });
+}
 var usuario = null;
 var cats = {plantaciones:[], tablas:[], tiposLabor:[], subtiposLabor:[], operarios:[]};
 var ordenEjecutando = null;
@@ -479,7 +507,7 @@ function renderEjec(){
     document.getElementById('eat').addEventListener('click',function(){pasoEjec--;renderEjec();});
     document.getElementById('es2').addEventListener('click',function(){pasoEjec++;renderEjec();});
   } else {
-    html+='<div class="step-label">Último paso</div><div class="step-title">Foto de evidencia</div><button class="foto-btn '+(capturaEjec.foto?'captured':'')+'" id="efoto" onclick="document.getElementById(\"inp-ev\").click()"><div class="foto-ic">'+(capturaEjec.foto?'✅':'📸')+'</div><div class="foto-lb">'+(capturaEjec.foto?'Evidencia lista':'Foto o video (opcional)')+'</div></button><input type="file" id="inp-ev" accept="image/*,video/*" capture="environment" style="display:none" onchange="capturaEjec.foto=this.files.length>0;renderEjec();">"resumen-card" style="margin-top:1rem;"><div class="resumen-row"><span class="resumen-key">Labor</span><span class="resumen-val">'+labor.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Área</span><span class="resumen-val">'+(planta?planta.nombre:'')+' · '+tabla.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Surcos</span><span class="resumen-val">'+capturaEjec.surcos.join(', ')+'</span></div>'+(labor.requiere_cantidad_insumo?'<div class="resumen-row"><span class="resumen-key">Cantidad</span><span class="resumen-val">'+capturaEjec.cantidad+' '+(labor.unidad_insumo||'litros')+'</span></div>':'')+'</div><div class="nav-row"><button class="btn-back" id="ea2">← Atrás</button><button class="btn-next" id="egu" style="background:var(--tierra)">✅ Guardar</button></div>';
+    html+='<div class="step-label">Último paso</div><div class="step-title">Foto de evidencia</div><button class="foto-btn '+(capturaEjec.foto?'captured':'')+'" id="efoto" onclick="document.getElementById('inp-ev').click()"><div class="foto-ic">'+(capturaEjec.foto?'✅':'📸')+'</div><div class="foto-lb">'+(capturaEjec.foto?'Evidencia lista':'Foto o video (opcional)')+'</div></button><input type="file" id="inp-ev" accept="image/*,video/*" capture="environment" style="display:none" onchange="capturaEjec.foto=this.files.length>0;renderEjec();">"resumen-card" style="margin-top:1rem;"><div class="resumen-row"><span class="resumen-key">Labor</span><span class="resumen-val">'+labor.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Área</span><span class="resumen-val">'+(planta?planta.nombre:'')+' · '+tabla.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Surcos</span><span class="resumen-val">'+capturaEjec.surcos.join(', ')+'</span></div>'+(labor.requiere_cantidad_insumo?'<div class="resumen-row"><span class="resumen-key">Cantidad</span><span class="resumen-val">'+capturaEjec.cantidad+' '+(labor.unidad_insumo||'litros')+'</span></div>':'')+'</div><div class="nav-row"><button class="btn-back" id="ea2">← Atrás</button><button class="btn-next" id="egu" style="background:var(--tierra)">✅ Guardar</button></div>';
     body.innerHTML=html;
     document.getElementById('efoto').addEventListener('click',function(){capturaEjec.foto=!capturaEjec.foto;renderEjec();});
     document.getElementById('ea2').addEventListener('click',function(){pasoEjec--;renderEjec();});
@@ -489,7 +517,16 @@ function renderEjec(){
 
 function guardarEjec(){
   var o=ordenEjecutando;
-  from('registros_labor').insert({usuario_id:usuario.id,tabla_id:o.tabla_id,tipo_labor_id:o.tipo_labor_id,subtipo_labor_id:o.subtipo_labor_id||null,surcos_trabajados:capturaEjec.surcos,cantidad_insumo:capturaEjec.cantidad||null,foto_url:capturaEjec.foto?'pendiente':null,capturado_en:new Date().toISOString(),orden_id:o.id}).then(function(){
+  var registro={usuario_id:usuario.id,tabla_id:o.tabla_id,tipo_labor_id:o.tipo_labor_id,subtipo_labor_id:o.subtipo_labor_id||null,surcos_trabajados:capturaEjec.surcos,cantidad_insumo:capturaEjec.cantidad||null,foto_url:capturaEjec.foto?'pendiente':null,capturado_en:new Date().toISOString(),orden_id:o.id};
+  if(!navigator.onLine){
+    guardarEnCola(registro);
+    from('ordenes_trabajo').eq('id',o.id).update({estado:'completada'}).then(function(){
+      document.getElementById('exito-sub').textContent='Sin señal. Guardado en tu dispositivo y se subirá cuando haya internet.';
+      mostrar('screen-exito'); ordenEjecutando=null;
+    });
+    return;
+  }
+  from('registros_labor').insert(registro).then(function(){
     from('ordenes_trabajo').eq('id',o.id).update({estado:'completada'}).then(function(){
       var lb=cats.tiposLabor.find(function(l){return l.id===o.tipo_labor_id;}), tb=cats.tablas.find(function(t){return t.id===o.tabla_id;});
       from('notificaciones').insert({titulo:'✅ Labor completada',cuerpo:usuario.nombre+' completó '+(lb?lb.nombre:'')+' en '+(tb?tb.nombre:'')+' — Surcos: '+capturaEjec.surcos.join(', '),icono:'✅',leida:false,para_rol:'encargado'}).then(function(){
@@ -704,6 +741,15 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('tab-tareas').addEventListener('click',function(){tabOperario('tareas');});
   document.getElementById('tab-op-notif').addEventListener('click',function(){tabOperario('notif');});
 });
+</script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('/sw.js').then(function(reg){
+      console.log('SW registrado');
+    }).catch(function(e){ console.log('SW error:', e); });
+  });
+}
 </script>
 </body>
 </html>
