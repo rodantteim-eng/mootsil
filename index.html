@@ -502,7 +502,7 @@ function renderConfig(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="loading">Cargando usuarios...</div>';
   from('usuarios').select('id,nombre,rol,activo').order('nombre').get().then(function(users){
-    var roles={admin:'Admin',encargado:'Encargado',operario:'Operario',ingeniero:'Ingeniero','dueño':'Dueño',inversionista:'Inversionista',cosechador:'Cosechador',galerista:'Galerista'};
+    var roles={admin:'Admin',encargado:'Encargado',operario:'Operario',ingeniero:'Ingeniero','dueño':'Dueño',inversionista:'Inversionista',cosechador:'Cosechador',galerista:'Galerista','encargado_rancho':'Enc. Rancho'};
   var roleColors={
     admin:'background:#c0392b;color:#fff',
     encargado:'background:#e6a817;color:#1a1a18',
@@ -511,7 +511,8 @@ function renderConfig(){
     'dueño':'background:#2980b9;color:#fff',
     inversionista:'background:#6c3483;color:#fff',
     cosechador:'background:#1a3a2a;color:#fff',
-    galerista:'background:#e91e8c;color:#fff'
+    galerista:'background:#e91e8c;color:#fff',
+    encargado_rancho:'background:#c0392b;color:#fff'
   };
     var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><div class="seccion-titulo" style="margin:0">Usuarios</div><button class="btn-sm btn-completar" id="btn-nuevo-usuario">+ Nuevo</button></div>';
     html+=users.map(function(u){
