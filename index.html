@@ -154,6 +154,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <button class="tab active" id="tab-tablero">Tablero</button>
     <button class="tab" id="tab-asignar">+ Asignar</button>
     <button class="tab" id="tab-notif">Avisos</button>
+    <button class="tab" id="tab-reporte">Reporte</button>
     <button class="tab" id="tab-config">⚙️</button>
   </div>
   <div class="app-body" id="enc-body"><div class="loading">Cargando...</div></div>
@@ -306,6 +307,7 @@ function tabEncargado(tab) {
   if(tab==='tablero') renderTablero();
   else if(tab==='asignar') renderFormAsignar();
   else if(tab==='notif') renderNotifs('enc-body');
+  else if(tab==='reporte') renderReporte();
   else if(tab==='config') renderConfig();
 }
 
@@ -477,7 +479,7 @@ function renderEjec(){
     document.getElementById('eat').addEventListener('click',function(){pasoEjec--;renderEjec();});
     document.getElementById('es2').addEventListener('click',function(){pasoEjec++;renderEjec();});
   } else {
-    html+='<div class="step-label">Último paso</div><div class="step-title">Foto de evidencia</div><button class="foto-btn '+(capturaEjec.foto?'captured':'')+'" id="efoto"><div class="foto-ic">'+(capturaEjec.foto?'✅':'📷')+'</div><div class="foto-lb">'+(capturaEjec.foto?'Foto capturada':'Tomar foto de evidencia')+'</div></button><div class="resumen-card" style="margin-top:1rem;"><div class="resumen-row"><span class="resumen-key">Labor</span><span class="resumen-val">'+labor.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Área</span><span class="resumen-val">'+(planta?planta.nombre:'')+' · '+tabla.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Surcos</span><span class="resumen-val">'+capturaEjec.surcos.join(', ')+'</span></div>'+(labor.requiere_cantidad_insumo?'<div class="resumen-row"><span class="resumen-key">Cantidad</span><span class="resumen-val">'+capturaEjec.cantidad+' '+(labor.unidad_insumo||'litros')+'</span></div>':'')+'</div><div class="nav-row"><button class="btn-back" id="ea2">← Atrás</button><button class="btn-next" id="egu" style="background:var(--tierra)">✅ Guardar</button></div>';
+    html+='<div class="step-label">Último paso</div><div class="step-title">Foto de evidencia</div><button class="foto-btn '+(capturaEjec.foto?'captured':'')+'" id="efoto" onclick="document.getElementById('inp-ev').click()"><div class="foto-ic">'+(capturaEjec.foto?'✅':'📸')+'</div><div class="foto-lb">'+(capturaEjec.foto?'Evidencia lista':'Foto o video (opcional)')+'</div></button><input type="file" id="inp-ev" accept="image/*,video/*" capture="environment" style="display:none" onchange="capturaEjec.foto=this.files.length>0;renderEjec();">"resumen-card" style="margin-top:1rem;"><div class="resumen-row"><span class="resumen-key">Labor</span><span class="resumen-val">'+labor.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Área</span><span class="resumen-val">'+(planta?planta.nombre:'')+' · '+tabla.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Surcos</span><span class="resumen-val">'+capturaEjec.surcos.join(', ')+'</span></div>'+(labor.requiere_cantidad_insumo?'<div class="resumen-row"><span class="resumen-key">Cantidad</span><span class="resumen-val">'+capturaEjec.cantidad+' '+(labor.unidad_insumo||'litros')+'</span></div>':'')+'</div><div class="nav-row"><button class="btn-back" id="ea2">← Atrás</button><button class="btn-next" id="egu" style="background:var(--tierra)">✅ Guardar</button></div>';
     body.innerHTML=html;
     document.getElementById('efoto').addEventListener('click',function(){capturaEjec.foto=!capturaEjec.foto;renderEjec();});
     document.getElementById('ea2').addEventListener('click',function(){pasoEjec--;renderEjec();});
@@ -637,6 +639,53 @@ function aplicarRangoF(){
     if(n>=ini&&n<=fin){formSurcos.push(n);b.classList.add('sel');}
   });
 }
+function renderReporte(){
+  var body=document.getElementById('enc-body');
+  var hoy=new Date().toISOString().slice(0,10);
+  body.innerHTML='<div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;"><label style="font-size:.8rem;color:var(--gris-3);font-weight:600;">FECHA</label><input type="date" id="fecha-reporte" value="'+hoy+'" style="padding:.4rem .6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;background:var(--gris-1);"><button onclick="cargarReporte()" style="padding:.4rem .9rem;border:none;border-radius:var(--radio-sm);background:var(--verde-mid);color:#fff;font-size:.8rem;font-weight:600;cursor:pointer;">Ver</button></div><div id="reporte-body"><div class="loading">Selecciona una fecha y toca Ver</div></div>';
+  cargarReporte();
+}
+
+function cargarReporte(){
+  var fecha=document.getElementById('fecha-reporte')?document.getElementById('fecha-reporte').value:new Date().toISOString().slice(0,10);
+  var body=document.getElementById('reporte-body');
+  if(!body) return;
+  body.innerHTML='<div class="loading">Cargando reporte...</div>';
+  from('ordenes_trabajo')
+    .select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre)')
+    .eq('fecha_asignacion',fecha)
+    .get().then(function(ordenes){
+      if(!ordenes||!ordenes.length){body.innerHTML='<div class="empty">Sin actividad registrada para esta fecha.</div>';return;}
+      var tablas={};
+      ordenes.forEach(function(o){
+        var tid=o.tabla_id;
+        if(!tablas[tid]) tablas[tid]={nombre:o.tabla?o.tabla.nombre:'',planta:cats.plantaciones.find(function(p){return p.id===o.tabla.plantacion_id;}),surcosTotales:o.tabla?o.tabla.cantidad_surcos||12:12,ordenes:[]};
+        tablas[tid].ordenes.push(o);
+      });
+      var html='';
+      Object.keys(tablas).forEach(function(tid){
+        var t=tablas[tid];
+        var comp=t.ordenes.filter(function(o){return o.estado==='completada';}).length;
+        var total=t.ordenes.length;
+        var pct=total>0?Math.round(comp/total*100):0;
+        var color=pct===100?'var(--verde-mid)':pct>50?'var(--tierra)':'var(--rojo)';
+        html+='<div style="background:var(--blanco);border-radius:var(--radio);padding:1rem;margin-bottom:.75rem;border-left:4px solid '+color+'">';
+        html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">';
+        html+='<strong style="font-size:.95rem">'+(t.planta?t.planta.nombre:'')+' · '+t.nombre+'</strong>';
+        html+='<span style="font-size:.75rem;font-weight:700;color:'+color+'">'+pct+'% completado</span></div>';
+        html+='<div style="background:var(--gris-2);border-radius:4px;height:6px;margin-bottom:.75rem;"><div style="background:'+color+';height:6px;border-radius:4px;width:'+pct+'%"></div></div>';
+        t.ordenes.forEach(function(o){
+          var ic=o.estado==='completada'?'✅':o.estado==='en_proceso'?'🔄':'⏳';
+          var surcos=o.surcos_asignados&&o.surcos_asignados.length?o.surcos_asignados.join(', '):'Todos';
+          html+='<div style="font-size:.78rem;padding:.3rem 0;border-bottom:1px solid var(--gris-1);display:flex;justify-content:space-between;">';
+          html+='<span>'+ic+' '+o.tipo_labor.nombre+' · '+(o.operario?o.operario.nombre:'')+'</span>';
+          html+='<span style="color:var(--gris-3)">Surcos: '+surcos+'</span></div>';
+        });
+        html+='</div>';
+      });
+      body.innerHTML=html;
+    }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
 function salir(){usuario=null;pin='';dibujarPin();setError('');mostrar('screen-login');}
 
 document.addEventListener('DOMContentLoaded', function(){
@@ -650,6 +699,7 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('tab-tablero').addEventListener('click',function(){tabEncargado('tablero');});
   document.getElementById('tab-asignar').addEventListener('click',function(){tabEncargado('asignar');});
   document.getElementById('tab-notif').addEventListener('click',function(){tabEncargado('notif');});
+  document.getElementById('tab-reporte').addEventListener('click',function(){tabEncargado('reporte');});
   document.getElementById('tab-config').addEventListener('click',function(){tabEncargado('config');});
   document.getElementById('tab-tareas').addEventListener('click',function(){tabOperario('tareas');});
   document.getElementById('tab-op-notif').addEventListener('click',function(){tabOperario('notif');});
