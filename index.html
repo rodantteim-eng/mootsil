@@ -357,7 +357,7 @@ function renderFormAsignar() {
   var opO = cats.operarios.map(function(o){ return '<button type="button" class="op-chip" data-id="'+o.id+'" onclick="toggleChipOp(this)" style="padding:6px 16px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.85rem;cursor:pointer;color:var(--negro);font-weight:600;transition:.15s;">'+o.nombre+'</button>'; }).join('');
   var pO = cats.plantaciones.map(function(p){ return '<option value="'+p.id+'">'+p.nombre+'</option>'; }).join('');
   var lO = cats.tiposLabor.map(function(l){ return '<option value="'+l.id+'">'+l.nombre+'</option>'; }).join('');
-  body.innerHTML = '<div class="form-card"><h3>Nueva orden de trabajo</h3><div class="form-group"><label>Operarios</label><div id="fop" style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Plantación</label><select id="fpl"><option value="">Selecciona...</option>'+pO+'</select></div><div class="form-group"><label>Tabla</label><select id="ftb"><option value="">Primero elige plantación</option></select></div><div class="form-group"><label>Labor</label><select id="flb"><option value="">Selecciona...</option>'+lO+'</select></div><div class="form-group" id="fsg" style="display:none"><label>Detalle</label><select id="fsb"><option value="">Selecciona...</option></select></div><div class="form-group" id="fcg" style="display:none"><label>Cantidad esperada</label><input type="number" id="fca" placeholder="0" min="0"/></div><div class="form-group"><label>Surcos</label><div class="surcos-grid" id="fsc"></div><p class="hint">Sin selección = todos</p></div><div class="form-group"><label>Duración</label><select id="fdu"><option value="dia">Solo hoy</option><option value="labor_completa">Labor completa</option></select></div><div class="form-group"><label>Fecha</label><input type="date" id="ffe" value="'+new Date().toISOString().slice(0,10)+'"/></div><div class="form-group"><label>Notas</label><input type="text" id="fno" placeholder="Opcional..."/></div><button class="btn-primary" id="fgo">Asignar orden</button></div>';
+  body.innerHTML = '<div class="form-card"><h3>Nueva orden de trabajo</h3><div class="form-group"><label>Operarios</label><div id="fop" style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Plantación</label><select id="fpl"><option value="">Selecciona...</option>'+pO+'</select></div><div class="form-group"><label>Tabla</label><select id="ftb"><option value="">Primero elige plantación</option></select></div><div class="form-group"><label>Labor</label><select id="flb"><option value="">Selecciona...</option>'+lO+'</select></div><div class="form-group" id="fsg" style="display:none"><label>Detalle</label><select id="fsb"><option value="">Selecciona...</option></select></div><div class="form-group" id="fcg" style="display:none"><label>Cantidad esperada</label><input type="number" id="fca" placeholder="0" min="0"/></div><div class="form-group"><label>Surcos a trabajar</label><div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;"><button type="button" onclick="selTodosF()" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">Tabla completa</button><button type="button" onclick="selNingunoF()" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.78rem;cursor:pointer;">Limpiar</button></div><div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;"><span style="font-size:.78rem;color:var(--gris-3)">Del surco</span><input type="number" id="f-rango-ini" min="1" style="width:52px;padding:3px 6px;border:1.5px solid var(--gris-2);border-radius:6px;font-size:.85rem;" placeholder="1"><span style="font-size:.78rem;color:var(--gris-3)">al</span><input type="number" id="f-rango-fin" min="1" style="width:52px;padding:3px 6px;border:1.5px solid var(--gris-2);border-radius:6px;font-size:.85rem;" placeholder="12"><button type="button" onclick="aplicarRangoF()" style="padding:4px 10px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.78rem;cursor:pointer;">Aplicar</button></div><div class="surcos-grid" id="fsc"></div><p class="hint">O toca surcos individuales</p></div><div class="form-group"><label>Duración</label><select id="fdu"><option value="dia">Solo hoy</option><option value="labor_completa">Labor completa</option></select></div><div class="form-group"><label>Fecha</label><input type="date" id="ffe" value="'+new Date().toISOString().slice(0,10)+'"/></div><div class="form-group"><label>Notas</label><input type="text" id="fno" placeholder="Opcional..."/></div><button class="btn-primary" id="fgo">Asignar orden</button></div>';
   formSurcos = [];
   document.getElementById('fpl').addEventListener('change', function(){
     var tablas = cats.tablas.filter(function(t){ return t.plantacion_id===this.value; }.bind(this));
@@ -464,7 +464,7 @@ function renderEjec(){
     var lista=asig.length?asig:Array.from({length:n},function(_,i){return i+1;});
     html+='<div class="step-label">Paso 1 de '+tot+'</div><div class="step-title">Surcos trabajados</div><p class="hint" style="margin-bottom:.75rem">📍 '+(planta?planta.nombre:'')+' · '+tabla.nombre+'</p><div class="surcos-grid" style="grid-template-columns:repeat(4,1fr);">';
     lista.forEach(function(n){html+='<button class="surco-btn '+(capturaEjec.surcos.indexOf(n)>-1?'sel':'')+'" data-s="'+n+'">'+n+'</button>';});
-    html+='</div><p class="hint">Toca los surcos trabajados.</p><div class="nav-row"><button class="btn-back" id="ecan">← Cancelar</button><button class="btn-next" id="esig" '+(capturaEjec.surcos.length?'':'disabled')+'>Siguiente →</button></div>';
+    html+='</div><div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;"><button type="button" onclick="selTodosOp()" style="padding:4px 12px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">Todos</button><button type="button" onclick="selNingunoOp()" style="padding:4px 12px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.78rem;cursor:pointer;">Limpiar</button></div><div style="display:flex;gap:6px;align-items:center;margin:6px 0;"><span style="font-size:.78rem;color:var(--gris-3);">Del surco</span><input type="number" id="op-rango-ini" min="1" style="width:48px;padding:3px 6px;border:1.5px solid var(--gris-2);border-radius:6px;font-size:.85rem;" placeholder="1"><span style="font-size:.78rem;color:var(--gris-3);">al</span><input type="number" id="op-rango-fin" min="1" style="width:48px;padding:3px 6px;border:1.5px solid var(--gris-2);border-radius:6px;font-size:.85rem;"><button type="button" onclick="aplicarRangoOp()" style="padding:4px 10px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.78rem;cursor:pointer;">Aplicar</button></div><p class="hint">O toca surcos individuales</p><div class="nav-row"><button class="btn-back" id="ecan">← Cancelar</button><button class="btn-next" id="esig" '+(capturaEjec.surcos.length?'':'disabled')+'>Siguiente →</button></div>';
     body.innerHTML=html;
     body.querySelectorAll('[data-s]').forEach(function(b){b.addEventListener('click',function(){var n=parseInt(this.dataset.s),i=capturaEjec.surcos.indexOf(n);if(i>-1){capturaEjec.surcos.splice(i,1);this.classList.remove('sel');}else{capturaEjec.surcos.push(n);this.classList.add('sel');}document.getElementById('esig').disabled=!capturaEjec.surcos.length;});});
     document.getElementById('ecan').addEventListener('click',function(){ordenEjecutando=null;cargarTareas();});
@@ -529,7 +529,7 @@ function renderConfig(){
 
 function renderFormNuevoUsuario(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="form-card"><h3>Nuevo usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="nu-nombre" placeholder="Nombre completo"/></div><div class="form-group"><label>Rol</label><select id="nu-rol"><option value="operario">Operario</option><option value="encargado">Encargado</option><option value="ingeniero">Ingeniero</option><option value="admin">Cosechador</option><option value="galerista">Galerista</option><option value="dueño">Dueño</option><option value="inversionista">Inversionista</option><option value="admin">Admin</option></select></div><div class="form-group"><label>PIN (4 dígitos)</label><input type="number" id="nu-pin" placeholder="1234" maxlength="4" min="0" max="9999"/></div><div class="nav-row"><button class="btn-back" id="btn-cancel-nu">← Cancelar</button><button class="btn-next" id="btn-save-nu">Guardar</button></div></div>';
+  body.innerHTML='<div class="form-card"><h3>Nuevo usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="nu-nombre" placeholder="Nombre completo"/></div><div class="form-group"><label>Rol</label><select id="nu-rol"><option value="operario">Operario</option><option value="encargado">Encargado</option><option value="ingeniero">Ingeniero</option><option value="admin">Admin</option></select></div><div class="form-group"><label>PIN (4 dígitos)</label><input type="number" id="nu-pin" placeholder="1234" maxlength="4" min="0" max="9999"/></div><div class="nav-row"><button class="btn-back" id="btn-cancel-nu">← Cancelar</button><button class="btn-next" id="btn-save-nu">Guardar</button></div></div>';
   document.getElementById('btn-cancel-nu').addEventListener('click',renderConfig);
   document.getElementById('btn-save-nu').addEventListener('click',function(){
     var nombre=document.getElementById('nu-nombre').value.trim();
@@ -548,7 +548,7 @@ function renderFormNuevoUsuario(){
 
 function renderFormEditarUsuario(id,nombre,rol){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="form-card"><h3>Editar usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="eu-nombre" value="'+nombre+'"/></div><div class="form-group"><label>Rol</label><select id="eu-rol"><option value="operario"'+(rol==='operario'?' selected':'')+'>Operario</option><option value="encargado"'+(rol==='encargado'?' selected':'')+'>Encargado</option><option value="ingeniero"'+(rol==='ingeniero'?' selected':'')+'>Ingeniero</option><option value="admin"'+(rol==='admin'?' selected':'')+'>Cosechador</option><option value="galerista">Galerista</option><option value="dueño">Dueño</option><option value="inversionista">Inversionista</option><option value="admin">Admin</option></select></div><div class="nav-row"><button class="btn-back" id="btn-cancel-eu">← Cancelar</button><button class="btn-next" id="btn-save-eu">Guardar</button></div></div>';
+  body.innerHTML='<div class="form-card"><h3>Editar usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="eu-nombre" value="'+nombre+'"/></div><div class="form-group"><label>Rol</label><select id="eu-rol"><option value="operario"'+(rol==='operario'?' selected':'')+'>Operario</option><option value="encargado"'+(rol==='encargado'?' selected':'')+'>Encargado</option><option value="ingeniero"'+(rol==='ingeniero'?' selected':'')+'>Ingeniero</option><option value="admin"'+(rol==='admin'?' selected':'')+'>Admin</option></select></div><div class="nav-row"><button class="btn-back" id="btn-cancel-eu">← Cancelar</button><button class="btn-next" id="btn-save-eu">Guardar</button></div></div>';
   document.getElementById('btn-cancel-eu').addEventListener('click',renderConfig);
   document.getElementById('btn-save-eu').addEventListener('click',function(){
     var nn=document.getElementById('eu-nombre').value.trim();
@@ -586,6 +586,56 @@ function toggleChipOp(btn){
     btn.style.borderColor='var(--verde-mid)';
     btn.style.color='var(--verde)';
   }
+}
+function selTodosOp(){
+  capturaEjec.surcos=[];
+  document.querySelectorAll('[data-s]').forEach(function(b){
+    var n=parseInt(b.getAttribute('data-s'));
+    capturaEjec.surcos.push(n);
+    b.classList.add('sel');
+  });
+  var sig=document.getElementById('esig');
+  if(sig) sig.disabled=false;
+}
+function selNingunoOp(){
+  capturaEjec.surcos=[];
+  document.querySelectorAll('[data-s]').forEach(function(b){ b.classList.remove('sel'); });
+  var sig=document.getElementById('esig');
+  if(sig) sig.disabled=true;
+}
+function aplicarRangoOp(){
+  var ini=parseInt(document.getElementById('op-rango-ini').value)||1;
+  var fin=parseInt(document.getElementById('op-rango-fin').value)||1;
+  capturaEjec.surcos=[];
+  document.querySelectorAll('[data-s]').forEach(function(b){
+    var n=parseInt(b.getAttribute('data-s'));
+    b.classList.remove('sel');
+    if(n>=ini&&n<=fin){capturaEjec.surcos.push(n);b.classList.add('sel');}
+  });
+  var sig=document.getElementById('esig');
+  if(sig) sig.disabled=capturaEjec.surcos.length===0;
+}
+function selTodosF(){
+  formSurcos=[];
+  document.querySelectorAll('#fsc .surco-btn').forEach(function(b){
+    var n=parseInt(b.getAttribute('data-n'));
+    formSurcos.push(n);
+    b.classList.add('sel');
+  });
+}
+function selNingunoF(){
+  formSurcos=[];
+  document.querySelectorAll('#fsc .surco-btn').forEach(function(b){ b.classList.remove('sel'); });
+}
+function aplicarRangoF(){
+  var ini=parseInt(document.getElementById('f-rango-ini').value)||1;
+  var fin=parseInt(document.getElementById('f-rango-fin').value)||1;
+  formSurcos=[];
+  document.querySelectorAll('#fsc .surco-btn').forEach(function(b){ b.classList.remove('sel'); });
+  document.querySelectorAll('#fsc .surco-btn').forEach(function(b){
+    var n=parseInt(b.getAttribute('data-n'));
+    if(n>=ini&&n<=fin){formSurcos.push(n);b.classList.add('sel');}
+  });
 }
 function salir(){usuario=null;pin='';dibujarPin();setError('');mostrar('screen-login');}
 
