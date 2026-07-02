@@ -354,10 +354,10 @@ function cambiarEstado(id, estado) {
 
 function renderFormAsignar() {
   var body = document.getElementById('enc-body');
-  var opO = cats.operarios.map(function(o){ return '<label style="display:flex;align-items:center;gap:6px;padding:.6rem .75rem;background:var(--gris-1);border-radius:8px;cursor:pointer;font-size:.9rem;"><input type="checkbox" class="op-check" value="'+o.id+'" style="width:18px;height:18px;accent-color:#2d6644;flex-shrink:0;"/> '+o.nombre+'</label>'; }).join('');
+  var opO = cats.operarios.map(function(o){ return '<button type="button" class="op-chip" data-id="'+o.id+'" onclick="toggleChipOp(this)" style="padding:6px 16px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.85rem;cursor:pointer;color:var(--negro);font-weight:600;transition:.15s;">'+o.nombre+'</button>'; }).join('');
   var pO = cats.plantaciones.map(function(p){ return '<option value="'+p.id+'">'+p.nombre+'</option>'; }).join('');
   var lO = cats.tiposLabor.map(function(l){ return '<option value="'+l.id+'">'+l.nombre+'</option>'; }).join('');
-  body.innerHTML = '<div class="form-card"><h3>Nueva orden de trabajo</h3><div class="form-group"><label>Operarios</label><div id="fop" style="display:flex;flex-direction:column;gap:4px;">'+opO+'</div></div><div class="form-group"><label>Plantación</label><select id="fpl"><option value="">Selecciona...</option>'+pO+'</select></div><div class="form-group"><label>Tabla</label><select id="ftb"><option value="">Primero elige plantación</option></select></div><div class="form-group"><label>Labor</label><select id="flb"><option value="">Selecciona...</option>'+lO+'</select></div><div class="form-group" id="fsg" style="display:none"><label>Detalle</label><select id="fsb"><option value="">Selecciona...</option></select></div><div class="form-group" id="fcg" style="display:none"><label>Cantidad esperada</label><input type="number" id="fca" placeholder="0" min="0"/></div><div class="form-group"><label>Surcos</label><div class="surcos-grid" id="fsc"></div><p class="hint">Sin selección = todos</p></div><div class="form-group"><label>Duración</label><select id="fdu"><option value="dia">Solo hoy</option><option value="labor_completa">Labor completa</option></select></div><div class="form-group"><label>Fecha</label><input type="date" id="ffe" value="'+new Date().toISOString().slice(0,10)+'"/></div><div class="form-group"><label>Notas</label><input type="text" id="fno" placeholder="Opcional..."/></div><button class="btn-primary" id="fgo">Asignar orden</button></div>';
+  body.innerHTML = '<div class="form-card"><h3>Nueva orden de trabajo</h3><div class="form-group"><label>Operarios</label><div id="fop" style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Plantación</label><select id="fpl"><option value="">Selecciona...</option>'+pO+'</select></div><div class="form-group"><label>Tabla</label><select id="ftb"><option value="">Primero elige plantación</option></select></div><div class="form-group"><label>Labor</label><select id="flb"><option value="">Selecciona...</option>'+lO+'</select></div><div class="form-group" id="fsg" style="display:none"><label>Detalle</label><select id="fsb"><option value="">Selecciona...</option></select></div><div class="form-group" id="fcg" style="display:none"><label>Cantidad esperada</label><input type="number" id="fca" placeholder="0" min="0"/></div><div class="form-group"><label>Surcos</label><div class="surcos-grid" id="fsc"></div><p class="hint">Sin selección = todos</p></div><div class="form-group"><label>Duración</label><select id="fdu"><option value="dia">Solo hoy</option><option value="labor_completa">Labor completa</option></select></div><div class="form-group"><label>Fecha</label><input type="date" id="ffe" value="'+new Date().toISOString().slice(0,10)+'"/></div><div class="form-group"><label>Notas</label><input type="text" id="fno" placeholder="Opcional..."/></div><button class="btn-primary" id="fgo">Asignar orden</button></div>';
   formSurcos = [];
   document.getElementById('fpl').addEventListener('change', function(){
     var tablas = cats.tablas.filter(function(t){ return t.plantacion_id===this.value; }.bind(this));
@@ -387,7 +387,7 @@ function renderSurcosForm(){
 }
 
 function guardarOrden(){
-  var opIds=Array.from(document.querySelectorAll('.op-check:checked')).map(function(c){return c.value;}), opId=opIds[0], tbId=document.getElementById('ftb').value, lbId=document.getElementById('flb').value;
+  var opIds=Array.from(document.querySelectorAll('.op-chip.sel')).map(function(c){return c.getAttribute('data-id');}), opId=opIds[0], tbId=document.getElementById('ftb').value, lbId=document.getElementById('flb').value;
   if(!opIds||!opIds.length||!tbId||!lbId){alert('Selecciona al menos un operario.');return;}
   var sub=document.getElementById('fsb').value||null;
   var cant=parseFloat(document.getElementById('fca').value)||null;
@@ -573,6 +573,19 @@ function renderFormCambiarPin(id,nombre){
   });
 }
 
+function toggleChipOp(btn){
+  if(btn.classList.contains('sel')){
+    btn.classList.remove('sel');
+    btn.style.background='var(--gris-1)';
+    btn.style.borderColor='var(--gris-2)';
+    btn.style.color='var(--negro)';
+  } else {
+    btn.classList.add('sel');
+    btn.style.background='var(--verde-tenue)';
+    btn.style.borderColor='var(--verde-mid)';
+    btn.style.color='var(--verde)';
+  }
+}
 function salir(){usuario=null;pin='';dibujarPin();setError('');mostrar('screen-login');}
 
 document.addEventListener('DOMContentLoaded', function(){
