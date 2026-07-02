@@ -279,6 +279,7 @@ function verificarPin() {
       } else {
         document.getElementById('enc-nombre').textContent = usuario.nombre + ' · ' + usuario.rol;
         mostrar('screen-encargado');
+        if(usuario.rol==='admin'||usuario.rol==='dueño') document.getElementById('tab-config').style.display='';
         renderTablero();
       }
     });
@@ -356,7 +357,7 @@ function renderFormAsignar() {
   var opO = cats.operarios.map(function(o){ return '<label style="display:flex;align-items:center;gap:6px;padding:.6rem .75rem;background:var(--gris-1);border-radius:8px;cursor:pointer;font-size:.9rem;"><input type="checkbox" class="op-check" value="'+o.id+'" style="width:18px;height:18px;accent-color:#2d6644;flex-shrink:0;"/> '+o.nombre+'</label>'; }).join('');
   var pO = cats.plantaciones.map(function(p){ return '<option value="'+p.id+'">'+p.nombre+'</option>'; }).join('');
   var lO = cats.tiposLabor.map(function(l){ return '<option value="'+l.id+'">'+l.nombre+'</option>'; }).join('');
-  body.innerHTML = '<div class="form-card"><h3>Nueva orden de trabajo</h3><div class="form-group"><label>Operario</label><select id="fop"><option value="">Selecciona...</option>'+opO+'</select></div><div class="form-group"><label>Plantación</label><select id="fpl"><option value="">Selecciona...</option>'+pO+'</select></div><div class="form-group"><label>Tabla</label><select id="ftb"><option value="">Primero elige plantación</option></select></div><div class="form-group"><label>Labor</label><select id="flb"><option value="">Selecciona...</option>'+lO+'</select></div><div class="form-group" id="fsg" style="display:none"><label>Detalle</label><select id="fsb"><option value="">Selecciona...</option></select></div><div class="form-group" id="fcg" style="display:none"><label>Cantidad esperada</label><input type="number" id="fca" placeholder="0" min="0"/></div><div class="form-group"><label>Surcos</label><div class="surcos-grid" id="fsc"></div><p class="hint">Sin selección = todos</p></div><div class="form-group"><label>Duración</label><select id="fdu"><option value="dia">Solo hoy</option><option value="labor_completa">Labor completa</option></select></div><div class="form-group"><label>Fecha</label><input type="date" id="ffe" value="'+new Date().toISOString().slice(0,10)+'"/></div><div class="form-group"><label>Notas</label><input type="text" id="fno" placeholder="Opcional..."/></div><button class="btn-primary" id="fgo">Asignar orden</button></div>';
+  body.innerHTML = '<div class="form-card"><h3>Nueva orden de trabajo</h3><div class="form-group"><label>Operarios</label><div id="fop" style="display:flex;flex-direction:column;gap:4px;">'+opO+'</div></div><div class="form-group"><label>Plantación</label><select id="fpl"><option value="">Selecciona...</option>'+pO+'</select></div><div class="form-group"><label>Tabla</label><select id="ftb"><option value="">Primero elige plantación</option></select></div><div class="form-group"><label>Labor</label><select id="flb"><option value="">Selecciona...</option>'+lO+'</select></div><div class="form-group" id="fsg" style="display:none"><label>Detalle</label><select id="fsb"><option value="">Selecciona...</option></select></div><div class="form-group" id="fcg" style="display:none"><label>Cantidad esperada</label><input type="number" id="fca" placeholder="0" min="0"/></div><div class="form-group"><label>Surcos</label><div class="surcos-grid" id="fsc"></div><p class="hint">Sin selección = todos</p></div><div class="form-group"><label>Duración</label><select id="fdu"><option value="dia">Solo hoy</option><option value="labor_completa">Labor completa</option></select></div><div class="form-group"><label>Fecha</label><input type="date" id="ffe" value="'+new Date().toISOString().slice(0,10)+'"/></div><div class="form-group"><label>Notas</label><input type="text" id="fno" placeholder="Opcional..."/></div><button class="btn-primary" id="fgo">Asignar orden</button></div>';
   formSurcos = [];
   document.getElementById('fpl').addEventListener('change', function(){
     var tablas = cats.tablas.filter(function(t){ return t.plantacion_id===this.value; }.bind(this));
@@ -501,14 +502,16 @@ function renderConfig(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="loading">Cargando usuarios...</div>';
   from('usuarios').select('id,nombre,rol,activo').order('nombre').get().then(function(users){
-    var roles={admin:'Admin',encargado:'Encargado',operario:'Operario',ingeniero:'Ingeniero','dueño':'Dueño',inversionista:'Inversionista'};
+    var roles={admin:'Admin',encargado:'Encargado',operario:'Operario',ingeniero:'Ingeniero','dueño':'Dueño',inversionista:'Inversionista',cosechador:'Cosechador',galerista:'Galerista'};
   var roleColors={
-    admin:'background:#1a3a2a;color:#fff',
-    encargado:'background:#2980b9;color:#fff',
-    operario:'background:#e6a817;color:#fff',
-    ingeniero:'background:#6c3483;color:#fff',
-    'dueño':'background:#c0392b;color:#fff',
-    inversionista:'background:#e67e22;color:#fff'
+    admin:'background:#c0392b;color:#fff',
+    encargado:'background:#e6a817;color:#1a1a18',
+    operario:'background:#4a9a6a;color:#fff',
+    ingeniero:'background:#e67e22;color:#fff',
+    'dueño':'background:#2980b9;color:#fff',
+    inversionista:'background:#6c3483;color:#fff',
+    cosechador:'background:#1a3a2a;color:#fff',
+    galerista:'background:#e91e8c;color:#fff'
   };
     var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><div class="seccion-titulo" style="margin:0">Usuarios</div><button class="btn-sm btn-completar" id="btn-nuevo-usuario">+ Nuevo</button></div>';
     html+=users.map(function(u){
