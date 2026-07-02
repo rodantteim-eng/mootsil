@@ -489,7 +489,7 @@ function renderEjec(){
   } else {
     var cant=labor.requiere_cantidad_insumo?'<div class="resumen-row"><span class="resumen-key">Cantidad</span><span class="resumen-val">'+capturaEjec.cantidad+' '+(labor.unidad_insumo||'litros')+'</span></div>':'';
     var evid=capturaEjec.foto?'<div style="padding:.75rem;background:var(--verde-tenue);border-radius:var(--radio);color:var(--verde);font-size:.85rem;text-align:center;margin-bottom:1rem;">✅ Evidencia capturada</div>':'';
-    body.innerHTML=bar+'<div class="step-label">Último paso</div><div class="step-title">Evidencia (opcional)</div><div style="display:flex;gap:8px;margin-bottom:1rem;"><button onclick="usarCamara()" style="flex:1;padding:1rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio);background:var(--verde-tenue);color:var(--verde);font-size:.85rem;font-weight:600;cursor:pointer;">📷 Cámara</button><button onclick="document.getElementById(\'inp-ev\').click()" style="flex:1;padding:1rem;border:1.5px solid var(--gris-2);border-radius:var(--radio);background:var(--gris-1);font-size:.85rem;cursor:pointer;">🖼️ Galería</button></div>'+evid+'<input type="file" id="inp-ev" accept="image/*,video/*" style="display:none" onchange="capturaEjec.foto=true;renderEjec();"><div class="resumen-card" style="margin-top:.5rem;"><div class="resumen-row"><span class="resumen-key">Labor</span><span class="resumen-val">'+labor.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Área</span><span class="resumen-val">'+(planta?planta.nombre:'')+' · '+tabla.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Surcos</span><span class="resumen-val">'+capturaEjec.surcos.join(', ')+'</span></div>'+cant+'</div><div class="nav-row"><button class="btn-back" onclick="pasoEjec--;renderEjec()">← Atrás</button><button class="btn-next" onclick="guardarEjec()" style="background:var(--tierra)">✅ Guardar</button></div>';
+    body.innerHTML=bar+'<div class="step-label">Último paso</div><div class="step-title">Evidencia (opcional)</div><div style="display:flex;gap:8px;margin-bottom:1rem;"><button onclick="usarCamara()" style="flex:1;padding:1rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio);background:var(--verde-tenue);color:var(--verde);font-size:.85rem;font-weight:600;cursor:pointer;">📷 Cámara</button><button onclick="abrirGaleria()" style="flex:1;padding:1rem;border:1.5px solid var(--gris-2);border-radius:var(--radio);background:var(--gris-1);font-size:.85rem;cursor:pointer;">🖼️ Galería</button></div>'+evid+'<input type="file" id="inp-ev" accept="image/*,video/*" style="display:none" onchange="capturaEjec.foto=true;renderEjec();"><div class="resumen-card" style="margin-top:.5rem;"><div class="resumen-row"><span class="resumen-key">Labor</span><span class="resumen-val">'+labor.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Área</span><span class="resumen-val">'+(planta?planta.nombre:'')+' · '+tabla.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Surcos</span><span class="resumen-val">'+capturaEjec.surcos.join(', ')+'</span></div>'+cant+'</div><div class="nav-row"><button class="btn-back" onclick="pasoEjec--;renderEjec()">← Atrás</button><button class="btn-next" onclick="guardarEjec()" style="background:var(--tierra)">✅ Guardar</button></div>';
   }
 }
 
@@ -587,29 +587,16 @@ function guardarPin(id){
 
 function bajaUsuario(id){if(confirm('¿Dar de baja?')) from('usuarios').eq('id',id).update({activo:false}).then(function(){renderConfig();});}
 function altaUsuario(id){from('usuarios').eq('id',id).update({activo:true}).then(function(){renderConfig();});}
-function usarCamara(){
-  if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia){
-    navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false}).then(function(stream){
-      stream.getTracks().forEach(function(t){t.stop();});
-      var input=document.createElement('input');
-      input.type='file';input.accept='image/*,video/*';input.capture='environment';
-      input.onchange=function(){capturaEjec.foto=this.files.length>0;renderEjec();};
-      input.click();
-    }).catch(function(){
-      document.getElementById('inp-ev').click();
-    });
-  } else {
-    var input=document.createElement('input');
-    input.type='file';input.accept='image/*,video/*';input.capture='environment';
-    input.onchange=function(){capturaEjec.foto=this.files.length>0;renderEjec();};
-    input.click();
-  }
-}
+function usarCamara(){document.getElementById('cam-input').click();}
+function abrirGaleria(){document.getElementById('gal-input').click();}
 function salir(){usuario=null;pin='';dibujarPin();setErr('');mostrar('screen-login');}
 
 if('serviceWorker' in navigator){
   navigator.serviceWorker.getRegistrations().then(function(regs){regs.forEach(function(r){r.unregister();});});
 }
 </script>
+
+<input type="file" id="cam-input" accept="image/*,video/*" capture="environment" style="display:none" onchange="capturaEjec.foto=true;renderEjec();">
+<input type="file" id="gal-input" accept="image/*,video/*" style="display:none" onchange="capturaEjec.foto=true;renderEjec();">
 </body>
 </html>
