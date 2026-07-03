@@ -113,6 +113,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .orden-badge-rol{font-size:.65rem;font-weight:700;padding:.2rem .55rem;border-radius:20px;text-transform:uppercase;}
 .prog-bar{background:var(--gris-2);border-radius:4px;height:6px;margin-bottom:.75rem;}
 .prog-fill{height:6px;border-radius:4px;}
+#toast{position:fixed;bottom:1.5rem;right:1rem;background:var(--verde);color:#fff;padding:.75rem 1.1rem;border-radius:12px;font-size:.85rem;font-weight:600;z-index:8888;display:none;box-shadow:0 4px 20px rgba(0,0,0,.3);max-width:280px;line-height:1.4;}
+.rep-view-btn{padding:.4rem .9rem;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.75rem;font-weight:600;cursor:pointer;color:var(--negro);}
+.rep-view-btn.active{background:var(--verde-mid);border-color:var(--verde-mid);color:#fff;}
 
 #cam-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:9999;display:none;flex-direction:column;}
 #cam-video{flex:1;width:100%;object-fit:cover;}
@@ -159,7 +162,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="tabs">
     <button class="tab active" id="tab-tablero" onclick="tabEncargado('tablero')">Tablero</button>
     <button class="tab" id="tab-asignar" onclick="tabEncargado('asignar')">+ Asignar</button>
-    <button class="tab" id="tab-notif" onclick="tabEncargado('notif')">Avisos</button>
+    <button class="tab" id="tab-notif" onclick="tabEncargado('notif')">Avisos <span id="badge-avisos" style="display:none;background:var(--tierra);color:#fff;border-radius:50%;width:16px;height:16px;font-size:.6rem;font-weight:700;align-items:center;justify-content:center;margin-left:3px;vertical-align:middle;">0</span></button>
     <button class="tab" id="tab-reporte" onclick="tabEncargado('reporte')">Reporte</button>
     <button class="tab" id="tab-config" onclick="tabEncargado('config')" style="display:none">⚙️</button>
   </div>
@@ -186,6 +189,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
 
 
+<div id="toast"></div>
 <div id="cam-overlay">
   <video id="cam-video" autoplay playsinline muted></video>
   <canvas id="cam-canvas"></canvas>
@@ -249,6 +253,12 @@ var ICONOS={'Via riego':'💧','Foliar':'🌿','Drench':'🧪','Poda':'✂️','
 var colaOffline=JSON.parse(localStorage.getItem('mootsil_cola')||'[]');
 var camStream=null, camFacing='environment', mediaRecorder=null, grabando=false, videoChunks=[];
 
+function showToast(msg){
+  var t=document.getElementById('toast');
+  t.innerHTML=msg; t.style.display='block';
+  clearTimeout(window._toastTimer);
+  window._toastTimer=setTimeout(function(){t.style.display='none';},4000);
+}
 function mostrar(id){document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});document.getElementById(id).classList.add('active');}
 
 function pinDigit(d){if(pin.length>=4)return;pin+=d;dibujarPin();if(pin.length===4)verificarPin();}
@@ -272,6 +282,8 @@ function verificarPin(){
         mostrar('screen-encargado');
         if(usuario.rol==='admin'||usuario.rol==='dueño') document.getElementById('tab-config').style.display='';
         renderTablero();
+        setInterval(actualizarBadgeAvisos,15000);
+        actualizarBadgeAvisos();
       }
     });
   }).catch(function(e){setErr('Error: '+e.message);pin='';dibujarPin();});
@@ -417,10 +429,22 @@ function renderNotifs(bodyId){
   });
 }
 
+function actualizarBadgeAvisos(){
+  from('notificaciones').select('id').eq('leida',false).get().then(function(data){
+    var n=data?data.length:0;
+    var badge=document.getElementById('badge-avisos');
+    if(badge){badge.textContent=n;badge.style.display=n>0?'inline-flex':'none';}
+  });
+}
+var repVista='tabla';
 function renderReporte(){
   var body=document.getElementById('enc-body');
   var hoy=new Date().toISOString().slice(0,10);
-  body.innerHTML='<div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;flex-wrap:wrap;"><label style="font-size:.8rem;color:var(--gris-3);font-weight:600;">FECHA</label><input type="date" id="fecha-rep" value="'+hoy+'" style="padding:.4rem .6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;background:var(--gris-1);"><button onclick="cargarReporte()" style="padding:.4rem .9rem;border:none;border-radius:var(--radio-sm);background:var(--verde-mid);color:#fff;font-size:.8rem;font-weight:600;cursor:pointer;">Ver</button></div><div id="rep-body"><div class="loading">Selecciona una fecha y toca Ver</div></div>';
+  var vistaOpts=['trabajador','plantacion','tabla','tarea'];
+  var vistaIcons=['👷','🌿','📋','🔧'];
+  var vistaNombres=['Trabajador','Plantación','Tabla','Tarea'];
+  var btnVistas=vistaOpts.map(function(v,idx){return '<button class="rep-view-btn'+(repVista===v?' active':'')+'" onclick="repVista=\''+v+'\';cargarReporte()">'+vistaIcons[idx]+' '+vistaNombres[idx]+'</button>';}).join('');
+  body.innerHTML='<div style="display:flex;align-items:center;gap:8px;margin-bottom:.75rem;flex-wrap:wrap;"><label style="font-size:.8rem;color:var(--gris-3);font-weight:600;">FECHA</label><input type="date" id="fecha-rep" value="'+hoy+'" style="padding:.4rem .6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;background:var(--gris-1);"><button onclick="cargarReporte()" style="padding:.4rem .9rem;border:none;border-radius:var(--radio-sm);background:var(--verde-mid);color:#fff;font-size:.8rem;font-weight:600;cursor:pointer;">Ver</button></div><div style="display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap;">'+btnVistas+'</div><div id="rep-body"><div class="loading">Cargando...</div></div>';
   cargarReporte();
 }
 
@@ -572,6 +596,7 @@ function ejecutarGuardadoFinal(o){
   from('registros_labor').insert(reg).then(function(){
     from('ordenes_trabajo').eq('id',o.id).update({estado:'completada'}).then(function(){
       var lb=cats.tiposLabor.find(function(l){return l.id===o.tipo_labor_id;}), tb=cats.tablas.find(function(t){return t.id===o.tabla_id;});
+      showToast('✅ '+usuario.nombre+' completó '+(lb?lb.nombre:'')+' en '+(tb?tb.nombre:''));
       from('notificaciones').insert({titulo:'✅ Labor completada',cuerpo:usuario.nombre+' completó '+(lb?lb.nombre:'')+' en '+(tb?tb.nombre:'')+' — Surcos: '+capturaEjec.surcos.join(', '),icono:'✅',leida:false,para_rol:'encargado'}).then(function(){
         document.getElementById('exito-sub').textContent='Registro guardado. El encargado recibirá un aviso.';
         mostrar('screen-exito'); ordenEjecutando=null;
