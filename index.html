@@ -445,17 +445,7 @@ function cargarReporte(){
       t.ordenes.forEach(function(o){
         var ic=o.estado==='completada'?'✅':o.estado==='en_proceso'?'🔄':'⏳';
         var su=(o.surcos_asignados&&o.surcos_asignados.length)?o.surcos_asignados.join(', '):'Todos';
-        from('registros_labor').select('foto_url').eq('orden_id',o.id).get().then(function(regs){
-          var foto='';
-          if(regs&&regs.length&&regs[0].foto_url&&regs[0].foto_url!=='pendiente'){
-            foto='<img src="'+regs[0].foto_url+'" style="width:60px;height:60px;object-fit:cover;border-radius:6px;margin-left:8px;cursor:pointer;" onclick="window.open(this.src)">';
-          }
-          var row=document.createElement('div');
-          row.style.cssText='font-size:.78rem;padding:.3rem 0;border-bottom:1px solid var(--gris-1);display:flex;justify-content:space-between;align-items:center;';
-          row.innerHTML='<span>'+ic+' '+o.tipo_labor.nombre+' · '+(o.operario?o.operario.nombre:'')+'</span><span style="display:flex;align-items:center;gap:4px;color:var(--gris-3)">'+su+foto+'</span>';
-          document.getElementById('rep-'+o.id).appendChild(row);
-        });
-        html+='<div id="rep-'+o.id+'"></div>';
+        html+='<div style="font-size:.78rem;padding:.5rem 0;border-bottom:1px solid var(--gris-1);"><div style="display:flex;justify-content:space-between;align-items:center;"><span>'+ic+' '+o.tipo_labor.nombre+' · '+(o.operario?o.operario.nombre:'')+'</span><span style="color:var(--gris-3)">'+su+'</span></div><div id="foto-'+o.id+'"></div></div>';
       });
       html+='</div>';
     });
