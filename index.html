@@ -122,6 +122,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .riego-circle.roja{background:var(--rojo);}
 .riego-circle.verde{background:var(--verde-mid);}
 .riego-circle.activa{background:var(--tierra);}
+.riego-circle.neutra{background:var(--gris-1);border:2px solid var(--gris-2);color:var(--gris-3);box-shadow:none;}
 .riego-circle small{font-weight:500;font-size:.65rem;opacity:.85;margin-top:2px;}
 .riego-ejec-card{background:var(--blanco);border-radius:var(--radio);padding:1.75rem 1.25rem;text-align:center;transition:background .3s;}
 .riego-ejec-min{font-size:2.6rem;font-weight:800;color:var(--verde-mid);margin-bottom:.5rem;font-variant-numeric:tabular-nums;}
@@ -373,6 +374,9 @@ function cambiarEstado(id,estado){
 }
 
 var asignarLaborSel=null;
+var riegoAsigMinutos={}, riegoAsigOperarios=[], riegoAsigFecha=null;
+
+function tableroLinkHtml(){return '<div style="text-align:center;margin-top:.6rem;"><button type="button" onclick="tabEncargado(\'tablero\')" style="border:none;background:none;color:var(--gris-3);font-size:.75rem;font-weight:600;cursor:pointer;text-decoration:underline;">🏠 Volver a Tablero</button></div>';}
 
 function renderFormAsignar(){
   asignarLaborSel=null;
@@ -380,12 +384,17 @@ function renderFormAsignar(){
   var tiles=cats.tiposLabor.map(function(l){
     return '<div class="labor-tile" data-id="'+l.id+'" data-nombre="'+l.nombre+'"><div class="labor-tile-ic">'+(ICONOS[l.nombre]||'🔧')+'</div><div class="labor-tile-lbl">'+l.nombre+'</div></div>';
   }).join('');
-  body.innerHTML='<div class="seccion-titulo">Paso 1 de 2 · Selecciona la labor</div><div class="labor-grid">'+tiles+'<div class="labor-tile labor-tile-otra" id="labor-otra-tile"><div class="labor-tile-ic">➕</div><div class="labor-tile-lbl">Otra</div></div></div><div id="labor-otra-box" style="display:none;margin-top:.75rem;" class="form-card"><label style="display:block;font-size:.75rem;font-weight:600;color:var(--gris-3);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">Nombre de la labor</label><input type="text" id="labor-otra-input" placeholder="Ej. Fertirriego" style="width:100%;padding:.65rem .75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;background:var(--gris-1);margin-bottom:.6rem;"><button class="btn-primary" id="labor-otra-btn">Usar esta labor</button></div>';
+  body.innerHTML='<div class="seccion-titulo">Paso 1 de 2 · Selecciona la labor</div><div class="labor-grid">'+tiles+'<div class="labor-tile labor-tile-otra" id="labor-otra-tile"><div class="labor-tile-ic">➕</div><div class="labor-tile-lbl">Otra</div></div></div><div id="labor-otra-box" style="display:none;margin-top:.75rem;" class="form-card"><label style="display:block;font-size:.75rem;font-weight:600;color:var(--gris-3);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">Nombre de la labor</label><input type="text" id="labor-otra-input" placeholder="Ej. Fertirriego" style="width:100%;padding:.65rem .75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;background:var(--gris-1);margin-bottom:.6rem;"><button class="btn-primary" id="labor-otra-btn">Usar esta labor</button></div>'+tableroLinkHtml();
   body.querySelectorAll('.labor-tile[data-id]').forEach(function(el){
     el.addEventListener('click',function(){
       var lb=cats.tiposLabor.find(function(l){return l.id===this.dataset.id;}.bind(this));
       asignarLaborSel=lb;
-      renderFormAsignarPaso2();
+      if(lb&&lb.requiere_tiempo){
+        riegoAsigMinutos={};riegoAsigOperarios=[];riegoAsigFecha=new Date().toISOString().slice(0,10);
+        renderAsigRiegoPlantaciones();
+      } else {
+        renderFormAsignarPaso2();
+      }
     });
   });
   document.getElementById('labor-otra-tile').addEventListener('click',function(){
@@ -415,7 +424,7 @@ function renderFormAsignarPaso2(){
   var opO=cats.operarios.map(function(o){return '<button type="button" class="op-chip" data-id="'+o.id+'" onclick="toggleChip(this)">'+o.nombre+'</button>';}).join('');
   var pO=cats.plantaciones.map(function(p){return '<option value="'+p.id+'">'+p.nombre+'</option>';}).join('');
   var esTiempo=!!(lb&&lb.requiere_tiempo);
-  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Paso 2 de 2 · Detalles<button type="button" onclick="renderFormAsignar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cambiar labor</button></div><div class="form-card"><div class="labor-chosen">'+(ICONOS[lb.nombre]||'🔧')+' <strong>'+lb.nombre+'</strong></div><div class="form-group"><label>Operarios</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Plantación</label><select id="fpl"><option value="">Selecciona...</option>'+pO+'</select></div><div class="form-group" id="ftb-wrap" style="display:'+(esTiempo?'none':'')+'"><label>Tabla</label><select id="ftb"><option value="">Primero elige plantación</option></select></div><div class="form-group" id="fsg" style="display:none"><label>Detalle</label><select id="fsb"></select></div><div class="form-group" id="fcg" style="display:'+(lb.requiere_cantidad_insumo?'':'none')+'"><label>Cantidad esperada</label><input type="number" id="fca" placeholder="0" min="0"/></div><div class="form-group" id="frg" style="display:'+(esTiempo?'':'none')+'"><label>Duración de riego por tabla (minutos)</label><div id="frg-tablas"></div><p class="hint">Deja vacío la tabla que no quieras asignar hoy.</p></div><div class="form-group" id="fsurcos-wrap" style="display:'+(esTiempo?'none':'')+'"><label>Surcos a trabajar</label><div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;"><button type="button" onclick="selTodosF()" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">Tabla completa</button><button type="button" onclick="selNingunoF()" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.78rem;cursor:pointer;">Limpiar</button></div><div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;"><span style="font-size:.78rem;color:var(--gris-3)">Del surco</span><input type="number" id="f-ri" min="1" style="width:52px;padding:3px 6px;border:1.5px solid var(--gris-2);border-radius:6px;font-size:.85rem;" placeholder="1"><span style="font-size:.78rem;color:var(--gris-3)">al</span><input type="number" id="f-rf" min="1" style="width:52px;padding:3px 6px;border:1.5px solid var(--gris-2);border-radius:6px;font-size:.85rem;" placeholder="12"><button type="button" onclick="aplicarRangoF()" style="padding:4px 10px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.78rem;cursor:pointer;">Aplicar</button></div><div class="surcos-grid" id="fsc"></div><p class="hint">O toca surcos individuales</p></div><div class="form-group"><label>Duración</label><select id="fdu"><option value="dia">Solo hoy</option><option value="labor_completa">Labor completa</option></select></div><div class="form-group"><label>Fecha</label><input type="date" id="ffe" value="'+new Date().toISOString().slice(0,10)+'"/></div><div class="form-group"><label>Notas</label><input type="text" id="fno" placeholder="Opcional..."/></div><button class="btn-primary" onclick="guardarOrden()">Asignar orden</button></div>';
+  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Paso 2 de 2 · Detalles<button type="button" onclick="renderFormAsignar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cambiar labor</button></div><div class="form-card"><div class="labor-chosen">'+(ICONOS[lb.nombre]||'🔧')+' <strong>'+lb.nombre+'</strong></div><div class="form-group"><label>Operarios</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Plantación</label><select id="fpl"><option value="">Selecciona...</option>'+pO+'</select></div><div class="form-group" id="ftb-wrap" style="display:'+(esTiempo?'none':'')+'"><label>Tabla</label><select id="ftb"><option value="">Primero elige plantación</option></select></div><div class="form-group" id="fsg" style="display:none"><label>Detalle</label><select id="fsb"></select></div><div class="form-group" id="fcg" style="display:'+(lb.requiere_cantidad_insumo?'':'none')+'"><label>Cantidad esperada</label><input type="number" id="fca" placeholder="0" min="0"/></div><div class="form-group" id="frg" style="display:'+(esTiempo?'':'none')+'"><label>Duración de riego por tabla (minutos)</label><div id="frg-tablas"></div><p class="hint">Deja vacío la tabla que no quieras asignar hoy.</p></div><div class="form-group" id="fsurcos-wrap" style="display:'+(esTiempo?'none':'')+'"><label>Surcos a trabajar</label><div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;"><button type="button" onclick="selTodosF()" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">Tabla completa</button><button type="button" onclick="selNingunoF()" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.78rem;cursor:pointer;">Limpiar</button></div><div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;"><span style="font-size:.78rem;color:var(--gris-3)">Del surco</span><input type="number" id="f-ri" min="1" style="width:52px;padding:3px 6px;border:1.5px solid var(--gris-2);border-radius:6px;font-size:.85rem;" placeholder="1"><span style="font-size:.78rem;color:var(--gris-3)">al</span><input type="number" id="f-rf" min="1" style="width:52px;padding:3px 6px;border:1.5px solid var(--gris-2);border-radius:6px;font-size:.85rem;" placeholder="12"><button type="button" onclick="aplicarRangoF()" style="padding:4px 10px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.78rem;cursor:pointer;">Aplicar</button></div><div class="surcos-grid" id="fsc"></div><p class="hint">O toca surcos individuales</p></div><div class="form-group"><label>Duración</label><select id="fdu"><option value="dia">Solo hoy</option><option value="labor_completa">Labor completa</option></select></div><div class="form-group"><label>Fecha</label><input type="date" id="ffe" value="'+new Date().toISOString().slice(0,10)+'"/></div><div class="form-group"><label>Notas</label><input type="text" id="fno" placeholder="Opcional..."/></div><button class="btn-primary" onclick="guardarOrden()">Asignar orden</button></div>'+tableroLinkHtml();
   formSurcos=[];
   var sbs=cats.subtiposLabor.filter(function(s){return s.tipo_labor_id===lb.id;});
   if(sbs.length){document.getElementById('fsb').innerHTML='<option value="">Selecciona...</option>'+sbs.map(function(s){return '<option value="'+s.id+'">'+s.nombre+'</option>';}).join('');document.getElementById('fsg').style.display='';}
@@ -436,6 +445,96 @@ function renderRiegoForm(){
   var ts=cats.tablas.filter(function(t){return t.plantacion_id===plId;});
   if(!ts.length){cont.innerHTML='<p class="hint">Primero elige una plantación.</p>';return;}
   cont.innerHTML=ts.map(function(t){return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><span style="flex:1;font-size:.85rem;font-weight:600;">'+t.nombre+'</span><input type="number" min="0" class="riego-min" data-tabla="'+t.id+'" placeholder="min" style="width:70px;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;background:var(--gris-1);"></div>';}).join('');
+}
+
+function renderAsigRiegoPlantaciones(){
+  var body=document.getElementById('enc-body');
+  var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">💧 Riego · Elige plantación<button type="button" onclick="renderFormAsignar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cambiar labor</button></div><div class="riego-grid">';
+  cats.plantaciones.forEach(function(p){
+    var tabs=cats.tablas.filter(function(t){return t.plantacion_id===p.id;});
+    var asignadas=tabs.filter(function(t){return riegoAsigMinutos[t.id]>0;}).length;
+    var cls=asignadas>0?'verde':'neutra';
+    html+='<div class="riego-circle '+cls+'" data-pid="'+p.id+'"><span>'+p.nombre+'</span><small>'+asignadas+'/'+tabs.length+' tablas</small></div>';
+  });
+  html+='</div>';
+  var totalAsig=Object.keys(riegoAsigMinutos).filter(function(k){return riegoAsigMinutos[k]>0;}).length;
+  html+='<button class="btn-primary" style="margin-top:1.25rem;" '+(totalAsig?'':'disabled')+' onclick="renderAsigRiegoOperarios()">Continuar → ('+totalAsig+' tabla'+(totalAsig===1?'':'s')+' con tiempo)</button>'+tableroLinkHtml();
+  body.innerHTML=html;
+  body.querySelectorAll('[data-pid]').forEach(function(el){el.addEventListener('click',function(){renderAsigRiegoTablas(this.dataset.pid);});});
+}
+
+function renderAsigRiegoTablas(plantacionId){
+  var body=document.getElementById('enc-body');
+  var p=cats.plantaciones.find(function(x){return x.id===plantacionId;});
+  var tabs=cats.tablas.filter(function(t){return t.plantacion_id===plantacionId;});
+  var html='<div class="seccion-titulo">💧 '+(p?p.nombre:'')+' · Elige tabla</div><div class="riego-grid">';
+  tabs.forEach(function(t){
+    var min=riegoAsigMinutos[t.id];
+    var cls=min>0?'verde':'neutra';
+    html+='<div class="riego-circle '+cls+'" data-tid="'+t.id+'"><span>'+t.nombre+'</span><small>'+(min>0?min+' min':'sin asignar')+'</small></div>';
+  });
+  html+='</div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigRiegoPlantaciones()">← Volver a plantaciones</button>'+tableroLinkHtml();
+  body.innerHTML=html;
+  body.querySelectorAll('[data-tid]').forEach(function(el){el.addEventListener('click',function(){renderAsigRiegoMinutos(this.dataset.tid,plantacionId);});});
+}
+
+function renderAsigRiegoMinutos(tablaId,plantacionId){
+  var body=document.getElementById('enc-body');
+  var t=cats.tablas.find(function(x){return x.id===tablaId;});
+  var actual=riegoAsigMinutos[tablaId]||'';
+  body.innerHTML='<div class="seccion-titulo">💧 '+t.nombre+' · Duración de riego</div><div class="riego-ejec-card"><input type="number" id="riego-min-input" min="0" value="'+actual+'" placeholder="0" style="width:100%;text-align:center;font-size:2.4rem;font-weight:800;color:var(--verde-mid);border:none;background:transparent;outline:none;"><p class="hint">minutos</p><button class="btn-primary" id="riego-min-guardar">Guardar y seguir</button>'+(actual?'<button class="btn-sm btn-cancelar" style="margin-top:.6rem;width:100%;" id="riego-min-quitar">Quitar esta tabla</button>':'')+'</div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigRiegoTablas(\''+plantacionId+'\')">← Volver a tablas</button>'+tableroLinkHtml();
+  document.getElementById('riego-min-guardar').addEventListener('click',function(){
+    var v=parseInt(document.getElementById('riego-min-input').value)||0;
+    if(v>0) riegoAsigMinutos[tablaId]=v; else delete riegoAsigMinutos[tablaId];
+    renderAsigRiegoTablas(plantacionId);
+  });
+  var q=document.getElementById('riego-min-quitar');
+  if(q) q.addEventListener('click',function(){delete riegoAsigMinutos[tablaId];renderAsigRiegoTablas(plantacionId);});
+}
+
+function renderAsigRiegoOperarios(){
+  var body=document.getElementById('enc-body');
+  var opO=cats.operarios.map(function(o){return '<button type="button" class="op-chip'+(riegoAsigOperarios.indexOf(o.id)>-1?' sel':'')+'" data-id="'+o.id+'" onclick="toggleChip(this)">'+o.nombre+'</button>';}).join('');
+  var resumen=Object.keys(riegoAsigMinutos).filter(function(k){return riegoAsigMinutos[k]>0;}).map(function(tid){var t=cats.tablas.find(function(x){return x.id===tid;});return t?t.nombre+' ('+riegoAsigMinutos[tid]+' min)':'';}).join(', ');
+  body.innerHTML='<div class="seccion-titulo">💧 Riego · ¿Quién lo hace?</div><div class="form-card"><p class="hint" style="margin-bottom:.9rem;">Tablas: '+resumen+'</p><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1rem;">'+opO+'</div><button class="btn-primary" id="riego-op-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigRiegoPlantaciones()">← Volver a tablas</button>'+tableroLinkHtml();
+  document.getElementById('riego-op-continuar').addEventListener('click',function(){
+    var opIds=Array.from(document.querySelectorAll('.op-chip.sel')).map(function(c){return c.dataset.id;});
+    if(!opIds.length){alert('Selecciona al menos un operario.');return;}
+    riegoAsigOperarios=opIds;
+    renderAsigRiegoFecha();
+  });
+}
+
+function renderAsigRiegoFecha(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo">💧 Riego · Fecha</div><div class="form-card"><div class="form-group"><label>Fecha de riego</label><input type="date" id="riego-fecha-input" value="'+(riegoAsigFecha||new Date().toISOString().slice(0,10))+'"></div><button class="btn-primary" id="riego-fecha-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigRiegoOperarios()">← Volver a operarios</button>'+tableroLinkHtml();
+  document.getElementById('riego-fecha-continuar').addEventListener('click',function(){
+    riegoAsigFecha=document.getElementById('riego-fecha-input').value||new Date().toISOString().slice(0,10);
+    renderAsigRiegoNotas();
+  });
+}
+
+function renderAsigRiegoNotas(){
+  var body=document.getElementById('enc-body');
+  var resumen=Object.keys(riegoAsigMinutos).filter(function(k){return riegoAsigMinutos[k]>0;}).map(function(tid){var t=cats.tablas.find(function(x){return x.id===tid;});return t?t.nombre+' · '+riegoAsigMinutos[tid]+' min':'';}).join('<br>');
+  var opNombres=riegoAsigOperarios.map(function(id){var o=cats.operarios.find(function(x){return x.id===id;});return o?o.nombre:'';}).join(', ');
+  body.innerHTML='<div class="seccion-titulo">💧 Riego · Notas (opcional)</div><div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row"><span class="resumen-key">Tablas</span></div><div style="font-size:.82rem;padding:.35rem 0;">'+resumen+'</div><div class="resumen-row"><span class="resumen-key">Operarios</span><span class="resumen-val">'+opNombres+'</span></div><div class="resumen-row"><span class="resumen-key">Fecha</span><span class="resumen-val">'+riegoAsigFecha+'</span></div></div><div class="form-group"><input type="text" id="riego-notas-input" placeholder="Notas para el operario..."></div><button class="btn-primary" id="riego-finalizar">✅ Asignar riego</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigRiegoFecha()">← Volver a fecha</button>'+tableroLinkHtml();
+  document.getElementById('riego-finalizar').addEventListener('click',guardarRiegoAsignacion);
+}
+
+function guardarRiegoAsignacion(){
+  var btn=document.getElementById('riego-finalizar'); if(btn){btn.disabled=true;btn.textContent='Guardando...';}
+  var not=document.getElementById('riego-notas-input').value||null;
+  var filas=Object.keys(riegoAsigMinutos).filter(function(k){return riegoAsigMinutos[k]>0;}).map(function(tid){return {tabla:tid,min:riegoAsigMinutos[tid]};});
+  if(!filas.length){alert('No hay tablas con tiempo asignado.');if(btn){btn.disabled=false;btn.textContent='✅ Asignar riego';}return;}
+  var lbId=asignarLaborSel.id;
+  var tareas=[];
+  riegoAsigOperarios.forEach(function(oid){filas.forEach(function(r){tareas.push({asignado_por:usuario.id,operario_id:oid,tabla_id:r.tabla,tipo_labor_id:lbId,duracion_minutos:r.min,duracion:'dia',fecha_asignacion:riegoAsigFecha,notas_encargado:not,estado:'pendiente'});});});
+  Promise.all(tareas.map(function(t){return from('ordenes_trabajo').insert(t);})).then(function(){
+    Promise.all(riegoAsigOperarios.map(function(oid){
+      return from('notificaciones').insert({titulo:'💧 Riego asignado',cuerpo:usuario.nombre+' asignó riego en '+filas.length+' tabla(s)',icono:'💧',leida:false,para_rol:'operario',para_usuario:oid});
+    })).then(function(){tabEncargado('tablero');});
+  }).catch(function(e){alert('Error: '+e.message);if(btn){btn.disabled=false;btn.textContent='✅ Asignar riego';}});
 }
 
 function toggleChip(btn){
@@ -728,8 +827,7 @@ function renderRiegoEjecucion(ordenId){
         riegoAlarmaActiva=true;
         card.classList.add('riego-alarma');
         msg.textContent=neg?'⏰ Tiempo cumplido — cierra esta tabla':'⏰ Faltan 5 min — prepárate para cambiar de tabla';
-        var urgente=restanteMs<=60000;
-        if(urgente||ss%2===0) sonarAlarmaRiego();
+        sonarAlarmaRiego();
       } else {
         card.classList.remove('riego-alarma');
         msg.textContent='Riego en curso';
@@ -746,18 +844,19 @@ function sonarAlarmaRiego(){
     var ctx=riegoAudioCtx;
     if(ctx.state==='suspended') ctx.resume();
     var t0=ctx.currentTime;
-    [0,0.28,0.56].forEach(function(off,i){
-      var o1=ctx.createOscillator(), g=ctx.createGain();
-      o1.type='square';
-      o1.frequency.value=i%2===0?1046:784;
-      g.gain.setValueAtTime(0.0001,t0+off);
-      g.gain.exponentialRampToValueAtTime(0.9,t0+off+0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001,t0+off+0.24);
-      o1.connect(g);g.connect(ctx.destination);
-      o1.start(t0+off);o1.stop(t0+off+0.26);
-    });
+    var o1=ctx.createOscillator(), g=ctx.createGain();
+    o1.type='square';
+    o1.frequency.setValueAtTime(700,t0);
+    o1.frequency.linearRampToValueAtTime(1400,t0+0.45);
+    o1.frequency.linearRampToValueAtTime(700,t0+0.9);
+    g.gain.setValueAtTime(0.0001,t0);
+    g.gain.exponentialRampToValueAtTime(1,t0+0.05);
+    g.gain.setValueAtTime(1,t0+0.85);
+    g.gain.exponentialRampToValueAtTime(0.0001,t0+0.95);
+    o1.connect(g);g.connect(ctx.destination);
+    o1.start(t0);o1.stop(t0+1);
   }catch(e){}
-  if(navigator.vibrate) navigator.vibrate([300,100,300,100,300]);
+  if(navigator.vibrate) navigator.vibrate([350,120,350,120,350]);
 }
 
 function iniciarEjecucion(oid){
