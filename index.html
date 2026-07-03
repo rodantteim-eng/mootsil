@@ -426,7 +426,7 @@ function cargarReporte(){
   var fecha=document.getElementById('fecha-rep')?document.getElementById('fecha-rep').value:new Date().toISOString().slice(0,10);
   var body=document.getElementById('rep-body'); if(!body) return;
   body.innerHTML='<div class="loading">Cargando...</div>';
-  from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre)').eq('fecha_asignacion',fecha).get().then(function(ordenes){
+  from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre)').eq('fecha_asignacion',fecha).order('creado_en',{ascending:false}).get().then(function(ordenes){
     if(!ordenes||!ordenes.length){body.innerHTML='<div class="empty">Sin actividad para esta fecha.</div>';return;}
     var tablas={};
     ordenes.forEach(function(o){
