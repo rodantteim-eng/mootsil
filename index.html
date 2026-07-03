@@ -113,6 +113,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .orden-badge-rol{font-size:.65rem;font-weight:700;padding:.2rem .55rem;border-radius:20px;text-transform:uppercase;}
 .prog-bar{background:var(--gris-2);border-radius:4px;height:6px;margin-bottom:.75rem;}
 .prog-fill{height:6px;border-radius:4px;}
+
+#cam-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:9999;display:none;flex-direction:column;}
+#cam-video{flex:1;width:100%;object-fit:cover;}
+#cam-canvas{display:none;}
+.cam-bar{background:#000;padding:1.5rem;display:flex;justify-content:space-around;align-items:center;}
+.cam-capbtn{width:75px;height:75px;border-radius:50%;border:5px solid #fff;background:#fff;cursor:pointer;font-size:1.8rem;}
+.cam-auxbtn{color:#fff;font-size:.85rem;padding:.5rem 1.25rem;background:rgba(255,255,255,.15);border:none;border-radius:20px;cursor:pointer;}
 </style>
 </head>
 <body>
@@ -178,6 +185,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <button class="btn-nuevo" onclick="mostrar('screen-operario');cargarTareas()">Ver mis tareas</button>
 </div>
 
+
+<div id="cam-overlay">
+  <video id="cam-video" autoplay playsinline muted></video>
+  <canvas id="cam-canvas"></canvas>
+  <div class="cam-bar">
+    <button class="cam-auxbtn" onclick="cerrarCamara()">✕ Cancelar</button>
+    <button class="cam-capbtn" onclick="tomarFoto()">📷</button>
+    <button class="cam-auxbtn" onclick="girarCamara()">🔄 Girar</button>
+  </div>
+</div>
 <script>
 var URL_SB = 'https://ypreafyqnckswvoaerbe.supabase.co';
 var KEY_SB = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwcmVhZnlxbmNrc3d2b2FlcmJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NDE0NjAsImV4cCI6MjA5ODQxNzQ2MH0.2Bwg1HdUXKlw9U3a3-3FvpeNV3iKktJchkL6xbD51DU';
@@ -228,6 +245,7 @@ var ROLES={admin:'Admin',encargado:'Encargado',operario:'Operario',ingeniero:'In
 var ROLE_COLORS={admin:'background:#c0392b;color:#fff',encargado:'background:#e6a817;color:#1a1a18',operario:'background:#4a9a6a;color:#fff',ingeniero:'background:#e67e22;color:#fff','dueño':'background:#2980b9;color:#fff',inversionista:'background:#6c3483;color:#fff',cosechador:'background:#1a3a2a;color:#fff',galerista:'background:#e91e8c;color:#fff'};
 var ICONOS={'Via riego':'💧','Foliar':'🌿','Drench':'🧪','Poda':'✂️','Deshierbado':'🌱','Enrejado':'🔲','Desbrozadora':'🔧','Infraestructura':'🏗️','Sistema de riego':'🚿'};
 var colaOffline=JSON.parse(localStorage.getItem('mootsil_cola')||'[]');
+var camStream=null, camFacing='environment';
 
 function mostrar(id){document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});document.getElementById(id).classList.add('active');}
 
@@ -489,7 +507,7 @@ function renderEjec(){
   } else {
     var cant=labor.requiere_cantidad_insumo?'<div class="resumen-row"><span class="resumen-key">Cantidad</span><span class="resumen-val">'+capturaEjec.cantidad+' '+(labor.unidad_insumo||'litros')+'</span></div>':'';
     var evid=capturaEjec.foto?'<div style="padding:.75rem;background:var(--verde-tenue);border-radius:var(--radio);color:var(--verde);font-size:.85rem;text-align:center;margin-bottom:1rem;">✅ Evidencia capturada</div>':'';
-    body.innerHTML=bar+'<div class="step-label">Último paso</div><div class="step-title">Evidencia (opcional)</div><div style="display:flex;gap:8px;margin-bottom:1rem;"><button onclick="abrirGaleria()" style="width:100%;padding:1.25rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio);background:var(--verde-tenue);color:var(--verde);font-size:.95rem;font-weight:600;cursor:pointer;">📷 Tomar foto o elegir de galería</button></div>'+evid+'<input type="file" id="inp-ev" accept="image/*,video/*" style="display:none" onchange="capturaEjec.foto=true;renderEjec();"><div class="resumen-card" style="margin-top:.5rem;"><div class="resumen-row"><span class="resumen-key">Labor</span><span class="resumen-val">'+labor.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Área</span><span class="resumen-val">'+(planta?planta.nombre:'')+' · '+tabla.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Surcos</span><span class="resumen-val">'+capturaEjec.surcos.join(', ')+'</span></div>'+cant+'</div><div class="nav-row"><button class="btn-back" onclick="pasoEjec--;renderEjec()">← Atrás</button><button class="btn-next" onclick="guardarEjec()" style="background:var(--tierra)">✅ Guardar</button></div>';
+    body.innerHTML=bar+'<div class="step-label">Último paso</div><div class="step-title">Evidencia (opcional)</div><div style="display:flex;gap:8px;margin-bottom:1rem;"><div style="display:flex;gap:8px;margin-bottom:1rem;"><button onclick="abrirCamaraApp()" style="flex:1;padding:1rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio);background:var(--verde-tenue);color:var(--verde);font-size:.9rem;font-weight:600;cursor:pointer;">📷 Cámara</button><button onclick="abrirGaleria()" style="flex:1;padding:1rem;border:1.5px solid var(--gris-2);border-radius:var(--radio);background:var(--gris-1);font-size:.9rem;cursor:pointer;">🖼️ Galería</button></div></div>'+evid+'<input type="file" id="inp-ev" accept="image/*,video/*" style="display:none" onchange="capturaEjec.foto=true;renderEjec();"><div class="resumen-card" style="margin-top:.5rem;"><div class="resumen-row"><span class="resumen-key">Labor</span><span class="resumen-val">'+labor.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Área</span><span class="resumen-val">'+(planta?planta.nombre:'')+' · '+tabla.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Surcos</span><span class="resumen-val">'+capturaEjec.surcos.join(', ')+'</span></div>'+cant+'</div><div class="nav-row"><button class="btn-back" onclick="pasoEjec--;renderEjec()">← Atrás</button><button class="btn-next" onclick="guardarEjec()" style="background:var(--tierra)">✅ Guardar</button></div>';
   }
 }
 
@@ -589,6 +607,48 @@ function bajaUsuario(id){if(confirm('¿Dar de baja?')) from('usuarios').eq('id',
 function altaUsuario(id){from('usuarios').eq('id',id).update({activo:true}).then(function(){renderConfig();});}
 function usarCamara(){document.getElementById('cam-input').click();}
 function abrirGaleria(){document.getElementById('gal-input').click();}
+
+function abrirCamaraApp(){
+  var overlay=document.getElementById('cam-overlay');
+  overlay.style.display='flex';
+  navigator.mediaDevices.getUserMedia({video:{facingMode:camFacing},audio:false}).then(function(stream){
+    camStream=stream;
+    var video=document.getElementById('cam-video');
+    video.srcObject=stream;
+  }).catch(function(e){
+    overlay.style.display='none';
+    alert('No se pudo acceder a la camara. Usa Galeria.');
+  });
+}
+
+function cerrarCamara(){
+  if(camStream) camStream.getTracks().forEach(function(t){t.stop();});
+  camStream=null;
+  document.getElementById('cam-overlay').style.display='none';
+}
+
+function girarCamara(){
+  camFacing=camFacing==='environment'?'user':'environment';
+  if(camStream) camStream.getTracks().forEach(function(t){t.stop();});
+  navigator.mediaDevices.getUserMedia({video:{facingMode:camFacing},audio:false}).then(function(stream){
+    camStream=stream;
+    document.getElementById('cam-video').srcObject=stream;
+  });
+}
+
+function tomarFoto(){
+  var video=document.getElementById('cam-video');
+  var canvas=document.getElementById('cam-canvas');
+  canvas.width=video.videoWidth;
+  canvas.height=video.videoHeight;
+  canvas.getContext('2d').drawImage(video,0,0);
+  canvas.toBlob(function(blob){
+    capturaEjec.foto=true;
+    capturaEjec.fotoBlob=blob;
+    cerrarCamara();
+    renderEjec();
+  },'image/jpeg',0.8);
+}
 function salir(){usuario=null;pin='';dibujarPin();setErr('');mostrar('screen-login');}
 
 if('serviceWorker' in navigator){
