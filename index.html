@@ -523,7 +523,25 @@ function aplicarRangoOp(){
 
 function guardarEjec(){
   var o=ordenEjecutando;
-  var reg={usuario_id:usuario.id,tabla_id:o.tabla_id,tipo_labor_id:o.tipo_labor_id,subtipo_labor_id:o.subtipo_labor_id||null,surcos_trabajados:capturaEjec.surcos,cantidad_insumo:capturaEjec.cantidad||null,foto_url:capturaEjec.fotoUrl||'pendiente',capturado_en:new Date().toISOString(),orden_id:o.id};
+  if(capturaEjec.foto&&capturaEjec.fotoBlob&&!capturaEjec.fotoUrl){
+    // Esperar a que la foto termine de subirse
+    document.getElementById('exito-sub').textContent='Subiendo evidencia...';
+    mostrar('screen-exito');
+    var nombre='evidencia_'+Date.now()+'.jpg';
+    fetch(URL_SB+'/storage/v1/object/evidencias/'+nombre,{method:'POST',headers:{'apikey':KEY_SB,'Authorization':'Bearer '+KEY_SB,'Content-Type':'image/jpeg','x-upsert':'true'},body:capturaEjec.fotoBlob}).then(function(){
+      capturaEjec.fotoUrl=URL_SB+'/storage/v1/object/public/evidencias/'+nombre;
+      ejecutarGuardadoFinal(o);
+    }).catch(function(){
+      capturaEjec.fotoUrl='pendiente';
+      ejecutarGuardadoFinal(o);
+    });
+    return;
+  }
+  ejecutarGuardadoFinal(o);
+}
+
+function ejecutarGuardadoFinal(o){
+  var reg={usuario_id:usuario.id,tabla_id:o.tabla_id,tipo_labor_id:o.tipo_labor_id,subtipo_labor_id:o.subtipo_labor_id||null,surcos_trabajados:capturaEjec.surcos,cantidad_insumo:capturaEjec.cantidad||null,foto_url:capturaEjec.fotoUrl||null,capturado_en:new Date().toISOString(),orden_id:o.id};
   if(!navigator.onLine){
     colaOffline.push(reg);
     localStorage.setItem('mootsil_cola',JSON.stringify(colaOffline));
@@ -533,6 +551,7 @@ function guardarEjec(){
     });
     return;
   }
+  if(!navigator.onLine){colaOffline.push(reg);localStorage.setItem('mootsil_cola',JSON.stringify(colaOffline));from('ordenes_trabajo').eq('id',o.id).update({estado:'completada'}).then(function(){document.getElementById('exito-sub').textContent='Sin señal. Guardado en tu dispositivo.';mostrar('screen-exito');ordenEjecutando=null;});return;}
   from('registros_labor').insert(reg).then(function(){
     from('ordenes_trabajo').eq('id',o.id).update({estado:'completada'}).then(function(){
       var lb=cats.tiposLabor.find(function(l){return l.id===o.tipo_labor_id;}), tb=cats.tablas.find(function(t){return t.id===o.tabla_id;});
@@ -648,20 +667,10 @@ function tomarFoto(){
     capturaEjec.fotoUrl=null;
     cerrarCamara();
     renderEjec();
-    subirFoto(blob);
   },'image/jpeg',0.8);
 }
 
-function subirFoto(blob){
-  var nombre='evidencia_'+Date.now()+'.jpg';
-  fetch(URL_SB+'/storage/v1/object/evidencias/'+nombre,{
-    method:'POST',
-    headers:{'apikey':KEY_SB,'Authorization':'Bearer '+KEY_SB,'Content-Type':'image/jpeg','x-upsert':'true'},
-    body:blob
-  }).then(function(r){return r.json();}).then(function(d){
-    capturaEjec.fotoUrl=URL_SB+'/storage/v1/object/public/evidencias/'+nombre;
-  }).catch(function(e){console.log('Error subiendo foto:',e);});
-}
+
 function salir(){usuario=null;pin='';dibujarPin();setErr('');mostrar('screen-login');}
 
 if('serviceWorker' in navigator){
