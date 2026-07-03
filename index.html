@@ -777,7 +777,8 @@ function renderRiegoTablas(plantacionId){
   var html='<div class="seccion-titulo">💧 '+(p?p.nombre:'')+' · Elige tabla</div><div class="riego-grid">';
   ordenes.forEach(function(o){
     var cls=o.estado==='completada'?'verde':(o.estado==='en_proceso'?'activa':'roja');
-    html+='<div class="riego-circle '+cls+'" data-oid="'+o.id+'"><span>'+o.tabla.nombre+'</span>'+(o.estado==='en_proceso'?'<small>en curso</small>':'')+'</div>';
+    var etiqueta=o.estado==='completada'?'completado':(o.estado==='en_proceso'?'en curso · '+o.duracion_minutos+' min':o.duracion_minutos+' min');
+    html+='<div class="riego-circle '+cls+'" data-oid="'+o.id+'"><span>'+o.tabla.nombre+'</span><small>'+etiqueta+'</small></div>';
   });
   html+='</div><button class="btn-back" style="margin-top:1rem;" onclick="renderRiegoPlantaciones()">← Volver a plantaciones</button>';
   body.innerHTML=html;
