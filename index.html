@@ -445,7 +445,17 @@ function cargarReporte(){
       t.ordenes.forEach(function(o){
         var ic=o.estado==='completada'?'✅':o.estado==='en_proceso'?'🔄':'⏳';
         var su=(o.surcos_asignados&&o.surcos_asignados.length)?o.surcos_asignados.join(', '):'Todos';
-        html+='<div style="font-size:.78rem;padding:.3rem 0;border-bottom:1px solid var(--gris-1);display:flex;justify-content:space-between;"><span>'+ic+' '+o.tipo_labor.nombre+' · '+(o.operario?o.operario.nombre:'')+'</span><span style="color:var(--gris-3)">'+su+'</span></div>';
+        from('registros_labor').select('foto_url').eq('orden_id',o.id).get().then(function(regs){
+          var foto='';
+          if(regs&&regs.length&&regs[0].foto_url&&regs[0].foto_url!=='pendiente'){
+            foto='<img src="'+regs[0].foto_url+'" style="width:60px;height:60px;object-fit:cover;border-radius:6px;margin-left:8px;cursor:pointer;" onclick="window.open(this.src)">';
+          }
+          var row=document.createElement('div');
+          row.style.cssText='font-size:.78rem;padding:.3rem 0;border-bottom:1px solid var(--gris-1);display:flex;justify-content:space-between;align-items:center;';
+          row.innerHTML='<span>'+ic+' '+o.tipo_labor.nombre+' · '+(o.operario?o.operario.nombre:'')+'</span><span style="display:flex;align-items:center;gap:4px;color:var(--gris-3)">'+su+foto+'</span>';
+          document.getElementById('rep-'+o.id).appendChild(row);
+        });
+        html+='<div id="rep-'+o.id+'"></div>';
       });
       html+='</div>';
     });
@@ -523,7 +533,7 @@ function aplicarRangoOp(){
 
 function guardarEjec(){
   var o=ordenEjecutando;
-  var reg={usuario_id:usuario.id,tabla_id:o.tabla_id,tipo_labor_id:o.tipo_labor_id,subtipo_labor_id:o.subtipo_labor_id||null,surcos_trabajados:capturaEjec.surcos,cantidad_insumo:capturaEjec.cantidad||null,foto_url:capturaEjec.foto?'pendiente':null,capturado_en:new Date().toISOString(),orden_id:o.id};
+  var reg={usuario_id:usuario.id,tabla_id:o.tabla_id,tipo_labor_id:o.tipo_labor_id,subtipo_labor_id:o.subtipo_labor_id||null,surcos_trabajados:capturaEjec.surcos,cantidad_insumo:capturaEjec.cantidad||null,foto_url:capturaEjec.fotoUrl||'pendiente',capturado_en:new Date().toISOString(),orden_id:o.id};
   if(!navigator.onLine){
     colaOffline.push(reg);
     localStorage.setItem('mootsil_cola',JSON.stringify(colaOffline));
@@ -645,9 +655,22 @@ function tomarFoto(){
   canvas.toBlob(function(blob){
     capturaEjec.foto=true;
     capturaEjec.fotoBlob=blob;
+    capturaEjec.fotoUrl=null;
     cerrarCamara();
     renderEjec();
+    subirFoto(blob);
   },'image/jpeg',0.8);
+}
+
+function subirFoto(blob){
+  var nombre='evidencia_'+Date.now()+'.jpg';
+  fetch(URL_SB+'/storage/v1/object/evidencias/'+nombre,{
+    method:'POST',
+    headers:{'apikey':KEY_SB,'Authorization':'Bearer '+KEY_SB,'Content-Type':'image/jpeg','x-upsert':'true'},
+    body:blob
+  }).then(function(r){return r.json();}).then(function(d){
+    capturaEjec.fotoUrl=URL_SB+'/storage/v1/object/public/evidencias/'+nombre;
+  }).catch(function(e){console.log('Error subiendo foto:',e);});
 }
 function salir(){usuario=null;pin='';dibujarPin();setErr('');mostrar('screen-login');}
 
