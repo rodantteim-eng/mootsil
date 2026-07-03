@@ -185,6 +185,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <button class="tab" id="tab-asignar" onclick="tabEncargado('asignar')">+ Asignar</button>
     <button class="tab" id="tab-notif" onclick="tabEncargado('notif')">Avisos <span id="badge-avisos" style="display:none;background:var(--tierra);color:#fff;border-radius:50%;width:16px;height:16px;font-size:.6rem;font-weight:700;align-items:center;justify-content:center;margin-left:3px;vertical-align:middle;">0</span></button>
     <button class="tab" id="tab-reporte" onclick="tabEncargado('reporte')">Reporte</button>
+    <button class="tab" id="tab-inventario" onclick="tabEncargado('inventario')" style="display:none">Inventario</button>
     <button class="tab" id="tab-config" onclick="tabEncargado('config')" style="display:none">⚙️</button>
   </div>
   <div class="app-body" id="enc-body"><div class="loading">Cargando...</div></div>
@@ -264,7 +265,7 @@ function from(table) {
 }
 
 var pin='', usuario=null;
-var cats={plantaciones:[],tablas:[],tiposLabor:[],subtiposLabor:[],operarios:[]};
+var cats={plantaciones:[],tablas:[],tiposLabor:[],subtiposLabor:[],operarios:[],inventario:[]};
 var ordenEjecutando=null, pasoEjec=1;
 var capturaEjec={surcos:[],cantidad:0,foto:false};
 var formSurcos=[];
@@ -272,6 +273,27 @@ var ROLES={admin:'Admin',encargado:'Encargado',operario:'Operario',ingeniero:'In
 var ROLE_COLORS={admin:'background:#c0392b;color:#fff',encargado:'background:#e6a817;color:#1a1a18',operario:'background:#4a9a6a;color:#fff',ingeniero:'background:#e67e22;color:#fff','dueño':'background:#2980b9;color:#fff',inversionista:'background:#6c3483;color:#fff',cosechador:'background:#1a3a2a;color:#fff',galerista:'background:#e91e8c;color:#fff'};
 var ICONOS={'Riego':'💧','Aplicaciones':'🧪','Poda':'✂️','Deshierbado':'🌱','Guiro':'🧵','Trineado':'🔪','Limpieza':'🧹','Sistema de riego':'🚿','Sistema de Tutoreo':'🪢','Macrotuneles':'⛺','Trampas':'🪤','Pozo':'🕳️','Equipos':'🛠️','Cuarto de Sucios':'🧺','Almacén':'📦','Galera':'🏚️','Otras':'➕','Via riego':'💧','Foliar':'🌿','Drench':'🧪','Enrejado':'🔲','Desbrozadora':'🔧','Infraestructura':'🏗️'};
 var riegoOrdenes=[], riegoTimer=null, riegoAlarmaActiva=false, riegoAudioCtx=null;
+var riegoColaOffline=JSON.parse(localStorage.getItem('mootsil_riego_cola')||'[]');
+
+function riegoActualizarEstado(o,cambios){
+  Object.keys(cambios).forEach(function(k){o[k]=cambios[k];});
+  if(navigator.onLine){
+    from('ordenes_trabajo').eq('id',o.id).update(cambios).catch(function(){riegoEncolar(o.id,cambios);});
+  } else {
+    riegoEncolar(o.id,cambios);
+  }
+}
+function riegoEncolar(id,cambios){
+  riegoColaOffline.push({id:id,cambios:cambios});
+  localStorage.setItem('mootsil_riego_cola',JSON.stringify(riegoColaOffline));
+}
+function riegoSincronizar(){
+  if(!riegoColaOffline.length) return;
+  var pend=riegoColaOffline.slice(); riegoColaOffline=[];
+  localStorage.setItem('mootsil_riego_cola','[]');
+  pend.forEach(function(p){from('ordenes_trabajo').eq('id',p.id).update(p.cambios).catch(function(){riegoColaOffline.push(p);localStorage.setItem('mootsil_riego_cola',JSON.stringify(riegoColaOffline));});});
+}
+window.addEventListener('online',riegoSincronizar);
 var colaOffline=JSON.parse(localStorage.getItem('mootsil_cola')||'[]');
 var camStream=null, camFacing='environment', mediaRecorder=null, grabando=false, videoChunks=[];
 
@@ -303,6 +325,7 @@ function verificarPin(){
         document.getElementById('enc-nombre').textContent=usuario.nombre+' · '+usuario.rol;
         mostrar('screen-encargado');
         if(usuario.rol==='admin'||usuario.rol==='dueño') document.getElementById('tab-config').style.display='';
+        if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='ingeniero') document.getElementById('tab-inventario').style.display='';
         renderTablero();
         setInterval(actualizarBadgeAvisos,15000);
         actualizarBadgeAvisos();
@@ -317,20 +340,22 @@ function cargarCatalogos(){
     from('tablas').select('*').order('nombre').get(),
     from('tipos_labor').select('*').eq('activo',true).order('orden').get(),
     from('subtipos_labor').select('*').get(),
-    from('usuarios').select('id,nombre,rol').eq('rol','operario').get()
+    from('usuarios').select('id,nombre,rol').eq('rol','operario').get(),
+    from('inventario_items').select('*').eq('activo',true).order('nombre').get()
   ]).then(function(r){
     cats.plantaciones=r[0]; cats.tablas=r[1]; cats.tiposLabor=r[2];
-    cats.subtiposLabor=r[3]; cats.operarios=r[4];
+    cats.subtiposLabor=r[3]; cats.operarios=r[4]; cats.inventario=r[5]||[];
   });
 }
 
 function tabEncargado(tab){
-  ['tablero','asignar','notif','reporte','config'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
+  ['tablero','asignar','notif','reporte','inventario','config'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
   var el=document.getElementById('tab-'+tab); if(el) el.classList.add('active');
   if(tab==='tablero') renderTablero();
   else if(tab==='asignar') renderFormAsignar();
   else if(tab==='notif') renderNotifs('enc-body');
   else if(tab==='reporte') renderReporte();
+  else if(tab==='inventario') renderInventario();
   else if(tab==='config') renderConfig();
 }
 
@@ -702,6 +727,74 @@ function cargarReporte(){
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
+function renderInventario(){
+  var body=document.getElementById('enc-body');
+  var items=cats.inventario;
+  var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Inventario<button type="button" onclick="renderInventarioNuevo()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Componente</button></div>';
+  if(!items.length){html+='<div class="empty">📦 Aún no hay componentes registrados.<br/>Toca "+ Componente" para agregar el primero.</div>';}
+  else{
+    html+=items.map(function(it){
+      var bajo=it.stock_actual<=it.stock_minimo;
+      var color=bajo?'var(--rojo)':'var(--verde-mid)';
+      return '<div class="orden-card" style="border-left-color:'+color+';cursor:pointer;" data-iid="'+it.id+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem">'+it.nombre+'</strong><span style="font-size:.85rem;font-weight:700;color:'+color+'">'+numFmt(it.stock_actual)+' '+it.unidad+'</span></div><div class="orden-meta">Mínimo: '+numFmt(it.stock_minimo)+' '+it.unidad+(bajo?' · ⚠️ Stock bajo, hacer pedido':'')+'</div></div>';
+    }).join('');
+  }
+  body.innerHTML=html;
+  body.querySelectorAll('[data-iid]').forEach(function(el){el.addEventListener('click',function(){renderInventarioItem(this.dataset.iid);});});
+}
+
+function numFmt(n){n=parseFloat(n)||0;return (Math.round(n*100)/100).toString();}
+
+function renderInventarioNuevo(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo">Nuevo componente</div><div class="form-card"><div class="form-group"><label>Nombre</label><input type="text" id="inv-n-nombre" placeholder="Ej. Sulfato de amonio"></div><div class="form-group"><label>Unidad</label><select id="inv-n-unidad"><option value="litros">Litros</option><option value="ml">Mililitros</option><option value="kg">Kilogramos</option><option value="gr">Gramos</option><option value="pza">Piezas</option></select></div><div class="form-group"><label>Stock inicial</label><input type="number" id="inv-n-stock" min="0" value="0"></div><div class="form-group"><label>Stock mínimo (para alerta)</label><input type="number" id="inv-n-min" min="0" value="0"></div><button class="btn-primary" id="inv-n-guardar">Guardar componente</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderInventario()">← Volver a inventario</button>';
+  document.getElementById('inv-n-guardar').addEventListener('click',function(){
+    var nombre=(document.getElementById('inv-n-nombre').value||'').trim();
+    if(!nombre){alert('Escribe el nombre del componente.');return;}
+    var unidad=document.getElementById('inv-n-unidad').value;
+    var stock=parseFloat(document.getElementById('inv-n-stock').value)||0;
+    var min=parseFloat(document.getElementById('inv-n-min').value)||0;
+    from('inventario_items').insert({nombre:nombre,unidad:unidad,stock_actual:stock,stock_minimo:min,activo:true}).then(function(){
+      return from('inventario_items').select('*').eq('activo',true).order('nombre').get();
+    }).then(function(rows){
+      cats.inventario=rows||[];
+      showToast('📦 Componente agregado: '+nombre);
+      renderInventario();
+    }).catch(function(e){alert('Error: '+e.message);});
+  });
+}
+
+function renderInventarioItem(itemId){
+  var body=document.getElementById('enc-body');
+  var it=cats.inventario.find(function(x){return x.id===itemId;});
+  if(!it){renderInventario();return;}
+  body.innerHTML='<div class="seccion-titulo">'+it.nombre+'</div><div class="form-card"><div class="resumen-row"><span class="resumen-key">Stock actual</span><span class="resumen-val">'+numFmt(it.stock_actual)+' '+it.unidad+'</span></div><div class="resumen-row"><span class="resumen-key">Stock mínimo</span><span class="resumen-val">'+numFmt(it.stock_minimo)+' '+it.unidad+'</span></div></div><div class="form-card"><div class="form-group"><label>Registrar movimiento</label><select id="inv-mov-tipo"><option value="entrada">➕ Entrada (llegó pedido)</option><option value="salida">➖ Salida (uso o merma)</option><option value="ajuste">✏️ Ajuste (corrección de conteo)</option></select></div><div class="form-group"><label>Cantidad ('+it.unidad+')</label><input type="number" id="inv-mov-cantidad" min="0" placeholder="0"></div><div class="form-group"><label>Motivo (opcional)</label><input type="text" id="inv-mov-motivo" placeholder="Ej. Pedido a proveedor X"></div><button class="btn-primary" id="inv-mov-guardar">Registrar</button></div><div id="inv-mov-historial"><div class="loading">Cargando movimientos...</div></div><button class="btn-back" style="margin-top:1rem;" onclick="renderInventario()">← Volver a inventario</button>';
+  document.getElementById('inv-mov-guardar').addEventListener('click',function(){
+    var tipo=document.getElementById('inv-mov-tipo').value;
+    var cant=parseFloat(document.getElementById('inv-mov-cantidad').value)||0;
+    if(cant<=0){alert('Captura una cantidad mayor a 0.');return;}
+    var motivo=document.getElementById('inv-mov-motivo').value||null;
+    var nuevoStock=tipo==='entrada'?it.stock_actual+cant:tipo==='salida'?it.stock_actual-cant:cant;
+    from('movimientos_inventario').insert({item_id:it.id,tipo:tipo,cantidad:cant,motivo:motivo,usuario_id:usuario.id}).then(function(){
+      return from('inventario_items').eq('id',it.id).update({stock_actual:nuevoStock});
+    }).then(function(){
+      it.stock_actual=nuevoStock;
+      showToast('✅ Movimiento registrado');
+      renderInventarioItem(itemId);
+    }).catch(function(e){alert('Error: '+e.message);});
+  });
+  from('movimientos_inventario').select('*,usuario:usuarios(nombre)').eq('item_id',itemId).order('creado_en',{ascending:false}).limit(15).get().then(function(movs){
+    var cont=document.getElementById('inv-mov-historial');
+    if(!cont) return;
+    if(!movs||!movs.length){cont.innerHTML='<div class="empty">Sin movimientos registrados.</div>';return;}
+    var ic={entrada:'➕',salida:'➖',ajuste:'✏️'};
+    cont.innerHTML='<div class="seccion-titulo">Historial reciente</div>'+movs.map(function(m){
+      var f=new Date(m.creado_en).toLocaleDateString('es-MX',{day:'2-digit',month:'short'});
+      return '<div style="font-size:.78rem;padding:.5rem 0;border-bottom:1px solid var(--gris-1);display:flex;justify-content:space-between;"><span>'+(ic[m.tipo]||'')+' '+numFmt(m.cantidad)+' '+it.unidad+(m.motivo?' · '+m.motivo:'')+'</span><span style="color:var(--gris-3)">'+(m.usuario?m.usuario.nombre+' · ':'')+f+'</span></div>';
+    }).join('');
+  });
+}
+
 function tabOperario(tab){
   document.getElementById('tab-tareas').classList.remove('active');
   document.getElementById('tab-op-notif').classList.remove('active');
@@ -713,6 +806,7 @@ function pararRiegoTimer(){if(riegoTimer){clearInterval(riegoTimer);riegoTimer=n
 
 function cargarTareas(){
   pararRiegoTimer();
+  riegoSincronizar();
   var body=document.getElementById('op-body');
   body.innerHTML='<div class="loading">Cargando tus tareas...</div>';
   var hoy=new Date().toISOString().slice(0,10);
@@ -781,6 +875,7 @@ function renderRiegoTablas(plantacionId){
     html+='<div class="riego-circle '+cls+'" data-oid="'+o.id+'"><span>'+o.tabla.nombre+'</span><small>'+etiqueta+'</small></div>';
   });
   html+='</div><button class="btn-back" style="margin-top:1rem;" onclick="renderRiegoPlantaciones()">← Volver a plantaciones</button>';
+  if(!navigator.onLine||riegoColaOffline.length){html+='<p class="hint" style="text-align:center;margin-top:.75rem;">📡 Sin señal — tus cambios se guardan en el celular y se suben solos al recuperar internet.</p>';}
   body.innerHTML=html;
   body.querySelectorAll('[data-oid]').forEach(function(el){el.addEventListener('click',function(){renderRiegoEjecucion(this.dataset.oid);});});
 }
@@ -796,10 +891,8 @@ function renderRiegoEjecucion(ordenId){
     body.innerHTML='<div class="seccion-titulo">💧 '+(p?p.nombre:'')+' · '+o.tabla.nombre+'</div><div class="riego-ejec-card"><div class="riego-ejec-min">'+o.duracion_minutos+' min</div><p class="hint">Duración programada por el encargado</p><button class="btn-primary" id="riego-iniciar">▶ Iniciar riego</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderRiegoTablas(\''+o.tabla.plantacion_id+'\')">← Volver a tablas</button>';
     document.getElementById('riego-iniciar').addEventListener('click',function(){
       var ahora=new Date().toISOString();
-      from('ordenes_trabajo').eq('id',o.id).update({estado:'en_proceso',hora_inicio_real:ahora}).then(function(){
-        o.estado='en_proceso';o.hora_inicio_real=ahora;
-        renderRiegoEjecucion(ordenId);
-      });
+      riegoActualizarEstado(o,{estado:'en_proceso',hora_inicio_real:ahora});
+      renderRiegoEjecucion(ordenId);
     });
     return;
   }
@@ -810,10 +903,8 @@ function renderRiegoEjecucion(ordenId){
     body.innerHTML='<div class="seccion-titulo">💧 '+(p?p.nombre:'')+' · '+o.tabla.nombre+'</div><div class="riego-ejec-card" id="riego-card"><div class="riego-ejec-min" id="riego-cuenta">--:--</div><p class="hint" id="riego-msg">Riego en curso</p><button class="btn-primary" style="background:var(--rojo)" id="riego-terminar">⏹ Terminar riego</button></div><p class="hint" style="margin-top:.75rem;">Mantén esta pantalla abierta para escuchar la alarma cuando falten 5 min.</p><button class="btn-back" style="margin-top:.5rem;" onclick="renderRiegoTablas(\''+o.tabla.plantacion_id+'\')">← Volver a tablas</button>';
     document.getElementById('riego-terminar').addEventListener('click',function(){
       pararRiegoTimer();
-      from('ordenes_trabajo').eq('id',o.id).update({estado:'completada',hora_fin_real:new Date().toISOString()}).then(function(){
-        o.estado='completada';
-        renderRiegoTablas(o.tabla.plantacion_id);
-      });
+      riegoActualizarEstado(o,{estado:'completada',hora_fin_real:new Date().toISOString()});
+      renderRiegoTablas(o.tabla.plantacion_id);
     });
     function tick(){
       var restanteMs=finMs-Date.now();
