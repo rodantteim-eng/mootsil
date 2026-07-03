@@ -495,7 +495,7 @@ function renderAsigRiegoMinutos(tablaId,plantacionId){
 function renderAsigRiegoOperarios(){
   var body=document.getElementById('enc-body');
   var opO=cats.operarios.map(function(o){return '<button type="button" class="op-chip'+(riegoAsigOperarios.indexOf(o.id)>-1?' sel':'')+'" data-id="'+o.id+'" onclick="toggleChip(this)">'+o.nombre+'</button>';}).join('');
-  var resumen=Object.keys(riegoAsigMinutos).filter(function(k){return riegoAsigMinutos[k]>0;}).map(function(tid){var t=cats.tablas.find(function(x){return x.id===tid;});return t?t.nombre+' ('+riegoAsigMinutos[tid]+' min)':'';}).join(', ');
+  var resumen=Object.keys(riegoAsigMinutos).filter(function(k){return riegoAsigMinutos[k]>0;}).map(function(tid){var t=cats.tablas.find(function(x){return x.id===tid;});var p=t?cats.plantaciones.find(function(x){return x.id===t.plantacion_id;}):null;return t?(p?p.nombre+' · ':'')+t.nombre+' ('+riegoAsigMinutos[tid]+' min)':'';}).join(', ');
   body.innerHTML='<div class="seccion-titulo">💧 Riego · ¿Quién lo hace?</div><div class="form-card"><p class="hint" style="margin-bottom:.9rem;">Tablas: '+resumen+'</p><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1rem;">'+opO+'</div><button class="btn-primary" id="riego-op-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigRiegoPlantaciones()">← Volver a tablas</button>'+tableroLinkHtml();
   document.getElementById('riego-op-continuar').addEventListener('click',function(){
     var opIds=Array.from(document.querySelectorAll('.op-chip.sel')).map(function(c){return c.dataset.id;});
@@ -516,7 +516,7 @@ function renderAsigRiegoFecha(){
 
 function renderAsigRiegoNotas(){
   var body=document.getElementById('enc-body');
-  var resumen=Object.keys(riegoAsigMinutos).filter(function(k){return riegoAsigMinutos[k]>0;}).map(function(tid){var t=cats.tablas.find(function(x){return x.id===tid;});return t?t.nombre+' · '+riegoAsigMinutos[tid]+' min':'';}).join('<br>');
+  var resumen=Object.keys(riegoAsigMinutos).filter(function(k){return riegoAsigMinutos[k]>0;}).map(function(tid){var t=cats.tablas.find(function(x){return x.id===tid;});var p=t?cats.plantaciones.find(function(x){return x.id===t.plantacion_id;}):null;return t?(p?p.nombre+' · ':'')+t.nombre+' · '+riegoAsigMinutos[tid]+' min':'';}).join('<br>');
   var opNombres=riegoAsigOperarios.map(function(id){var o=cats.operarios.find(function(x){return x.id===id;});return o?o.nombre:'';}).join(', ');
   body.innerHTML='<div class="seccion-titulo">💧 Riego · Notas (opcional)</div><div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row"><span class="resumen-key">Tablas</span></div><div style="font-size:.82rem;padding:.35rem 0;">'+resumen+'</div><div class="resumen-row"><span class="resumen-key">Operarios</span><span class="resumen-val">'+opNombres+'</span></div><div class="resumen-row"><span class="resumen-key">Fecha</span><span class="resumen-val">'+riegoAsigFecha+'</span></div></div><div class="form-group"><input type="text" id="riego-notas-input" placeholder="Notas para el operario..."></div><button class="btn-primary" id="riego-finalizar">✅ Asignar riego</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigRiegoFecha()">← Volver a fecha</button>'+tableroLinkHtml();
   document.getElementById('riego-finalizar').addEventListener('click',guardarRiegoAsignacion);
