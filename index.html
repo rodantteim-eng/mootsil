@@ -459,7 +459,7 @@ function cargarReporte(){
             if(d){
               var url=regs[0].foto_url;
               var esVid=url.indexOf('.webm')>-1||url.indexOf('.mp4')>-1;
-              d.innerHTML=esVid?'<video src="'+url+'" style="width:120px;height:80px;object-fit:cover;border-radius:8px;margin-top:6px;cursor:pointer;" controls></video>':'<img src="'+url+'" style="width:80px;height:80px;object-fit:cover;border-radius:8px;margin-top:6px;cursor:pointer;" onclick="window.open(this.src)" title="Ver evidencia">';
+              d.innerHTML=esVid?'<div style="margin-top:6px;"><video src="'+url+'" style="width:160px;height:100px;border-radius:8px;" controls playsinline></video><br><a href="'+url+'" target="_blank" style="font-size:.72rem;color:var(--verde-mid);">▶ Abrir video</a></div>':'<img src="'+url+'" style="width:80px;height:80px;object-fit:cover;border-radius:8px;margin-top:6px;cursor:pointer;" onclick="window.open(this.src)" title="Ver evidencia">';
             }
           }
         });
