@@ -450,6 +450,14 @@ function cargarReporte(){
       html+='</div>';
     });
     body.innerHTML=html;
+      ordenes.filter(function(o){return o.estado==='completada';}).forEach(function(o){
+        fetch(URL_SB+'/rest/v1/registros_labor?select=foto_url&orden_id=eq.'+o.id+'&limit=1',{headers:{'apikey':KEY_SB,'Authorization':'Bearer '+KEY_SB}}).then(function(r){return r.json();}).then(function(regs){
+          if(regs&&regs.length&&regs[0].foto_url&&regs[0].foto_url!=='pendiente'&&regs[0].foto_url!==null){
+            var d=document.getElementById('foto-'+o.id);
+            if(d) d.innerHTML='<img src="'+regs[0].foto_url+'" style="width:80px;height:80px;object-fit:cover;border-radius:8px;margin-top:6px;cursor:pointer;" onclick="window.open(this.src)" title="Ver evidencia">';
+          }
+        });
+      });
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
