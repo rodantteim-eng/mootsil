@@ -189,10 +189,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div id="cam-overlay">
   <video id="cam-video" autoplay playsinline muted></video>
   <canvas id="cam-canvas"></canvas>
+  <div id="cam-status" style="position:absolute;top:1rem;left:50%;transform:translateX(-50%);background:rgba(200,0,0,.85);color:#fff;padding:.3rem .9rem;border-radius:20px;font-size:.85rem;font-weight:600;display:none;">⏺ Grabando...</div>
   <div class="cam-bar">
     <button class="cam-auxbtn" onclick="cerrarCamara()">✕ Cancelar</button>
     <button class="cam-capbtn" onclick="tomarFoto()">📷</button>
-    <button class="cam-auxbtn" onclick="girarCamara()">🔄 Girar</button>
+    <button id="btn-video" onclick="toggleVideo()" style="color:#fff;font-size:.85rem;padding:.5rem 1rem;background:rgba(200,0,0,.6);border:none;border-radius:20px;cursor:pointer;">⏺ Video</button>
+    <button class="cam-auxbtn" onclick="girarCamara()">🔄</button>
   </div>
 </div>
 <script>
@@ -245,7 +247,7 @@ var ROLES={admin:'Admin',encargado:'Encargado',operario:'Operario',ingeniero:'In
 var ROLE_COLORS={admin:'background:#c0392b;color:#fff',encargado:'background:#e6a817;color:#1a1a18',operario:'background:#4a9a6a;color:#fff',ingeniero:'background:#e67e22;color:#fff','dueño':'background:#2980b9;color:#fff',inversionista:'background:#6c3483;color:#fff',cosechador:'background:#1a3a2a;color:#fff',galerista:'background:#e91e8c;color:#fff'};
 var ICONOS={'Via riego':'💧','Foliar':'🌿','Drench':'🧪','Poda':'✂️','Deshierbado':'🌱','Enrejado':'🔲','Desbrozadora':'🔧','Infraestructura':'🏗️','Sistema de riego':'🚿'};
 var colaOffline=JSON.parse(localStorage.getItem('mootsil_cola')||'[]');
-var camStream=null, camFacing='environment';
+var camStream=null, camFacing='environment', mediaRecorder=null, grabando=false, videoChunks=[];
 
 function mostrar(id){document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});document.getElementById(id).classList.add('active');}
 
@@ -454,7 +456,11 @@ function cargarReporte(){
         fetch(URL_SB+'/rest/v1/registros_labor?select=foto_url&orden_id=eq.'+o.id+'&limit=1',{headers:{'apikey':KEY_SB,'Authorization':'Bearer '+KEY_SB}}).then(function(r){return r.json();}).then(function(regs){
           if(regs&&regs.length&&regs[0].foto_url&&regs[0].foto_url!=='pendiente'&&regs[0].foto_url!==null){
             var d=document.getElementById('foto-'+o.id);
-            if(d) d.innerHTML='<img src="'+regs[0].foto_url+'" style="width:80px;height:80px;object-fit:cover;border-radius:8px;margin-top:6px;cursor:pointer;" onclick="window.open(this.src)" title="Ver evidencia">';
+            if(d){
+              var url=regs[0].foto_url;
+              var esVid=url.indexOf('.webm')>-1||url.indexOf('.mp4')>-1;
+              d.innerHTML=esVid?'<video src="'+url+'" style="width:120px;height:80px;object-fit:cover;border-radius:8px;margin-top:6px;cursor:pointer;" controls></video>':'<img src="'+url+'" style="width:80px;height:80px;object-fit:cover;border-radius:8px;margin-top:6px;cursor:pointer;" onclick="window.open(this.src)" title="Ver evidencia">';
+            }
           }
         });
       });
@@ -536,8 +542,11 @@ function guardarEjec(){
     document.getElementById('exito-sub').textContent='Subiendo evidencia...';
     mostrar('screen-exito');
     var nombre='evidencia_'+Date.now()+'.jpg';
-    fetch(URL_SB+'/storage/v1/object/evidencias/'+nombre,{method:'POST',headers:{'apikey':KEY_SB,'Authorization':'Bearer '+KEY_SB,'Content-Type':'image/jpeg','x-upsert':'true'},body:capturaEjec.fotoBlob}).then(function(){
-      capturaEjec.fotoUrl=URL_SB+'/storage/v1/object/public/evidencias/'+nombre;
+    var esVideo=capturaEjec.esVideo||false;
+    var ext=esVideo?'.webm':'.jpg';
+    var mime=esVideo?'video/webm':'image/jpeg';
+    fetch(URL_SB+'/storage/v1/object/evidencias/'+nombre.replace('.jpg',ext),{method:'POST',headers:{'apikey':KEY_SB,'Authorization':'Bearer '+KEY_SB,'Content-Type':mime,'x-upsert':'true'},body:capturaEjec.fotoBlob}).then(function(){
+      capturaEjec.fotoUrl=URL_SB+'/storage/v1/object/public/evidencias/'+nombre.replace('.jpg',ext);
       ejecutarGuardadoFinal(o);
     }).catch(function(){
       capturaEjec.fotoUrl='pendiente';
@@ -654,6 +663,37 @@ function cerrarCamara(){
   document.getElementById('cam-overlay').style.display='none';
 }
 
+function toggleVideo(){
+  if(!grabando){
+    videoChunks=[];
+    var options={mimeType:'video/webm;codecs=vp9'};
+    if(!MediaRecorder.isTypeSupported(options.mimeType)) options={mimeType:'video/webm'};
+    mediaRecorder=new MediaRecorder(camStream, options);
+    mediaRecorder.ondataavailable=function(e){if(e.data.size>0) videoChunks.push(e.data);};
+    mediaRecorder.onstop=function(){
+      var blob=new Blob(videoChunks,{type:'video/webm'});
+      capturaEjec.foto=true;
+      capturaEjec.fotoBlob=blob;
+      capturaEjec.fotoUrl=null;
+      capturaEjec.esVideo=true;
+      cerrarCamara();
+      renderEjec();
+    };
+    mediaRecorder.start();
+    grabando=true;
+    document.getElementById('btn-video').textContent='⏹ Detener';
+    document.getElementById('btn-video').style.background='rgba(255,0,0,.9)';
+    var st=document.getElementById('cam-status');
+    if(st) st.style.display='block';
+  } else {
+    mediaRecorder.stop();
+    grabando=false;
+    document.getElementById('btn-video').textContent='⏺ Video';
+    document.getElementById('btn-video').style.background='rgba(255,0,0,.5)';
+    var st=document.getElementById('cam-status');
+    if(st) st.style.display='none';
+  }
+}
 function girarCamara(){
   camFacing=camFacing==='environment'?'user':'environment';
   if(camStream) camStream.getTracks().forEach(function(t){t.stop();});
