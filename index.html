@@ -530,7 +530,7 @@ function guardarRiegoAsignacion(){
   riegoAsigOperarios.forEach(function(oid){filas.forEach(function(r){tareas.push({asignado_por:usuario.id,operario_id:oid,tabla_id:r.tabla,tipo_labor_id:lbId,duracion_minutos:r.min,duracion:'dia',fecha_asignacion:riegoAsigFecha,notas_encargado:not,estado:'pendiente'});});});
   Promise.all(tareas.map(function(t){return from('ordenes_trabajo').insert(t);})).then(function(){
     Promise.all(riegoAsigOperarios.map(function(oid){
-      return from('notificaciones').insert({titulo:'💧 Riego asignado',cuerpo:usuario.nombre+' asignó riego en '+filas.length+' tabla(s)',icono:'💧',leida:false,para_rol:'operario',para_usuario:oid});
+      return from('notificaciones').insert({titulo:'💧 Riego asignado',cuerpo:usuario.nombre+' asignó riego a '+(cats.operarios.find(function(o){return o.id===oid;})||{}).nombre+' en '+filas.length+' tabla(s)',icono:'💧',leida:false,para_rol:'operario',para_usuario:oid});
     })).then(function(){showToast('💧 Riego asignado en '+filas.length+' tabla(s). Puedes asignar otra labor.');renderFormAsignar();});
   }).catch(function(e){alert('Error: '+e.message);if(btn){btn.disabled=false;btn.textContent='✅ Asignar riego';}});
 }
@@ -575,7 +575,7 @@ function guardarOrden(){
     opIds.forEach(function(oid){filas.forEach(function(r){tareas.push({asignado_por:usuario.id,operario_id:oid,tabla_id:r.tabla,tipo_labor_id:lbId,duracion_minutos:r.min,duracion:dur,fecha_asignacion:fec,notas_encargado:not,estado:'pendiente'});});});
     Promise.all(tareas.map(function(t){return from('ordenes_trabajo').insert(t);})).then(function(){
       Promise.all(opIds.map(function(oid){
-        return from('notificaciones').insert({titulo:'💧 Riego asignado',cuerpo:usuario.nombre+' asignó riego en '+filas.length+' tabla(s)',icono:'💧',leida:false,para_rol:'operario',para_usuario:oid});
+        return from('notificaciones').insert({titulo:'💧 Riego asignado',cuerpo:usuario.nombre+' asignó riego a '+(cats.operarios.find(function(o){return o.id===oid;})||{}).nombre+' en '+filas.length+' tabla(s)',icono:'💧',leida:false,para_rol:'operario',para_usuario:oid});
       })).then(function(){showToast('💧 Riego asignado. Puedes asignar otra labor.');renderFormAsignar();});
     }).catch(function(e){alert('Error: '+e.message);});
     return;
@@ -590,7 +590,7 @@ function guardarOrden(){
     return from('ordenes_trabajo').insert({asignado_por:usuario.id,operario_id:oid,tabla_id:tbId,tipo_labor_id:lbId,subtipo_labor_id:sub,surcos_asignados:formSurcos,cantidad_insumo_esperada:cant,duracion:dur,fecha_asignacion:fec,notas_encargado:not,estado:'pendiente'});
   })).then(function(){
     Promise.all(opIds.map(function(oid){
-      return from('notificaciones').insert({titulo:'📋 Nueva tarea asignada',cuerpo:usuario.nombre+' asignó: '+(lb?lb.nombre:'')+' en '+(tb?tb.nombre:''),icono:'📋',leida:false,para_rol:'operario',para_usuario:oid});
+      return from('notificaciones').insert({titulo:'📋 Nueva tarea asignada',cuerpo:usuario.nombre+' asignó a '+(cats.operarios.find(function(o){return o.id===oid;})||{}).nombre+': '+(lb?lb.nombre:'')+' en '+(tb?tb.nombre:''),icono:'📋',leida:false,para_rol:'operario',para_usuario:oid});
     })).then(function(){showToast('📋 Labor asignada: '+(lb?lb.nombre:'')+'. Puedes asignar otra.');renderFormAsignar();});
   }).catch(function(e){alert('Error: '+e.message);});
 }
