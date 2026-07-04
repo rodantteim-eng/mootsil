@@ -187,6 +187,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <button class="tab" id="tab-asignar" onclick="tabEncargado('asignar')">+ Asignar</button>
     <button class="tab" id="tab-notif" onclick="tabEncargado('notif')">Avisos <span id="badge-avisos" style="display:none;background:var(--tierra);color:#fff;border-radius:50%;width:16px;height:16px;font-size:.6rem;font-weight:700;align-items:center;justify-content:center;margin-left:3px;vertical-align:middle;">0</span></button>
     <button class="tab" id="tab-permisos" onclick="tabEncargado('permisos')" style="display:none">Permisos</button>
+    <button class="tab" id="tab-alarmas" onclick="tabEncargado('alarmas')" style="display:none">🚨 Alarmas</button>
     <button class="tab" id="tab-reporte" onclick="tabEncargado('reporte')">Reporte</button>
     <button class="tab" id="tab-inventario" onclick="tabEncargado('inventario')" style="display:none">Inventario</button>
     <button class="tab" id="tab-formulas" onclick="tabEncargado('formulas')" style="display:none">Fórmulas</button>
@@ -368,6 +369,7 @@ function entrarSegunRol(){
     mostrar('screen-encargado');
     if(usuario.rol==='admin'||usuario.rol==='dueño') document.getElementById('tab-config').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='dueño') document.getElementById('tab-permisos').style.display='';
+    if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='dueño') document.getElementById('tab-alarmas').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='ingeniero') document.getElementById('tab-inventario').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='ingeniero') document.getElementById('tab-formulas').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='ingeniero') document.getElementById('tab-validar').style.display='';
@@ -411,12 +413,13 @@ function cargarCatalogos(){
 }
 
 function tabEncargado(tab){
-  ['tablero','asignar','notif','permisos','reporte','inventario','formulas','validar','config'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
+  ['tablero','asignar','notif','permisos','alarmas','reporte','inventario','formulas','validar','config'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
   var el=document.getElementById('tab-'+tab); if(el) el.classList.add('active');
   if(tab==='tablero') renderTablero();
   else if(tab==='asignar') renderFormAsignar();
   else if(tab==='notif') renderNotifs('enc-body');
   else if(tab==='permisos') renderPermisosRevision();
+  else if(tab==='alarmas') renderAlarmasRevision();
   else if(tab==='reporte') renderReporte();
   else if(tab==='inventario') renderInventario();
   else if(tab==='formulas') renderFormulas();
@@ -432,16 +435,20 @@ function renderTablero(){
   Promise.all([
     from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre),subtipo:subtipos_labor(nombre)').order('creado_en',{ascending:false}).get(),
     from('formulas_aplicacion').select('id,nombre,fecha_programada,tabla_id').eq('activo',true).get(),
-    from('ordenes_trabajo').select('formula_id').not('formula_id','is','null').get()
+    from('ordenes_trabajo').select('formula_id').not('formula_id','is','null').get(),
+    from('permisos').select('id').eq('estado','pendiente').get()
   ]).then(function(r){
-    var todas=r[0]||[], formulas=r[1]||[], ordenesConFormula=r[2]||[];
+    var todas=r[0]||[], formulas=r[1]||[], ordenesConFormula=r[2]||[], permisosPendientes=r[3]||[];
     var asignadas={};
     ordenesConFormula.forEach(function(o){asignadas[o.formula_id]=true;});
     var pendientesFormula=formulas.filter(function(f){return f.fecha_programada&&f.fecha_programada<=en7dias&&!asignadas[f.id];});
     var hoyN=pendientesFormula.filter(function(f){return f.fecha_programada===hoy;}).length;
     var avisoHtml='';
+    if(permisosPendientes.length){
+      avisoHtml+='<div style="background:var(--tierra-tenue);border:1.5px solid var(--tierra);border-radius:var(--radio-sm);padding:.85rem;margin-bottom:1rem;cursor:pointer;" id="aviso-permisos-pendientes"><strong style="color:var(--tierra);">📝 '+permisosPendientes.length+' solicitud(es) de permiso pendiente(s)</strong><div class="hint" style="margin-top:.25rem;">Toca para revisarlas y aprobar/rechazar</div></div>';
+    }
     if(pendientesFormula.length){
-      avisoHtml='<div style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);border-radius:var(--radio-sm);padding:.85rem;margin-bottom:1rem;cursor:pointer;" id="aviso-aplic-pendientes"><strong style="color:var(--rojo);">🧪 '+pendientesFormula.length+' aplicación(es) programada(s)'+(hoyN?' — '+hoyN+' para HOY':' esta semana')+' sin asignar</strong><div class="hint" style="margin-top:.25rem;">Toca para ir a asignarlas</div></div>';
+      avisoHtml+='<div style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);border-radius:var(--radio-sm);padding:.85rem;margin-bottom:1rem;cursor:pointer;" id="aviso-aplic-pendientes"><strong style="color:var(--rojo);">🧪 '+pendientesFormula.length+' aplicación(es) programada(s)'+(hoyN?' — '+hoyN+' para HOY':' esta semana')+' sin asignar</strong><div class="hint" style="margin-top:.25rem;">Toca para ir a asignarlas</div></div>';
     }
     var pend=todas.filter(function(o){return o.estado==='pendiente';}).length;
     var enP=todas.filter(function(o){return o.estado==='en_proceso';}).length;
@@ -455,6 +462,8 @@ function renderTablero(){
       if(cer.length) html+='<div class="seccion-titulo" style="margin-top:1rem">Cerradas</div>'+cer.map(cardHtml).join('');
     }
     body.innerHTML=html;
+    var avisoPermisosEl=document.getElementById('aviso-permisos-pendientes');
+    if(avisoPermisosEl) avisoPermisosEl.addEventListener('click',function(){tabEncargado('permisos');});
     var avisoEl=document.getElementById('aviso-aplic-pendientes');
     if(avisoEl) avisoEl.addEventListener('click',function(){
       ['tablero','asignar','notif','reporte','inventario','formulas','validar','config'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
@@ -1512,6 +1521,25 @@ function guardarAplicacion(){
   }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='✅ Asignar aplicación';});
 }
 
+function renderAlarmasRevision(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo">🚨 Alarmas de campo</div><div class="loading">Cargando...</div>';
+  from('alertas_campo').select('*,usuario:usuarios(nombre),tabla:tablas(nombre,plantacion_id)').order('creado_en',{ascending:false}).limit(50).get().then(function(rows){
+    if(!rows||!rows.length){body.innerHTML='<div class="seccion-titulo">🚨 Alarmas de campo</div><div class="empty">Sin reportes todavía.</div>';return;}
+    var iconos={plantacion:'🌱',plagas:'🐛',infraestructura:'🏗️',accidente:'🤕',emergencia:'🆘'};
+    var nombres={plantacion:'Plantación',plagas:'Plagas',infraestructura:'Infraestructura',accidente:'Accidente',emergencia:'Emergencia'};
+    var html='<div class="seccion-titulo">🚨 Alarmas de campo</div>';
+    html+=rows.map(function(a){
+      var p=a.tabla?cats.plantaciones.find(function(x){return x.id===a.tabla.plantacion_id;}):null;
+      var ubicacion=(p||a.tabla)?('📍 '+(p?p.nombre:'')+(a.tabla?' · '+a.tabla.nombre:'')):'';
+      var f=new Date(a.creado_en).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'numeric',minute:'2-digit',hour12:true});
+      var esEmerg=a.categoria==='emergencia';
+      return '<div class="orden-card" style="'+(esEmerg?'border-left-color:var(--rojo);':'')+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(iconos[a.categoria]||'🚨')+' '+(nombres[a.categoria]||a.categoria)+'</strong><span style="font-size:.72rem;color:var(--gris-3);">'+f+'</span></div>'+(ubicacion?'<div class="orden-meta" style="font-weight:700;">'+ubicacion+'</div>':'')+'<div class="orden-meta">👤 '+(a.usuario?a.usuario.nombre:'')+'</div>'+(a.descripcion?'<div class="orden-meta" style="margin-top:.2rem;">📝 '+a.descripcion+'</div>':'')+'</div>';
+    }).join('');
+    body.innerHTML=html;
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
 function renderPermisosRevision(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Permisos<button type="button" onclick="renderAsignarExtra()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Asignar hora extra</button></div><div class="loading">Cargando...</div>';
@@ -1865,7 +1893,10 @@ function capturarEvidenciaPermiso(e){
   if(!f) return;
   permisoEvidenciaBlob=f;
   var ind=document.getElementById('perm-ev-status');
-  if(ind) ind.innerHTML='✅ Comprobante listo para enviar: '+f.name;
+  if(ind){
+    var url=URL.createObjectURL(f);
+    ind.innerHTML='✅ Comprobante listo: '+f.name+'<br><img src="'+url+'" style="max-width:120px;max-height:120px;border-radius:8px;margin-top:.4rem;border:1px solid var(--gris-2);">';
+  }
 }
 
 function renderFormPermiso(tipo){
@@ -1880,23 +1911,34 @@ function renderFormPermiso(tipo){
     if(!fi||!ff){alert('Completa las fechas.');return;}
     var btn=document.getElementById('perm-enviar'); btn.disabled=true; btn.textContent='Enviando...';
     var folio=(tipo==='medico'?'PM-':'PP-')+Date.now().toString().slice(-8);
-    var subirEvidencia = permisoEvidenciaBlob ? subirComprobantePermiso(permisoEvidenciaBlob) : Promise.resolve(null);
-    subirEvidencia.then(function(url){
-      return from('permisos').insert({usuario_id:usuario.id,tipo:tipo,motivo:motivo,fecha_inicio:fi,fecha_fin:ff,estado:'pendiente',folio:folio,evidencia_url:url});
-    }).then(function(){
-      return from('notificaciones').insert({titulo:(tipo==='medico'?'🩺 Solicitud médica':'👤 Solicitud personal'),cuerpo:usuario.nombre+' solicitó permiso '+tipo+' del '+fi+' al '+ff+(motivo?' — '+motivo:'')+' · Folio '+folio,icono:'📝',leida:false,para_rol:'encargado'});
-    }).then(function(){
-      alert('✅ Solicitud enviada.\n\nTu folio de seguimiento es: '+folio+'\n\nGuárdalo para dar seguimiento a tu solicitud.');
-      renderAsisPermisos();
-    }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Enviar solicitud';});
+    var enviarSolicitud=function(url){
+      return from('permisos').insert({usuario_id:usuario.id,tipo:tipo,motivo:motivo,fecha_inicio:fi,fecha_fin:ff,estado:'pendiente',folio:folio,evidencia_url:url}).then(function(){
+        return from('notificaciones').insert({titulo:(tipo==='medico'?'🩺 Solicitud médica':'👤 Solicitud personal'),cuerpo:usuario.nombre+' solicitó permiso '+tipo+' del '+fi+' al '+ff+(motivo?' — '+motivo:'')+' · Folio '+folio,icono:'📝',leida:false,para_rol:'encargado'});
+      }).then(function(){
+        alert('✅ Solicitud enviada.\n\nTu folio de seguimiento es: '+folio+'\n\nGuárdalo para dar seguimiento a tu solicitud.');
+        renderAsisPermisos();
+      });
+    };
+    if(permisoEvidenciaBlob){
+      btn.textContent='Subiendo comprobante...';
+      subirComprobantePermiso(permisoEvidenciaBlob).then(function(url){
+        return enviarSolicitud(url);
+      }).catch(function(e){
+        if(!confirm('No se pudo subir el comprobante ('+e.message+').\n\n¿Enviar la solicitud sin el comprobante? Podrás mostrarlo después.')) {btn.disabled=false;btn.textContent='Enviar solicitud';return;}
+        enviarSolicitud(null).catch(function(e2){alert('Error: '+e2.message);btn.disabled=false;btn.textContent='Enviar solicitud';});
+      });
+    } else {
+      enviarSolicitud(null).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Enviar solicitud';});
+    }
   });
 }
 
 function subirComprobantePermiso(blob){
   var nombre='comprobante_'+Date.now()+'_'+Math.round(Math.random()*9999)+'.jpg';
-  return fetch(URL_SB+'/storage/v1/object/evidencias/'+nombre,{method:'POST',headers:{'apikey':KEY_SB,'Authorization':'Bearer '+KEY_SB,'Content-Type':blob.type||'image/jpeg','x-upsert':'true'},body:blob}).then(function(){
+  return fetch(URL_SB+'/storage/v1/object/evidencias/'+nombre,{method:'POST',headers:{'apikey':KEY_SB,'Authorization':'Bearer '+KEY_SB,'Content-Type':blob.type||'image/jpeg','x-upsert':'true'},body:blob}).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
     return URL_SB+'/storage/v1/object/public/evidencias/'+nombre;
-  }).catch(function(){ return null; });
+  });
 }
 
 function calcularResumenAsistencia(registros,primerDia){
@@ -1921,6 +1963,14 @@ function calcularResumenAsistencia(registros,primerDia){
   return {trabajados:Object.keys(trabajadosSet).length,retardos:retardos,faltas:faltas};
 }
 
+function numeroSemanaISO(fecha){
+  var d=new Date(Date.UTC(fecha.getFullYear(),fecha.getMonth(),fecha.getDate()));
+  var dayNum=d.getUTCDay()||7;
+  d.setUTCDate(d.getUTCDate()+4-dayNum);
+  var yearStart=new Date(Date.UTC(d.getUTCFullYear(),0,1));
+  return Math.ceil((((d-yearStart)/86400000)+1)/7);
+}
+
 function renderAsisHistorial(){
   var body=document.getElementById('op-body');
   body.innerHTML='<div class="seccion-titulo">📊 Historial</div><div class="loading">Cargando...</div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsistenciaMenu()">← Volver a Asistencia</button>';
@@ -1929,69 +1979,88 @@ function renderAsisHistorial(){
     from('permisos').select('*').eq('usuario_id',usuario.id).order('creado_en',{ascending:false}).get()
   ]).then(function(r){
     var registros=r[0]||[], permisos=r[1]||[];
+    var mesesSet={};
+    registros.forEach(function(reg){mesesSet[reg.fecha.slice(0,7)]=true;});
     var hoyD=new Date();
-    var primerDiaMes=new Date(hoyD.getFullYear(),hoyD.getMonth(),1).toISOString().slice(0,10);
-    var registrosMes=registros.filter(function(reg){return reg.fecha>=primerDiaMes;});
-    var resumen=calcularResumenAsistencia(registrosMes,primerDiaMes);
-    var nombreMes=hoyD.toLocaleDateString('es-MX',{month:'long',year:'numeric'});
-    var porDia={};
-    registros.forEach(function(reg){
-      var key=reg.fecha+'|'+reg.modalidad;
-      if(!porDia[key]) porDia[key]={fecha:reg.fecha,modalidad:reg.modalidad,entrada:null,salida:null,retardo:false};
-      if(reg.tipo==='entrada'&&(!porDia[key].entrada||reg.registrado_en<porDia[key].entrada)){porDia[key].entrada=reg.registrado_en;porDia[key].retardo=reg.retardo;}
-      if(reg.tipo==='salida'&&(!porDia[key].salida||reg.registrado_en>porDia[key].salida)) porDia[key].salida=reg.registrado_en;
-    });
-    var claves=Object.keys(porDia).sort().reverse();
-    var totalHorasExtra=0;
+    var mesActual=hoyD.toISOString().slice(0,7);
+    mesesSet[mesActual]=true;
+    var meses=Object.keys(mesesSet).sort().reverse();
+    window._histRegistros=registros; window._histPermisos=permisos;
+    var selectorHtml='<div class="form-group" style="margin-bottom:1rem;"><label>Mes</label><select id="hist-mes-sel">'+meses.map(function(m){
+      var d=new Date(m+'-02T00:00:00');
+      var lbl=d.toLocaleDateString('es-MX',{month:'long',year:'numeric'});
+      return '<option value="'+m+'"'+(m===mesActual?' selected':'')+' style="text-transform:capitalize;">'+lbl+'</option>';
+    }).join('')+'</select></div>';
+    var body2=document.getElementById('op-body');
+    body2.innerHTML='<div class="seccion-titulo">📊 Historial</div>'+selectorHtml+'<div id="hist-contenido"></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsistenciaMenu()">← Volver a Asistencia</button>';
+    document.getElementById('hist-mes-sel').addEventListener('change',function(){pintarHistorialMes(this.value);});
+    pintarHistorialMes(mesActual);
+  });
+}
+
+function pintarHistorialMes(mesStr){
+  var cont=document.getElementById('hist-contenido');
+  if(!cont) return;
+  var registros=window._histRegistros||[], permisos=window._histPermisos||[];
+  var primerDiaMes=mesStr+'-01';
+  var registrosMes=registros.filter(function(reg){return reg.fecha.slice(0,7)===mesStr;});
+  var resumen=calcularResumenAsistencia(registrosMes,primerDiaMes);
+  var porDia={};
+  registrosMes.forEach(function(reg){
+    var key=reg.fecha+'|'+reg.modalidad;
+    if(!porDia[key]) porDia[key]={fecha:reg.fecha,modalidad:reg.modalidad,entrada:null,salida:null,retardo:false};
+    if(reg.tipo==='entrada'&&(!porDia[key].entrada||reg.registrado_en<porDia[key].entrada)){porDia[key].entrada=reg.registrado_en;porDia[key].retardo=reg.retardo;}
+    if(reg.tipo==='salida'&&(!porDia[key].salida||reg.registrado_en>porDia[key].salida)) porDia[key].salida=reg.registrado_en;
+  });
+  var claves=Object.keys(porDia).sort().reverse();
+  var totalHorasExtra=0;
+  claves.forEach(function(k){
+    var d=porDia[k];
+    if(d.modalidad==='extras'&&d.entrada&&d.salida){
+      totalHorasExtra += (new Date(d.salida)-new Date(d.entrada))/3600000;
+    }
+  });
+  var html='<div class="stats-row"><div class="stat-card"><div class="stat-num stat-vd">'+resumen.trabajados+'</div><div class="stat-lbl">Trabajados</div></div><div class="stat-card"><div class="stat-num" style="color:var(--rojo);">'+resumen.faltas+'</div><div class="stat-lbl">Faltas</div></div><div class="stat-card"><div class="stat-num stat-am">'+resumen.retardos+'</div><div class="stat-lbl">Retardos</div></div></div>';
+  html+='<div style="background:var(--verde-tenue);border-radius:var(--radio-sm);padding:.85rem;margin-bottom:1rem;text-align:center;"><strong style="color:var(--verde);font-size:1.1rem;">'+totalHorasExtra.toFixed(1)+' h</strong><div class="hint" style="margin:0;">Total de horas extra trabajadas</div></div>';
+  if(claves.length){
+    var semanas={};
     claves.forEach(function(k){
       var d=porDia[k];
-      if(d.modalidad==='extras'&&d.entrada&&d.salida){
-        totalHorasExtra += (new Date(d.salida)-new Date(d.entrada))/3600000;
-      }
+      var fd=new Date(d.fecha+'T00:00:00');
+      var diaSemana=fd.getDay();
+      var lunes=new Date(fd);
+      lunes.setDate(fd.getDate()-((diaSemana+6)%7));
+      var domingo=new Date(lunes);
+      domingo.setDate(lunes.getDate()+6);
+      var claveSemana=lunes.toISOString().slice(0,10);
+      if(!semanas[claveSemana]) semanas[claveSemana]={inicio:lunes,fin:domingo,dias:[],trabajados:0,horasExtra:0};
+      semanas[claveSemana].dias.push(d);
+      if(d.modalidad==='labores') semanas[claveSemana].trabajados++;
+      if(d.modalidad==='extras'&&d.entrada&&d.salida) semanas[claveSemana].horasExtra += (new Date(d.salida)-new Date(d.entrada))/3600000;
     });
-    var html='<div class="seccion-titulo">📊 Historial</div>';
-    html+='<div class="seccion-titulo" style="margin-top:0;text-transform:capitalize;">Resumen de '+nombreMes+'</div><div class="stats-row"><div class="stat-card"><div class="stat-num stat-vd">'+resumen.trabajados+'</div><div class="stat-lbl">Trabajados</div></div><div class="stat-card"><div class="stat-num" style="color:var(--rojo);">'+resumen.faltas+'</div><div class="stat-lbl">Faltas</div></div><div class="stat-card"><div class="stat-num stat-am">'+resumen.retardos+'</div><div class="stat-lbl">Retardos</div></div></div>';
-    html+='<div style="background:var(--verde-tenue);border-radius:var(--radio-sm);padding:.85rem;margin-bottom:1rem;text-align:center;"><strong style="color:var(--verde);font-size:1.1rem;">'+totalHorasExtra.toFixed(1)+' h</strong><div class="hint" style="margin:0;">Total de horas extra trabajadas</div></div>';
-    if(claves.length){
-      var semanas={};
-      claves.forEach(function(k){
-        var d=porDia[k];
-        var fd=new Date(d.fecha+'T00:00:00');
-        var diaSemana=fd.getDay();
-        var lunes=new Date(fd);
-        lunes.setDate(fd.getDate()-((diaSemana+6)%7));
-        var domingo=new Date(lunes);
-        domingo.setDate(lunes.getDate()+6);
-        var claveSemana=lunes.toISOString().slice(0,10);
-        if(!semanas[claveSemana]) semanas[claveSemana]={inicio:lunes,fin:domingo,dias:[],trabajados:0,horasExtra:0};
-        semanas[claveSemana].dias.push(d);
-        if(d.modalidad==='labores') semanas[claveSemana].trabajados++;
-        if(d.modalidad==='extras'&&d.entrada&&d.salida) semanas[claveSemana].horasExtra += (new Date(d.salida)-new Date(d.entrada))/3600000;
-      });
-      var clavesSemana=Object.keys(semanas).sort().reverse();
-      html+='<div class="seccion-titulo" style="margin-top:0;">Por semana</div>';
-      html+=clavesSemana.map(function(sk){
-        var s=semanas[sk];
-        var opts={day:'2-digit',month:'short'};
-        var rango=s.inicio.toLocaleDateString('es-MX',opts)+' – '+s.fin.toLocaleDateString('es-MX',opts);
-        var filas=s.dias.map(function(d){
-          var hE=d.entrada?new Date(d.entrada).toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',hour12:true}):'—';
-          var hS=d.salida?new Date(d.salida).toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',hour12:true}):'—';
-          return '<div style="font-size:.78rem;display:flex;justify-content:space-between;padding:.35rem 0;border-bottom:1px solid var(--gris-1);"><span>'+d.fecha+(d.modalidad==='extras'?' · extra':'')+(d.retardo?' · <span style="color:var(--rojo);font-weight:700;">retardo</span>':'')+'</span><span style="color:var(--verde-mid);font-weight:700;">'+hE+' → '+hS+'</span></div>';
-        }).join('');
-        return '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;"><strong style="font-size:.85rem;">Semana '+rango+'</strong><span style="font-size:.75rem;color:var(--gris-3);">'+s.trabajados+' días'+(s.horasExtra>0?' · '+s.horasExtra.toFixed(1)+'h extra':'')+'</span></div>'+filas+'</div>';
+    var clavesSemana=Object.keys(semanas).sort().reverse();
+    html+='<div class="seccion-titulo" style="margin-top:0;">Por semana</div>';
+    html+=clavesSemana.map(function(sk){
+      var s=semanas[sk];
+      var opts={day:'2-digit',month:'short'};
+      var rango=s.inicio.toLocaleDateString('es-MX',opts)+' – '+s.fin.toLocaleDateString('es-MX',opts);
+      var numSemana=numeroSemanaISO(s.inicio);
+      var filas=s.dias.map(function(d){
+        var hE=d.entrada?new Date(d.entrada).toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',hour12:true}):'—';
+        var hS=d.salida?new Date(d.salida).toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',hour12:true}):'—';
+        return '<div style="font-size:.78rem;display:flex;justify-content:space-between;padding:.35rem 0;border-bottom:1px solid var(--gris-1);"><span>'+d.fecha+(d.modalidad==='extras'?' · extra':'')+(d.retardo?' · <span style="color:var(--rojo);font-weight:700;">retardo</span>':'')+'</span><span style="color:var(--verde-mid);font-weight:700;">'+hE+' → '+hS+'</span></div>';
       }).join('');
-    } else { html+='<div class="empty">Sin registros de asistencia todavía.</div>'; }
-    if(permisos.length){
-      var estLbl={pendiente:'⏳ Pendiente',aprobado:'✅ Aprobado',rechazado:'❌ Rechazado'};
-      var estColor={pendiente:'var(--tierra)',aprobado:'var(--verde-mid)',rechazado:'var(--rojo)'};
-      html+='<div class="seccion-titulo" style="margin-top:1rem;">Permisos</div>'+permisos.map(function(p){
+      return '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;"><strong style="font-size:.85rem;">Semana '+numSemana+' · '+rango+'</strong><span style="font-size:.75rem;color:var(--gris-3);">'+s.trabajados+' días'+(s.horasExtra>0?' · '+s.horasExtra.toFixed(1)+'h extra':'')+'</span></div>'+filas+'</div>';
+    }).join('');
+  } else { html+='<div class="empty">Sin registros de asistencia este mes.</div>'; }
+  if(permisos.length){
+    var estLbl={pendiente:'⏳ Pendiente',aprobado:'✅ Aprobado',rechazado:'❌ Rechazado'};
+    var estColor={pendiente:'var(--tierra)',aprobado:'var(--verde-mid)',rechazado:'var(--rojo)'};
+    html+='<div class="seccion-titulo" style="margin-top:1rem;">Permisos</div>'+permisos.map(function(p){
         return '<div style="background:var(--blanco);border-radius:12px;padding:.75rem;font-size:.8rem;margin-bottom:.4rem;"><div style="display:flex;justify-content:space-between;"><span>'+(p.tipo==='medico'?'🩺 Médico':'👤 Personal')+' · '+p.fecha_inicio+' a '+p.fecha_fin+'</span><span style="color:'+estColor[p.estado]+';font-weight:700;">'+estLbl[p.estado]+'</span></div>'+(p.folio?'<div class="hint" style="margin-top:.2rem;">🔖 '+p.folio+'</div>':'')+(p.motivo?'<div class="hint" style="margin-top:.1rem;">'+p.motivo+'</div>':'')+(p.evidencia_url?'<div style="margin-top:.2rem;"><a href="'+p.evidencia_url+'" target="_blank" style="color:var(--verde-mid);font-weight:700;font-size:.78rem;">📎 Ver comprobante</a></div>':'')+'</div>';
       }).join('');
     }
-    html+='<button class="btn-back" style="margin-top:1rem;" onclick="renderAsistenciaMenu()">← Volver a Asistencia</button>';
-    body.innerHTML=html;
-  });
+    cont.innerHTML=html;
 }
 
 function pararRiegoTimer(){if(riegoTimer){clearInterval(riegoTimer);riegoTimer=null;}riegoAlarmaActiva=false;}
