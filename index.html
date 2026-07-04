@@ -373,11 +373,26 @@ function tabEncargado(tab){
 function renderTablero(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="loading">Cargando tablero...</div>';
-  from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre),subtipo:subtipos_labor(nombre)').order('creado_en',{ascending:false}).get().then(function(todas){
+  var hoy=new Date().toISOString().slice(0,10);
+  var en7dias=new Date(Date.now()+7*86400000).toISOString().slice(0,10);
+  Promise.all([
+    from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre),subtipo:subtipos_labor(nombre)').order('creado_en',{ascending:false}).get(),
+    from('formulas_aplicacion').select('id,nombre,fecha_programada,tabla_id').eq('activo',true).get(),
+    from('ordenes_trabajo').select('formula_id').not('formula_id','is','null').get()
+  ]).then(function(r){
+    var todas=r[0]||[], formulas=r[1]||[], ordenesConFormula=r[2]||[];
+    var asignadas={};
+    ordenesConFormula.forEach(function(o){asignadas[o.formula_id]=true;});
+    var pendientesFormula=formulas.filter(function(f){return f.fecha_programada&&f.fecha_programada<=en7dias&&!asignadas[f.id];});
+    var hoyN=pendientesFormula.filter(function(f){return f.fecha_programada===hoy;}).length;
+    var avisoHtml='';
+    if(pendientesFormula.length){
+      avisoHtml='<div style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);border-radius:var(--radio-sm);padding:.85rem;margin-bottom:1rem;cursor:pointer;" id="aviso-aplic-pendientes"><strong style="color:var(--rojo);">🧪 '+pendientesFormula.length+' aplicación(es) programada(s)'+(hoyN?' — '+hoyN+' para HOY':' esta semana')+' sin asignar</strong><div class="hint" style="margin-top:.25rem;">Toca para ir a asignarlas</div></div>';
+    }
     var pend=todas.filter(function(o){return o.estado==='pendiente';}).length;
     var enP=todas.filter(function(o){return o.estado==='en_proceso';}).length;
     var comp=todas.filter(function(o){return o.estado==='completada';}).length;
-    var html='<div class="stats-row"><div class="stat-card"><div class="stat-num stat-am">'+pend+'</div><div class="stat-lbl">Pendientes</div></div><div class="stat-card"><div class="stat-num stat-vd">'+enP+'</div><div class="stat-lbl">En proceso</div></div><div class="stat-card"><div class="stat-num stat-az">'+comp+'</div><div class="stat-lbl">Completadas</div></div></div>';
+    var html=avisoHtml+'<div class="stats-row"><div class="stat-card"><div class="stat-num stat-am">'+pend+'</div><div class="stat-lbl">Pendientes</div></div><div class="stat-card"><div class="stat-num stat-vd">'+enP+'</div><div class="stat-lbl">En proceso</div></div><div class="stat-card"><div class="stat-num stat-az">'+comp+'</div><div class="stat-lbl">Completadas</div></div></div>';
     if(!todas.length){html+='<div class="empty">Sin órdenes. Toca "+ Asignar" para crear una.</div>';}
     else{
       var act=todas.filter(function(o){return o.estado!=='completada'&&o.estado!=='cancelada';});
@@ -386,6 +401,15 @@ function renderTablero(){
       if(cer.length) html+='<div class="seccion-titulo" style="margin-top:1rem">Cerradas</div>'+cer.map(cardHtml).join('');
     }
     body.innerHTML=html;
+    var avisoEl=document.getElementById('aviso-aplic-pendientes');
+    if(avisoEl) avisoEl.addEventListener('click',function(){
+      ['tablero','asignar','notif','reporte','inventario','formulas','validar','config'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
+      document.getElementById('tab-asignar').classList.add('active');
+      var lb=cats.tiposLabor.find(function(l){return l.requiere_formula;});
+      asignarLaborSel=lb;
+      aplicReset();
+      renderAsigAplicPorFecha();
+    });
     body.querySelectorAll('[data-can]').forEach(function(b){b.addEventListener('click',function(){cambiarEstado(this.dataset.can,'cancelada');});});
     body.querySelectorAll('[data-com]').forEach(function(b){b.addEventListener('click',function(){cambiarEstado(this.dataset.com,'completada');});});
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
@@ -428,7 +452,7 @@ function renderFormAsignar(){
         renderAsigRiegoPlantaciones();
       } else if(lb&&lb.requiere_formula){
         aplicReset();
-        renderAsigAplicPlantaciones();
+        renderAsigAplicPorFecha();
       } else {
         renderFormAsignarPaso2();
       }
@@ -1214,6 +1238,37 @@ function aplicReset(){
   aplic={plantacionId:null,tablaId:null,formula:null,componentes:[],bomba:null,numBombas:null,volumen:200,factor:1,operarios:[],fecha:new Date().toISOString().slice(0,10),notas:null};
 }
 
+function renderAsigAplicPorFecha(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🧪 Aplicaciones<button type="button" onclick="renderFormAsignar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cambiar labor</button></div><div class="loading">Buscando lo programado...</div>';
+  var hoy=new Date().toISOString().slice(0,10);
+  var en7dias=new Date(Date.now()+7*86400000).toISOString().slice(0,10);
+  Promise.all([
+    from('formulas_aplicacion').select('*,tabla:tablas(nombre,plantacion_id)').eq('activo',true).not('fecha_programada','is','null').order('fecha_programada').get(),
+    from('ordenes_trabajo').select('formula_id').not('formula_id','is','null').get()
+  ]).then(function(r){
+    var formulas=r[0]||[], ordenesConFormula=r[1]||[];
+    var asignadas={};
+    ordenesConFormula.forEach(function(o){asignadas[o.formula_id]=true;});
+    var hoyF=formulas.filter(function(f){return f.fecha_programada===hoy;});
+    var semanaF=formulas.filter(function(f){return f.fecha_programada>hoy&&f.fecha_programada<=en7dias;});
+    var masF=formulas.filter(function(f){return f.fecha_programada>en7dias;});
+    function tarjeta(f){
+      var p=f.tabla?cats.plantaciones.find(function(x){return x.id===f.tabla.plantacion_id;}):null;
+      var yaAsig=asignadas[f.id];
+      return '<div class="orden-card" style="cursor:pointer;'+(yaAsig?'opacity:.55;':'')+'" data-fid="'+f.id+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem">'+(VIA_ICONOS[f.via]||'')+' '+f.nombre+'</strong>'+(yaAsig?'<span style="font-size:.7rem;color:var(--verde-mid);font-weight:700;">✅ Ya asignada</span>':'<span style="font-size:.7rem;color:var(--rojo);font-weight:700;">Sin asignar</span>')+'</div><div class="orden-meta">📍 '+(p?p.nombre:'')+' · '+(f.tabla?f.tabla.nombre:'')+' · 📅 '+f.fecha_programada+'</div></div>';
+    }
+    var html='';
+    if(hoyF.length) html+='<div class="seccion-titulo">📅 Hoy</div>'+hoyF.map(tarjeta).join('');
+    if(semanaF.length) html+='<div class="seccion-titulo" style="margin-top:1rem">Esta semana</div>'+semanaF.map(tarjeta).join('');
+    if(masF.length) html+='<div class="seccion-titulo" style="margin-top:1rem">Más adelante</div>'+masF.map(tarjeta).join('');
+    if(!formulas.length) html='<div class="empty">No hay fórmulas con fecha programada.<br/>Puedes buscar por plantación abajo.</div>';
+    html+='<button class="btn-back" style="margin-top:1.25rem;width:100%;" onclick="renderAsigAplicPlantaciones()">🔍 Buscar por plantación / tabla</button>';
+    body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🧪 Aplicaciones<button type="button" onclick="renderFormAsignar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cambiar labor</button></div>'+html;
+    body.querySelectorAll('[data-fid]').forEach(function(el){el.addEventListener('click',function(){cargarFormulaParaAsignar(this.dataset.fid);});});
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
 function renderAsigAplicPlantaciones(){
   var body=document.getElementById('enc-body');
   var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🧪 Aplicación · Plantación<button type="button" onclick="renderFormAsignar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cambiar labor</button></div><div class="riego-grid">';
@@ -1270,7 +1325,10 @@ function cargarFormulaParaAsignar(formulaId){
   ]).then(function(r){
     aplic.formula=r[0]&&r[0][0];
     aplic.componentes=r[1]||[];
-    if(!aplic.fecha) aplic.fecha=aplic.formula.fecha_programada||new Date().toISOString().slice(0,10);
+    aplic.tablaId=aplic.formula.tabla_id;
+    var tb=cats.tablas.find(function(t){return t.id===aplic.tablaId;});
+    aplic.plantacionId=tb?tb.plantacion_id:null;
+    aplic.fecha=aplic.formula.fecha_programada||new Date().toISOString().slice(0,10);
     renderAsigAplicBomba();
   });
 }
