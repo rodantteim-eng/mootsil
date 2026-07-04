@@ -1788,7 +1788,7 @@ function irInicioOperario(){
   pararRiegoTimer();
   ['asistencia','tareas','pagos','op-notif'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
   var body=document.getElementById('op-body');
-  body.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2.5rem 1rem;text-align:center;min-height:60vh;"><div style="width:120px;height:120px;border-radius:50%;background:var(--verde-tenue);display:flex;align-items:center;justify-content:center;font-size:3.2rem;margin-bottom:1rem;">🥑</div><div style="font-size:1.15rem;font-weight:800;color:var(--verde);">¡Bienvenido, '+usuario.nombre+'!</div><div style="font-size:.78rem;color:var(--gris-3);margin-top:.15rem;">Tu Mootsilito de hoy te saluda 👋</div><div style="font-size:.82rem;color:var(--gris-3);margin-top:.5rem;">¿Qué vamos a hacer hoy?</div><button class="btn-primary" style="margin-top:1.5rem;width:100%;max-width:260px;" onclick="tabOperario(\'asistencia\')">Ir a Asistencia →</button></div>';
+  body.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2.5rem 1rem;text-align:center;min-height:60vh;"><div style="width:120px;height:120px;border-radius:50%;background:var(--verde-tenue);display:flex;align-items:center;justify-content:center;font-size:3.2rem;margin-bottom:1rem;">🥑</div><div style="font-size:1.15rem;font-weight:800;color:var(--verde);">¡Bienvenido, '+usuario.nombre+'!</div><div style="font-size:.78rem;color:var(--gris-3);margin-top:.15rem;">Tu Mootsilito de hoy te saluda 👋</div><div style="font-size:.82rem;color:var(--gris-3);margin-top:.5rem;">¿Qué vamos a hacer hoy? Elige una opción arriba 👆</div></div>';
 }
 
 function actualizarBadgeOperario(){
@@ -2042,15 +2042,18 @@ function pintarHistorialMes(mesStr){
     html+='<div class="seccion-titulo" style="margin-top:0;">Por semana</div>';
     html+=clavesSemana.map(function(sk){
       var s=semanas[sk];
-      var opts={day:'2-digit',month:'short'};
-      var rango=s.inicio.toLocaleDateString('es-MX',opts)+' – '+s.fin.toLocaleDateString('es-MX',opts);
       var numSemana=numeroSemanaISO(s.inicio);
+      var mesInicio=s.inicio.toLocaleDateString('es-MX',{month:'long'});
+      var mesFin=s.fin.toLocaleDateString('es-MX',{month:'long'});
+      var rango = (mesInicio===mesFin)
+        ? ('del '+s.inicio.getDate()+' al '+s.fin.getDate()+' de '+mesFin+' '+s.fin.getFullYear())
+        : ('del '+s.inicio.getDate()+' '+mesInicio+' al '+s.fin.getDate()+' '+mesFin+' '+s.fin.getFullYear());
       var filas=s.dias.map(function(d){
         var hE=d.entrada?new Date(d.entrada).toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',hour12:true}):'—';
         var hS=d.salida?new Date(d.salida).toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',hour12:true}):'—';
         return '<div style="font-size:.78rem;display:flex;justify-content:space-between;padding:.35rem 0;border-bottom:1px solid var(--gris-1);"><span>'+d.fecha+(d.modalidad==='extras'?' · extra':'')+(d.retardo?' · <span style="color:var(--rojo);font-weight:700;">retardo</span>':'')+'</span><span style="color:var(--verde-mid);font-weight:700;">'+hE+' → '+hS+'</span></div>';
       }).join('');
-      return '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;"><strong style="font-size:.85rem;">Semana '+numSemana+' · '+rango+'</strong><span style="font-size:.75rem;color:var(--gris-3);">'+s.trabajados+' días'+(s.horasExtra>0?' · '+s.horasExtra.toFixed(1)+'h extra':'')+'</span></div>'+filas+'</div>';
+      return '<div class="orden-card"><div style="margin-bottom:.4rem;"><strong style="font-size:.85rem;">Semana '+numSemana+'</strong><div style="font-size:.75rem;color:var(--gris-3);">'+rango+' · '+s.trabajados+' días'+(s.horasExtra>0?' · '+s.horasExtra.toFixed(1)+'h extra':'')+'</div></div>'+filas+'</div>';
     }).join('');
   } else { html+='<div class="empty">Sin registros de asistencia este mes.</div>'; }
   if(permisos.length){
