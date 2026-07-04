@@ -715,12 +715,20 @@ function guardarOrden(){
 function renderNotifs(bodyId){
   var body=document.getElementById(bodyId);
   body.innerHTML='<div class="loading">Cargando avisos...</div>';
-  from('notificaciones').select('*').order('creado_en',{ascending:false}).limit(30).get().then(function(data){
+  var esPanelLiderazgo = bodyId==='enc-body';
+  Promise.all([
+    from('notificaciones').select('*').order('creado_en',{ascending:false}).limit(30).get(),
+    esPanelLiderazgo?from('config_app').select('*').get():Promise.resolve([])
+  ]).then(function(r){
+    var data=r[0], cfgRows=r[1]||[];
+    var cfg={}; cfgRows.forEach(function(c){cfg[c.clave]=c.valor;});
     if(!data||!data.length){body.innerHTML='<div class="empty">📭 Sin avisos por ahora</div>';return;}
     body.innerHTML=data.map(function(n){
       var diff=Math.floor((Date.now()-new Date(n.creado_en))/1000);
       var t=diff<60?'hace un momento':diff<3600?'hace '+Math.floor(diff/60)+' min':diff<86400?'hace '+Math.floor(diff/3600)+' h':'hace '+Math.floor(diff/86400)+' días';
-      return '<div class="notif-item"><div class="notif-ic">'+(n.icono||'🔔')+'</div><div class="notif-texto"><strong>'+n.titulo+'</strong>'+n.cuerpo+'<div class="notif-tiempo">'+t+'</div></div></div>';
+      var esEmergencia = esPanelLiderazgo && n.icono==='🆘';
+      var botonesLlamada = esEmergencia?'<div style="display:flex;gap:6px;margin-top:.5rem;flex-wrap:wrap;"><a href="tel:'+(cfg.emergencia_policia||'911')+'" style="text-decoration:none;"><span style="display:inline-block;padding:.4rem .7rem;border-radius:20px;background:var(--rojo);color:#fff;font-size:.75rem;font-weight:700;">🚓 Llamar Policía</span></a><a href="tel:'+(cfg.emergencia_bomberos||'911')+'" style="text-decoration:none;"><span style="display:inline-block;padding:.4rem .7rem;border-radius:20px;background:var(--rojo);color:#fff;font-size:.75rem;font-weight:700;">🚒 Llamar Bomberos</span></a><a href="tel:'+(cfg.emergencia_ambulancia||'911')+'" style="text-decoration:none;"><span style="display:inline-block;padding:.4rem .7rem;border-radius:20px;background:var(--rojo);color:#fff;font-size:.75rem;font-weight:700;">🚑 Llamar Ambulancia</span></a></div>':'';
+      return '<div class="notif-item" style="'+(esEmergencia?'border:2px solid var(--rojo);border-radius:var(--radio);':'')+'"><div class="notif-ic">'+(n.icono||'🔔')+'</div><div class="notif-texto"><strong>'+n.titulo+'</strong>'+n.cuerpo+botonesLlamada+'<div class="notif-tiempo">'+t+'</div></div></div>';
     }).join('');
   });
 }
@@ -1516,7 +1524,7 @@ function renderPermisosRevision(){
     var estColor={pendiente:'var(--tierra)',aprobado:'var(--verde-mid)',rechazado:'var(--rojo)'};
     function tarjeta(p){
       var ac=p.estado==='pendiente'?'<div style="display:flex;gap:8px;margin-top:.6rem;"><button class="btn-sm btn-completar" data-aprob="'+p.id+'">✅ Aprobar</button><button class="btn-sm btn-cancelar" data-rech="'+p.id+'">❌ Rechazar</button></div>':'';
-      return '<div class="orden-card" style="border-left-color:'+estColor[p.estado]+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(p.tipo==='medico'?'🩺 Médico':'👤 Personal')+' · '+(p.operario?p.operario.nombre:'')+'</strong><span style="font-size:.72rem;font-weight:700;color:'+estColor[p.estado]+';">'+estLbl[p.estado]+'</span></div><div class="orden-meta">'+(p.folio?'🔖 '+p.folio+'<br>':'')+'📅 '+p.fecha_inicio+' a '+p.fecha_fin+(p.motivo?'<br>📝 '+p.motivo:'')+'</div>'+ac+'</div>';
+      return '<div class="orden-card" style="border-left-color:'+estColor[p.estado]+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(p.tipo==='medico'?'🩺 Médico':'👤 Personal')+' · '+(p.operario?p.operario.nombre:'')+'</strong><span style="font-size:.72rem;font-weight:700;color:'+estColor[p.estado]+';">'+estLbl[p.estado]+'</span></div><div class="orden-meta">'+(p.folio?'🔖 '+p.folio+'<br>':'')+'📅 '+p.fecha_inicio+' a '+p.fecha_fin+(p.motivo?'<br>📝 '+p.motivo:'')+(p.evidencia_url?'<br><a href="'+p.evidencia_url+'" target="_blank" style="color:var(--verde-mid);font-weight:700;">📎 Ver comprobante</a>':'')+'</div>'+ac+'</div>';
     }
     var html=headerHtml+'<div class="seccion-titulo" style="margin-top:0;">'+(pend.length?'<span style="font-size:.75rem;color:var(--rojo);font-weight:700;">('+pend.length+' pendientes)</span>':'Solicitudes')+'</div>';
     if(pend.length) html+=pend.map(tarjeta).join('');
@@ -1558,8 +1566,8 @@ function renderAlarmaForm(categoria){
   var necesitaUbicacion = categoria!=='accidente';
   var pO=cats.plantaciones.map(function(p){return '<option value="'+p.id+'">'+p.nombre+'</option>';}).join('');
   body.innerHTML='<div class="seccion-titulo">'+ALARMA_LABELS[categoria]+'</div><div class="form-card">'+
-  (necesitaUbicacion?'<div class="form-group"><label>Plantación (opcional)</label><select id="al-pl"><option value="">No aplica</option>'+pO+'</select></div><div class="form-group"><label>Tabla (opcional)</label><select id="al-tb"><option value="">Selecciona plantación primero</option></select></div>':'')+
-  '<div class="form-group"><label>¿Qué encontraste?</label><textarea id="al-desc" rows="4" placeholder="Ej. Encontré fuga en E1 surco 30 / J3 Surcos 1-20 hormigas / E2 surco 24 línea tutoreo trozada" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div>'+
+  (necesitaUbicacion?'<div class="form-group"><label>Plantación</label><select id="al-pl"><option value="">Selecciona...</option>'+pO+'</select></div><div class="form-group"><label>Tabla</label><select id="al-tb"><option value="">Selecciona plantación primero</option></select></div>':'')+
+  '<div class="form-group"><label>¿Qué encontraste?</label><textarea id="al-desc" rows="4" placeholder="Ej. Encontré fuga en surco 30 / Surcos 1-20 con hormigas / Surco 24 línea de tutoreo trozada" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div>'+
   '<button class="btn-primary" id="al-enviar">🚨 Enviar reporte</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAlarmasMenu()">← Volver a Alarmas</button>';
   if(necesitaUbicacion){
     document.getElementById('al-pl').addEventListener('change',function(){
@@ -1572,8 +1580,12 @@ function renderAlarmaForm(categoria){
     if(!desc){alert('Describe lo que encontraste.');return;}
     var plId=necesitaUbicacion?(document.getElementById('al-pl').value||null):null;
     var tbId=necesitaUbicacion?(document.getElementById('al-tb').value||null):null;
+    if(necesitaUbicacion&&(!plId||!tbId)){alert('Selecciona la plantación y la tabla para poder dar seguimiento.');return;}
+    var p=plId?cats.plantaciones.find(function(x){return x.id===plId;}):null;
+    var t=tbId?cats.tablas.find(function(x){return x.id===tbId;}):null;
+    var ubicacionTxt=(p&&t)?(' · 📍 '+p.nombre+' · '+t.nombre):'';
     from('alertas_campo').insert({usuario_id:usuario.id,categoria:categoria,descripcion:desc,plantacion_id:plId,tabla_id:tbId}).then(function(){
-      return from('notificaciones').insert({titulo:'🚨 '+ALARMA_LABELS[categoria],cuerpo:usuario.nombre+' reportó: '+desc,icono:'🚨',leida:false,para_rol:'encargado'});
+      return from('notificaciones').insert({titulo:'🚨 '+ALARMA_LABELS[categoria],cuerpo:usuario.nombre+' reportó: '+desc+ubicacionTxt,icono:'🚨',leida:false,para_rol:'encargado'});
     }).then(function(){
       alert('✅ Reporte enviado. El encargado ya fue notificado.');
       renderAlarmasMenu();
@@ -1581,23 +1593,37 @@ function renderAlarmaForm(categoria){
   });
 }
 
+var EMERGENCIA_TIPOS={medica:'🩺 Médica',seguridad:'🚨 Seguridad',incendio:'🔥 Incendio',otra:'⚠️ Otra'};
+
 function renderEmergencia(){
   var body=document.getElementById('op-body');
-  body.innerHTML='<div class="seccion-titulo" style="color:var(--rojo);">🆘 Emergencia</div><div class="loading">Cargando...</div>';
-  from('config_app').select('*').get().then(function(rows){
-    var cfg={}; (rows||[]).forEach(function(r){cfg[r.clave]=r.valor;});
-    var pol=cfg.emergencia_policia||'911', bom=cfg.emergencia_bomberos||'911', amb=cfg.emergencia_ambulancia||'911';
-    body.innerHTML='<div class="seccion-titulo" style="color:var(--rojo);">🆘 Emergencia</div><p class="hint" style="margin-bottom:1rem;">Toca para llamar directo. También se avisa al encargado.</p><div style="display:flex;flex-direction:column;gap:.75rem;">'+
-    '<a href="tel:'+pol+'" onclick="notificarEmergencia(\'Policía\')" style="text-decoration:none;"><div class="pbtn-emerg">🚓 Policía · '+pol+'</div></a>'+
-    '<a href="tel:'+bom+'" onclick="notificarEmergencia(\'Bomberos\')" style="text-decoration:none;"><div class="pbtn-emerg">🚒 Bomberos · '+bom+'</div></a>'+
-    '<a href="tel:'+amb+'" onclick="notificarEmergencia(\'Ambulancia\')" style="text-decoration:none;"><div class="pbtn-emerg">🚑 Ambulancia · '+amb+'</div></a>'+
-    '</div><button class="btn-back" style="margin-top:1.25rem;" onclick="renderAlarmasMenu()">← Volver a Alarmas</button>';
+  var tiles=Object.keys(EMERGENCIA_TIPOS).map(function(k){
+    return '<div class="labor-tile" data-tipo="'+k+'"><div class="labor-tile-lbl" style="font-size:.85rem;">'+EMERGENCIA_TIPOS[k]+'</div></div>';
+  }).join('');
+  body.innerHTML='<div class="seccion-titulo" style="color:var(--rojo);">🆘 Emergencia</div><p class="hint" style="margin-bottom:1rem;">Esto avisa de inmediato a dueño, encargado y admin — ellos hacen la llamada a las autoridades. No marca ningún número por ti.</p><div class="labor-grid" style="grid-template-columns:repeat(2,1fr);">'+tiles+'</div><div id="emerg-detalle" style="display:none;margin-top:1rem;"><div class="form-card"><div class="form-group"><label>¿Qué pasó? (opcional)</label><textarea id="emerg-desc" rows="3" placeholder="Ej. Compañero con piquete de avispa, cerca de Tabla 2" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="emerg-enviar" style="background:var(--rojo);">🆘 Avisar AHORA</button></div></div><button class="btn-back" style="margin-top:1.25rem;" onclick="renderAlarmasMenu()">← Volver a Alarmas</button>';
+  var tipoSel=null;
+  body.querySelectorAll('[data-tipo]').forEach(function(el){
+    el.addEventListener('click',function(){
+      tipoSel=this.dataset.tipo;
+      body.querySelectorAll('[data-tipo]').forEach(function(x){x.classList.remove('labor-tile-otra');});
+      this.classList.add('labor-tile-otra');
+      document.getElementById('emerg-detalle').style.display='block';
+    });
+  });
+  document.getElementById('emerg-enviar').addEventListener('click',function(){
+    if(!tipoSel){alert('Selecciona qué tipo de emergencia es.');return;}
+    if(!confirm('¿Confirmas que es una emergencia real?\n\nSe avisará de inmediato a dueño, encargado y admin.')) return;
+    var desc=document.getElementById('emerg-desc').value.trim()||null;
+    notificarEmergencia(tipoSel,desc);
   });
 }
 
-function notificarEmergencia(tipo){
-  from('alertas_campo').insert({usuario_id:usuario.id,categoria:'emergencia',descripcion:'Llamada a '+tipo}).catch(function(){});
-  from('notificaciones').insert({titulo:'🆘 EMERGENCIA',cuerpo:usuario.nombre+' está llamando a '+tipo+' ahora mismo.',icono:'🆘',leida:false,para_rol:'encargado'}).catch(function(){});
+function notificarEmergencia(tipo,desc){
+  from('alertas_campo').insert({usuario_id:usuario.id,categoria:'emergencia',descripcion:(EMERGENCIA_TIPOS[tipo]||tipo)+(desc?' — '+desc:'')}).catch(function(){});
+  from('notificaciones').insert({titulo:'🆘 EMERGENCIA — '+(EMERGENCIA_TIPOS[tipo]||tipo),cuerpo:usuario.nombre+' reportó una emergencia'+(desc?': '+desc:'')+'. ¡Llama ya!',icono:'🆘',leida:false,para_rol:'encargado'}).then(function(){
+    var body=document.getElementById('op-body');
+    body.innerHTML='<div style="text-align:center;padding:2.5rem 1rem;"><div style="font-size:3rem;margin-bottom:1rem;">🆘</div><div style="font-size:1.1rem;font-weight:800;color:var(--rojo);">Se avisó a dueño, encargado y admin</div><div class="hint" style="margin-top:.5rem;">Mantente en un lugar seguro. Te contactarán de inmediato.</div><button class="btn-primary" style="margin-top:1.5rem;" onclick="tabOperario(\'tareas\')">Entendido</button></div>';
+  }).catch(function(e){alert('Error: '+e.message);});
 }
 
 function renderPerfilOperario(){
@@ -1605,8 +1631,9 @@ function renderPerfilOperario(){
   body.innerHTML='<div class="seccion-titulo">Perfil</div><div class="loading">Cargando...</div>';
   from('usuarios').select('*').eq('id',usuario.id).get().then(function(rows){
     var u=rows&&rows[0]||{};
+    var asignacionLbl = u.certificado_ambas ? '🎖️ Certificado para Labores y Cosecha' : (usuario.rol==='cosechador'?'Asignado a: Cosecha':usuario.rol==='galerista'?'Asignado a: Galera':'Asignado a: Labores');
     body.innerHTML='<div class="seccion-titulo">Perfil</div>'+
-    '<div class="tarea-card"><div class="tarea-title">👤 '+usuario.nombre+'</div><div class="tarea-meta">'+usuario.rol+'</div></div>'+
+    '<div class="tarea-card"><div class="tarea-title">👤 '+usuario.nombre+'</div><div class="tarea-meta">'+asignacionLbl+'</div></div>'+
     '<div class="form-card" style="margin-top:.75rem;"><label style="display:block;font-size:.75rem;font-weight:600;color:var(--gris-3);margin-bottom:.4rem;text-transform:uppercase;">Mi teléfono</label><input type="tel" id="perf-tel" value="'+(u.telefono||'').replace(/"/g,'&quot;')+'" placeholder="10 dígitos" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;margin-bottom:.75rem;">'+
     '<label style="display:block;font-size:.75rem;font-weight:600;color:var(--gris-3);margin-bottom:.4rem;text-transform:uppercase;">Contacto de emergencia — nombre</label><input type="text" id="perf-ce-nombre" value="'+(u.contacto_emergencia_nombre||'').replace(/"/g,'&quot;')+'" placeholder="Nombre completo" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;margin-bottom:.75rem;">'+
     '<label style="display:block;font-size:.75rem;font-weight:600;color:var(--gris-3);margin-bottom:.4rem;text-transform:uppercase;">Contacto de emergencia — teléfono</label><input type="tel" id="perf-ce-tel" value="'+(u.contacto_emergencia_telefono||'').replace(/"/g,'&quot;')+'" placeholder="10 dígitos" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;margin-bottom:.9rem;">'+
@@ -1831,22 +1858,45 @@ function renderAsisPermisos(){
   });
 }
 
+var permisoEvidenciaBlob=null;
+
+function capturarEvidenciaPermiso(e){
+  var f=e.target.files&&e.target.files[0];
+  if(!f) return;
+  permisoEvidenciaBlob=f;
+  var ind=document.getElementById('perm-ev-status');
+  if(ind) ind.innerHTML='✅ Comprobante listo para enviar: '+f.name;
+}
+
 function renderFormPermiso(tipo){
   var body=document.getElementById('op-body');
   var hoy=new Date().toISOString().slice(0,10);
-  body.innerHTML='<div class="seccion-titulo">'+(tipo==='medico'?'🩺 Permiso médico':'👤 Permiso personal')+'</div><div class="form-card"><div class="form-group"><label>Desde</label><input type="date" id="perm-fi" value="'+hoy+'"></div><div class="form-group"><label>Hasta</label><input type="date" id="perm-ff" value="'+hoy+'"></div><div class="form-group"><label>Motivo</label><input type="text" id="perm-motivo" placeholder="'+(tipo==='medico'?'Ej. Cita médica, incapacidad...':'Ej. Trámite personal, asunto familiar...')+'"></div><button class="btn-primary" id="perm-enviar">Enviar solicitud</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsisPermisos()">← Cancelar</button>';
+  permisoEvidenciaBlob=null;
+  var adjuntoHtml=tipo==='medico'?'<div class="form-group"><label>Comprobante médico (foto, opcional pero recomendado)</label><button type="button" onclick="document.getElementById(\'perm-ev-input\').click()" style="width:100%;padding:.75rem;border:1.5px dashed var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📎 Adjuntar foto del comprobante</button><div id="perm-ev-status" class="hint" style="margin-top:.4rem;"></div></div>':'';
+  body.innerHTML='<div class="seccion-titulo">'+(tipo==='medico'?'🩺 Permiso médico':'👤 Permiso personal')+'</div><div class="form-card"><div class="form-group"><label>Desde</label><input type="date" id="perm-fi" value="'+hoy+'"></div><div class="form-group"><label>Hasta</label><input type="date" id="perm-ff" value="'+hoy+'"></div><div class="form-group"><label>Motivo</label><input type="text" id="perm-motivo" placeholder="'+(tipo==='medico'?'Ej. Cita médica, incapacidad...':'Ej. Trámite personal, asunto familiar...')+'"></div>'+adjuntoHtml+'<button class="btn-primary" id="perm-enviar">Enviar solicitud</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsisPermisos()">← Cancelar</button>';
   document.getElementById('perm-enviar').addEventListener('click',function(){
     var fi=document.getElementById('perm-fi').value, ff=document.getElementById('perm-ff').value;
     var motivo=document.getElementById('perm-motivo').value||null;
     if(!fi||!ff){alert('Completa las fechas.');return;}
+    var btn=document.getElementById('perm-enviar'); btn.disabled=true; btn.textContent='Enviando...';
     var folio=(tipo==='medico'?'PM-':'PP-')+Date.now().toString().slice(-8);
-    from('permisos').insert({usuario_id:usuario.id,tipo:tipo,motivo:motivo,fecha_inicio:fi,fecha_fin:ff,estado:'pendiente',folio:folio}).then(function(){
+    var subirEvidencia = permisoEvidenciaBlob ? subirComprobantePermiso(permisoEvidenciaBlob) : Promise.resolve(null);
+    subirEvidencia.then(function(url){
+      return from('permisos').insert({usuario_id:usuario.id,tipo:tipo,motivo:motivo,fecha_inicio:fi,fecha_fin:ff,estado:'pendiente',folio:folio,evidencia_url:url});
+    }).then(function(){
       return from('notificaciones').insert({titulo:(tipo==='medico'?'🩺 Solicitud médica':'👤 Solicitud personal'),cuerpo:usuario.nombre+' solicitó permiso '+tipo+' del '+fi+' al '+ff+(motivo?' — '+motivo:'')+' · Folio '+folio,icono:'📝',leida:false,para_rol:'encargado'});
     }).then(function(){
       alert('✅ Solicitud enviada.\n\nTu folio de seguimiento es: '+folio+'\n\nGuárdalo para dar seguimiento a tu solicitud.');
       renderAsisPermisos();
-    }).catch(function(e){alert('Error: '+e.message);});
+    }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Enviar solicitud';});
   });
+}
+
+function subirComprobantePermiso(blob){
+  var nombre='comprobante_'+Date.now()+'_'+Math.round(Math.random()*9999)+'.jpg';
+  return fetch(URL_SB+'/storage/v1/object/evidencias/'+nombre,{method:'POST',headers:{'apikey':KEY_SB,'Authorization':'Bearer '+KEY_SB,'Content-Type':blob.type||'image/jpeg','x-upsert':'true'},body:blob}).then(function(){
+    return URL_SB+'/storage/v1/object/public/evidencias/'+nombre;
+  }).catch(function(){ return null; });
 }
 
 function calcularResumenAsistencia(registros,primerDia){
@@ -1903,18 +1953,40 @@ function renderAsisHistorial(){
     html+='<div class="seccion-titulo" style="margin-top:0;text-transform:capitalize;">Resumen de '+nombreMes+'</div><div class="stats-row"><div class="stat-card"><div class="stat-num stat-vd">'+resumen.trabajados+'</div><div class="stat-lbl">Trabajados</div></div><div class="stat-card"><div class="stat-num" style="color:var(--rojo);">'+resumen.faltas+'</div><div class="stat-lbl">Faltas</div></div><div class="stat-card"><div class="stat-num stat-am">'+resumen.retardos+'</div><div class="stat-lbl">Retardos</div></div></div>';
     html+='<div style="background:var(--verde-tenue);border-radius:var(--radio-sm);padding:.85rem;margin-bottom:1rem;text-align:center;"><strong style="color:var(--verde);font-size:1.1rem;">'+totalHorasExtra.toFixed(1)+' h</strong><div class="hint" style="margin:0;">Total de horas extra trabajadas</div></div>';
     if(claves.length){
-      html+='<div class="seccion-titulo" style="margin-top:0;">Asistencias</div>'+claves.map(function(k){
+      var semanas={};
+      claves.forEach(function(k){
         var d=porDia[k];
-        var hE=d.entrada?new Date(d.entrada).toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',hour12:true}):'—';
-        var hS=d.salida?new Date(d.salida).toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',hour12:true}):'—';
-        return '<div style="background:var(--blanco);border-radius:12px;padding:.75rem;font-size:.8rem;display:flex;justify-content:space-between;margin-bottom:.4rem;"><span>'+d.fecha+(d.modalidad==='extras'?' · extra':'')+(d.retardo?' · <span style="color:var(--rojo);font-weight:700;">retardo</span>':'')+'</span><span style="color:var(--verde-mid);font-weight:700;">'+hE+' → '+hS+'</span></div>';
+        var fd=new Date(d.fecha+'T00:00:00');
+        var diaSemana=fd.getDay();
+        var lunes=new Date(fd);
+        lunes.setDate(fd.getDate()-((diaSemana+6)%7));
+        var domingo=new Date(lunes);
+        domingo.setDate(lunes.getDate()+6);
+        var claveSemana=lunes.toISOString().slice(0,10);
+        if(!semanas[claveSemana]) semanas[claveSemana]={inicio:lunes,fin:domingo,dias:[],trabajados:0,horasExtra:0};
+        semanas[claveSemana].dias.push(d);
+        if(d.modalidad==='labores') semanas[claveSemana].trabajados++;
+        if(d.modalidad==='extras'&&d.entrada&&d.salida) semanas[claveSemana].horasExtra += (new Date(d.salida)-new Date(d.entrada))/3600000;
+      });
+      var clavesSemana=Object.keys(semanas).sort().reverse();
+      html+='<div class="seccion-titulo" style="margin-top:0;">Por semana</div>';
+      html+=clavesSemana.map(function(sk){
+        var s=semanas[sk];
+        var opts={day:'2-digit',month:'short'};
+        var rango=s.inicio.toLocaleDateString('es-MX',opts)+' – '+s.fin.toLocaleDateString('es-MX',opts);
+        var filas=s.dias.map(function(d){
+          var hE=d.entrada?new Date(d.entrada).toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',hour12:true}):'—';
+          var hS=d.salida?new Date(d.salida).toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',hour12:true}):'—';
+          return '<div style="font-size:.78rem;display:flex;justify-content:space-between;padding:.35rem 0;border-bottom:1px solid var(--gris-1);"><span>'+d.fecha+(d.modalidad==='extras'?' · extra':'')+(d.retardo?' · <span style="color:var(--rojo);font-weight:700;">retardo</span>':'')+'</span><span style="color:var(--verde-mid);font-weight:700;">'+hE+' → '+hS+'</span></div>';
+        }).join('');
+        return '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;"><strong style="font-size:.85rem;">Semana '+rango+'</strong><span style="font-size:.75rem;color:var(--gris-3);">'+s.trabajados+' días'+(s.horasExtra>0?' · '+s.horasExtra.toFixed(1)+'h extra':'')+'</span></div>'+filas+'</div>';
       }).join('');
     } else { html+='<div class="empty">Sin registros de asistencia todavía.</div>'; }
     if(permisos.length){
       var estLbl={pendiente:'⏳ Pendiente',aprobado:'✅ Aprobado',rechazado:'❌ Rechazado'};
       var estColor={pendiente:'var(--tierra)',aprobado:'var(--verde-mid)',rechazado:'var(--rojo)'};
       html+='<div class="seccion-titulo" style="margin-top:1rem;">Permisos</div>'+permisos.map(function(p){
-        return '<div style="background:var(--blanco);border-radius:12px;padding:.75rem;font-size:.8rem;margin-bottom:.4rem;"><div style="display:flex;justify-content:space-between;"><span>'+(p.tipo==='medico'?'🩺 Médico':'👤 Personal')+' · '+p.fecha_inicio+' a '+p.fecha_fin+'</span><span style="color:'+estColor[p.estado]+';font-weight:700;">'+estLbl[p.estado]+'</span></div>'+(p.folio?'<div class="hint" style="margin-top:.2rem;">🔖 '+p.folio+'</div>':'')+(p.motivo?'<div class="hint" style="margin-top:.1rem;">'+p.motivo+'</div>':'')+'</div>';
+        return '<div style="background:var(--blanco);border-radius:12px;padding:.75rem;font-size:.8rem;margin-bottom:.4rem;"><div style="display:flex;justify-content:space-between;"><span>'+(p.tipo==='medico'?'🩺 Médico':'👤 Personal')+' · '+p.fecha_inicio+' a '+p.fecha_fin+'</span><span style="color:'+estColor[p.estado]+';font-weight:700;">'+estLbl[p.estado]+'</span></div>'+(p.folio?'<div class="hint" style="margin-top:.2rem;">🔖 '+p.folio+'</div>':'')+(p.motivo?'<div class="hint" style="margin-top:.1rem;">'+p.motivo+'</div>':'')+(p.evidencia_url?'<div style="margin-top:.2rem;"><a href="'+p.evidencia_url+'" target="_blank" style="color:var(--verde-mid);font-weight:700;font-size:.78rem;">📎 Ver comprobante</a></div>':'')+'</div>';
       }).join('');
     }
     html+='<button class="btn-back" style="margin-top:1rem;" onclick="renderAsistenciaMenu()">← Volver a Asistencia</button>';
@@ -2198,7 +2270,7 @@ function renderConfig(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="loading">Cargando usuarios...</div>';
   Promise.all([
-    from('usuarios').select('id,nombre,rol,activo').order('nombre').get(),
+    from('usuarios').select('id,nombre,rol,activo,certificado_ambas').order('nombre').get(),
     from('config_app').select('*').get()
   ]).then(function(r){
     var users=r[0]||[], cfg={};
@@ -2206,7 +2278,7 @@ function renderConfig(){
     var html='<div class="seccion-titulo">📞 Números de emergencia</div><div class="form-card"><div class="form-group"><label>Policía</label><input type="tel" id="cfg-policia" value="'+(cfg.emergencia_policia||'911')+'"></div><div class="form-group"><label>Bomberos</label><input type="tel" id="cfg-bomberos" value="'+(cfg.emergencia_bomberos||'911')+'"></div><div class="form-group"><label>Ambulancia</label><input type="tel" id="cfg-ambulancia" value="'+(cfg.emergencia_ambulancia||'911')+'"></div><button class="btn-primary" id="cfg-guardar-emerg">Guardar números</button></div>';
     html+='<div style="display:flex;justify-content:space-between;align-items:center;margin:1.25rem 0 1rem;"><div class="seccion-titulo" style="margin:0">Usuarios</div><button class="btn-sm btn-completar" onclick="renderNuevoUsuario()">+ Nuevo</button></div>';
     html+=users.map(function(u){
-      return '<div class="orden-card" style="border-left-color:var(--verde-mid)"><div class="orden-header"><div class="orden-labor">'+u.nombre+'</div><span class="orden-badge-rol" style="'+( ROLE_COLORS[u.rol]||'background:#888;color:#fff')+'">'+( ROLES[u.rol]||u.rol)+'</span></div><div class="orden-actions"><button class="btn-sm btn-iniciar" onclick="renderEditarUsuario(\''+u.id+'\',\''+u.nombre+'\',\''+u.rol+'\')">Editar</button><button class="btn-sm btn-completar" onclick="renderCambiarPin(\''+u.id+'\',\''+u.nombre+'\')">Cambiar PIN</button>'+(u.activo?'<button class="btn-sm btn-cancelar" onclick="bajaUsuario(\''+u.id+'\')">Dar de baja</button>':'<button class="btn-sm btn-iniciar" onclick="altaUsuario(\''+u.id+'\')">Reactivar</button>')+'</div></div>';
+      return '<div class="orden-card" style="border-left-color:var(--verde-mid)"><div class="orden-header"><div class="orden-labor">'+u.nombre+'</div><span class="orden-badge-rol" style="'+( ROLE_COLORS[u.rol]||'background:#888;color:#fff')+'">'+( ROLES[u.rol]||u.rol)+'</span></div><div class="orden-actions"><button class="btn-sm btn-iniciar" onclick="renderEditarUsuario(\''+u.id+'\',\''+u.nombre+'\',\''+u.rol+'\','+(u.certificado_ambas?'true':'false')+')">Editar</button><button class="btn-sm btn-completar" onclick="renderCambiarPin(\''+u.id+'\',\''+u.nombre+'\')">Cambiar PIN</button>'+(u.activo?'<button class="btn-sm btn-cancelar" onclick="bajaUsuario(\''+u.id+'\')">Dar de baja</button>':'<button class="btn-sm btn-iniciar" onclick="altaUsuario(\''+u.id+'\')">Reactivar</button>')+'</div></div>';
     }).join('');
     body.innerHTML=html;
     document.getElementById('cfg-guardar-emerg').addEventListener('click',function(){
@@ -2240,15 +2312,16 @@ function guardarNuevoUsuario(){
   }).catch(function(e){alert('Error: '+e.message);});
 }
 
-function renderEditarUsuario(id,nombre,rol){
+function renderEditarUsuario(id,nombre,rol,certAmbas){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="form-card"><h3>Editar usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="eu-n" value="'+nombre+'"/></div><div class="form-group"><label>Rol</label><select id="eu-r"><option value="operario"'+(rol==='operario'?' selected':'')+'>Operario</option><option value="encargado"'+(rol==='encargado'?' selected':'')+'>Encargado</option><option value="ingeniero"'+(rol==='ingeniero'?' selected':'')+'>Ingeniero</option><option value="cosechador"'+(rol==='cosechador'?' selected':'')+'>Cosechador</option><option value="galerista"'+(rol==='galerista'?' selected':'')+'>Galerista</option><option value="dueño"'+(rol==='dueño'?' selected':'')+'>Dueño</option><option value="inversionista"'+(rol==='inversionista'?' selected':'')+'>Inversionista</option><option value="admin"'+(rol==='admin'?' selected':'')+'>Admin</option></select></div><div class="nav-row"><button class="btn-back" onclick="renderConfig()">← Cancelar</button><button class="btn-next" onclick="guardarEditarUsuario(\''+id+'\')">Guardar</button></div></div>';
+  body.innerHTML='<div class="form-card"><h3>Editar usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="eu-n" value="'+nombre+'"/></div><div class="form-group"><label>Rol</label><select id="eu-r"><option value="operario"'+(rol==='operario'?' selected':'')+'>Operario</option><option value="encargado"'+(rol==='encargado'?' selected':'')+'>Encargado</option><option value="ingeniero"'+(rol==='ingeniero'?' selected':'')+'>Ingeniero</option><option value="cosechador"'+(rol==='cosechador'?' selected':'')+'>Cosechador</option><option value="galerista"'+(rol==='galerista'?' selected':'')+'>Galerista</option><option value="dueño"'+(rol==='dueño'?' selected':'')+'>Dueño</option><option value="inversionista"'+(rol==='inversionista'?' selected':'')+'>Inversionista</option><option value="admin"'+(rol==='admin'?' selected':'')+'>Admin</option></select></div><div class="form-group"><label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:.85rem;"><input type="checkbox" id="eu-cert" '+(certAmbas?'checked':'')+' style="width:18px;height:18px;"> Certificado para Labores y Cosecha (ambas)</label></div><div class="nav-row"><button class="btn-back" onclick="renderConfig()">← Cancelar</button><button class="btn-next" onclick="guardarEditarUsuario(\''+id+'\')">Guardar</button></div></div>';
 }
 
 function guardarEditarUsuario(id){
   var nn=document.getElementById('eu-n').value.trim(), nr=document.getElementById('eu-r').value;
+  var certAmbas=document.getElementById('eu-cert').checked;
   if(!nn){alert('El nombre es obligatorio.');return;}
-  from('usuarios').eq('id',id).update({nombre:nn,rol:nr}).then(function(){cargarCatalogos().then(function(){renderConfig();});});
+  from('usuarios').eq('id',id).update({nombre:nn,rol:nr,certificado_ambas:certAmbas}).then(function(){cargarCatalogos().then(function(){renderConfig();});});
 }
 
 function renderCambiarPin(id,nombre){
@@ -2351,5 +2424,6 @@ if('serviceWorker' in navigator){
 
 <input type="file" id="cam-input" accept="image/*,video/*" capture="environment" style="display:none" onchange="capturaEjec.foto=true;renderEjec();">
 <input type="file" id="gal-input" accept="image/*,video/*" capture style="display:none" onchange="capturaEjec.foto=true;renderEjec();">
+<input type="file" id="perm-ev-input" accept="image/*" style="display:none" onchange="capturarEvidenciaPermiso(event)">
 </body>
 </html>
