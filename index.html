@@ -238,13 +238,20 @@ var KEY_SB = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 
 function api(path, opts) {
   opts = opts || {};
+  var ctrl = (typeof AbortController!=='undefined') ? new AbortController() : null;
+  var timer = ctrl ? setTimeout(function(){ctrl.abort();}, 8000) : null;
   return fetch(URL_SB + path, {
     method: opts.method || 'GET',
     headers: Object.assign({'apikey':KEY_SB,'Authorization':'Bearer '+KEY_SB,'Content-Type':'application/json','Prefer':opts.prefer||''}, opts.headers||{}),
-    body: opts.body ? JSON.stringify(opts.body) : undefined
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+    signal: ctrl?ctrl.signal:undefined
   }).then(function(r) {
+    if(timer) clearTimeout(timer);
     if(!r.ok) return r.json().then(function(e){ throw new Error(e.message||r.status); });
     return r.status===204 ? {} : r.json();
+  }).catch(function(e){
+    if(timer) clearTimeout(timer);
+    throw e;
   });
 }
 
@@ -368,7 +375,10 @@ function entrarSegunRol(){
 function intentarEntradaOffline(){
   var ses=null;
   try{ses=JSON.parse(localStorage.getItem('mootsil_sesion')||'null');}catch(e){}
-  if(!ses||!ses.usuario) return false;
+  if(!ses||!ses.usuario){
+    alert('No tienes una sesión guardada en este dispositivo/navegador todavía.\n\nPara poder entrar sin señal, primero necesitas iniciar sesión una vez con internet desde este mismo celular y navegador.');
+    return false;
+  }
   usuario=ses.usuario; cats=ses.cats||cats;
   entrarSegunRol();
   showToast('📡 Sin señal — entraste con tu última sesión guardada.');
