@@ -186,6 +186,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <button class="tab" id="tab-notif" onclick="tabEncargado('notif')">Avisos <span id="badge-avisos" style="display:none;background:var(--tierra);color:#fff;border-radius:50%;width:16px;height:16px;font-size:.6rem;font-weight:700;align-items:center;justify-content:center;margin-left:3px;vertical-align:middle;">0</span></button>
     <button class="tab" id="tab-reporte" onclick="tabEncargado('reporte')">Reporte</button>
     <button class="tab" id="tab-inventario" onclick="tabEncargado('inventario')" style="display:none">Inventario</button>
+    <button class="tab" id="tab-formulas" onclick="tabEncargado('formulas')" style="display:none">Fórmulas</button>
     <button class="tab" id="tab-config" onclick="tabEncargado('config')" style="display:none">⚙️</button>
   </div>
   <div class="app-body" id="enc-body"><div class="loading">Cargando...</div></div>
@@ -259,6 +260,10 @@ function from(table) {
     update:function(data){
       var url='/rest/v1/'+this._t+'?'+this._f.join('&');
       return api(url,{method:'PATCH',body:data,prefer:'return=representation'});
+    },
+    delete:function(){
+      var url='/rest/v1/'+this._t+'?'+this._f.join('&');
+      return api(url,{method:'DELETE',prefer:'return=representation'});
     }
   };
   return q;
@@ -326,6 +331,7 @@ function verificarPin(){
         mostrar('screen-encargado');
         if(usuario.rol==='admin'||usuario.rol==='dueño') document.getElementById('tab-config').style.display='';
         if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='ingeniero') document.getElementById('tab-inventario').style.display='';
+        if(usuario.rol==='admin'||usuario.rol==='ingeniero') document.getElementById('tab-formulas').style.display='';
         renderTablero();
         setInterval(actualizarBadgeAvisos,15000);
         actualizarBadgeAvisos();
@@ -349,13 +355,14 @@ function cargarCatalogos(){
 }
 
 function tabEncargado(tab){
-  ['tablero','asignar','notif','reporte','inventario','config'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
+  ['tablero','asignar','notif','reporte','inventario','formulas','config'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
   var el=document.getElementById('tab-'+tab); if(el) el.classList.add('active');
   if(tab==='tablero') renderTablero();
   else if(tab==='asignar') renderFormAsignar();
   else if(tab==='notif') renderNotifs('enc-body');
   else if(tab==='reporte') renderReporte();
   else if(tab==='inventario') renderInventario();
+  else if(tab==='formulas') renderFormulas();
   else if(tab==='config') renderConfig();
 }
 
@@ -793,6 +800,145 @@ function renderInventarioItem(itemId){
       return '<div style="font-size:.78rem;padding:.5rem 0;border-bottom:1px solid var(--gris-1);display:flex;justify-content:space-between;"><span>'+(ic[m.tipo]||'')+' '+numFmt(m.cantidad)+' '+it.unidad+(m.motivo?' · '+m.motivo:'')+'</span><span style="color:var(--gris-3)">'+(m.usuario?m.usuario.nombre+' · ':'')+f+'</span></div>';
     }).join('');
   });
+}
+
+var VIA_ICONOS={'Riego':'💧','Foliar':'🌿','Drench':'🧪'};
+var CATEGORIA_ICONOS={'Nutrición':'🌱','Plaga':'🐛','Estimulación':'⚡'};
+var formulaVia=null, formulaCategoria=null, formulaCompRows=[], formulaCompSeq=0;
+
+function renderFormulas(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Fórmulas<button type="button" onclick="renderFormulaForm()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nueva fórmula</button></div><div class="loading">Cargando fórmulas...</div>';
+  from('formulas_aplicacion').select('*').eq('activo',true).order('nombre').get().then(function(rows){
+    if(!rows||!rows.length){body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Fórmulas<button type="button" onclick="renderFormulaForm()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nueva fórmula</button></div><div class="empty">🧪 Aún no hay fórmulas registradas.</div>';return;}
+    var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Fórmulas<button type="button" onclick="renderFormulaForm()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nueva fórmula</button></div>';
+    html+=rows.map(function(f){
+      return '<div class="orden-card" style="cursor:pointer;" data-fid="'+f.id+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem">'+(VIA_ICONOS[f.via]||'')+' '+f.nombre+'</strong><span style="font-size:.72rem;color:var(--gris-3)">'+(CATEGORIA_ICONOS[f.categoria]||'')+' '+f.categoria+'</span></div><div class="orden-meta">'+f.via+' · Base 🛢️ '+f.volumen_base_litros+' L</div></div>';
+    }).join('');
+    body.innerHTML=html;
+    body.querySelectorAll('[data-fid]').forEach(function(el){el.addEventListener('click',function(){renderFormulaForm(this.dataset.fid);});});
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function renderFormulaForm(formulaId){
+  formulaVia=null; formulaCategoria=null; formulaCompRows=[]; formulaCompSeq=0;
+  if(formulaId){
+    Promise.all([
+      from('formulas_aplicacion').select('*').eq('id',formulaId).get(),
+      from('formula_componentes').select('*,item:inventario_items(nombre,unidad)').eq('formula_id',formulaId).get()
+    ]).then(function(r){
+      var f=r[0]&&r[0][0], comps=r[1]||[];
+      if(!f){renderFormulas();return;}
+      formulaVia=f.via; formulaCategoria=f.categoria;
+      formulaCompRows=comps.map(function(c){formulaCompSeq++;return {row:formulaCompSeq,item_id:c.item_id,nombre:c.item?c.item.nombre:'',unidad:c.item?c.item.unidad:'',cantidad:c.cantidad_base};});
+      dibujarFormulaForm(f);
+    });
+  } else {
+    dibujarFormulaForm(null);
+  }
+}
+
+function dibujarFormulaForm(f){
+  var body=document.getElementById('enc-body');
+  var viaBtns=['Riego','Foliar','Drench'].map(function(v){return '<button type="button" class="op-chip'+(formulaVia===v?' sel':'')+'" data-via="'+v+'">'+VIA_ICONOS[v]+' '+v+'</button>';}).join('');
+  var catBtns=['Nutrición','Plaga','Estimulación'].map(function(c){return '<button type="button" class="op-chip'+(formulaCategoria===c?' sel':'')+'" data-cat="'+c+'">'+CATEGORIA_ICONOS[c]+' '+c+'</button>';}).join('');
+  body.innerHTML='<div class="seccion-titulo">'+(f?'Editar fórmula':'Nueva fórmula')+'</div><div class="form-card"><div class="form-group"><label>Nombre</label><input type="text" id="fm-nombre" placeholder="Ej. Aplicación contra trips" value="'+(f?f.nombre.replace(/"/g,'&quot;'):'')+'"></div><div class="form-group"><label>Vía de aplicación</label><div style="display:flex;flex-wrap:wrap;gap:8px;" id="fm-via-grp">'+viaBtns+'</div></div><div class="form-group"><label>Tipo de aplicación</label><div style="display:flex;flex-wrap:wrap;gap:8px;" id="fm-cat-grp">'+catBtns+'</div></div><div class="form-group"><label>Volumen base</label><div style="display:flex;align-items:center;gap:10px;background:var(--gris-1);border-radius:var(--radio-sm);padding:.65rem .9rem;"><span style="font-size:1.5rem;">🛢️</span><strong>200 litros</strong><span class="hint" style="margin:0;">(tambo de referencia del ingeniero)</span></div></div><div class="form-group"><label>Componentes</label><div id="fm-comp-list"></div><button type="button" onclick="agregarFormulaComponenteRow()" style="padding:6px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">+ Agregar componente</button></div><div class="form-group"><label>Notas (opcional)</label><input type="text" id="fm-notas" value="'+(f&&f.notas?f.notas.replace(/"/g,'&quot;'):'')+'" placeholder="Instrucciones adicionales..."></div><button class="btn-primary" id="fm-guardar">'+(f?'Guardar cambios':'Crear fórmula')+'</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulas()">← Volver a fórmulas</button>';
+  document.getElementById('fm-via-grp').querySelectorAll('[data-via]').forEach(function(b){b.addEventListener('click',function(){formulaVia=this.dataset.via;dibujarFormulaForm(f);});});
+  document.getElementById('fm-cat-grp').querySelectorAll('[data-cat]').forEach(function(b){b.addEventListener('click',function(){formulaCategoria=this.dataset.cat;dibujarFormulaForm(f);});});
+  if(!formulaCompRows.length) agregarFormulaComponenteRow(); else pintarFormulaCompList();
+  document.getElementById('fm-guardar').addEventListener('click',function(){guardarFormula(f?f.id:null);});
+}
+
+function pintarFormulaCompList(){
+  var cont=document.getElementById('fm-comp-list');
+  if(!cont) return;
+  var opts=cats.inventario.map(function(it){return '<option value="'+it.id+'">'+it.nombre+' ('+it.unidad+')</option>';}).join('');
+  cont.innerHTML=formulaCompRows.map(function(r){
+    return '<div class="form-card" style="margin-bottom:.5rem;padding:.75rem;" data-row="'+r.row+'"><select class="fcomp-item" data-row="'+r.row+'"><option value="">Selecciona componente...</option>'+opts+'<option value="__nuevo__">+ Nuevo componente...</option></select><div class="fcomp-nuevo-box" data-row="'+r.row+'" style="display:none;margin-top:.5rem;gap:8px;"><input type="text" class="fcomp-nuevo-nombre" data-row="'+r.row+'" placeholder="Nombre del componente" style="width:100%;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;margin-bottom:.4rem;"><select class="fcomp-nuevo-unidad" data-row="'+r.row+'" style="width:100%;margin-bottom:.4rem;"><option value="litros">Litros</option><option value="ml">Mililitros</option><option value="kg">Kilogramos</option><option value="gr">Gramos</option><option value="pza">Piezas</option></select><button type="button" class="fcomp-crear" data-row="'+r.row+'" style="padding:6px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">Crear y usar</button></div><div style="display:flex;gap:8px;align-items:center;margin-top:.5rem;"><input type="number" class="fcomp-cant" data-row="'+r.row+'" min="0" placeholder="cantidad para 200L" value="'+(r.cantidad||'')+'" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><span style="font-size:.78rem;color:var(--gris-3);min-width:40px;" class="fcomp-unidad-lbl" data-row="'+r.row+'">'+(r.unidad||'')+'</span><button type="button" class="fcomp-quitar" data-row="'+r.row+'" style="border:none;background:none;color:var(--rojo);font-size:1.1rem;cursor:pointer;">✕</button></div></div>';
+  }).join('');
+  cont.querySelectorAll('.fcomp-item').forEach(function(sel){
+    var rid=parseInt(sel.dataset.row);
+    var row=formulaCompRows.find(function(x){return x.row===rid;});
+    if(row&&row.item_id) sel.value=row.item_id;
+    sel.addEventListener('change',function(){
+      var box=cont.querySelector('.fcomp-nuevo-box[data-row="'+rid+'"]');
+      if(this.value==='__nuevo__'){box.style.display='flex';box.style.flexDirection='column';row.item_id=null;}
+      else{
+        box.style.display='none';
+        var it=cats.inventario.find(function(x){return x.id===this.value;}.bind(this));
+        row.item_id=this.value||null; row.nombre=it?it.nombre:''; row.unidad=it?it.unidad:'';
+        cont.querySelector('.fcomp-unidad-lbl[data-row="'+rid+'"]').textContent=row.unidad;
+      }
+    });
+  });
+  cont.querySelectorAll('.fcomp-crear').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var rid=parseInt(this.dataset.row);
+      var nombre=(cont.querySelector('.fcomp-nuevo-nombre[data-row="'+rid+'"]').value||'').trim();
+      var unidad=cont.querySelector('.fcomp-nuevo-unidad[data-row="'+rid+'"]').value;
+      if(!nombre){alert('Escribe el nombre del componente.');return;}
+      var existente=cats.inventario.find(function(x){return x.nombre.toLowerCase()===nombre.toLowerCase();});
+      if(existente){aplicarComponenteCreado(rid,existente);return;}
+      from('inventario_items').insert({nombre:nombre,unidad:unidad,stock_actual:0,stock_minimo:0,activo:true}).then(function(){
+        return from('inventario_items').select('*').eq('activo',true).order('nombre').get();
+      }).then(function(rows){
+        cats.inventario=rows||[];
+        var it=cats.inventario.find(function(x){return x.nombre.toLowerCase()===nombre.toLowerCase();});
+        aplicarComponenteCreado(rid,it);
+      }).catch(function(e){alert('Error: '+e.message);});
+    });
+  });
+  cont.querySelectorAll('.fcomp-cant').forEach(function(inp){
+    inp.addEventListener('input',function(){
+      var rid=parseInt(this.dataset.row);
+      var row=formulaCompRows.find(function(x){return x.row===rid;});
+      if(row) row.cantidad=parseFloat(this.value)||0;
+    });
+  });
+  cont.querySelectorAll('.fcomp-quitar').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var rid=parseInt(this.dataset.row);
+      formulaCompRows=formulaCompRows.filter(function(x){return x.row!==rid;});
+      if(!formulaCompRows.length) agregarFormulaComponenteRow(); else pintarFormulaCompList();
+    });
+  });
+}
+
+function aplicarComponenteCreado(rid,item){
+  var row=formulaCompRows.find(function(x){return x.row===rid;});
+  if(row&&item){row.item_id=item.id;row.nombre=item.nombre;row.unidad=item.unidad;}
+  pintarFormulaCompList();
+  showToast('📦 Componente creado: '+(item?item.nombre:''));
+}
+
+function agregarFormulaComponenteRow(){
+  formulaCompSeq++;
+  formulaCompRows.push({row:formulaCompSeq,item_id:null,nombre:'',unidad:'',cantidad:null});
+  pintarFormulaCompList();
+}
+
+function guardarFormula(formulaId){
+  var nombre=(document.getElementById('fm-nombre').value||'').trim();
+  var notas=document.getElementById('fm-notas').value||null;
+  if(!nombre){alert('Escribe el nombre de la fórmula.');return;}
+  if(!formulaVia){alert('Selecciona la vía de aplicación.');return;}
+  if(!formulaCategoria){alert('Selecciona el tipo de aplicación.');return;}
+  var comps=formulaCompRows.filter(function(r){return r.item_id&&r.cantidad>0;});
+  if(!comps.length){alert('Agrega al menos un componente con cantidad mayor a 0.');return;}
+  var btn=document.getElementById('fm-guardar'); btn.disabled=true; btn.textContent='Guardando...';
+  var payload={nombre:nombre,via:formulaVia,categoria:formulaCategoria,volumen_base_litros:200,notas:notas,creado_por:usuario.id,activo:true};
+  var guardar=formulaId?from('formulas_aplicacion').eq('id',formulaId).update(payload):from('formulas_aplicacion').insert(payload);
+  guardar.then(function(resp){
+    var fid=formulaId||(resp&&resp[0]&&resp[0].id);
+    if(!fid){throw new Error('No se pudo obtener la fórmula guardada.');}
+    var borrarViejos=formulaId?from('formula_componentes').eq('formula_id',fid).delete():Promise.resolve();
+    return borrarViejos.then(function(){
+      return Promise.all(comps.map(function(c){return from('formula_componentes').insert({formula_id:fid,item_id:c.item_id,cantidad_base:c.cantidad});}));
+    });
+  }).then(function(){
+    showToast('✅ Fórmula guardada: '+nombre);
+    renderFormulas();
+  }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent=formulaId?'Guardar cambios':'Crear fórmula';});
 }
 
 function tabOperario(tab){
