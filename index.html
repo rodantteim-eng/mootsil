@@ -2122,7 +2122,7 @@ function tomarFoto(){
 function salir(){usuario=null;pin='';dibujarPin();setErr('');mostrar('screen-login');}
 
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.getRegistrations().then(function(regs){regs.forEach(function(r){r.unregister();});});
+  navigator.serviceWorker.register('./sw.js').catch(function(e){console.warn('SW no registrado:',e);});
 }
 </script>
 
