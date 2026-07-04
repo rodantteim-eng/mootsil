@@ -804,7 +804,9 @@ function renderInventarioItem(itemId){
 
 var VIA_ICONOS={'Riego':'💧','Foliar':'🌿','Drench':'🧪'};
 var CATEGORIA_ICONOS={'Nutrición':'🌱','Plaga':'🐛','Estimulación':'⚡'};
-var formulaVia=null, formulaCategoria=null, formulaCompRows=[], formulaCompSeq=0;
+var BOMBA_ICONOS={'inyeccion':'🛢️','motor':'⚙️','manual':'🤲'};
+var BOMBA_LABELS={'inyeccion':'Bomba Inyección','motor':'Bomba Motor','manual':'Bomba Manual'};
+var formulaVia=null, formulaCategoria=null, formulaBombas=[], formulaCompRows=[], formulaCompSeq=0, formulaEditId=null;
 
 function renderFormulas(){
   var body=document.getElementById('enc-body');
@@ -813,7 +815,8 @@ function renderFormulas(){
     if(!rows||!rows.length){body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Fórmulas<button type="button" onclick="renderFormulaForm()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nueva fórmula</button></div><div class="empty">🧪 Aún no hay fórmulas registradas.</div>';return;}
     var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Fórmulas<button type="button" onclick="renderFormulaForm()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nueva fórmula</button></div>';
     html+=rows.map(function(f){
-      return '<div class="orden-card" style="cursor:pointer;" data-fid="'+f.id+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem">'+(VIA_ICONOS[f.via]||'')+' '+f.nombre+'</strong><span style="font-size:.72rem;color:var(--gris-3)">'+(CATEGORIA_ICONOS[f.categoria]||'')+' '+f.categoria+'</span></div><div class="orden-meta">'+f.via+' · Base 🛢️ '+f.volumen_base_litros+' L</div></div>';
+      var bombasTxt=(f.bombas_compatibles||[]).map(function(b){return BOMBA_ICONOS[b]||'';}).join(' ');
+      return '<div class="orden-card" style="cursor:pointer;" data-fid="'+f.id+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem">'+(VIA_ICONOS[f.via]||'')+' '+f.nombre+'</strong><span style="font-size:.72rem;color:var(--gris-3)">'+(CATEGORIA_ICONOS[f.categoria]||'')+' '+f.categoria+'</span></div><div class="orden-meta">'+f.via+' · Base 🛢️ '+f.volumen_base_litros+' L'+(bombasTxt?' · '+bombasTxt:'')+'</div></div>';
     }).join('');
     body.innerHTML=html;
     body.querySelectorAll('[data-fid]').forEach(function(el){el.addEventListener('click',function(){renderFormulaForm(this.dataset.fid);});});
@@ -821,7 +824,8 @@ function renderFormulas(){
 }
 
 function renderFormulaForm(formulaId){
-  formulaVia=null; formulaCategoria=null; formulaCompRows=[]; formulaCompSeq=0;
+  formulaEditId=formulaId||null;
+  formulaVia=null; formulaCategoria=null; formulaBombas=[]; formulaCompRows=[]; formulaCompSeq=0;
   if(formulaId){
     Promise.all([
       from('formulas_aplicacion').select('*').eq('id',formulaId).get(),
@@ -829,24 +833,75 @@ function renderFormulaForm(formulaId){
     ]).then(function(r){
       var f=r[0]&&r[0][0], comps=r[1]||[];
       if(!f){renderFormulas();return;}
-      formulaVia=f.via; formulaCategoria=f.categoria;
+      formulaVia=f.via; formulaCategoria=f.categoria; formulaBombas=(f.bombas_compatibles||[]).slice();
       formulaCompRows=comps.map(function(c){formulaCompSeq++;return {row:formulaCompSeq,item_id:c.item_id,nombre:c.item?c.item.nombre:'',unidad:c.item?c.item.unidad:'',cantidad:c.cantidad_base};});
-      dibujarFormulaForm(f);
+      window._formulaNombreExistente=f.nombre; window._formulaNotasExistente=f.notas;
+      renderFormulaPasoVia();
     });
   } else {
-    dibujarFormulaForm(null);
+    window._formulaNombreExistente=''; window._formulaNotasExistente='';
+    renderFormulaPasoVia();
   }
 }
 
-function dibujarFormulaForm(f){
+function formulaCancelarLink(){return '<button type="button" onclick="renderFormulas()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cancelar</button>';}
+
+function renderFormulaPasoVia(){
   var body=document.getElementById('enc-body');
-  var viaBtns=['Riego','Foliar','Drench'].map(function(v){return '<button type="button" class="op-chip'+(formulaVia===v?' sel':'')+'" data-via="'+v+'">'+VIA_ICONOS[v]+' '+v+'</button>';}).join('');
-  var catBtns=['Nutrición','Plaga','Estimulación'].map(function(c){return '<button type="button" class="op-chip'+(formulaCategoria===c?' sel':'')+'" data-cat="'+c+'">'+CATEGORIA_ICONOS[c]+' '+c+'</button>';}).join('');
-  body.innerHTML='<div class="seccion-titulo">'+(f?'Editar fórmula':'Nueva fórmula')+'</div><div class="form-card"><div class="form-group"><label>Nombre</label><input type="text" id="fm-nombre" placeholder="Ej. Aplicación contra trips" value="'+(f?f.nombre.replace(/"/g,'&quot;'):'')+'"></div><div class="form-group"><label>Vía de aplicación</label><div style="display:flex;flex-wrap:wrap;gap:8px;" id="fm-via-grp">'+viaBtns+'</div></div><div class="form-group"><label>Tipo de aplicación</label><div style="display:flex;flex-wrap:wrap;gap:8px;" id="fm-cat-grp">'+catBtns+'</div></div><div class="form-group"><label>Volumen base</label><div style="display:flex;align-items:center;gap:10px;background:var(--gris-1);border-radius:var(--radio-sm);padding:.65rem .9rem;"><span style="font-size:1.5rem;">🛢️</span><strong>200 litros</strong><span class="hint" style="margin:0;">(tambo de referencia del ingeniero)</span></div></div><div class="form-group"><label>Componentes</label><div id="fm-comp-list"></div><button type="button" onclick="agregarFormulaComponenteRow()" style="padding:6px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">+ Agregar componente</button></div><div class="form-group"><label>Notas (opcional)</label><input type="text" id="fm-notas" value="'+(f&&f.notas?f.notas.replace(/"/g,'&quot;'):'')+'" placeholder="Instrucciones adicionales..."></div><button class="btn-primary" id="fm-guardar">'+(f?'Guardar cambios':'Crear fórmula')+'</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulas()">← Volver a fórmulas</button>';
-  document.getElementById('fm-via-grp').querySelectorAll('[data-via]').forEach(function(b){b.addEventListener('click',function(){formulaVia=this.dataset.via;dibujarFormulaForm(f);});});
-  document.getElementById('fm-cat-grp').querySelectorAll('[data-cat]').forEach(function(b){b.addEventListener('click',function(){formulaCategoria=this.dataset.cat;dibujarFormulaForm(f);});});
+  var tiles=['Riego','Foliar','Drench'].map(function(v){
+    return '<div class="labor-tile'+(formulaVia===v?' labor-tile-otra':'')+'" data-via="'+v+'"><div class="labor-tile-ic">'+VIA_ICONOS[v]+'</div><div class="labor-tile-lbl">'+v+'</div></div>';
+  }).join('');
+  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Paso 1 de 6 · Vía de aplicación'+formulaCancelarLink()+'</div><div class="labor-grid">'+tiles+'</div>';
+  body.querySelectorAll('[data-via]').forEach(function(el){el.addEventListener('click',function(){formulaVia=this.dataset.via;renderFormulaPasoCategoria();});});
+}
+
+function renderFormulaPasoCategoria(){
+  var body=document.getElementById('enc-body');
+  var tiles=['Nutrición','Plaga','Estimulación'].map(function(c){
+    return '<div class="labor-tile'+(formulaCategoria===c?' labor-tile-otra':'')+'" data-cat="'+c+'"><div class="labor-tile-ic">'+CATEGORIA_ICONOS[c]+'</div><div class="labor-tile-lbl">'+c+'</div></div>';
+  }).join('');
+  body.innerHTML='<div class="seccion-titulo">Paso 2 de 6 · Tipo de aplicación</div><div class="labor-grid">'+tiles+'</div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoVia()">← Volver a vía</button>';
+  body.querySelectorAll('[data-cat]').forEach(function(el){el.addEventListener('click',function(){formulaCategoria=this.dataset.cat;renderFormulaPasoBombas();});});
+}
+
+function renderFormulaPasoBombas(){
+  var body=document.getElementById('enc-body');
+  var tiles=['inyeccion','motor','manual'].map(function(b){
+    return '<div class="labor-tile'+(formulaBombas.indexOf(b)>-1?' labor-tile-otra':'')+'" data-bomba="'+b+'"><div class="labor-tile-ic">'+BOMBA_ICONOS[b]+'</div><div class="labor-tile-lbl">'+BOMBA_LABELS[b]+'</div></div>';
+  }).join('');
+  body.innerHTML='<div class="seccion-titulo">Paso 3 de 6 · ¿Con qué se aplica?</div><p class="hint">Toca una o varias — puedes marcar más de una si la fórmula sirve para distintos equipos.</p><div class="labor-grid">'+tiles+'</div><button class="btn-primary" id="fm-bombas-continuar" style="margin-top:1rem;" '+(formulaBombas.length?'':'disabled')+'>Continuar →</button><button class="btn-back" style="margin-top:.75rem;" onclick="renderFormulaPasoCategoria()">← Volver a tipo</button>';
+  body.querySelectorAll('[data-bomba]').forEach(function(el){el.addEventListener('click',function(){
+    var b=this.dataset.bomba; var i=formulaBombas.indexOf(b);
+    if(i>-1) formulaBombas.splice(i,1); else formulaBombas.push(b);
+    renderFormulaPasoBombas();
+  });});
+  document.getElementById('fm-bombas-continuar').addEventListener('click',function(){
+    if(!formulaBombas.length){alert('Selecciona al menos un método de aplicación.');return;}
+    renderFormulaPasoNombre();
+  });
+}
+
+function renderFormulaPasoNombre(){
+  var body=document.getElementById('enc-body');
+  var nombreActual=document.getElementById('fm-nombre-input')?document.getElementById('fm-nombre-input').value:(window._formulaNombreExistente||'');
+  body.innerHTML='<div class="seccion-titulo">Paso 4 de 6 · Nombra la fórmula</div><div class="form-card"><div class="form-group"><label>Nombre</label><input type="text" id="fm-nombre-input" placeholder="Ej. Aplicación contra trips, Sazonada de planta..." value="'+(nombreActual||'').replace(/"/g,'&quot;')+'"></div><div class="form-group"><label>Volumen base</label><div style="display:flex;align-items:center;gap:10px;background:var(--gris-1);border-radius:var(--radio-sm);padding:.65rem .9rem;"><span style="font-size:1.5rem;">🛢️</span><strong>200 litros</strong><span class="hint" style="margin:0;">(tambo de referencia del ingeniero)</span></div></div><button class="btn-primary" id="fm-nombre-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoBombas()">← Volver a bombas</button>';
+  document.getElementById('fm-nombre-continuar').addEventListener('click',function(){
+    var n=(document.getElementById('fm-nombre-input').value||'').trim();
+    if(!n){alert('Escribe el nombre de la fórmula.');return;}
+    window._formulaNombreExistente=n;
+    renderFormulaPasoComponentes();
+  });
+}
+
+function renderFormulaPasoComponentes(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo">Paso 5 de 6 · Componentes</div><div id="fm-comp-list"></div><button type="button" onclick="agregarFormulaComponenteRow()" style="padding:6px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">+ Agregar componente</button><button class="btn-primary" id="fm-comp-continuar" style="margin-top:1.25rem;">Continuar →</button><button class="btn-back" style="margin-top:.75rem;" onclick="renderFormulaPasoNombre()">← Volver a nombre</button>';
   if(!formulaCompRows.length) agregarFormulaComponenteRow(); else pintarFormulaCompList();
-  document.getElementById('fm-guardar').addEventListener('click',function(){guardarFormula(f?f.id:null);});
+  document.getElementById('fm-comp-continuar').addEventListener('click',function(){
+    var comps=formulaCompRows.filter(function(r){return r.item_id&&r.cantidad>0;});
+    if(!comps.length){alert('Agrega al menos un componente con cantidad mayor a 0.');return;}
+    renderFormulaPasoNotas();
+  });
 }
 
 function pintarFormulaCompList(){
@@ -917,28 +972,33 @@ function agregarFormulaComponenteRow(){
   pintarFormulaCompList();
 }
 
-function guardarFormula(formulaId){
-  var nombre=(document.getElementById('fm-nombre').value||'').trim();
-  var notas=document.getElementById('fm-notas').value||null;
-  if(!nombre){alert('Escribe el nombre de la fórmula.');return;}
-  if(!formulaVia){alert('Selecciona la vía de aplicación.');return;}
-  if(!formulaCategoria){alert('Selecciona el tipo de aplicación.');return;}
+function renderFormulaPasoNotas(){
+  var body=document.getElementById('enc-body');
   var comps=formulaCompRows.filter(function(r){return r.item_id&&r.cantidad>0;});
-  if(!comps.length){alert('Agrega al menos un componente con cantidad mayor a 0.');return;}
+  var resumenComp=comps.map(function(c){return c.nombre+' · '+c.cantidad+' '+c.unidad;}).join('<br>');
+  var bombasTxt=formulaBombas.map(function(b){return BOMBA_ICONOS[b]+' '+BOMBA_LABELS[b];}).join(', ');
+  body.innerHTML='<div class="seccion-titulo">Paso 6 de 6 · Notas y confirmar</div><div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row"><span class="resumen-key">Nombre</span><span class="resumen-val">'+window._formulaNombreExistente+'</span></div><div class="resumen-row"><span class="resumen-key">Vía</span><span class="resumen-val">'+VIA_ICONOS[formulaVia]+' '+formulaVia+'</span></div><div class="resumen-row"><span class="resumen-key">Tipo</span><span class="resumen-val">'+CATEGORIA_ICONOS[formulaCategoria]+' '+formulaCategoria+'</span></div><div class="resumen-row"><span class="resumen-key">Bombas</span><span class="resumen-val">'+bombasTxt+'</span></div><div class="resumen-row"><span class="resumen-key">Componentes</span></div><div style="font-size:.82rem;padding:.35rem 0;">'+resumenComp+'</div></div><div class="form-group"><label>Notas (opcional)</label><input type="text" id="fm-notas-input" value="'+(window._formulaNotasExistente?window._formulaNotasExistente.replace(/"/g,'&quot;'):'')+'" placeholder="Instrucciones adicionales..."></div><button class="btn-primary" id="fm-guardar">'+(formulaEditId?'Guardar cambios':'Crear fórmula')+'</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoComponentes()">← Volver a componentes</button>';
+  document.getElementById('fm-guardar').addEventListener('click',guardarFormula);
+}
+
+function guardarFormula(){
+  var nombre=window._formulaNombreExistente;
+  var notas=document.getElementById('fm-notas-input').value||null;
+  var comps=formulaCompRows.filter(function(r){return r.item_id&&r.cantidad>0;});
   var btn=document.getElementById('fm-guardar'); btn.disabled=true; btn.textContent='Guardando...';
-  var payload={nombre:nombre,via:formulaVia,categoria:formulaCategoria,volumen_base_litros:200,notas:notas,creado_por:usuario.id,activo:true};
-  var guardar=formulaId?from('formulas_aplicacion').eq('id',formulaId).update(payload):from('formulas_aplicacion').insert(payload);
+  var payload={nombre:nombre,via:formulaVia,categoria:formulaCategoria,bombas_compatibles:formulaBombas,volumen_base_litros:200,notas:notas,creado_por:usuario.id,activo:true};
+  var guardar=formulaEditId?from('formulas_aplicacion').eq('id',formulaEditId).update(payload):from('formulas_aplicacion').insert(payload);
   guardar.then(function(resp){
-    var fid=formulaId||(resp&&resp[0]&&resp[0].id);
+    var fid=formulaEditId||(resp&&resp[0]&&resp[0].id);
     if(!fid){throw new Error('No se pudo obtener la fórmula guardada.');}
-    var borrarViejos=formulaId?from('formula_componentes').eq('formula_id',fid).delete():Promise.resolve();
+    var borrarViejos=formulaEditId?from('formula_componentes').eq('formula_id',fid).delete():Promise.resolve();
     return borrarViejos.then(function(){
       return Promise.all(comps.map(function(c){return from('formula_componentes').insert({formula_id:fid,item_id:c.item_id,cantidad_base:c.cantidad});}));
     });
   }).then(function(){
     showToast('✅ Fórmula guardada: '+nombre);
     renderFormulas();
-  }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent=formulaId?'Guardar cambios':'Crear fórmula';});
+  }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent=formulaEditId?'Guardar cambios':'Crear fórmula';});
 }
 
 function tabOperario(tab){
