@@ -807,16 +807,27 @@ var CATEGORIA_ICONOS={'Nutrición':'🌱','Plaga':'🐛','Estimulación':'⚡'};
 var BOMBA_ICONOS={'inyeccion':'🛢️','motor':'⚙️','manual':'🤲'};
 var BOMBA_LABELS={'inyeccion':'Bomba Inyección','motor':'Bomba Motor','manual':'Bomba Manual'};
 var formulaVia=null, formulaCategoria=null, formulaBombas=[], formulaCompRows=[], formulaCompSeq=0, formulaEditId=null;
+var formulaPlantacionId=null, formulaTablaId=null;
 
 function renderFormulas(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Fórmulas<button type="button" onclick="renderFormulaForm()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nueva fórmula</button></div><div class="loading">Cargando fórmulas...</div>';
-  from('formulas_aplicacion').select('*').eq('activo',true).order('nombre').get().then(function(rows){
-    if(!rows||!rows.length){body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Fórmulas<button type="button" onclick="renderFormulaForm()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nueva fórmula</button></div><div class="empty">🧪 Aún no hay fórmulas registradas.</div>';return;}
+  Promise.all([
+    from('formulas_aplicacion').select('*,tabla:tablas(nombre,plantacion_id)').eq('activo',true).order('fecha_programada').get(),
+    from('formula_componentes').select('*,item:inventario_items(nombre,unidad,stock_actual)').get()
+  ]).then(function(r){
+    var rows=r[0]||[], todosComps=r[1]||[];
+    if(!rows.length){body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Fórmulas<button type="button" onclick="renderFormulaForm()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nueva fórmula</button></div><div class="empty">🧪 Aún no hay fórmulas registradas.</div>';return;}
     var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Fórmulas<button type="button" onclick="renderFormulaForm()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nueva fórmula</button></div>';
     html+=rows.map(function(f){
       var bombasTxt=(f.bombas_compatibles||[]).map(function(b){return BOMBA_ICONOS[b]||'';}).join(' ');
-      return '<div class="orden-card" style="cursor:pointer;" data-fid="'+f.id+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem">'+(VIA_ICONOS[f.via]||'')+' '+f.nombre+'</strong><span style="font-size:.72rem;color:var(--gris-3)">'+(CATEGORIA_ICONOS[f.categoria]||'')+' '+f.categoria+'</span></div><div class="orden-meta">'+f.via+' · Base 🛢️ '+f.volumen_base_litros+' L'+(bombasTxt?' · '+bombasTxt:'')+'</div></div>';
+      var p=f.tabla?cats.plantaciones.find(function(x){return x.id===f.tabla.plantacion_id;}):null;
+      var ubicacion=(p?p.nombre+' · ':'')+(f.tabla?f.tabla.nombre:'sin tabla');
+      var comps=todosComps.filter(function(c){return c.formula_id===f.id;});
+      var faltantes=comps.filter(function(c){return c.item&&(c.cantidad_base>c.item.stock_actual);});
+      var colorBorde=faltantes.length?'var(--rojo)':'var(--verde-mid)';
+      var alerta=faltantes.length?'<div style="color:var(--rojo);font-weight:700;font-size:.75rem;margin-top:.25rem;">⚠️ Falta material: '+faltantes.map(function(c){return c.item.nombre;}).join(', ')+' — pedir antes del '+(f.fecha_programada||'?')+'</div>':'';
+      return '<div class="orden-card" style="cursor:pointer;border-left-color:'+colorBorde+';" data-fid="'+f.id+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem">'+(VIA_ICONOS[f.via]||'')+' '+f.nombre+'</strong><span style="font-size:.72rem;color:var(--gris-3)">'+(CATEGORIA_ICONOS[f.categoria]||'')+' '+f.categoria+'</span></div><div class="orden-meta">📍 '+ubicacion+' · '+f.via+(f.fecha_programada?' · 📅 '+f.fecha_programada:'')+' · Base 🛢️ '+f.volumen_base_litros+' L'+(bombasTxt?' · '+bombasTxt:'')+'</div>'+alerta+'</div>';
     }).join('');
     body.innerHTML=html;
     body.querySelectorAll('[data-fid]').forEach(function(el){el.addEventListener('click',function(){renderFormulaForm(this.dataset.fid);});});
@@ -826,6 +837,7 @@ function renderFormulas(){
 function renderFormulaForm(formulaId){
   formulaEditId=formulaId||null;
   formulaVia=null; formulaCategoria=null; formulaBombas=[]; formulaCompRows=[]; formulaCompSeq=0;
+  formulaPlantacionId=null; formulaTablaId=null;
   if(formulaId){
     Promise.all([
       from('formulas_aplicacion').select('*').eq('id',formulaId).get(),
@@ -834,24 +846,47 @@ function renderFormulaForm(formulaId){
       var f=r[0]&&r[0][0], comps=r[1]||[];
       if(!f){renderFormulas();return;}
       formulaVia=f.via; formulaCategoria=f.categoria; formulaBombas=(f.bombas_compatibles||[]).slice();
+      formulaTablaId=f.tabla_id||null;
+      var tb=cats.tablas.find(function(t){return t.id===formulaTablaId;});
+      formulaPlantacionId=tb?tb.plantacion_id:null;
       formulaCompRows=comps.map(function(c){formulaCompSeq++;return {row:formulaCompSeq,item_id:c.item_id,nombre:c.item?c.item.nombre:'',unidad:c.item?c.item.unidad:'',cantidad:c.cantidad_base};});
-      window._formulaNombreExistente=f.nombre; window._formulaNotasExistente=f.notas;
-      renderFormulaPasoVia();
+      window._formulaNombreExistente=f.nombre; window._formulaNotasExistente=f.notas; window._formulaFechaExistente=f.fecha_programada;
+      renderFormulaPasoPlantacion();
     });
   } else {
-    window._formulaNombreExistente=''; window._formulaNotasExistente='';
-    renderFormulaPasoVia();
+    window._formulaNombreExistente=''; window._formulaNotasExistente=''; window._formulaFechaExistente='';
+    renderFormulaPasoPlantacion();
   }
 }
 
 function formulaCancelarLink(){return '<button type="button" onclick="renderFormulas()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cancelar</button>';}
+
+function renderFormulaPasoPlantacion(){
+  var body=document.getElementById('enc-body');
+  var tiles=cats.plantaciones.map(function(p){
+    return '<div class="labor-tile'+(formulaPlantacionId===p.id?' labor-tile-otra':'')+'" data-pid="'+p.id+'"><div class="labor-tile-ic">🌿</div><div class="labor-tile-lbl">'+p.nombre+'</div></div>';
+  }).join('');
+  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Paso 1 de 8 · Plantación'+formulaCancelarLink()+'</div><div class="labor-grid">'+tiles+'</div>';
+  body.querySelectorAll('[data-pid]').forEach(function(el){el.addEventListener('click',function(){formulaPlantacionId=this.dataset.pid;formulaTablaId=null;renderFormulaPasoTabla();});});
+}
+
+function renderFormulaPasoTabla(){
+  var body=document.getElementById('enc-body');
+  var tabs=cats.tablas.filter(function(t){return t.plantacion_id===formulaPlantacionId;});
+  var p=cats.plantaciones.find(function(x){return x.id===formulaPlantacionId;});
+  var tiles=tabs.map(function(t){
+    return '<div class="labor-tile'+(formulaTablaId===t.id?' labor-tile-otra':'')+'" data-tid="'+t.id+'"><div class="labor-tile-ic">🧭</div><div class="labor-tile-lbl">'+t.nombre+'</div></div>';
+  }).join('');
+  body.innerHTML='<div class="seccion-titulo">Paso 2 de 8 · Tabla en '+(p?p.nombre:'')+'</div><div class="labor-grid">'+tiles+'</div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoPlantacion()">← Volver a plantación</button>';
+  body.querySelectorAll('[data-tid]').forEach(function(el){el.addEventListener('click',function(){formulaTablaId=this.dataset.tid;renderFormulaPasoVia();});});
+}
 
 function renderFormulaPasoVia(){
   var body=document.getElementById('enc-body');
   var tiles=['Riego','Foliar','Drench'].map(function(v){
     return '<div class="labor-tile'+(formulaVia===v?' labor-tile-otra':'')+'" data-via="'+v+'"><div class="labor-tile-ic">'+VIA_ICONOS[v]+'</div><div class="labor-tile-lbl">'+v+'</div></div>';
   }).join('');
-  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Paso 1 de 6 · Vía de aplicación'+formulaCancelarLink()+'</div><div class="labor-grid">'+tiles+'</div>';
+  body.innerHTML='<div class="seccion-titulo">Paso 3 de 8 · Vía de aplicación</div><div class="labor-grid">'+tiles+'</div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoTabla()">← Volver a tabla</button>';
   body.querySelectorAll('[data-via]').forEach(function(el){el.addEventListener('click',function(){formulaVia=this.dataset.via;renderFormulaPasoCategoria();});});
 }
 
@@ -860,7 +895,7 @@ function renderFormulaPasoCategoria(){
   var tiles=['Nutrición','Plaga','Estimulación'].map(function(c){
     return '<div class="labor-tile'+(formulaCategoria===c?' labor-tile-otra':'')+'" data-cat="'+c+'"><div class="labor-tile-ic">'+CATEGORIA_ICONOS[c]+'</div><div class="labor-tile-lbl">'+c+'</div></div>';
   }).join('');
-  body.innerHTML='<div class="seccion-titulo">Paso 2 de 6 · Tipo de aplicación</div><div class="labor-grid">'+tiles+'</div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoVia()">← Volver a vía</button>';
+  body.innerHTML='<div class="seccion-titulo">Paso 4 de 8 · Tipo de aplicación</div><div class="labor-grid">'+tiles+'</div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoVia()">← Volver a vía</button>';
   body.querySelectorAll('[data-cat]').forEach(function(el){el.addEventListener('click',function(){formulaCategoria=this.dataset.cat;renderFormulaPasoBombas();});});
 }
 
@@ -869,7 +904,7 @@ function renderFormulaPasoBombas(){
   var tiles=['inyeccion','motor','manual'].map(function(b){
     return '<div class="labor-tile'+(formulaBombas.indexOf(b)>-1?' labor-tile-otra':'')+'" data-bomba="'+b+'"><div class="labor-tile-ic">'+BOMBA_ICONOS[b]+'</div><div class="labor-tile-lbl">'+BOMBA_LABELS[b]+'</div></div>';
   }).join('');
-  body.innerHTML='<div class="seccion-titulo">Paso 3 de 6 · ¿Con qué se aplica?</div><p class="hint">Toca una o varias — puedes marcar más de una si la fórmula sirve para distintos equipos.</p><div class="labor-grid">'+tiles+'</div><button class="btn-primary" id="fm-bombas-continuar" style="margin-top:1rem;" '+(formulaBombas.length?'':'disabled')+'>Continuar →</button><button class="btn-back" style="margin-top:.75rem;" onclick="renderFormulaPasoCategoria()">← Volver a tipo</button>';
+  body.innerHTML='<div class="seccion-titulo">Paso 5 de 9 · ¿Con qué se aplica?</div><p class="hint">Toca una o varias — puedes marcar más de una si la fórmula sirve para distintos equipos.</p><div class="labor-grid">'+tiles+'</div><button class="btn-primary" id="fm-bombas-continuar" style="margin-top:1rem;" '+(formulaBombas.length?'':'disabled')+'>Continuar →</button><button class="btn-back" style="margin-top:.75rem;" onclick="renderFormulaPasoCategoria()">← Volver a tipo</button>';
   body.querySelectorAll('[data-bomba]').forEach(function(el){el.addEventListener('click',function(){
     var b=this.dataset.bomba; var i=formulaBombas.indexOf(b);
     if(i>-1) formulaBombas.splice(i,1); else formulaBombas.push(b);
@@ -877,6 +912,15 @@ function renderFormulaPasoBombas(){
   });});
   document.getElementById('fm-bombas-continuar').addEventListener('click',function(){
     if(!formulaBombas.length){alert('Selecciona al menos un método de aplicación.');return;}
+    renderFormulaPasoFecha();
+  });
+}
+
+function renderFormulaPasoFecha(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo">Paso 6 de 9 · Fecha de aplicación</div><div class="form-card"><div class="form-group"><label>¿Cuándo se tiene que aplicar?</label><input type="date" id="fm-fecha-input" value="'+(window._formulaFechaExistente||new Date().toISOString().slice(0,10))+'"></div><p class="hint">Con esta fecha revisamos si el inventario alcanza a tiempo para hacer el pedido.</p><button class="btn-primary" id="fm-fecha-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoBombas()">← Volver a bombas</button>';
+  document.getElementById('fm-fecha-continuar').addEventListener('click',function(){
+    window._formulaFechaExistente=document.getElementById('fm-fecha-input').value||new Date().toISOString().slice(0,10);
     renderFormulaPasoNombre();
   });
 }
@@ -884,7 +928,7 @@ function renderFormulaPasoBombas(){
 function renderFormulaPasoNombre(){
   var body=document.getElementById('enc-body');
   var nombreActual=document.getElementById('fm-nombre-input')?document.getElementById('fm-nombre-input').value:(window._formulaNombreExistente||'');
-  body.innerHTML='<div class="seccion-titulo">Paso 4 de 6 · Nombra la fórmula</div><div class="form-card"><div class="form-group"><label>Nombre</label><input type="text" id="fm-nombre-input" placeholder="Ej. Aplicación contra trips, Sazonada de planta..." value="'+(nombreActual||'').replace(/"/g,'&quot;')+'"></div><div class="form-group"><label>Volumen base</label><div style="display:flex;align-items:center;gap:10px;background:var(--gris-1);border-radius:var(--radio-sm);padding:.65rem .9rem;"><span style="font-size:1.5rem;">🛢️</span><strong>200 litros</strong><span class="hint" style="margin:0;">(tambo de referencia del ingeniero)</span></div></div><button class="btn-primary" id="fm-nombre-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoBombas()">← Volver a bombas</button>';
+  body.innerHTML='<div class="seccion-titulo">Paso 7 de 9 · Nombra la fórmula</div><div class="form-card"><div class="form-group"><label>Nombre</label><input type="text" id="fm-nombre-input" placeholder="Ej. Aplicación contra trips, Sazonada de planta..." value="'+(nombreActual||'').replace(/"/g,'&quot;')+'"></div><div class="form-group"><label>Volumen base</label><div style="display:flex;align-items:center;gap:10px;background:var(--gris-1);border-radius:var(--radio-sm);padding:.65rem .9rem;"><span style="font-size:1.5rem;">🛢️</span><strong>200 litros</strong><span class="hint" style="margin:0;">(tambo de referencia del ingeniero)</span></div></div><button class="btn-primary" id="fm-nombre-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoFecha()">← Volver a fecha</button>';
   document.getElementById('fm-nombre-continuar').addEventListener('click',function(){
     var n=(document.getElementById('fm-nombre-input').value||'').trim();
     if(!n){alert('Escribe el nombre de la fórmula.');return;}
@@ -895,7 +939,7 @@ function renderFormulaPasoNombre(){
 
 function renderFormulaPasoComponentes(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo">Paso 5 de 6 · Componentes</div><div id="fm-comp-list"></div><button type="button" onclick="agregarFormulaComponenteRow()" style="padding:6px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">+ Agregar componente</button><button class="btn-primary" id="fm-comp-continuar" style="margin-top:1.25rem;">Continuar →</button><button class="btn-back" style="margin-top:.75rem;" onclick="renderFormulaPasoNombre()">← Volver a nombre</button>';
+  body.innerHTML='<div class="seccion-titulo">Paso 8 de 9 · Componentes</div><div id="fm-comp-list"></div><button type="button" onclick="agregarFormulaComponenteRow()" style="padding:6px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">+ Agregar componente</button><button class="btn-primary" id="fm-comp-continuar" style="margin-top:1.25rem;">Continuar →</button><button class="btn-back" style="margin-top:.75rem;" onclick="renderFormulaPasoNombre()">← Volver a nombre</button>';
   if(!formulaCompRows.length) agregarFormulaComponenteRow(); else pintarFormulaCompList();
   document.getElementById('fm-comp-continuar').addEventListener('click',function(){
     var comps=formulaCompRows.filter(function(r){return r.item_id&&r.cantidad>0;});
@@ -975,9 +1019,24 @@ function agregarFormulaComponenteRow(){
 function renderFormulaPasoNotas(){
   var body=document.getElementById('enc-body');
   var comps=formulaCompRows.filter(function(r){return r.item_id&&r.cantidad>0;});
-  var resumenComp=comps.map(function(c){return c.nombre+' · '+c.cantidad+' '+c.unidad;}).join('<br>');
   var bombasTxt=formulaBombas.map(function(b){return BOMBA_ICONOS[b]+' '+BOMBA_LABELS[b];}).join(', ');
-  body.innerHTML='<div class="seccion-titulo">Paso 6 de 6 · Notas y confirmar</div><div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row"><span class="resumen-key">Nombre</span><span class="resumen-val">'+window._formulaNombreExistente+'</span></div><div class="resumen-row"><span class="resumen-key">Vía</span><span class="resumen-val">'+VIA_ICONOS[formulaVia]+' '+formulaVia+'</span></div><div class="resumen-row"><span class="resumen-key">Tipo</span><span class="resumen-val">'+CATEGORIA_ICONOS[formulaCategoria]+' '+formulaCategoria+'</span></div><div class="resumen-row"><span class="resumen-key">Bombas</span><span class="resumen-val">'+bombasTxt+'</span></div><div class="resumen-row"><span class="resumen-key">Componentes</span></div><div style="font-size:.82rem;padding:.35rem 0;">'+resumenComp+'</div></div><div class="form-group"><label>Notas (opcional)</label><input type="text" id="fm-notas-input" value="'+(window._formulaNotasExistente?window._formulaNotasExistente.replace(/"/g,'&quot;'):'')+'" placeholder="Instrucciones adicionales..."></div><button class="btn-primary" id="fm-guardar">'+(formulaEditId?'Guardar cambios':'Crear fórmula')+'</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoComponentes()">← Volver a componentes</button>';
+  var p=cats.plantaciones.find(function(x){return x.id===formulaPlantacionId;});
+  var t=cats.tablas.find(function(x){return x.id===formulaTablaId;});
+  var faltantes=[];
+  var resumenComp=comps.map(function(c){
+    var it=cats.inventario.find(function(x){return x.id===c.item_id;});
+    var stock=it?it.stock_actual:0;
+    var falta=c.cantidad-stock;
+    var alerta='';
+    if(falta>0){faltantes.push({nombre:c.nombre,falta:falta,unidad:c.unidad});alerta=' · <span style="color:var(--rojo);font-weight:700;">⚠️ faltan '+numFmt(falta)+' '+c.unidad+'</span>';}
+    return c.nombre+' · '+c.cantidad+' '+c.unidad+' (hay '+numFmt(stock)+')'+alerta;
+  }).join('<br>');
+  var fechaTxt=window._formulaFechaExistente||'';
+  var alertaHtml='';
+  if(faltantes.length){
+    alertaHtml='<div style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);border-radius:var(--radio-sm);padding:.75rem;margin-bottom:1rem;font-size:.82rem;"><strong style="color:var(--rojo);">⚠️ No alcanza el inventario para el '+fechaTxt+'</strong><br>Hay que pedir antes de esa fecha: '+faltantes.map(function(f){return f.nombre+' ('+numFmt(f.falta)+' '+f.unidad+')';}).join(', ')+'</div>';
+  }
+  body.innerHTML='<div class="seccion-titulo">Paso 9 de 9 · Notas y confirmar</div>'+alertaHtml+'<div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row"><span class="resumen-key">Nombre</span><span class="resumen-val">'+window._formulaNombreExistente+'</span></div><div class="resumen-row"><span class="resumen-key">Ubicación</span><span class="resumen-val">📍 '+(p?p.nombre:'')+' · '+(t?t.nombre:'')+'</span></div><div class="resumen-row"><span class="resumen-key">Fecha de aplicación</span><span class="resumen-val">'+fechaTxt+'</span></div><div class="resumen-row"><span class="resumen-key">Vía</span><span class="resumen-val">'+VIA_ICONOS[formulaVia]+' '+formulaVia+'</span></div><div class="resumen-row"><span class="resumen-key">Tipo</span><span class="resumen-val">'+CATEGORIA_ICONOS[formulaCategoria]+' '+formulaCategoria+'</span></div><div class="resumen-row"><span class="resumen-key">Bombas</span><span class="resumen-val">'+bombasTxt+'</span></div><div class="resumen-row"><span class="resumen-key">Componentes</span></div><div style="font-size:.82rem;padding:.35rem 0;">'+resumenComp+'</div></div><div class="form-group"><label>Notas (opcional)</label><input type="text" id="fm-notas-input" value="'+(window._formulaNotasExistente?window._formulaNotasExistente.replace(/"/g,'&quot;'):'')+'" placeholder="Instrucciones adicionales..."></div><button class="btn-primary" id="fm-guardar">'+(formulaEditId?'Guardar cambios':'Crear fórmula')+'</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoComponentes()">← Volver a componentes</button>';
   document.getElementById('fm-guardar').addEventListener('click',guardarFormula);
 }
 
@@ -986,7 +1045,7 @@ function guardarFormula(){
   var notas=document.getElementById('fm-notas-input').value||null;
   var comps=formulaCompRows.filter(function(r){return r.item_id&&r.cantidad>0;});
   var btn=document.getElementById('fm-guardar'); btn.disabled=true; btn.textContent='Guardando...';
-  var payload={nombre:nombre,via:formulaVia,categoria:formulaCategoria,bombas_compatibles:formulaBombas,volumen_base_litros:200,notas:notas,creado_por:usuario.id,activo:true};
+  var payload={nombre:nombre,via:formulaVia,categoria:formulaCategoria,bombas_compatibles:formulaBombas,tabla_id:formulaTablaId,fecha_programada:window._formulaFechaExistente||null,volumen_base_litros:200,notas:notas,creado_por:usuario.id,activo:true};
   var guardar=formulaEditId?from('formulas_aplicacion').eq('id',formulaEditId).update(payload):from('formulas_aplicacion').insert(payload);
   guardar.then(function(resp){
     var fid=formulaEditId||(resp&&resp[0]&&resp[0].id);
