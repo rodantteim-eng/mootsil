@@ -322,6 +322,57 @@ function riegoSincronizar(){
 }
 window.addEventListener('online',riegoSincronizar);
 var colaOffline=JSON.parse(localStorage.getItem('mootsil_cola')||'[]');
+
+var _mootsilDB=null;
+function abrirDBEvidencias(){
+  if(_mootsilDB) return Promise.resolve(_mootsilDB);
+  return new Promise(function(resolve,reject){
+    var req=indexedDB.open('mootsil_evidencias',1);
+    req.onupgradeneeded=function(e){
+      var db=e.target.result;
+      if(!db.objectStoreNames.contains('pendientes')) db.createObjectStore('pendientes',{keyPath:'id'});
+    };
+    req.onsuccess=function(e){_mootsilDB=e.target.result;resolve(_mootsilDB);};
+    req.onerror=function(e){reject(e.target.error);};
+  });
+}
+function guardarEvidenciaPendiente(blob,mime){
+  var id='ev_'+Date.now()+'_'+Math.round(Math.random()*99999);
+  return abrirDBEvidencias().then(function(db){
+    return new Promise(function(resolve,reject){
+      var tx=db.transaction('pendientes','readwrite');
+      tx.objectStore('pendientes').put({id:id,blob:blob,mime:mime||'image/jpeg',creado_en:Date.now()});
+      tx.oncomplete=function(){resolve(id);};
+      tx.onerror=function(e){reject(e.target.error);};
+    });
+  });
+}
+function obtenerEvidenciaPendiente(id){
+  return abrirDBEvidencias().then(function(db){
+    return new Promise(function(resolve){
+      var tx=db.transaction('pendientes','readonly');
+      var req=tx.objectStore('pendientes').get(id);
+      req.onsuccess=function(){resolve(req.result||null);};
+      req.onerror=function(){resolve(null);};
+    });
+  });
+}
+function borrarEvidenciaPendiente(id){
+  return abrirDBEvidencias().then(function(db){
+    var tx=db.transaction('pendientes','readwrite');
+    tx.objectStore('pendientes').delete(id);
+  }).catch(function(){});
+}
+function listarEvidenciasPendientes(){
+  return abrirDBEvidencias().then(function(db){
+    return new Promise(function(resolve){
+      var tx=db.transaction('pendientes','readonly');
+      var req=tx.objectStore('pendientes').getAll();
+      req.onsuccess=function(){resolve(req.result||[]);};
+      req.onerror=function(){resolve([]);};
+    });
+  });
+}
 var camStream=null, camFacing='environment', mediaRecorder=null, grabando=false, videoChunks=[];
 
 function showToast(msg){
@@ -2354,6 +2405,7 @@ function cargarTareas(subtab){
   if(subtab) SUBTAB_TAREAS_ACTUAL=subtab;
   pararRiegoTimer();
   riegoSincronizar();
+  if(navigator.onLine) sincronizarEvidenciasPendientes().then(sincronizarColaGeneral);
   var body=document.getElementById('op-body');
   body.innerHTML=barraSubtabsTareas()+'<div id="tareas-contenido"><div class="loading">Cargando tus tareas...</div></div>';
   var hoy=new Date().toISOString().slice(0,10);
@@ -2723,19 +2775,38 @@ function guardarEjec(){
     return;
   }
   if(capturaEjec.foto&&capturaEjec.fotoBlob&&!capturaEjec.fotoUrl){
-    // Esperar a que la foto termine de subirse
     document.getElementById('exito-sub').textContent='Subiendo evidencia...';
     mostrar('screen-exito');
-    var nombre='evidencia_'+Date.now()+'.jpg';
     var esVideo=capturaEjec.esVideo||false;
     var ext=esVideo?'.webm':'.jpg';
     var mime=esVideo?'video/webm':'image/jpeg';
-    fetch(URL_SB+'/storage/v1/object/evidencias/'+nombre.replace('.jpg',ext),{method:'POST',headers:{'apikey':KEY_SB,'Authorization':'Bearer '+KEY_SB,'Content-Type':mime,'x-upsert':'true'},body:capturaEjec.fotoBlob}).then(function(){
-      capturaEjec.fotoUrl=URL_SB+'/storage/v1/object/public/evidencias/'+nombre.replace('.jpg',ext);
+    var nombre='evidencia_'+Date.now()+ext;
+
+    function guardarLocalYContinuar(){
+      guardarEvidenciaPendiente(capturaEjec.fotoBlob,mime).then(function(localId){
+        capturaEjec.fotoUrl='offline:'+localId;
+        document.getElementById('exito-sub').textContent='Sin señal — tu evidencia quedó guardada en el celular y se subirá sola cuando regrese la conexión.';
+        ejecutarGuardadoFinal(o);
+      }).catch(function(){
+        capturaEjec.fotoUrl='pendiente';
+        ejecutarGuardadoFinal(o);
+      });
+    }
+
+    if(!navigator.onLine){
+      guardarLocalYContinuar();
+      return;
+    }
+    var ctrl=(typeof AbortController!=='undefined')?new AbortController():null;
+    var timer=ctrl?setTimeout(function(){ctrl.abort();},8000):null;
+    fetch(URL_SB+'/storage/v1/object/evidencias/'+nombre,{method:'POST',headers:{'apikey':KEY_SB,'Authorization':'Bearer '+KEY_SB,'Content-Type':mime,'x-upsert':'true'},body:capturaEjec.fotoBlob,signal:ctrl?ctrl.signal:undefined}).then(function(r){
+      if(timer) clearTimeout(timer);
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      capturaEjec.fotoUrl=URL_SB+'/storage/v1/object/public/evidencias/'+nombre;
       ejecutarGuardadoFinal(o);
     }).catch(function(){
-      capturaEjec.fotoUrl='pendiente';
-      ejecutarGuardadoFinal(o);
+      if(timer) clearTimeout(timer);
+      guardarLocalYContinuar();
     });
     return;
   }
@@ -2758,11 +2829,15 @@ function ejecutarGuardadoFinal(o){
   var updatePayload = esAplic ? {estado:nuevoEstado} : {estado:nuevoEstado, surcos_completados:progreso.union};
   if(nuevoEstado==='completada') updatePayload.completado_en=new Date().toISOString();
   var reg={usuario_id:usuario.id,tabla_id:o.tabla_id,tipo_labor_id:o.tipo_labor_id,subtipo_labor_id:o.subtipo_labor_id||null,surcos_trabajados:esAplic?[]:capturaEjec.surcos,cantidad_insumo:esAplic?o.volumen_aplicado_litros:(capturaEjec.cantidad||null),foto_url:capturaEjec.fotoUrl||null,capturado_en:new Date().toISOString(),orden_id:o.id};
-  if(!navigator.onLine){
+  var fotoQuedoLocal = capturaEjec.fotoUrl && capturaEjec.fotoUrl.indexOf('offline:')===0;
+  if(!navigator.onLine||fotoQuedoLocal){
     colaOffline.push(reg);
     localStorage.setItem('mootsil_cola',JSON.stringify(colaOffline));
     from('ordenes_trabajo').eq('id',o.id).update(updatePayload).then(function(){
-      document.getElementById('exito-sub').textContent='Sin señal. Guardado en tu dispositivo y se subirá cuando haya internet.';
+      if(!document.getElementById('exito-sub').textContent) document.getElementById('exito-sub').textContent='Sin señal. Guardado en tu dispositivo y se subirá cuando haya internet.';
+      mostrar('screen-exito'); ordenEjecutando=null;
+    }).catch(function(){
+      riegoEncolar(o.id,updatePayload);
       mostrar('screen-exito'); ordenEjecutando=null;
     });
     return;
@@ -2781,11 +2856,32 @@ function ejecutarGuardadoFinal(o){
   }).catch(function(e){alert('Error: '+e.message);});
 }
 
-window.addEventListener('online',function(){
+function sincronizarEvidenciasPendientes(){
+  return listarEvidenciasPendientes().then(function(items){
+    return Promise.all(items.map(function(item){
+      var ext=item.mime==='video/webm'?'.webm':'.jpg';
+      var nombre='evidencia_'+item.id+ext;
+      return fetch(URL_SB+'/storage/v1/object/evidencias/'+nombre,{method:'POST',headers:{'apikey':KEY_SB,'Authorization':'Bearer '+KEY_SB,'Content-Type':item.mime,'x-upsert':'true'},body:item.blob}).then(function(r){
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        var url=URL_SB+'/storage/v1/object/public/evidencias/'+nombre;
+        var marcador='offline:'+item.id;
+        colaOffline.forEach(function(r2){ if(r2.foto_url===marcador) r2.foto_url=url; });
+        localStorage.setItem('mootsil_cola',JSON.stringify(colaOffline));
+        return borrarEvidenciaPendiente(item.id);
+      }).catch(function(){});
+    }));
+  });
+}
+
+function sincronizarColaGeneral(){
   if(!colaOffline.length) return;
   var pendientes=colaOffline.slice(); colaOffline=[];
   localStorage.setItem('mootsil_cola','[]');
   pendientes.forEach(function(r){from('registros_labor').insert(r).catch(function(){colaOffline.push(r);localStorage.setItem('mootsil_cola',JSON.stringify(colaOffline));});});
+}
+
+window.addEventListener('online',function(){
+  sincronizarEvidenciasPendientes().then(sincronizarColaGeneral);
 });
 
 function renderConfig(){
