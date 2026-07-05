@@ -1548,7 +1548,12 @@ function renderAlarmasRevision(){
 function renderPermisosRevision(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Permisos<button type="button" onclick="renderAsignarExtra()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Asignar hora extra</button></div><div class="loading">Cargando...</div>';
-  var headerHtml='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Permisos<div><button type="button" onclick="renderResumenNomina()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;margin-right:.75rem;">📊 Resumen nómina</button><button type="button" onclick="renderAsignarExtra()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Hora extra</button></div></div>';
+  var headerHtml='<div class="seccion-titulo">Permisos</div><div style="display:flex;flex-wrap:wrap;gap:.4rem 1rem;margin-bottom:1rem;">'+
+    '<button type="button" onclick="renderResumenNomina()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">📊 Resumen nómina</button>'+
+    '<button type="button" onclick="renderAsignarExtra()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Hora extra</button>'+
+    '<button type="button" onclick="renderEvaluarComportamiento()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">🤝 Comportamiento</button>'+
+    (usuario.rol==='admin'||usuario.rol==='dueño'?'<button type="button" onclick="renderBonos()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">🎁 Bonos</button>':'')+
+  '</div>';
   from('permisos').select('*,operario:usuarios!usuario_id(nombre)').order('creado_en',{ascending:false}).get().then(function(rows){
     if(!rows||!rows.length){body.innerHTML=headerHtml+'<div class="empty">Sin solicitudes de permiso.</div>';return;}
     var pend=rows.filter(function(p){return p.estado==='pendiente';});
@@ -1716,6 +1721,69 @@ function renderResumenNomina(){
     }).join('');
     body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderPermisosRevision()">← Volver a Permisos</button>';
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function renderEvaluarComportamiento(){
+  var body=document.getElementById('enc-body');
+  var opO=cats.operarios.map(function(o){return '<button type="button" class="op-chip" data-id="'+o.id+'" onclick="seleccionUnica(this)">'+o.nombre+'</button>';}).join('');
+  var hoyD=new Date();
+  var primerDiaMes=new Date(hoyD.getFullYear(),hoyD.getMonth(),1).toISOString().slice(0,10);
+  var ultimoDiaMes=new Date(hoyD.getFullYear(),hoyD.getMonth()+1,0).toISOString().slice(0,10);
+  body.innerHTML='<div class="seccion-titulo">🤝 Evaluar comportamiento</div><div class="form-card"><div class="form-group"><label>Colaborador</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Calificación (1 a 10)</label><input type="number" id="ev-calif" min="1" max="10" step="0.5" placeholder="Ej. 8.5"></div><div class="form-group"><label>Comentario (opcional)</label><input type="text" id="ev-comentario" placeholder="Ej. Buena actitud, apoya a sus compañeros..."></div><div class="form-group"><label>Periodo evaluado</label><div style="display:flex;gap:8px;"><input type="date" id="ev-desde" value="'+primerDiaMes+'"><input type="date" id="ev-hasta" value="'+ultimoDiaMes+'"></div></div><button class="btn-primary" id="ev-guardar">Guardar evaluación</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderPermisosRevision()">← Volver a Permisos</button>';
+  document.getElementById('ev-guardar').addEventListener('click',function(){
+    var opId=document.querySelector('.op-chip.sel');
+    var calif=parseFloat(document.getElementById('ev-calif').value);
+    if(!opId){alert('Selecciona un colaborador.');return;}
+    if(!calif||calif<1||calif>10){alert('Captura una calificación entre 1 y 10.');return;}
+    var comentario=document.getElementById('ev-comentario').value||null;
+    var desde=document.getElementById('ev-desde').value, hasta=document.getElementById('ev-hasta').value;
+    from('evaluaciones_comportamiento').insert({operario_id:opId.dataset.id,evaluado_por:usuario.id,periodo_inicio:desde,periodo_fin:hasta,calificacion:calif,comentario:comentario}).then(function(){
+      showToast('✅ Evaluación guardada');
+      renderPermisosRevision();
+    }).catch(function(e){alert('Error: '+e.message);});
+  });
+}
+
+function seleccionUnica(btn){
+  btn.parentElement.querySelectorAll('.op-chip').forEach(function(b){b.classList.remove('sel');});
+  btn.classList.add('sel');
+}
+
+function renderBonos(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🎁 Bonos<button type="button" onclick="renderNuevoBono()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo bono</button></div><div class="loading">Cargando...</div>';
+  from('bonos').select('*').order('creado_en',{ascending:false}).get().then(function(rows){
+    if(!rows||!rows.length){body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🎁 Bonos<button type="button" onclick="renderNuevoBono()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo bono</button></div><div class="empty">Sin bonos registrados.</div>';return;}
+    var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🎁 Bonos<button type="button" onclick="renderNuevoBono()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo bono</button></div>';
+    html+=rows.map(function(b){
+      return '<div class="orden-card" style="border-left-color:'+(b.estado==='activo'?'var(--verde-mid)':'var(--gris-3)')+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(b.tipo==='equipo'?'🤝 Equipo':'👤 Individual')+' · '+(b.tipo_recompensa==='economico'?'💰 Económico':'🎁 En especie')+'</strong><span style="font-size:.72rem;font-weight:700;color:'+(b.estado==='activo'?'var(--verde-mid)':'var(--gris-3)')+';">'+(b.estado==='activo'?'Activo':'Cerrado')+'</span></div><div class="orden-meta">'+b.descripcion+(b.umbral_minimo?'<br/>Requiere '+b.umbral_minimo+'/10 de rendimiento':'')+'<br/>📅 '+b.periodo_inicio+' a '+b.periodo_fin+'</div>'+(b.estado==='activo'?'<button class="btn-sm btn-cancelar" data-cerrar="'+b.id+'" style="margin-top:.5rem;">Cerrar bono</button>':'')+'</div>';
+    }).join('');
+    body.innerHTML=html;
+    body.querySelectorAll('[data-cerrar]').forEach(function(btn){btn.addEventListener('click',function(){
+      from('bonos').eq('id',this.dataset.cerrar).update({estado:'cerrado'}).then(function(){showToast('Bono cerrado');renderBonos();});
+    });});
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function renderNuevoBono(){
+  var body=document.getElementById('enc-body');
+  var hoyD=new Date();
+  var primerDiaMes=new Date(hoyD.getFullYear(),hoyD.getMonth(),1).toISOString().slice(0,10);
+  var ultimoDiaMes=new Date(hoyD.getFullYear(),hoyD.getMonth()+1,0).toISOString().slice(0,10);
+  body.innerHTML='<div class="seccion-titulo">+ Nuevo bono</div><div class="form-card"><div class="form-group"><label>Tipo</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip sel" data-tipo="individual" onclick="seleccionUnica(this)">👤 Individual</button><button type="button" class="op-chip" data-tipo="equipo" onclick="seleccionUnica(this)">🤝 Equipo</button></div></div><div class="form-group"><label>Tipo de recompensa</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip sel" data-rec="economico" onclick="seleccionUnica(this)">💰 Económico</button><button type="button" class="op-chip" data-rec="especie" onclick="seleccionUnica(this)">🎁 En especie</button></div></div><div class="form-group"><label>Descripción</label><input type="text" id="bo-desc" placeholder="Ej. $500 extra en la quincena / Día libre adicional"></div><div class="form-group"><label>Rendimiento mínimo requerido (opcional)</label><input type="number" id="bo-umbral" min="1" max="10" step="0.5" placeholder="Ej. 8.5"></div><div class="form-group"><label>Periodo</label><div style="display:flex;gap:8px;"><input type="date" id="bo-desde" value="'+primerDiaMes+'"><input type="date" id="bo-hasta" value="'+ultimoDiaMes+'"></div></div><button class="btn-primary" id="bo-guardar">Activar bono</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderBonos()">← Volver a Bonos</button>';
+  document.getElementById('bo-guardar').addEventListener('click',function(){
+    var tipoBtn=document.querySelector('[data-tipo].sel'), recBtn=document.querySelector('[data-rec].sel');
+    var desc=document.getElementById('bo-desc').value.trim();
+    if(!desc){alert('Describe el bono.');return;}
+    var umbral=document.getElementById('bo-umbral').value||null;
+    var desde=document.getElementById('bo-desde').value, hasta=document.getElementById('bo-hasta').value;
+    from('bonos').insert({tipo:tipoBtn.dataset.tipo,tipo_recompensa:recBtn.dataset.rec,descripcion:desc,umbral_minimo:umbral,periodo_inicio:desde,periodo_fin:hasta,activado_por:usuario.id,estado:'activo'}).then(function(){
+      return from('notificaciones').insert({titulo:'🎁 Nuevo bono activo',cuerpo:usuario.nombre+' activó un bono: '+desc,icono:'🎁',leida:false,para_rol:'operario'});
+    }).then(function(){
+      showToast('✅ Bono activado');
+      renderBonos();
+    }).catch(function(e){alert('Error: '+e.message);});
+  });
 }
 
 function renderAsignarExtra(){
@@ -2153,79 +2221,181 @@ function mostrarDetalleHistorial(cat){
 
 function pararRiegoTimer(){if(riegoTimer){clearInterval(riegoTimer);riegoTimer=null;}riegoAlarmaActiva=false;}
 
-function cargarTareas(){
+var SUBTAB_TAREAS_ACTUAL='porhacer';
+
+function cargarTareas(subtab){
+  if(subtab) SUBTAB_TAREAS_ACTUAL=subtab;
   pararRiegoTimer();
   riegoSincronizar();
   var body=document.getElementById('op-body');
-  body.innerHTML='<div class="loading">Cargando tus tareas...</div>';
+  body.innerHTML=barraSubtabsTareas()+'<div class="loading">Cargando tus tareas...</div>';
   var hoy=new Date().toISOString().slice(0,10);
   Promise.all([
     from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_cantidad_insumo,unidad_insumo,requiere_tiempo),subtipo:subtipos_labor(nombre)').eq('operario_id',usuario.id).in('estado',['pendiente','en_proceso']).order('fecha_asignacion',{ascending:true}).get(),
     from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo)').eq('operario_id',usuario.id).eq('fecha_asignacion',hoy).order('creado_en',{ascending:false}).get(),
-    from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo)').eq('operario_id',usuario.id).eq('estado','completada').eq('fecha_asignacion',hoy).get()
+    from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo)').eq('operario_id',usuario.id).eq('estado','completada').order('fecha_asignacion',{ascending:false}).limit(60).get()
   ]).then(function(res){
-    var todas=res[0]||[], hoyOrdenes=res[1]||[], completadasHoy=res[2]||[];
-    var idsComp=completadasHoy.map(function(o){return o.id;});
+    var todas=res[0]||[], hoyOrdenes=res[1]||[], completadas=res[2]||[];
+    var idsComp=completadas.map(function(o){return o.id;});
     var evidenciaFetch = idsComp.length ? from('registros_labor').select('orden_id,foto_url').in('orden_id',idsComp).get() : Promise.resolve([]);
     evidenciaFetch.then(function(regs){
       var evidenciaPorOrden={};
       (regs||[]).forEach(function(r){evidenciaPorOrden[r.orden_id]=!!r.foto_url;});
-      try{localStorage.setItem('mootsil_tareas_cache_'+usuario.id,JSON.stringify({todas:todas,hoyOrdenes:hoyOrdenes,completadasHoy:completadasHoy,evidenciaPorOrden:evidenciaPorOrden,ts:Date.now()}));}catch(e){}
-      pintarTareas(todas,hoyOrdenes,false,completadasHoy,evidenciaPorOrden);
+      try{localStorage.setItem('mootsil_tareas_cache_'+usuario.id,JSON.stringify({todas:todas,hoyOrdenes:hoyOrdenes,completadas:completadas,evidenciaPorOrden:evidenciaPorOrden,ts:Date.now()}));}catch(e){}
+      pintarTareas(todas,hoyOrdenes,false,completadas,evidenciaPorOrden);
     });
   }).catch(function(){
     var cache=null;
     try{cache=JSON.parse(localStorage.getItem('mootsil_tareas_cache_'+usuario.id)||'null');}catch(e){}
-    if(cache){ pintarTareas(cache.todas,cache.hoyOrdenes,true,cache.completadasHoy||[],cache.evidenciaPorOrden||{}); }
-    else{ body.innerHTML='<div class="empty">📡 Sin señal y sin tareas guardadas.<br/>Conéctate al menos una vez para descargarlas.</div>'; }
+    if(cache){ pintarTareas(cache.todas,cache.hoyOrdenes,true,cache.completadas||[],cache.evidenciaPorOrden||{}); }
+    else{ body.innerHTML=barraSubtabsTareas()+'<div class="empty">📡 Sin señal y sin tareas guardadas.<br/>Conéctate al menos una vez para descargarlas.</div>'; }
   });
 }
 
-function pintarTareas(todas,hoyOrdenes,esCache,completadasHoy,evidenciaPorOrden){
-  completadasHoy=completadasHoy||[]; evidenciaPorOrden=evidenciaPorOrden||{};
+function barraSubtabsTareas(){
+  var tabs=[['porhacer','Por Hacer'],['pendientes','Pendientes'],['terminadas','Terminadas'],['rendimiento','Rendimiento']];
+  return '<div style="display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap;">'+tabs.map(function(t){
+    return '<button type="button" class="rep-view-btn'+(SUBTAB_TAREAS_ACTUAL===t[0]?' active':'')+'" data-subtab="'+t[0]+'" onclick="cargarTareas(\''+t[0]+'\')">'+t[1]+'</button>';
+  }).join('')+'</div>';
+}
+
+function pintarTareas(todas,hoyOrdenes,esCache,completadas,evidenciaPorOrden){
+  completadas=completadas||[]; evidenciaPorOrden=evidenciaPorOrden||{};
   var body=document.getElementById('op-body');
   var hoy=new Date().toISOString().slice(0,10);
   riegoOrdenes=hoyOrdenes.filter(function(o){return o.tipo_labor&&o.tipo_labor.requiere_tiempo;});
   var tareasTodas=todas.filter(function(t){return !(t.tipo_labor&&t.tipo_labor.requiere_tiempo);});
-  var tareasHoy=tareasTodas.filter(function(t){return t.fecha_asignacion===hoy;});
-  var tareasAtrasadas=tareasTodas.filter(function(t){return t.fecha_asignacion<hoy;});
-  var completadasNormales=completadasHoy.filter(function(o){return !(o.tipo_labor&&o.tipo_labor.requiere_tiempo);});
-  var html=esCache?'<p class="hint" style="text-align:center;margin-bottom:.75rem;">📡 Sin señal — mostrando tus tareas guardadas.</p>':'';
-  if(riegoOrdenes.length){
-    var comp=riegoOrdenes.filter(function(o){return o.estado==='completada';}).length;
-    html+='<div class="tarea-card" style="border-left-color:var(--tierra);cursor:pointer;" onclick="renderRiegoPlantaciones()"><div class="tarea-title">💧 Riego de hoy</div><div class="tarea-meta">'+comp+' de '+riegoOrdenes.length+' tablas regadas · toca para entrar</div></div>';
-  }
-  function tarjetaTarea(t,atrasada){
+  var porHacer=tareasTodas.filter(function(t){return t.estado==='pendiente';});
+  var enProceso=tareasTodas.filter(function(t){return t.estado==='en_proceso';});
+  var completadasNormales=completadas.filter(function(o){return !(o.tipo_labor&&o.tipo_labor.requiere_tiempo);});
+
+  function tarjetaTarea(t){
     var p=cats.plantaciones.find(function(x){return x.id===t.tabla.plantacion_id;});
     var ic=ICONOS[t.tipo_labor.nombre]||'🔧';
     var su=(t.surcos_asignados&&t.surcos_asignados.length)?t.surcos_asignados.join(', '):'Todos';
-    return '<div class="tarea-card" style="'+(atrasada?'border-left-color:var(--rojo);':'')+'"><div class="tarea-title">'+ic+' '+t.tipo_labor.nombre+(t.subtipo?' · '+t.subtipo.nombre:'')+(atrasada?' <span style="color:var(--rojo);font-size:.72rem;font-weight:700;">⚠️ Atrasada desde '+t.fecha_asignacion+'</span>':'')+'</div><div class="tarea-meta">📍 '+(p?p.nombre:'')+' · '+t.tabla.nombre+'<br/>🔢 Surcos: '+su+(t.notas_encargado?'<br/>📝 '+t.notas_encargado:'')+'</div><div style="margin-top:.75rem;display:flex;gap:8px;">'+(t.estado==='pendiente'?'<button class="btn-sm btn-iniciar" data-ini="'+t.id+'">▶ Iniciar</button>':'')+(t.estado==='en_proceso'?'<button class="btn-sm btn-completar" data-eje="'+t.id+'">✅ Registrar avance</button>':'')+'</div></div>';
+    var atrasada=t.fecha_asignacion<hoy;
+    var progresoTxt='';
+    if(t.estado==='en_proceso'&&t.surcos_completados&&t.surcos_completados.length){
+      var totalRef=(t.surcos_asignados&&t.surcos_asignados.length)?t.surcos_asignados.length:(t.tabla.cantidad_surcos||0);
+      progresoTxt='<br/>🔶 Avance: '+t.surcos_completados.length+'/'+totalRef+' surcos';
+    }
+    return '<div class="tarea-card" style="'+(atrasada?'border-left-color:var(--rojo);':'')+'"><div class="tarea-title">'+ic+' '+t.tipo_labor.nombre+(t.subtipo?' · '+t.subtipo.nombre:'')+(atrasada?' <span style="color:var(--rojo);font-size:.72rem;font-weight:700;">⚠️ Desde '+t.fecha_asignacion+'</span>':'')+'</div><div class="tarea-meta">📍 '+(p?p.nombre:'')+' · '+t.tabla.nombre+'<br/>🔢 Surcos: '+su+progresoTxt+(t.notas_encargado?'<br/>📝 '+t.notas_encargado:'')+'</div><div style="margin-top:.75rem;display:flex;gap:8px;">'+(t.estado==='pendiente'?'<button class="btn-sm btn-iniciar" data-ini="'+t.id+'">▶ Iniciar</button>':'')+(t.estado==='en_proceso'?'<button class="btn-sm btn-completar" data-eje="'+t.id+'">✅ Registrar avance</button>':'')+'</div></div>';
   }
-  if(tareasAtrasadas.length){
-    html+='<div class="seccion-titulo" style="margin-top:1rem;color:var(--rojo);">⚠️ Atrasadas ('+tareasAtrasadas.length+')</div>';
-    html+=tareasAtrasadas.map(function(t){return tarjetaTarea(t,true);}).join('');
-  }
-  if(!tareasHoy.length&&!riegoOrdenes.length&&!tareasAtrasadas.length&&!completadasNormales.length){body.innerHTML=html+'<div class="empty">🌱 No tienes tareas asignadas.<br/>El encargado te asignará labores aquí.</div>';return;}
-  if(tareasHoy.length){
-    html+='<div class="seccion-titulo" style="margin-top:1rem">Tus tareas de hoy</div>';
-    html+=tareasHoy.map(function(t){return tarjetaTarea(t,false);}).join('');
-  }
-  if(completadasNormales.length){
-    html+='<div class="seccion-titulo" style="margin-top:1rem">✅ Completadas hoy</div>';
-    html+=completadasNormales.map(function(t){
+
+  var html='';
+  if(SUBTAB_TAREAS_ACTUAL==='porhacer'){
+    if(riegoOrdenes.length){
+      var comp=riegoOrdenes.filter(function(o){return o.estado==='completada';}).length;
+      if(comp<riegoOrdenes.length) html+='<div class="tarea-card" style="border-left-color:var(--tierra);cursor:pointer;" onclick="renderRiegoPlantaciones()"><div class="tarea-title">💧 Riego de hoy</div><div class="tarea-meta">'+comp+' de '+riegoOrdenes.length+' tablas regadas · toca para entrar</div></div>';
+    }
+    if(!porHacer.length&&!html){html+='<div class="empty">🌱 No tienes tareas por hacer.<br/>El encargado te asignará labores aquí.</div>';}
+    else html+=porHacer.map(tarjetaTarea).join('');
+  } else if(SUBTAB_TAREAS_ACTUAL==='pendientes'){
+    if(riegoOrdenes.length){
+      var comp2=riegoOrdenes.filter(function(o){return o.estado==='en_proceso';}).length;
+      if(comp2>0) html+='<div class="tarea-card" style="border-left-color:var(--tierra);cursor:pointer;" onclick="renderRiegoPlantaciones()"><div class="tarea-title">💧 Riego en curso</div><div class="tarea-meta">Toca para continuar</div></div>';
+    }
+    if(!enProceso.length&&!html) html='<div class="empty">No tienes tareas en proceso.</div>';
+    else html+=enProceso.map(tarjetaTarea).join('');
+  } else if(SUBTAB_TAREAS_ACTUAL==='terminadas'){
+    if(!completadasNormales.length){html='<div class="empty">Aún no tienes labores terminadas.</div>';}
+    else html=completadasNormales.map(function(t){
       var p=cats.plantaciones.find(function(x){return x.id===t.tabla.plantacion_id;});
       var ic=ICONOS[t.tipo_labor.nombre]||'🔧';
       var tieneEvidencia=evidenciaPorOrden[t.id];
-      return '<div class="tarea-card" style="opacity:.7;border-left-color:var(--verde-mid);"><div class="tarea-title">'+ic+' '+t.tipo_labor.nombre+' 🔒</div><div class="tarea-meta">📍 '+(p?p.nombre:'')+' · '+t.tabla.nombre+'<br/>'+(tieneEvidencia?'📷 Con evidencia':'Sin foto de evidencia')+'</div></div>';
+      return '<div class="tarea-card" style="opacity:.75;border-left-color:var(--verde-mid);"><div class="tarea-title">'+ic+' '+t.tipo_labor.nombre+' 🔒</div><div class="tarea-meta">📍 '+(p?p.nombre:'')+' · '+t.tabla.nombre+' · '+t.fecha_asignacion+'<br/>'+(tieneEvidencia?'📷 Con evidencia':'Sin foto de evidencia')+'</div></div>';
     }).join('');
+  } else if(SUBTAB_TAREAS_ACTUAL==='rendimiento'){
+    renderRendimientoOperario();
+    return;
   }
-  body.innerHTML=html;
+
+  var prefijo=esCache?'<p class="hint" style="text-align:center;margin-bottom:.75rem;">📡 Sin señal — mostrando tus tareas guardadas.</p>':'';
+  body.innerHTML=barraSubtabsTareas()+prefijo+html;
   body.querySelectorAll('[data-ini]').forEach(function(b){b.addEventListener('click',function(){
     var oid=this.dataset.ini;
     if(navigator.onLine) from('ordenes_trabajo').eq('id',oid).update({estado:'en_proceso'}).then(function(){cargarTareas();}).catch(function(){riegoEncolar(oid,{estado:'en_proceso'});cargarTareas();});
-    else{riegoEncolar(oid,{estado:'en_proceso'});var t=todas.find(function(x){return x.id===oid;});if(t)t.estado='en_proceso';pintarTareas(todas,hoyOrdenes,true,completadasHoy,evidenciaPorOrden);}
+    else{riegoEncolar(oid,{estado:'en_proceso'});var t=todas.find(function(x){return x.id===oid;});if(t)t.estado='en_proceso';pintarTareas(todas,hoyOrdenes,true,completadas,evidenciaPorOrden);}
   });});
   body.querySelectorAll('[data-eje]').forEach(function(b){b.addEventListener('click',function(){iniciarEjecucion(this.dataset.eje);});});
+}
+
+function renderRendimientoOperario(){
+  var body=document.getElementById('op-body');
+  body.innerHTML=barraSubtabsTareas()+'<div class="loading">Calculando rendimiento...</div>';
+  var hoyD=new Date();
+  var primerDiaMes=new Date(hoyD.getFullYear(),hoyD.getMonth(),1).toISOString().slice(0,10);
+  var hoy=hoyD.toISOString().slice(0,10);
+  var nombreMes=hoyD.toLocaleDateString('es-MX',{month:'long',year:'numeric'});
+  Promise.all([
+    from('asistencia_registros').select('*').eq('usuario_id',usuario.id).gte('fecha',primerDiaMes).get(),
+    from('ordenes_trabajo').select('fecha_asignacion,completado_en,estado').eq('operario_id',usuario.id).gte('fecha_asignacion',primerDiaMes).get(),
+    from('evaluaciones_comportamiento').select('*').eq('operario_id',usuario.id).gte('periodo_fin',primerDiaMes).get(),
+    from('bonos').select('*').eq('estado','activo').get()
+  ]).then(function(r){
+    var registrosAs=r[0]||[], ordenesMes=r[1]||[], evals=r[2]||[], bonos=r[3]||[];
+    var resumenAs=calcularResumenAsistencia(registrosAs,primerDiaMes);
+    var scoreAsistencia=Math.max(0,10-resumenAs.faltas*1.5-resumenAs.retardos*0.5);
+
+    var completadasMes=ordenesMes.filter(function(o){return o.estado==='completada'&&o.completado_en;});
+    var aTiempo=completadasMes.filter(function(o){return o.completado_en.slice(0,10)<=o.fecha_asignacion;}).length;
+    var scoreTareas = completadasMes.length ? (aTiempo/completadasMes.length)*10 : 7;
+
+    var atrasadasAbiertas=ordenesMes.filter(function(o){return o.estado==='en_proceso'&&o.fecha_asignacion<hoy;}).length;
+    var scoreAvance=Math.max(0,10-atrasadasAbiertas*2);
+
+    var horasExtraMes=0;
+    var porDiaExtra={};
+    registrosAs.filter(function(x){return x.modalidad==='extras';}).forEach(function(reg){
+      if(!porDiaExtra[reg.fecha]) porDiaExtra[reg.fecha]={entrada:null,salida:null};
+      if(reg.tipo==='entrada'&&(!porDiaExtra[reg.fecha].entrada||reg.registrado_en<porDiaExtra[reg.fecha].entrada)) porDiaExtra[reg.fecha].entrada=reg.registrado_en;
+      if(reg.tipo==='salida'&&(!porDiaExtra[reg.fecha].salida||reg.registrado_en>porDiaExtra[reg.fecha].salida)) porDiaExtra[reg.fecha].salida=reg.registrado_en;
+    });
+    Object.keys(porDiaExtra).forEach(function(f){var d=porDiaExtra[f];if(d.entrada&&d.salida) horasExtraMes+=(new Date(d.salida)-new Date(d.entrada))/3600000;});
+    var scoreExtra=Math.min(10,5+horasExtraMes*0.3);
+
+    var scoreComportamiento = evals.length ? (evals.reduce(function(s,e){return s+parseFloat(e.calificacion);},0)/evals.length) : 7;
+
+    var pesos={asistencia:.30,tareas:.25,avance:.15,extra:.10,comportamiento:.20};
+    var scoreFinal = scoreAsistencia*pesos.asistencia + scoreTareas*pesos.tareas + scoreAvance*pesos.avance + scoreExtra*pesos.extra + scoreComportamiento*pesos.comportamiento;
+    scoreFinal = Math.max(0,Math.min(10,scoreFinal));
+
+    var color = scoreFinal>=8?'var(--verde-mid)':scoreFinal>=6?'var(--tierra)':'var(--rojo)';
+    var pct=(scoreFinal/10)*100;
+
+    var bonosCalificando=bonos.filter(function(b){return (b.tipo==='individual'||b.tipo==='equipo')&&(!b.umbral_minimo||scoreFinal>=parseFloat(b.umbral_minimo));});
+
+    var html=barraSubtabsTareas();
+    html+='<div class="seccion-titulo" style="text-transform:capitalize;">Rendimiento de '+nombreMes+'</div>';
+    html+='<div class="form-card" style="text-align:center;">';
+    if(usuario.avatarUrl) html+='<img src="'+usuario.avatarUrl+'" style="max-height:140px;object-fit:contain;margin-bottom:.5rem;">';
+    html+='<div style="font-size:2.2rem;font-weight:800;color:'+color+';">'+scoreFinal.toFixed(1)+'<span style="font-size:1.1rem;color:var(--gris-3);">/10</span></div>';
+    html+='<div style="background:var(--gris-1);border-radius:20px;height:14px;margin:.75rem 0;overflow:hidden;"><div style="background:'+color+';height:100%;width:'+pct+'%;border-radius:20px;transition:width .3s;"></div></div>';
+    html+='</div>';
+
+    html+='<div class="seccion-titulo" style="margin-top:1rem;">¿Cómo se calculó?</div>';
+    html+='<div class="form-card">';
+    html+=filaRendimiento('✅ Asistencia (30%)',scoreAsistencia,resumenAs.faltas+' falta(s), '+resumenAs.retardos+' retardo(s)');
+    html+=filaRendimiento('📋 Tareas a tiempo (25%)',scoreTareas,completadasMes.length?(aTiempo+' de '+completadasMes.length+' a tiempo'):'Sin tareas completadas aún');
+    html+=filaRendimiento('🔶 Sin dejar a medias (15%)',scoreAvance,atrasadasAbiertas?atrasadasAbiertas+' tarea(s) atrasada(s) sin cerrar':'Todo al día');
+    html+=filaRendimiento('⏰ Horas extra (10%)',scoreExtra,horasExtraMes.toFixed(1)+' h este mes');
+    html+=filaRendimiento('🤝 Comportamiento (20%)',scoreComportamiento,evals.length?(evals.length+' evaluación(es) de tu encargado/admin/dueño'):'Aún sin evaluar este mes');
+    html+='</div>';
+
+    if(bonosCalificando.length){
+      html+='<div class="seccion-titulo" style="margin-top:1rem;">🎁 Bonos activos que calificas</div>';
+      html+=bonosCalificando.map(function(b){
+        return '<div class="tarea-card" style="border-left-color:var(--verde-mid);"><div class="tarea-title">'+(b.tipo==='equipo'?'🤝 Equipo':'👤 Individual')+' · '+(b.tipo_recompensa==='economico'?'💰 Económico':'🎁 En especie')+'</div><div class="tarea-meta">'+b.descripcion+'<br/>Vigente: '+b.periodo_inicio+' a '+b.periodo_fin+'</div></div>';
+      }).join('');
+    }
+
+    body.innerHTML=html;
+  }).catch(function(e){body.innerHTML=barraSubtabsTareas()+'<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function filaRendimiento(label,score,detalle){
+  var color = score>=8?'var(--verde-mid)':score>=6?'var(--tierra)':'var(--rojo)';
+  return '<div style="margin-bottom:.85rem;"><div style="display:flex;justify-content:space-between;font-size:.82rem;font-weight:700;"><span>'+label+'</span><span style="color:'+color+';">'+score.toFixed(1)+'</span></div><div style="background:var(--gris-1);border-radius:10px;height:6px;margin:.3rem 0;overflow:hidden;"><div style="background:'+color+';height:100%;width:'+(score*10)+'%;"></div></div><div class="hint" style="margin:0;">'+detalle+'</div></div>';
 }
 
 function renderRiegoPlantaciones(){
@@ -2417,25 +2587,39 @@ function guardarEjec(){
   ejecutarGuardadoFinal(o);
 }
 
+function calcularProgresoSurcos(o){
+  var totalAsignados = (o.surcos_asignados&&o.surcos_asignados.length) ? o.surcos_asignados.map(String) : (o.tabla&&o.tabla.cantidad_surcos ? Array.from({length:o.tabla.cantidad_surcos},function(_,i){return String(i+1);}) : []);
+  var yaCompletados = (o.surcos_completados||[]).map(String);
+  var nuevos = (capturaEjec.surcos||[]).map(String);
+  var union = Array.from(new Set(yaCompletados.concat(nuevos)));
+  var faltan = totalAsignados.filter(function(s){return union.indexOf(s)===-1;});
+  return {totalAsignados:totalAsignados,union:union,faltan:faltan,completo: totalAsignados.length>0 && faltan.length===0};
+}
+
 function ejecutarGuardadoFinal(o){
   var esAplic=o.tipo_labor&&o.tipo_labor.requiere_formula;
+  var progreso = esAplic ? {completo:true,union:[],faltan:[]} : calcularProgresoSurcos(o);
+  var nuevoEstado = progreso.completo ? 'completada' : 'en_proceso';
+  var updatePayload = esAplic ? {estado:nuevoEstado} : {estado:nuevoEstado, surcos_completados:progreso.union};
+  if(nuevoEstado==='completada') updatePayload.completado_en=new Date().toISOString();
   var reg={usuario_id:usuario.id,tabla_id:o.tabla_id,tipo_labor_id:o.tipo_labor_id,subtipo_labor_id:o.subtipo_labor_id||null,surcos_trabajados:esAplic?[]:capturaEjec.surcos,cantidad_insumo:esAplic?o.volumen_aplicado_litros:(capturaEjec.cantidad||null),foto_url:capturaEjec.fotoUrl||null,capturado_en:new Date().toISOString(),orden_id:o.id};
   if(!navigator.onLine){
     colaOffline.push(reg);
     localStorage.setItem('mootsil_cola',JSON.stringify(colaOffline));
-    from('ordenes_trabajo').eq('id',o.id).update({estado:'completada'}).then(function(){
+    from('ordenes_trabajo').eq('id',o.id).update(updatePayload).then(function(){
       document.getElementById('exito-sub').textContent='Sin señal. Guardado en tu dispositivo y se subirá cuando haya internet.';
       mostrar('screen-exito'); ordenEjecutando=null;
     });
     return;
   }
   from('registros_labor').insert(reg).then(function(){
-    from('ordenes_trabajo').eq('id',o.id).update({estado:'completada'}).then(function(){
+    from('ordenes_trabajo').eq('id',o.id).update(updatePayload).then(function(){
       var lb=cats.tiposLabor.find(function(l){return l.id===o.tipo_labor_id;}), tb=cats.tablas.find(function(t){return t.id===o.tabla_id;});
-      showToast('✅ '+usuario.nombre+' completó '+(lb?lb.nombre:'')+' en '+(tb?tb.nombre:''));
-      var detalle=esAplic?('Fórmula: '+(o.formula?o.formula.nombre:'')):('Surcos: '+capturaEjec.surcos.join(', '));
-      from('notificaciones').insert({titulo:'✅ Labor completada',cuerpo:usuario.nombre+' completó '+(lb?lb.nombre:'')+' en '+(tb?tb.nombre:'')+' — '+detalle,icono:'✅',leida:false,para_rol:'encargado'}).then(function(){
-        document.getElementById('exito-sub').textContent='Registro guardado. El encargado recibirá un aviso.';
+      var verbo = progreso.completo ? 'completó' : 'avanzó en';
+      showToast('✅ '+usuario.nombre+' '+verbo+' '+(lb?lb.nombre:'')+' en '+(tb?tb.nombre:''));
+      var detalle=esAplic?('Fórmula: '+(o.formula?o.formula.nombre:'')):('Surcos: '+capturaEjec.surcos.join(', ')+(progreso.completo?'':' · Faltan: '+progreso.faltan.join(', ')));
+      from('notificaciones').insert({titulo: progreso.completo?'✅ Labor completada':'🔶 Avance parcial registrado',cuerpo:usuario.nombre+' '+verbo+' '+(lb?lb.nombre:'')+' en '+(tb?tb.nombre:'')+' — '+detalle,icono: progreso.completo?'✅':'🔶',leida:false,para_rol:'encargado'}).then(function(){
+        document.getElementById('exito-sub').textContent = progreso.completo ? 'Registro guardado. El encargado recibirá un aviso.' : 'Avance guardado. Faltan '+progreso.faltan.length+' surco(s) — seguirá apareciendo en tus tareas.';
         mostrar('screen-exito'); ordenEjecutando=null;
       });
     });
