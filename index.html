@@ -1794,9 +1794,9 @@ function irInicioOperario(){
   ['asistencia','tareas','pagos','op-notif'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
   var body=document.getElementById('op-body');
   var avatarHtml = usuario.avatarUrl
-    ? '<div style="width:160px;height:160px;border-radius:50%;background:var(--verde-tenue);display:flex;align-items:center;justify-content:center;margin-bottom:1rem;overflow:hidden;"><img src="'+usuario.avatarUrl+'" style="width:100%;height:100%;object-fit:contain;" alt="Tu Mootsilito"></div>'
+    ? '<div style="width:100%;max-width:320px;display:flex;align-items:center;justify-content:center;margin-bottom:.5rem;"><img src="'+usuario.avatarUrl+'" style="width:100%;max-height:48vh;object-fit:contain;" alt="Tu Mootsilito"></div>'
     : '<div style="width:120px;height:120px;border-radius:50%;background:var(--verde-tenue);display:flex;align-items:center;justify-content:center;font-size:3.2rem;margin-bottom:1rem;">🥑</div>';
-  body.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2.5rem 1rem;text-align:center;min-height:60vh;">'+avatarHtml+'<div style="font-size:1.15rem;font-weight:800;color:var(--verde);">¡Bienvenido, '+usuario.nombre+'!</div><div style="font-size:.78rem;color:var(--gris-3);margin-top:.15rem;">Tu Mootsilito de hoy te saluda 👋</div><div style="font-size:.82rem;color:var(--gris-3);margin-top:.5rem;">¿Qué vamos a hacer hoy? Elige una opción arriba 👆</div></div>';
+  body.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem 1rem;text-align:center;min-height:60vh;">'+avatarHtml+'<div style="font-size:1.15rem;font-weight:800;color:var(--verde);">¡Bienvenido, '+usuario.nombre+'!</div><div style="font-size:.78rem;color:var(--gris-3);margin-top:.15rem;">Tu Mootsilito de hoy te saluda 👋</div><div style="font-size:.82rem;color:var(--gris-3);margin-top:.5rem;">¿Qué vamos a hacer hoy? Elige una opción arriba 👆</div></div>';
 }
 
 function actualizarBadgeOperario(){
