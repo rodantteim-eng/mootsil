@@ -1616,7 +1616,7 @@ function renderAlarmasRevision(){
       var ubicacion=(p||a.tabla)?('📍 '+(p?p.nombre:'')+(a.tabla?' · '+a.tabla.nombre:'')):'';
       var f=new Date(a.creado_en).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'numeric',minute:'2-digit',hour12:true});
       var esEmerg=a.categoria==='emergencia';
-      return '<div class="orden-card" style="'+(esEmerg?'border-left-color:var(--rojo);':'')+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(iconos[a.categoria]||'🚨')+' '+(nombres[a.categoria]||a.categoria)+'</strong><span style="font-size:.72rem;color:var(--gris-3);">'+f+'</span></div>'+(ubicacion?'<div class="orden-meta" style="font-weight:700;">'+ubicacion+'</div>':'')+'<div class="orden-meta">👤 '+(a.usuario?a.usuario.nombre:'')+'</div>'+(a.descripcion?'<div class="orden-meta" style="margin-top:.2rem;">📝 '+a.descripcion+'</div>':'')+'</div>';
+      return '<div class="orden-card" style="'+(esEmerg?'border-left-color:var(--rojo);':'')+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(iconos[a.categoria]||'🚨')+' '+(nombres[a.categoria]||a.categoria)+'</strong><span style="font-size:.72rem;color:var(--gris-3);">'+f+'</span></div>'+(ubicacion?'<div class="orden-meta" style="font-weight:700;">'+ubicacion+'</div>':'')+'<div class="orden-meta">👤 '+(a.usuario?a.usuario.nombre:'')+'</div>'+(a.descripcion?'<div class="orden-meta" style="margin-top:.2rem;">📝 '+a.descripcion+'</div>':'')+(a.evidencia_url?'<div style="margin-top:.4rem;"><a href="'+a.evidencia_url+'" target="_blank"><img src="'+a.evidencia_url+'" style="max-width:140px;max-height:140px;border-radius:8px;border:1px solid var(--gris-2);"></a></div>':'')+'</div>';
     }).join('');
     body.innerHTML=html;
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
@@ -1629,6 +1629,7 @@ function renderPermisosRevision(){
     '<button type="button" onclick="renderResumenNomina()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">📊 Resumen nómina</button>'+
     '<button type="button" onclick="renderEvaluarComportamiento()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">🤝 Comportamiento</button>'+
     (usuario.rol==='admin'||usuario.rol==='dueño'?'<button type="button" onclick="renderBonos()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">🎁 Bonos</button>':'')+
+    (usuario.rol==='admin'||usuario.rol==='dueño'?'<button type="button" onclick="renderPagarSemanas()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">💳 Pagar semana</button>':'')+
   '</div>';
   from('permisos').select('*,operario:usuarios!usuario_id(nombre)').order('creado_en',{ascending:false}).get().then(function(rows){
     if(!rows||!rows.length){body.innerHTML=headerHtml+'<div class="empty">Sin solicitudes de permiso.</div>';return;}
@@ -1675,14 +1676,29 @@ function renderAlarmasMenu(){
 
 var ALARMA_LABELS={plantacion:'🌱 Plantación',plagas:'🐛 Plagas',infraestructura:'🏗️ Infraestructura',accidente:'🤕 Accidente'};
 
+var alarmaEvidenciaBlob=null;
+
+function capturarEvidenciaAlarma(e){
+  var f=e.target.files&&e.target.files[0];
+  if(!f) return;
+  alarmaEvidenciaBlob=f;
+  var ind=document.getElementById('al-ev-status');
+  if(ind){
+    var url=URL.createObjectURL(f);
+    ind.innerHTML='✅ Foto lista<br><img src="'+url+'" style="max-width:120px;max-height:120px;border-radius:8px;margin-top:.4rem;border:1px solid var(--gris-2);">';
+  }
+}
+
 function renderAlarmaForm(categoria){
   var body=document.getElementById('op-body');
   var necesitaUbicacion = categoria!=='accidente';
   var pO=cats.plantaciones.map(function(p){return '<option value="'+p.id+'">'+p.nombre+'</option>';}).join('');
+  alarmaEvidenciaBlob=null;
   body.innerHTML='<div class="seccion-titulo">'+ALARMA_LABELS[categoria]+'</div><div class="form-card">'+
   (necesitaUbicacion?'<div class="form-group"><label>Plantación</label><select id="al-pl"><option value="">Selecciona...</option>'+pO+'</select></div><div class="form-group"><label>Tabla</label><select id="al-tb"><option value="">Selecciona plantación primero</option></select></div>':'')+
   '<div class="form-group"><label>¿Qué encontraste?</label><textarea id="al-desc" rows="4" placeholder="Ej. Encontré fuga en surco 30 / Surcos 1-20 con hormigas / Surco 24 línea de tutoreo trozada" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div>'+
-  '<button class="btn-primary" id="al-enviar">🚨 Enviar reporte</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAlarmasMenu()">← Volver a Alarmas</button>';
+  '<div class="form-group"><label>Foto (muy recomendada)</label><div style="display:flex;gap:8px;"><button type="button" onclick="document.getElementById(\'al-ev-cam\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📷 Cámara</button><button type="button" onclick="document.getElementById(\'al-ev-gal\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);background:var(--gris-1);cursor:pointer;">🖼️ Galería</button></div><div id="al-ev-status" class="hint" style="margin-top:.4rem;"></div></div>'+
+  '<button class="btn-primary" id="al-enviar">🚨 Enviar reporte</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAlarmasMenu()">← Volver a Alarmas</button><input type="file" id="al-ev-cam" accept="image/*" capture="environment" style="display:none" onchange="capturarEvidenciaAlarma(event)"><input type="file" id="al-ev-gal" accept="image/*" style="display:none" onchange="capturarEvidenciaAlarma(event)">';
   if(necesitaUbicacion){
     document.getElementById('al-pl').addEventListener('change',function(){
       var tabs=cats.tablas.filter(function(t){return t.plantacion_id===this.value;}.bind(this));
@@ -1698,12 +1714,16 @@ function renderAlarmaForm(categoria){
     var p=plId?cats.plantaciones.find(function(x){return x.id===plId;}):null;
     var t=tbId?cats.tablas.find(function(x){return x.id===tbId;}):null;
     var ubicacionTxt=(p&&t)?(' · 📍 '+p.nombre+' · '+t.nombre):'';
-    from('alertas_campo').insert({usuario_id:usuario.id,categoria:categoria,descripcion:desc,plantacion_id:plId,tabla_id:tbId}).then(function(){
-      return from('notificaciones').insert({titulo:'🚨 '+ALARMA_LABELS[categoria],cuerpo:usuario.nombre+' reportó: '+desc+ubicacionTxt,icono:'🚨',leida:false,para_rol:'encargado'});
+    var btn=this; btn.disabled=true; btn.textContent='Enviando...';
+    var subirFoto = alarmaEvidenciaBlob ? subirComprobantePermiso(alarmaEvidenciaBlob).catch(function(){return null;}) : Promise.resolve(null);
+    subirFoto.then(function(url){
+      return from('alertas_campo').insert({usuario_id:usuario.id,categoria:categoria,descripcion:desc,plantacion_id:plId,tabla_id:tbId,evidencia_url:url});
+    }).then(function(){
+      return from('notificaciones').insert({titulo:'🚨 '+ALARMA_LABELS[categoria],cuerpo:usuario.nombre+' reportó: '+desc+ubicacionTxt+(alarmaEvidenciaBlob?' 📷':''),icono:'🚨',leida:false,para_rol:'encargado'});
     }).then(function(){
       alert('✅ Reporte enviado. El encargado ya fue notificado.');
       renderAlarmasMenu();
-    }).catch(function(e){alert('Error: '+e.message);});
+    }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='🚨 Enviar reporte';});
   });
 }
 
@@ -1823,6 +1843,54 @@ function renderEvaluarComportamiento(){
 function seleccionUnica(btn){
   btn.parentElement.querySelectorAll('.op-chip').forEach(function(b){b.classList.remove('sel');});
   btn.classList.add('sel');
+}
+
+function renderPagarSemanas(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo">💳 Pagar semana</div><div class="loading">Calculando...</div>';
+  var lunes=inicioDeSemana(new Date());
+  var domingo=new Date(lunes); domingo.setDate(lunes.getDate()+6);
+  var semanaInicio=lunes.toISOString().slice(0,10), semanaFin=domingo.toISOString().slice(0,10);
+  var numSemana=numeroSemanaISO(lunes);
+  Promise.all([
+    from('usuarios').select('id,nombre,sueldo_base').eq('rol','operario').get(),
+    from('asistencia_registros').select('*').gte('fecha',semanaInicio).lte('fecha',semanaFin).get(),
+    from('pagos_semana_estado').select('*').eq('semana_inicio',semanaInicio).get()
+  ]).then(function(r){
+    var operarios=r[0]||[], registros=r[1]||[], estados=r[2]||[];
+    var estadoPorOp={}; estados.forEach(function(e){estadoPorOp[e.operario_id]=e;});
+    var html='<div class="seccion-titulo">💳 Pagar semana '+numSemana+'</div><p class="hint" style="margin-bottom:1rem;">'+semanaInicio+' a '+semanaFin+'</p>';
+    if(!operarios.length){html+='<div class="empty">No hay operarios registrados.</div>';}
+    html+=operarios.map(function(o){
+      var regsOp=registros.filter(function(r){return r.usuario_id===o.id;});
+      var resumen=calcularResumenAsistencia(regsOp,semanaInicio);
+      var sueldoBase=o.sueldo_base||0;
+      var total=resumen.trabajados*sueldoBase;
+      var est=estadoPorOp[o.id];
+      var pagado=est&&est.estado==='pagado';
+      return '<div class="orden-card" style="border-left-color:'+(pagado?'var(--verde-mid)':'var(--tierra)')+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+o.nombre+'</strong><span style="font-weight:800;color:'+(pagado?'var(--verde-mid)':'var(--tierra)')+';">$'+total.toFixed(2)+'</span></div><div class="orden-meta">'+resumen.trabajados+' días · '+resumen.faltas+' faltas · '+resumen.retardos+' retardos'+(sueldoBase?'':' · ⚠️ sin sueldo base configurado')+'</div>'+(pagado?'<button class="btn-sm btn-cancelar" data-despagar="'+o.id+'" style="margin-top:.5rem;">Marcar como pendiente</button>':'<button class="btn-sm btn-completar" data-pagar="'+o.id+'" data-total="'+total+'" style="margin-top:.5rem;">✅ Marcar como pagado</button>')+'</div>';
+    }).join('');
+    body.innerHTML=html;
+    body.querySelectorAll('[data-pagar]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var opId=this.dataset.pagar, total=parseFloat(this.dataset.total);
+        var payload={operario_id:opId,semana_inicio:semanaInicio,semana_fin:semanaFin,estado:'pagado',monto_pagado:total,pagado_por:usuario.id,pagado_en:new Date().toISOString()};
+        var existente=estadoPorOp[opId];
+        var accion = existente ? from('pagos_semana_estado').eq('id',existente.id).update(payload) : from('pagos_semana_estado').insert(payload);
+        accion.then(function(){
+          return from('notificaciones').insert({titulo:'💳 Pago registrado',cuerpo:'Tu pago de la semana '+numSemana+' ($'+total.toFixed(2)+') fue marcado como pagado.',icono:'💳',leida:false,para_rol:'operario',para_usuario:opId});
+        }).then(function(){showToast('✅ Marcado como pagado');renderPagarSemanas();}).catch(function(e){alert('Error: '+e.message);});
+      });
+    });
+    body.querySelectorAll('[data-despagar]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var opId=this.dataset.despagar;
+        var existente=estadoPorOp[opId];
+        if(!existente) return;
+        from('pagos_semana_estado').eq('id',existente.id).update({estado:'pendiente'}).then(function(){showToast('Marcado como pendiente');renderPagarSemanas();}).catch(function(e){alert('Error: '+e.message);});
+      });
+    });
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
 function renderBonos(){
@@ -2029,7 +2097,7 @@ function tabOperario(tab){
   pararRiegoTimer();
   if(tab==='tareas'){document.getElementById('tab-tareas').classList.add('active');cargarTareas();}
   else if(tab==='asistencia'){document.getElementById('tab-asistencia').classList.add('active');renderAsistenciaMenu();}
-  else if(tab==='pagos'){document.getElementById('tab-pagos').classList.add('active');renderPagosProximamente();}
+  else if(tab==='pagos'){document.getElementById('tab-pagos').classList.add('active');renderPagosMenu();}
   else if(tab==='perfil'){document.getElementById('tab-perfil').classList.add('active');renderPerfilOperario();}
   else{document.getElementById('tab-op-notif').classList.add('active');renderNotifs('op-body');}
 }
@@ -2062,9 +2130,80 @@ function actualizarBadgeOperario(){
   });
 }
 
-function renderPagosProximamente(){
+function renderPagosMenu(){
   var body=document.getElementById('op-body');
-  body.innerHTML='<div class="empty">💳 Próximamente<br/>Aquí verás tus pagos y recibos.</div>';
+  body.innerHTML='<div class="seccion-titulo">💳 Pagos</div><div class="labor-grid" style="grid-template-columns:repeat(3,1fr);">'+
+    '<div class="labor-tile" data-pago="semana"><div class="labor-tile-ic">📅</div><div class="labor-tile-lbl">Semana</div></div>'+
+    '<div class="labor-tile" data-pago="extras"><div class="labor-tile-ic">⏰</div><div class="labor-tile-lbl">Horas Extras</div></div>'+
+    '<div class="labor-tile" data-pago="debo"><div class="labor-tile-ic">📝</div><div class="labor-tile-lbl">Debo</div></div>'+
+    '<div class="labor-tile" data-pago="cartera"><div class="labor-tile-ic">👛</div><div class="labor-tile-lbl">Cartera</div></div>'+
+    '<div class="labor-tile" data-pago="historial"><div class="labor-tile-ic">📊</div><div class="labor-tile-lbl">Historial</div></div>'+
+  '</div>';
+  body.querySelector('[data-pago="semana"]').addEventListener('click',function(){renderPagoSemana(new Date());});
+  body.querySelector('[data-pago="extras"]').addEventListener('click',function(){body.innerHTML='<div class="empty">⏰ Próximamente</div><button class="btn-back" style="margin-top:1rem;" onclick="renderPagosMenu()">← Volver a Pagos</button>';});
+  body.querySelector('[data-pago="debo"]').addEventListener('click',function(){body.innerHTML='<div class="empty">📝 Próximamente</div><button class="btn-back" style="margin-top:1rem;" onclick="renderPagosMenu()">← Volver a Pagos</button>';});
+  body.querySelector('[data-pago="cartera"]').addEventListener('click',function(){body.innerHTML='<div class="empty">👛 Próximamente</div><button class="btn-back" style="margin-top:1rem;" onclick="renderPagosMenu()">← Volver a Pagos</button>';});
+  body.querySelector('[data-pago="historial"]').addEventListener('click',function(){body.innerHTML='<div class="empty">📊 Próximamente</div><button class="btn-back" style="margin-top:1rem;" onclick="renderPagosMenu()">← Volver a Pagos</button>';});
+}
+
+function inicioDeSemana(fecha){
+  var d=new Date(fecha); d.setHours(0,0,0,0);
+  var dia=d.getDay();
+  d.setDate(d.getDate()-((dia+6)%7));
+  return d;
+}
+
+function renderPagoSemana(fechaRef){
+  var body=document.getElementById('op-body');
+  body.innerHTML='<div class="seccion-titulo">📅 Pago de la semana</div><div class="loading">Calculando...</div>';
+  var lunes=inicioDeSemana(fechaRef);
+  var domingo=new Date(lunes); domingo.setDate(lunes.getDate()+6);
+  var semanaInicio=lunes.toISOString().slice(0,10), semanaFin=domingo.toISOString().slice(0,10);
+  var numSemana=numeroSemanaISO(lunes);
+  Promise.all([
+    from('usuarios').select('sueldo_base').eq('id',usuario.id).get(),
+    from('asistencia_registros').select('*').eq('usuario_id',usuario.id).gte('fecha',semanaInicio).lte('fecha',semanaFin).get(),
+    from('pagos_semana_estado').select('*').eq('operario_id',usuario.id).eq('semana_inicio',semanaInicio).get()
+  ]).then(function(r){
+    var sueldoBase=(r[0]&&r[0][0]&&r[0][0].sueldo_base)||0;
+    var registros=r[1]||[];
+    var estadoRow=r[2]&&r[2][0];
+    var resumen=calcularResumenAsistencia(registros,semanaInicio);
+    var total=resumen.trabajados*sueldoBase;
+    var pagado=estadoRow&&estadoRow.estado==='pagado';
+    var mesInicio=lunes.toLocaleDateString('es-MX',{month:'long'});
+    var mesFin=domingo.toLocaleDateString('es-MX',{month:'long'});
+    var rango=(mesInicio===mesFin)?('del '+lunes.getDate()+' al '+domingo.getDate()+' de '+mesFin+' '+domingo.getFullYear()):('del '+lunes.getDate()+' '+mesInicio+' al '+domingo.getDate()+' '+mesFin+' '+domingo.getFullYear());
+    var hoy=new Date().toISOString().slice(0,10);
+    var esSemanaActual = hoy>=semanaInicio && hoy<=semanaFin;
+
+    var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📅 Pago de la semana<button type="button" onclick="renderPagosMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Pagos</button></div>';
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;"><button type="button" id="pg-sem-ant" style="border:none;background:var(--gris-1);border-radius:20px;padding:.4rem .9rem;font-size:.8rem;cursor:pointer;">← Semana anterior</button>'+(esSemanaActual?'':'<button type="button" id="pg-sem-sig" style="border:none;background:var(--gris-1);border-radius:20px;padding:.4rem .9rem;font-size:.8rem;cursor:pointer;">Semana siguiente →</button>')+'</div>';
+
+    html+='<div class="form-card" style="text-align:center;'+(pagado?'border:2px solid var(--verde-mid);':'border:2px solid var(--tierra);')+'">';
+    html+='<div style="font-size:.8rem;color:var(--gris-3);">Pago semana '+numSemana+'</div>';
+    html+='<div style="font-size:.85rem;font-weight:700;margin-bottom:.75rem;">'+rango+'</div>';
+    html+='<div style="font-size:2rem;font-weight:800;color:'+(pagado?'var(--verde-mid)':'var(--tierra)')+';">$'+total.toFixed(2)+'</div>';
+    html+='<div style="display:inline-block;margin-top:.5rem;padding:.3rem 1rem;border-radius:20px;background:'+(pagado?'var(--verde-tenue)':'var(--tierra-tenue)')+';color:'+(pagado?'var(--verde-mid)':'var(--tierra)')+';font-weight:700;font-size:.8rem;">'+(pagado?'✅ Pagado':'⏳ Pendiente')+'</div>';
+    html+='</div>';
+
+    html+='<div class="form-card" style="margin-top:.75rem;">';
+    html+='<div class="resumen-row"><span class="resumen-key">Sueldo base diario</span><span class="resumen-val">$'+sueldoBase.toFixed(2)+'</span></div>';
+    html+='<div class="resumen-row"><span class="resumen-key">Días laborados</span><span class="resumen-val" style="color:var(--verde-mid);">'+resumen.trabajados+'</span></div>';
+    html+='<div class="resumen-row"><span class="resumen-key">Faltas</span><span class="resumen-val" style="color:var(--rojo);">'+resumen.faltas+'</span></div>';
+    html+='<div class="resumen-row"><span class="resumen-key">Retardos</span><span class="resumen-val" style="color:var(--tierra);">'+resumen.retardos+'</span></div>';
+    html+='</div>';
+
+    if(!sueldoBase){
+      html+='<p class="hint" style="margin-top:.75rem;text-align:center;">Tu sueldo base todavía no está configurado. Pide al admin que lo capture en tu perfil.</p>';
+    }
+
+    body.innerHTML=html;
+    var btnAnt=document.getElementById('pg-sem-ant');
+    if(btnAnt) btnAnt.addEventListener('click',function(){var d=new Date(lunes);d.setDate(d.getDate()-7);renderPagoSemana(d);});
+    var btnSig=document.getElementById('pg-sem-sig');
+    if(btnSig) btnSig.addEventListener('click',function(){var d=new Date(lunes);d.setDate(d.getDate()+7);renderPagoSemana(d);});
+  }).catch(function(e){body.innerHTML='<div class="empty">No se pudo calcular tu pago.<br/><span style="font-size:.7rem;color:var(--gris-3);">('+e.message+')</span></div><button class="btn-back" style="margin-top:1rem;" onclick="renderPagosMenu()">← Volver a Pagos</button>';});
 }
 
 function renderAsistenciaMenu(){
@@ -2948,9 +3087,10 @@ function guardarNuevoUsuario(){
 function renderEditarUsuario(id,nombre,rol,certAmbas){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="loading">Cargando...</div>';
-  from('usuarios').select('avatar_url').eq('id',id).get().then(function(rows){
+  from('usuarios').select('avatar_url,sueldo_base').eq('id',id).get().then(function(rows){
     var avatarUrl=(rows&&rows[0]&&rows[0].avatar_url)||'';
-    body.innerHTML='<div class="form-card"><h3>Editar usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="eu-n" value="'+nombre+'"/></div><div class="form-group"><label>Rol</label><select id="eu-r"><option value="operario"'+(rol==='operario'?' selected':'')+'>Operario</option><option value="encargado"'+(rol==='encargado'?' selected':'')+'>Encargado</option><option value="ingeniero"'+(rol==='ingeniero'?' selected':'')+'>Ingeniero</option><option value="cosechador"'+(rol==='cosechador'?' selected':'')+'>Cosechador</option><option value="galerista"'+(rol==='galerista'?' selected':'')+'>Galerista</option><option value="dueño"'+(rol==='dueño'?' selected':'')+'>Dueño</option><option value="inversionista"'+(rol==='inversionista'?' selected':'')+'>Inversionista</option><option value="admin"'+(rol==='admin'?' selected':'')+'>Admin</option></select></div><div class="form-group"><label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:.85rem;"><input type="checkbox" id="eu-cert" '+(certAmbas?'checked':'')+' style="width:18px;height:18px;"> Certificado para Labores y Cosecha (ambas)</label></div><div class="form-group"><label>URL de su Mootsilito personalizado (opcional)</label><input type="text" id="eu-avatar" value="'+avatarUrl.replace(/"/g,'&quot;')+'" placeholder="Ej. https://tusitio.pages.dev/avatares/lalo.png"><p class="hint">Sube la imagen a tu repo (junto a index.html) y pega aquí el link completo.</p></div><div class="nav-row"><button class="btn-back" onclick="renderConfig()">← Cancelar</button><button class="btn-next" onclick="guardarEditarUsuario(\''+id+'\')">Guardar</button></div></div>';
+    var sueldoBase=(rows&&rows[0]&&rows[0].sueldo_base)||'';
+    body.innerHTML='<div class="form-card"><h3>Editar usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="eu-n" value="'+nombre+'"/></div><div class="form-group"><label>Rol</label><select id="eu-r"><option value="operario"'+(rol==='operario'?' selected':'')+'>Operario</option><option value="encargado"'+(rol==='encargado'?' selected':'')+'>Encargado</option><option value="ingeniero"'+(rol==='ingeniero'?' selected':'')+'>Ingeniero</option><option value="cosechador"'+(rol==='cosechador'?' selected':'')+'>Cosechador</option><option value="galerista"'+(rol==='galerista'?' selected':'')+'>Galerista</option><option value="dueño"'+(rol==='dueño'?' selected':'')+'>Dueño</option><option value="inversionista"'+(rol==='inversionista'?' selected':'')+'>Inversionista</option><option value="admin"'+(rol==='admin'?' selected':'')+'>Admin</option></select></div><div class="form-group"><label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:.85rem;"><input type="checkbox" id="eu-cert" '+(certAmbas?'checked':'')+' style="width:18px;height:18px;"> Certificado para Labores y Cosecha (ambas)</label></div><div class="form-group"><label>Sueldo base diario ($)</label><input type="number" id="eu-sueldo" min="0" step="1" value="'+sueldoBase+'" placeholder="Ej. 350"></div><div class="form-group"><label>URL de su Mootsilito personalizado (opcional)</label><input type="text" id="eu-avatar" value="'+avatarUrl.replace(/"/g,'&quot;')+'" placeholder="Ej. https://tusitio.pages.dev/avatares/lalo.png"><p class="hint">Sube la imagen a tu repo (junto a index.html) y pega aquí el link completo.</p></div><div class="nav-row"><button class="btn-back" onclick="renderConfig()">← Cancelar</button><button class="btn-next" onclick="guardarEditarUsuario(\''+id+'\')">Guardar</button></div></div>';
   });
 }
 
@@ -2958,8 +3098,9 @@ function guardarEditarUsuario(id){
   var nn=document.getElementById('eu-n').value.trim(), nr=document.getElementById('eu-r').value;
   var certAmbas=document.getElementById('eu-cert').checked;
   var avatarUrl=document.getElementById('eu-avatar').value.trim()||null;
+  var sueldoBase=parseFloat(document.getElementById('eu-sueldo').value)||null;
   if(!nn){alert('El nombre es obligatorio.');return;}
-  from('usuarios').eq('id',id).update({nombre:nn,rol:nr,certificado_ambas:certAmbas,avatar_url:avatarUrl}).then(function(){cargarCatalogos().then(function(){renderConfig();});});
+  from('usuarios').eq('id',id).update({nombre:nn,rol:nr,certificado_ambas:certAmbas,avatar_url:avatarUrl,sueldo_base:sueldoBase}).then(function(){cargarCatalogos().then(function(){renderConfig();});});
 }
 
 function renderCambiarPin(id,nombre){
