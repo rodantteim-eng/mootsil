@@ -507,27 +507,34 @@ var riegoAsigMinutos={}, riegoAsigOperarios=[], riegoAsigFecha=null;
 
 function renderAsignarMenu(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo">+ Asignar</div><div class="labor-grid" style="grid-template-columns:repeat(3,1fr);">'+
+  body.innerHTML='<div class="seccion-titulo">+ Asignar</div><div class="labor-grid" style="grid-template-columns:repeat(2,1fr);">'+
     '<div class="labor-tile" data-menu="labores"><div class="labor-tile-ic">🧰</div><div class="labor-tile-lbl">Labores</div></div>'+
     '<div class="labor-tile" data-menu="cosecha"><div class="labor-tile-ic">🧺</div><div class="labor-tile-lbl">Cosecha</div></div>'+
-    '<div class="labor-tile" data-menu="extras"><div class="labor-tile-ic">⏰</div><div class="labor-tile-lbl">Horas Extras</div></div>'+
   '</div>';
   body.querySelector('[data-menu="labores"]').addEventListener('click',renderFormAsignar);
   body.querySelector('[data-menu="cosecha"]').addEventListener('click',function(){cosechaReset();renderAsigCosechaPlantaciones();});
-  body.querySelector('[data-menu="extras"]').addEventListener('click',renderAsignarExtra);
 }
+
+var modoAsignacionLabor='normal';
 
 function renderFormAsignar(){
   asignarLaborSel=null;
+  modoAsignacionLabor='normal';
   var body=document.getElementById('enc-body');
   var tiles=cats.tiposLabor.filter(function(l){return !l.es_cosecha;}).map(function(l){
     return '<div class="labor-tile" data-id="'+l.id+'" data-nombre="'+l.nombre+'"><div class="labor-tile-ic">'+(ICONOS[l.nombre]||'🔧')+'</div><div class="labor-tile-lbl">'+l.nombre+'</div></div>';
   }).join('');
-  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Paso 1 de 2 · Selecciona la labor<button type="button" onclick="renderAsignarMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Menú</button></div><div class="labor-grid">'+tiles+'<div class="labor-tile labor-tile-otra" id="labor-otra-tile"><div class="labor-tile-ic">➕</div><div class="labor-tile-lbl">Otra</div></div></div><div id="labor-otra-box" style="display:none;margin-top:.75rem;" class="form-card"><label style="display:block;font-size:.75rem;font-weight:600;color:var(--gris-3);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">Nombre de la labor</label><input type="text" id="labor-otra-input" placeholder="Ej. Fertirriego" style="width:100%;padding:.65rem .75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;background:var(--gris-1);margin-bottom:.6rem;"><button class="btn-primary" id="labor-otra-btn">Usar esta labor</button></div>';
+  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Paso 1 de 2 · Selecciona la labor<button type="button" onclick="renderAsignarMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Menú</button></div><div style="display:flex;gap:8px;margin-bottom:1rem;"><button type="button" class="op-chip sel" id="modo-normal" data-modo="normal">🕐 Normal</button><button type="button" class="op-chip" id="modo-extra" data-modo="extra">⏰ Hora Extra</button></div><div class="labor-grid">'+tiles+'<div class="labor-tile labor-tile-otra" id="labor-otra-tile"><div class="labor-tile-ic">➕</div><div class="labor-tile-lbl">Otra</div></div></div><div id="labor-otra-box" style="display:none;margin-top:.75rem;" class="form-card"><label style="display:block;font-size:.75rem;font-weight:600;color:var(--gris-3);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">Nombre de la labor</label><input type="text" id="labor-otra-input" placeholder="Ej. Fertirriego" style="width:100%;padding:.65rem .75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;background:var(--gris-1);margin-bottom:.6rem;"><button class="btn-primary" id="labor-otra-btn">Usar esta labor</button></div>';
+  document.getElementById('modo-normal').addEventListener('click',function(){modoAsignacionLabor='normal';this.classList.add('sel');document.getElementById('modo-extra').classList.remove('sel');});
+  document.getElementById('modo-extra').addEventListener('click',function(){modoAsignacionLabor='extra';this.classList.add('sel');document.getElementById('modo-normal').classList.remove('sel');});
   body.querySelectorAll('.labor-tile[data-id]').forEach(function(el){
     el.addEventListener('click',function(){
       var lb=cats.tiposLabor.find(function(l){return l.id===this.dataset.id;}.bind(this));
       asignarLaborSel=lb;
+      if(modoAsignacionLabor==='extra'){
+        renderAsignarExtra(lb);
+        return;
+      }
       if(lb&&lb.requiere_tiempo){
         riegoAsigMinutos={};riegoAsigOperarios=[];riegoAsigFecha=new Date().toISOString().slice(0,10);
         renderAsigRiegoPlantaciones();
@@ -548,14 +555,18 @@ function renderFormAsignar(){
     var nombre=(document.getElementById('labor-otra-input').value||'').trim();
     if(!nombre){alert('Escribe el nombre de la labor.');return;}
     var existente=cats.tiposLabor.find(function(l){return l.nombre.toLowerCase()===nombre.toLowerCase();});
-    if(existente){asignarLaborSel=existente;renderFormAsignarPaso2();return;}
+    if(existente){
+      asignarLaborSel=existente;
+      if(modoAsignacionLabor==='extra'){renderAsignarExtra(existente);}else{renderFormAsignarPaso2();}
+      return;
+    }
     from('tipos_labor').insert({nombre:nombre,requiere_cantidad_insumo:false,requiere_tiempo:false,activo:true,orden:100}).then(function(){
       return from('tipos_labor').select('*').eq('nombre',nombre).get();
     }).then(function(rows){
       var lb=rows&&rows[0]?rows[0]:{id:null,nombre:nombre,requiere_cantidad_insumo:false,requiere_tiempo:false};
       cats.tiposLabor.push(lb);
       asignarLaborSel=lb;
-      renderFormAsignarPaso2();
+      if(modoAsignacionLabor==='extra'){renderAsignarExtra(lb);}else{renderFormAsignarPaso2();}
     }).catch(function(e){alert('Error: '+e.message);});
   });
 }
@@ -1560,10 +1571,9 @@ function renderAlarmasRevision(){
 
 function renderPermisosRevision(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Permisos<button type="button" onclick="renderAsignarExtra()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Asignar hora extra</button></div><div class="loading">Cargando...</div>';
+  body.innerHTML='<div class="seccion-titulo">Permisos</div><div class="loading">Cargando...</div>';
   var headerHtml='<div class="seccion-titulo">Permisos</div><div style="display:flex;flex-wrap:wrap;gap:.4rem 1rem;margin-bottom:1rem;">'+
     '<button type="button" onclick="renderResumenNomina()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">📊 Resumen nómina</button>'+
-    '<button type="button" onclick="renderAsignarExtra()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Hora extra</button>'+
     '<button type="button" onclick="renderEvaluarComportamiento()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">🤝 Comportamiento</button>'+
     (usuario.rol==='admin'||usuario.rol==='dueño'?'<button type="button" onclick="renderBonos()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">🎁 Bonos</button>':'')+
   '</div>';
@@ -1900,24 +1910,24 @@ function guardarCosecha(){
   }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='✅ Asignar cosecha';});
 }
 
-function renderAsignarExtra(){
+function renderAsignarExtra(lb){
   var body=document.getElementById('enc-body');
   var opO=cats.operarios.map(function(o){return '<button type="button" class="op-chip" data-id="'+o.id+'" onclick="toggleChip(this)">'+o.nombre+'</button>';}).join('');
-  body.innerHTML='<div class="seccion-titulo">+ Asignar hora extra</div><div class="form-card"><div class="form-group"><label>Operarios</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Fecha</label><input type="date" id="ext-fecha" value="'+new Date().toISOString().slice(0,10)+'"></div><div class="form-group"><label>Motivo</label><input type="text" id="ext-motivo" placeholder="Ej. Terminar aplicación pendiente"></div><button class="btn-primary" id="ext-guardar">Autorizar hora extra</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderPermisosRevision()">← Volver a Permisos</button>';
+  body.innerHTML='<div class="seccion-titulo">⏰ Hora extra</div><div class="form-card"><div class="labor-chosen">'+(ICONOS[lb.nombre]||'🔧')+' <strong>'+lb.nombre+'</strong></div><div class="form-group"><label>Operarios</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Fecha</label><input type="date" id="ext-fecha" value="'+new Date().toISOString().slice(0,10)+'"></div><div class="form-group"><label>Notas (opcional)</label><input type="text" id="ext-motivo" placeholder="Ej. Terminar aplicación pendiente"></div><button class="btn-primary" id="ext-guardar">Autorizar hora extra</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormAsignar()">← Cambiar labor</button>';
   document.getElementById('ext-guardar').addEventListener('click',function(){
     var opIds=Array.from(document.querySelectorAll('.op-chip.sel')).map(function(c){return c.dataset.id;});
     var fecha=document.getElementById('ext-fecha').value;
     var motivo=document.getElementById('ext-motivo').value||null;
     if(!opIds.length||!fecha){alert('Selecciona operario(s) y fecha.');return;}
     Promise.all(opIds.map(function(oid){
-      return from('horas_extra_asignadas').insert({operario_id:oid,asignado_por:usuario.id,fecha:fecha,motivo:motivo,estado:'aprobada'});
+      return from('horas_extra_asignadas').insert({operario_id:oid,asignado_por:usuario.id,fecha:fecha,motivo:motivo,tipo_labor_id:lb.id,estado:'aprobada'});
     })).then(function(){
       return Promise.all(opIds.map(function(oid){
-        return from('notificaciones').insert({titulo:'⏰ Hora extra autorizada',cuerpo:usuario.nombre+' te autorizó horas extra para el '+fecha+(motivo?' — '+motivo:''),icono:'⏰',leida:false,para_rol:'operario',para_usuario:oid});
+        return from('notificaciones').insert({titulo:'⏰ Hora extra autorizada',cuerpo:usuario.nombre+' te autorizó horas extra para el '+fecha+' — '+lb.nombre+(motivo?' · '+motivo:''),icono:'⏰',leida:false,para_rol:'operario',para_usuario:oid});
       }));
     }).then(function(){
-      showToast('✅ Hora extra autorizada');
-      renderPermisosRevision();
+      showToast('✅ Hora extra autorizada: '+lb.nombre);
+      renderAsignarMenu();
     }).catch(function(e){alert('Error: '+e.message);});
   });
 }
@@ -2013,11 +2023,12 @@ function renderAsisEntrada(){
   var body=document.getElementById('op-body');
   body.innerHTML='<div class="seccion-titulo">📥 Entrada</div><div class="loading">Verificando...</div>';
   var hoy=new Date().toISOString().slice(0,10);
-  from('horas_extra_asignadas').select('*').eq('operario_id',usuario.id).eq('fecha',hoy).eq('estado','aprobada').get().then(function(rows){
+  from('horas_extra_asignadas').select('*,tipo_labor:tipos_labor(nombre)').eq('operario_id',usuario.id).eq('fecha',hoy).eq('estado','aprobada').get().then(function(rows){
     var extraHoy=rows&&rows[0];
     window._extraHoyId=extraHoy?extraHoy.id:null;
     var extDeshabilitado=!extraHoy;
-    body.innerHTML='<div class="seccion-titulo">📥 Entrada</div><div style="display:flex;gap:10px;"><button type="button" id="asis-btn-lab" class="labor-tile" style="flex:1;border:2px solid var(--verde-mid);" onclick="marcarAsistencia(\'entrada\',\'labores\')"><div class="labor-tile-ic">📷</div><div class="labor-tile-lbl">QR Labores</div></button><button type="button" id="asis-btn-ext" class="labor-tile" style="flex:1;border:2px solid var(--tierra);'+(extDeshabilitado?'opacity:.4;':'')+'" '+(extDeshabilitado?'disabled':'onclick="marcarAsistencia(\'entrada\',\'extras\')"')+'><div class="labor-tile-ic">📷</div><div class="labor-tile-lbl">QR Extras</div></button></div><div id="asis-msg" style="margin-top:1rem;text-align:center;font-size:.85rem;color:var(--gris-3);">'+(extDeshabilitado?'No tienes horas extra autorizadas hoy. ':'')+'Escanea el código al llegar al rancho.</div><button class="btn-back" style="margin-top:1.5rem;" onclick="renderAsistenciaMenu()">← Volver a Asistencia</button>';
+    var labExtraTxt=extraHoy&&extraHoy.tipo_labor?(' — '+(ICONOS[extraHoy.tipo_labor.nombre]||'🔧')+' '+extraHoy.tipo_labor.nombre):'';
+    body.innerHTML='<div class="seccion-titulo">📥 Entrada</div><div style="display:flex;gap:10px;"><button type="button" id="asis-btn-lab" class="labor-tile" style="flex:1;border:2px solid var(--verde-mid);" onclick="marcarAsistencia(\'entrada\',\'labores\')"><div class="labor-tile-ic">📷</div><div class="labor-tile-lbl">QR Labores</div></button><button type="button" id="asis-btn-ext" class="labor-tile" style="flex:1;border:2px solid var(--tierra);'+(extDeshabilitado?'opacity:.4;':'')+'" '+(extDeshabilitado?'disabled':'onclick="marcarAsistencia(\'entrada\',\'extras\')"')+'><div class="labor-tile-ic">📷</div><div class="labor-tile-lbl">QR Extras</div></button></div><div id="asis-msg" style="margin-top:1rem;text-align:center;font-size:.85rem;color:var(--gris-3);">'+(extDeshabilitado?'No tienes horas extra autorizadas hoy. ':'Hora extra de hoy'+labExtraTxt+'. ')+'Escanea el código al llegar al rancho.</div><button class="btn-back" style="margin-top:1.5rem;" onclick="renderAsistenciaMenu()">← Volver a Asistencia</button>';
     cargarUltimoRegistroHoy('entrada');
   });
 }
