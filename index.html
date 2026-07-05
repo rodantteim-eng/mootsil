@@ -363,7 +363,12 @@ function verificarPin(){
 function entrarSegunRol(){
   if(usuario.rol==='operario'||usuario.rol==='cosechador'||usuario.rol==='galerista'){
     document.getElementById('op-nombre').textContent=usuario.nombre+' · '+(ROLES_COLABORADOR[usuario.rol]||'Colaborador');
-    mostrar('screen-operario'); irInicioOperario(); actualizarBadgeOperario(); setInterval(actualizarBadgeOperario,15000);
+    mostrar('screen-operario');
+    from('usuarios').select('avatar_url').eq('id',usuario.id).get().then(function(rows){
+      usuario.avatarUrl=rows&&rows[0]?rows[0].avatar_url:null;
+      irInicioOperario();
+    }).catch(function(){irInicioOperario();});
+    actualizarBadgeOperario(); setInterval(actualizarBadgeOperario,15000);
   } else {
     document.getElementById('enc-nombre').textContent=usuario.nombre+' · '+usuario.rol;
     mostrar('screen-encargado');
@@ -1788,7 +1793,10 @@ function irInicioOperario(){
   pararRiegoTimer();
   ['asistencia','tareas','pagos','op-notif'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
   var body=document.getElementById('op-body');
-  body.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2.5rem 1rem;text-align:center;min-height:60vh;"><div style="width:120px;height:120px;border-radius:50%;background:var(--verde-tenue);display:flex;align-items:center;justify-content:center;font-size:3.2rem;margin-bottom:1rem;">🥑</div><div style="font-size:1.15rem;font-weight:800;color:var(--verde);">¡Bienvenido, '+usuario.nombre+'!</div><div style="font-size:.78rem;color:var(--gris-3);margin-top:.15rem;">Tu Mootsilito de hoy te saluda 👋</div><div style="font-size:.82rem;color:var(--gris-3);margin-top:.5rem;">¿Qué vamos a hacer hoy? Elige una opción arriba 👆</div></div>';
+  var avatarHtml = usuario.avatarUrl
+    ? '<div style="width:160px;height:160px;border-radius:50%;background:var(--verde-tenue);display:flex;align-items:center;justify-content:center;margin-bottom:1rem;overflow:hidden;"><img src="'+usuario.avatarUrl+'" style="width:100%;height:100%;object-fit:contain;" alt="Tu Mootsilito"></div>'
+    : '<div style="width:120px;height:120px;border-radius:50%;background:var(--verde-tenue);display:flex;align-items:center;justify-content:center;font-size:3.2rem;margin-bottom:1rem;">🥑</div>';
+  body.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2.5rem 1rem;text-align:center;min-height:60vh;">'+avatarHtml+'<div style="font-size:1.15rem;font-weight:800;color:var(--verde);">¡Bienvenido, '+usuario.nombre+'!</div><div style="font-size:.78rem;color:var(--gris-3);margin-top:.15rem;">Tu Mootsilito de hoy te saluda 👋</div><div style="font-size:.82rem;color:var(--gris-3);margin-top:.5rem;">¿Qué vamos a hacer hoy? Elige una opción arriba 👆</div></div>';
 }
 
 function actualizarBadgeOperario(){
@@ -2386,14 +2394,19 @@ function guardarNuevoUsuario(){
 
 function renderEditarUsuario(id,nombre,rol,certAmbas){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="form-card"><h3>Editar usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="eu-n" value="'+nombre+'"/></div><div class="form-group"><label>Rol</label><select id="eu-r"><option value="operario"'+(rol==='operario'?' selected':'')+'>Operario</option><option value="encargado"'+(rol==='encargado'?' selected':'')+'>Encargado</option><option value="ingeniero"'+(rol==='ingeniero'?' selected':'')+'>Ingeniero</option><option value="cosechador"'+(rol==='cosechador'?' selected':'')+'>Cosechador</option><option value="galerista"'+(rol==='galerista'?' selected':'')+'>Galerista</option><option value="dueño"'+(rol==='dueño'?' selected':'')+'>Dueño</option><option value="inversionista"'+(rol==='inversionista'?' selected':'')+'>Inversionista</option><option value="admin"'+(rol==='admin'?' selected':'')+'>Admin</option></select></div><div class="form-group"><label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:.85rem;"><input type="checkbox" id="eu-cert" '+(certAmbas?'checked':'')+' style="width:18px;height:18px;"> Certificado para Labores y Cosecha (ambas)</label></div><div class="nav-row"><button class="btn-back" onclick="renderConfig()">← Cancelar</button><button class="btn-next" onclick="guardarEditarUsuario(\''+id+'\')">Guardar</button></div></div>';
+  body.innerHTML='<div class="loading">Cargando...</div>';
+  from('usuarios').select('avatar_url').eq('id',id).get().then(function(rows){
+    var avatarUrl=(rows&&rows[0]&&rows[0].avatar_url)||'';
+    body.innerHTML='<div class="form-card"><h3>Editar usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="eu-n" value="'+nombre+'"/></div><div class="form-group"><label>Rol</label><select id="eu-r"><option value="operario"'+(rol==='operario'?' selected':'')+'>Operario</option><option value="encargado"'+(rol==='encargado'?' selected':'')+'>Encargado</option><option value="ingeniero"'+(rol==='ingeniero'?' selected':'')+'>Ingeniero</option><option value="cosechador"'+(rol==='cosechador'?' selected':'')+'>Cosechador</option><option value="galerista"'+(rol==='galerista'?' selected':'')+'>Galerista</option><option value="dueño"'+(rol==='dueño'?' selected':'')+'>Dueño</option><option value="inversionista"'+(rol==='inversionista'?' selected':'')+'>Inversionista</option><option value="admin"'+(rol==='admin'?' selected':'')+'>Admin</option></select></div><div class="form-group"><label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:.85rem;"><input type="checkbox" id="eu-cert" '+(certAmbas?'checked':'')+' style="width:18px;height:18px;"> Certificado para Labores y Cosecha (ambas)</label></div><div class="form-group"><label>URL de su Mootsilito personalizado (opcional)</label><input type="text" id="eu-avatar" value="'+avatarUrl.replace(/"/g,'&quot;')+'" placeholder="Ej. https://tusitio.pages.dev/avatares/lalo.png"><p class="hint">Sube la imagen a tu repo (junto a index.html) y pega aquí el link completo.</p></div><div class="nav-row"><button class="btn-back" onclick="renderConfig()">← Cancelar</button><button class="btn-next" onclick="guardarEditarUsuario(\''+id+'\')">Guardar</button></div></div>';
+  });
 }
 
 function guardarEditarUsuario(id){
   var nn=document.getElementById('eu-n').value.trim(), nr=document.getElementById('eu-r').value;
   var certAmbas=document.getElementById('eu-cert').checked;
+  var avatarUrl=document.getElementById('eu-avatar').value.trim()||null;
   if(!nn){alert('El nombre es obligatorio.');return;}
-  from('usuarios').eq('id',id).update({nombre:nn,rol:nr,certificado_ambas:certAmbas}).then(function(){cargarCatalogos().then(function(){renderConfig();});});
+  from('usuarios').eq('id',id).update({nombre:nn,rol:nr,certificado_ambas:certAmbas,avatar_url:avatarUrl}).then(function(){cargarCatalogos().then(function(){renderConfig();});});
 }
 
 function renderCambiarPin(id,nombre){
