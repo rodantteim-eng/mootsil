@@ -2355,7 +2355,7 @@ function cargarTareas(subtab){
   pararRiegoTimer();
   riegoSincronizar();
   var body=document.getElementById('op-body');
-  body.innerHTML=barraSubtabsTareas()+'<div class="loading">Cargando tus tareas...</div>';
+  body.innerHTML=barraSubtabsTareas()+'<div id="tareas-contenido"><div class="loading">Cargando tus tareas...</div></div>';
   var hoy=new Date().toISOString().slice(0,10);
   Promise.all([
     from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_cantidad_insumo,unidad_insumo,requiere_tiempo),subtipo:subtipos_labor(nombre)').eq('operario_id',usuario.id).in('estado',['pendiente','en_proceso']).order('fecha_asignacion',{ascending:true}).get(),
@@ -2365,17 +2365,20 @@ function cargarTareas(subtab){
     var todas=res[0]||[], hoyOrdenes=res[1]||[], completadas=res[2]||[];
     var idsComp=completadas.map(function(o){return o.id;});
     var evidenciaFetch = idsComp.length ? from('registros_labor').select('orden_id,foto_url').in('orden_id',idsComp).get() : Promise.resolve([]);
-    evidenciaFetch.then(function(regs){
+    return evidenciaFetch.then(function(regs){
       var evidenciaPorOrden={};
       (regs||[]).forEach(function(r){evidenciaPorOrden[r.orden_id]=!!r.foto_url;});
       try{localStorage.setItem('mootsil_tareas_cache_'+usuario.id,JSON.stringify({todas:todas,hoyOrdenes:hoyOrdenes,completadas:completadas,evidenciaPorOrden:evidenciaPorOrden,ts:Date.now()}));}catch(e){}
       pintarTareas(todas,hoyOrdenes,false,completadas,evidenciaPorOrden);
     });
-  }).catch(function(){
+  }).catch(function(err){
     var cache=null;
     try{cache=JSON.parse(localStorage.getItem('mootsil_tareas_cache_'+usuario.id)||'null');}catch(e){}
     if(cache){ pintarTareas(cache.todas,cache.hoyOrdenes,true,cache.completadas||[],cache.evidenciaPorOrden||{}); }
-    else{ body.innerHTML=barraSubtabsTareas()+'<div class="empty">📡 Sin señal y sin tareas guardadas.<br/>Conéctate al menos una vez para descargarlas.</div>'; }
+    else{
+      var cont=document.getElementById('tareas-contenido');
+      if(cont) cont.innerHTML='<div class="empty">📡 Sin señal y sin tareas guardadas.<br/>Conéctate al menos una vez para descargarlas.</div>';
+    }
   });
 }
 
@@ -2389,74 +2392,86 @@ function barraSubtabsTareas(){
 function pintarTareas(todas,hoyOrdenes,esCache,completadas,evidenciaPorOrden){
   completadas=completadas||[]; evidenciaPorOrden=evidenciaPorOrden||{};
   var body=document.getElementById('op-body');
-  var hoy=new Date().toISOString().slice(0,10);
-  riegoOrdenes=hoyOrdenes.filter(function(o){return o.tipo_labor&&o.tipo_labor.requiere_tiempo;});
-  var tareasTodas=todas.filter(function(t){return !(t.tipo_labor&&t.tipo_labor.requiere_tiempo);});
-  var porHacer=tareasTodas.filter(function(t){return t.estado==='pendiente';});
-  var enProceso=tareasTodas.filter(function(t){return t.estado==='en_proceso';});
-  var completadasNormales=completadas.filter(function(o){return !(o.tipo_labor&&o.tipo_labor.requiere_tiempo);});
-
-  function tarjetaTarea(t){
-    var p=cats.plantaciones.find(function(x){return x.id===t.tabla.plantacion_id;});
-    var ic=ICONOS[t.tipo_labor.nombre]||'🔧';
-    var su=(t.surcos_asignados&&t.surcos_asignados.length)?t.surcos_asignados.join(', '):'Todos';
-    var atrasada=t.fecha_asignacion<hoy;
-    var progresoTxt='', etiquetaEstado='';
-    if(t.estado==='en_proceso'){
-      var tieneAvance=t.surcos_completados&&t.surcos_completados.length>0;
-      var totalRef=(t.surcos_asignados&&t.surcos_asignados.length)?t.surcos_asignados.length:(t.tabla.cantidad_surcos||0);
-      if(tieneAvance){
-        progresoTxt='<br/>🔶 Avance: '+t.surcos_completados.length+'/'+totalRef+' surcos';
-        etiquetaEstado=' <span style="color:var(--tierra);font-size:.7rem;font-weight:700;background:var(--tierra-tenue);padding:2px 8px;border-radius:10px;">🔶 No concluida</span>';
-      } else {
-        etiquetaEstado=' <span style="color:var(--verde-mid);font-size:.7rem;font-weight:700;background:var(--verde-tenue);padding:2px 8px;border-radius:10px;">🆕 Iniciada, sin avance</span>';
-      }
-    }
-    return '<div class="tarea-card" style="'+(atrasada?'border-left-color:var(--rojo);':'')+'"><div class="tarea-title">'+ic+' '+t.tipo_labor.nombre+(t.subtipo?' · '+t.subtipo.nombre:'')+etiquetaEstado+(atrasada?' <span style="color:var(--rojo);font-size:.72rem;font-weight:700;">⚠️ Desde '+t.fecha_asignacion+'</span>':'')+'</div><div class="tarea-meta">📍 '+(p?p.nombre:'')+' · '+t.tabla.nombre+'<br/>🔢 Surcos: '+su+progresoTxt+(t.notas_encargado?'<br/>📝 '+t.notas_encargado:'')+'</div><div style="margin-top:.75rem;display:flex;gap:8px;">'+(t.estado==='pendiente'?'<button class="btn-sm btn-iniciar" data-ini="'+t.id+'">▶ Iniciar</button>':'')+(t.estado==='en_proceso'?'<button class="btn-sm btn-completar" data-eje="'+t.id+'">✅ Registrar avance</button>':'')+'</div></div>';
+  if(!document.getElementById('tareas-contenido')){
+    body.innerHTML=barraSubtabsTareas()+'<div id="tareas-contenido"></div>';
   }
-
-
-  var html='';
-  if(SUBTAB_TAREAS_ACTUAL==='porhacer'){
-    if(riegoOrdenes.length){
-      var comp=riegoOrdenes.filter(function(o){return o.estado==='completada';}).length;
-      if(comp<riegoOrdenes.length) html+='<div class="tarea-card" style="border-left-color:var(--tierra);cursor:pointer;" onclick="renderRiegoPlantaciones()"><div class="tarea-title">💧 Riego de hoy</div><div class="tarea-meta">'+comp+' de '+riegoOrdenes.length+' tablas regadas · toca para entrar</div></div>';
-    }
-    if(!porHacer.length&&!html){html+='<div class="empty">🌱 No tienes tareas por hacer.<br/>El encargado te asignará labores aquí.</div>';}
-    else html+=porHacer.map(tarjetaTarea).join('');
-  } else if(SUBTAB_TAREAS_ACTUAL==='pendientes'){
-    if(riegoOrdenes.length){
-      var comp2=riegoOrdenes.filter(function(o){return o.estado==='en_proceso';}).length;
-      if(comp2>0) html+='<div class="tarea-card" style="border-left-color:var(--tierra);cursor:pointer;" onclick="renderRiegoPlantaciones()"><div class="tarea-title">💧 Riego en curso</div><div class="tarea-meta">Toca para continuar</div></div>';
-    }
-    if(!enProceso.length&&!html) html='<div class="empty">No tienes tareas en proceso.</div>';
-    else html+=enProceso.map(tarjetaTarea).join('');
-  } else if(SUBTAB_TAREAS_ACTUAL==='terminadas'){
-    if(!completadasNormales.length){html='<div class="empty">Aún no tienes labores terminadas.</div>';}
-    else html=completadasNormales.map(function(t){
-      var p=cats.plantaciones.find(function(x){return x.id===t.tabla.plantacion_id;});
-      var ic=ICONOS[t.tipo_labor.nombre]||'🔧';
-      var tieneEvidencia=evidenciaPorOrden[t.id];
-      return '<div class="tarea-card" style="opacity:.75;border-left-color:var(--verde-mid);"><div class="tarea-title">'+ic+' '+t.tipo_labor.nombre+' 🔒</div><div class="tarea-meta">📍 '+(p?p.nombre:'')+' · '+t.tabla.nombre+' · '+t.fecha_asignacion+'<br/>'+(tieneEvidencia?'📷 Con evidencia':'Sin foto de evidencia')+'</div></div>';
-    }).join('');
-  } else if(SUBTAB_TAREAS_ACTUAL==='rendimiento'){
+  var cont=document.getElementById('tareas-contenido');
+  if(SUBTAB_TAREAS_ACTUAL==='rendimiento'){
     renderRendimientoOperario();
     return;
   }
+  try{
+    var hoy=new Date().toISOString().slice(0,10);
+    riegoOrdenes=hoyOrdenes.filter(function(o){return o.tipo_labor&&o.tipo_labor.requiere_tiempo;});
+    var tareasTodas=todas.filter(function(t){return t.tabla&&!(t.tipo_labor&&t.tipo_labor.requiere_tiempo);});
+    var porHacer=tareasTodas.filter(function(t){return t.estado==='pendiente';});
+    var enProceso=tareasTodas.filter(function(t){return t.estado==='en_proceso';});
+    var completadasNormales=completadas.filter(function(o){return o.tabla&&!(o.tipo_labor&&o.tipo_labor.requiere_tiempo);});
 
-  var prefijo=esCache?'<p class="hint" style="text-align:center;margin-bottom:.75rem;">📡 Sin señal — mostrando tus tareas guardadas.</p>':'';
-  body.innerHTML=barraSubtabsTareas()+prefijo+html;
-  body.querySelectorAll('[data-ini]').forEach(function(b){b.addEventListener('click',function(){
-    var oid=this.dataset.ini;
-    if(navigator.onLine) from('ordenes_trabajo').eq('id',oid).update({estado:'en_proceso'}).then(function(){cargarTareas();}).catch(function(){riegoEncolar(oid,{estado:'en_proceso'});cargarTareas();});
-    else{riegoEncolar(oid,{estado:'en_proceso'});var t=todas.find(function(x){return x.id===oid;});if(t)t.estado='en_proceso';pintarTareas(todas,hoyOrdenes,true,completadas,evidenciaPorOrden);}
-  });});
-  body.querySelectorAll('[data-eje]').forEach(function(b){b.addEventListener('click',function(){iniciarEjecucion(this.dataset.eje);});});
+    function tarjetaTarea(t){
+      var p=cats.plantaciones.find(function(x){return x.id===t.tabla.plantacion_id;});
+      var ic=ICONOS[t.tipo_labor.nombre]||'🔧';
+      var su=(t.surcos_asignados&&t.surcos_asignados.length)?t.surcos_asignados.join(', '):'Todos';
+      var atrasada=t.fecha_asignacion<hoy;
+      var progresoTxt='', etiquetaEstado='';
+      if(t.estado==='en_proceso'){
+        var tieneAvance=t.surcos_completados&&t.surcos_completados.length>0;
+        var totalRef=(t.surcos_asignados&&t.surcos_asignados.length)?t.surcos_asignados.length:(t.tabla.cantidad_surcos||0);
+        if(tieneAvance){
+          progresoTxt='<br/>🔶 Avance: '+t.surcos_completados.length+'/'+totalRef+' surcos';
+          etiquetaEstado=' <span style="color:var(--tierra);font-size:.7rem;font-weight:700;background:var(--tierra-tenue);padding:2px 8px;border-radius:10px;">🔶 No concluida</span>';
+        } else {
+          etiquetaEstado=' <span style="color:var(--verde-mid);font-size:.7rem;font-weight:700;background:var(--verde-tenue);padding:2px 8px;border-radius:10px;">🆕 Iniciada, sin avance</span>';
+        }
+      }
+      return '<div class="tarea-card" style="'+(atrasada?'border-left-color:var(--rojo);':'')+'"><div class="tarea-title">'+ic+' '+t.tipo_labor.nombre+(t.subtipo?' · '+t.subtipo.nombre:'')+etiquetaEstado+(atrasada?' <span style="color:var(--rojo);font-size:.72rem;font-weight:700;">⚠️ Desde '+t.fecha_asignacion+'</span>':'')+'</div><div class="tarea-meta">📍 '+(p?p.nombre:'')+' · '+t.tabla.nombre+'<br/>🔢 Surcos: '+su+progresoTxt+(t.notas_encargado?'<br/>📝 '+t.notas_encargado:'')+'</div><div style="margin-top:.75rem;display:flex;gap:8px;">'+(t.estado==='pendiente'?'<button class="btn-sm btn-iniciar" data-ini="'+t.id+'">▶ Iniciar</button>':'')+(t.estado==='en_proceso'?'<button class="btn-sm btn-completar" data-eje="'+t.id+'">✅ Registrar avance</button>':'')+'</div></div>';
+    }
+
+    var html='';
+    if(SUBTAB_TAREAS_ACTUAL==='porhacer'){
+      if(riegoOrdenes.length){
+        var comp=riegoOrdenes.filter(function(o){return o.estado==='completada';}).length;
+        if(comp<riegoOrdenes.length) html+='<div class="tarea-card" style="border-left-color:var(--tierra);cursor:pointer;" onclick="renderRiegoPlantaciones()"><div class="tarea-title">💧 Riego de hoy</div><div class="tarea-meta">'+comp+' de '+riegoOrdenes.length+' tablas regadas · toca para entrar</div></div>';
+      }
+      if(!porHacer.length&&!html){html+='<div class="empty">🌱 No tienes tareas por hacer.<br/>El encargado te asignará labores aquí.</div>';}
+      else html+=porHacer.map(tarjetaTarea).join('');
+    } else if(SUBTAB_TAREAS_ACTUAL==='pendientes'){
+      if(riegoOrdenes.length){
+        var comp2=riegoOrdenes.filter(function(o){return o.estado==='en_proceso';}).length;
+        if(comp2>0) html+='<div class="tarea-card" style="border-left-color:var(--tierra);cursor:pointer;" onclick="renderRiegoPlantaciones()"><div class="tarea-title">💧 Riego en curso</div><div class="tarea-meta">Toca para continuar</div></div>';
+      }
+      if(!enProceso.length&&!html) html='<div class="empty">No tienes tareas en proceso.</div>';
+      else html+=enProceso.map(tarjetaTarea).join('');
+    } else if(SUBTAB_TAREAS_ACTUAL==='terminadas'){
+      if(!completadasNormales.length){html='<div class="empty">Aún no tienes labores terminadas.</div>';}
+      else html=completadasNormales.map(function(t){
+        var p=cats.plantaciones.find(function(x){return x.id===t.tabla.plantacion_id;});
+        var ic=ICONOS[t.tipo_labor.nombre]||'🔧';
+        var tieneEvidencia=evidenciaPorOrden[t.id];
+        return '<div class="tarea-card" style="opacity:.75;border-left-color:var(--verde-mid);"><div class="tarea-title">'+ic+' '+t.tipo_labor.nombre+' 🔒</div><div class="tarea-meta">📍 '+(p?p.nombre:'')+' · '+t.tabla.nombre+' · '+t.fecha_asignacion+'<br/>'+(tieneEvidencia?'📷 Con evidencia':'Sin foto de evidencia')+'</div></div>';
+      }).join('');
+    }
+
+    var prefijo=esCache?'<p class="hint" style="text-align:center;margin-bottom:.75rem;">📡 Sin señal — mostrando tus tareas guardadas.</p>':'';
+    cont.innerHTML=prefijo+html;
+    cont.querySelectorAll('[data-ini]').forEach(function(b){b.addEventListener('click',function(){
+      var oid=this.dataset.ini;
+      if(navigator.onLine) from('ordenes_trabajo').eq('id',oid).update({estado:'en_proceso'}).then(function(){cargarTareas();}).catch(function(){riegoEncolar(oid,{estado:'en_proceso'});cargarTareas();});
+      else{riegoEncolar(oid,{estado:'en_proceso'});var t=todas.find(function(x){return x.id===oid;});if(t)t.estado='en_proceso';pintarTareas(todas,hoyOrdenes,true,completadas,evidenciaPorOrden);}
+    });});
+    cont.querySelectorAll('[data-eje]').forEach(function(b){b.addEventListener('click',function(){iniciarEjecucion(this.dataset.eje);});});
+  }catch(err){
+    cont.innerHTML='<div class="empty">Ocurrió un problema mostrando tus tareas.<br/>Cierra sesión y vuelve a entrar. Si persiste, avisa al admin.<br/><span style="font-size:.7rem;color:var(--gris-3);">('+err.message+')</span></div>';
+  }
 }
 
 function renderRendimientoOperario(){
   var body=document.getElementById('op-body');
-  body.innerHTML=barraSubtabsTareas()+'<div class="loading">Calculando rendimiento...</div>';
+  if(!document.getElementById('tareas-contenido')){
+    body.innerHTML=barraSubtabsTareas()+'<div id="tareas-contenido"></div>';
+  }
+  var cont=document.getElementById('tareas-contenido');
+  cont.innerHTML='<div class="loading">Calculando rendimiento...</div>';
   var hoyD=new Date();
   var primerDiaMes=new Date(hoyD.getFullYear(),hoyD.getMonth(),1).toISOString().slice(0,10);
   var hoy=hoyD.toISOString().slice(0,10);
@@ -2499,7 +2514,7 @@ function renderRendimientoOperario(){
 
     var bonosCalificando=bonos.filter(function(b){return (b.tipo==='individual'||b.tipo==='equipo')&&(!b.umbral_minimo||scoreFinal>=parseFloat(b.umbral_minimo));});
 
-    var html=barraSubtabsTareas();
+    var html='';
     html+='<div class="seccion-titulo" style="text-transform:capitalize;">Rendimiento de '+nombreMes+'</div>';
     html+='<div class="form-card" style="text-align:center;">';
     if(usuario.avatarUrl) html+='<img src="'+usuario.avatarUrl+'" style="max-height:140px;object-fit:contain;margin-bottom:.5rem;">';
@@ -2523,8 +2538,8 @@ function renderRendimientoOperario(){
       }).join('');
     }
 
-    body.innerHTML=html;
-  }).catch(function(e){body.innerHTML=barraSubtabsTareas()+'<div class="loading">Error: '+e.message+'</div>';});
+    cont.innerHTML=html;
+  }).catch(function(e){cont.innerHTML='<div class="empty">No se pudo calcular el rendimiento.<br/><span style="font-size:.7rem;color:var(--gris-3);">('+e.message+')</span></div>';});
 }
 
 function filaRendimiento(label,score,detalle){
