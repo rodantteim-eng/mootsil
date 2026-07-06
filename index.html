@@ -1122,7 +1122,7 @@ var VIA_ICONOS={'Riego':'💧','Foliar':'🌿','Drench':'🧪'};
 var CATEGORIA_ICONOS={'Nutrición':'🌱','Plaga':'🐛','Estimulación':'⚡'};
 var BOMBA_ICONOS={'inyeccion':'🛢️','motor':'⚙️','manual':'🤲'};
 var BOMBA_LABELS={'inyeccion':'Bomba Inyección','motor':'Bomba Motor','manual':'Bomba Manual'};
-var formulaVia=null, formulaCategoria=null, formulaBombas=[], formulaCompRows=[], formulaCompSeq=0, formulaEditId=null;
+var formulaVia=null, formulaCategoria=null, formulaBombas=[], formulaCompRows=[], formulaCompSeq=0, formulaEditId=null, formulaVolverAResumen=false;
 var formulaPlantacionId=null, formulaTablaId=null;
 
 function renderFormulas(){
@@ -1163,6 +1163,7 @@ function renderFormulas(){
 
 function renderFormulaForm(formulaId){
   formulaEditId=formulaId||null;
+  formulaVolverAResumen=false;
   formulaVia=null; formulaCategoria=null; formulaBombas=[]; formulaCompRows=[]; formulaCompSeq=0;
   formulaPlantacionId=null; formulaTablaId=null;
   if(formulaId){
@@ -1205,7 +1206,7 @@ function renderFormulaPasoTabla(){
     return '<div class="labor-tile'+(formulaTablaId===t.id?' labor-tile-otra':'')+'" data-tid="'+t.id+'"><div class="labor-tile-ic">🧭</div><div class="labor-tile-lbl">'+t.nombre+'</div></div>';
   }).join('');
   body.innerHTML='<div class="seccion-titulo">Paso 2 de 8 · Tabla en '+(p?p.nombre:'')+'</div><div class="labor-grid">'+tiles+'</div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoPlantacion()">← Volver a plantación</button>';
-  body.querySelectorAll('[data-tid]').forEach(function(el){el.addEventListener('click',function(){formulaTablaId=this.dataset.tid;renderFormulaPasoVia();});});
+  body.querySelectorAll('[data-tid]').forEach(function(el){el.addEventListener('click',function(){formulaTablaId=this.dataset.tid;if(formulaVolverAResumen){formulaVolverAResumen=false;renderFormulaPasoNotas();}else renderFormulaPasoVia();});});
 }
 
 function renderFormulaPasoVia(){
@@ -1214,7 +1215,7 @@ function renderFormulaPasoVia(){
     return '<div class="labor-tile'+(formulaVia===v?' labor-tile-otra':'')+'" data-via="'+v+'"><div class="labor-tile-ic">'+VIA_ICONOS[v]+'</div><div class="labor-tile-lbl">'+v+'</div></div>';
   }).join('');
   body.innerHTML='<div class="seccion-titulo">Paso 3 de 8 · Vía de aplicación</div><div class="labor-grid">'+tiles+'</div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoTabla()">← Volver a tabla</button>';
-  body.querySelectorAll('[data-via]').forEach(function(el){el.addEventListener('click',function(){formulaVia=this.dataset.via;renderFormulaPasoCategoria();});});
+  body.querySelectorAll('[data-via]').forEach(function(el){el.addEventListener('click',function(){formulaVia=this.dataset.via;if(formulaVolverAResumen){formulaVolverAResumen=false;renderFormulaPasoNotas();}else renderFormulaPasoCategoria();});});
 }
 
 function renderFormulaPasoCategoria(){
@@ -1223,7 +1224,7 @@ function renderFormulaPasoCategoria(){
     return '<div class="labor-tile'+(formulaCategoria===c?' labor-tile-otra':'')+'" data-cat="'+c+'"><div class="labor-tile-ic">'+CATEGORIA_ICONOS[c]+'</div><div class="labor-tile-lbl">'+c+'</div></div>';
   }).join('');
   body.innerHTML='<div class="seccion-titulo">Paso 4 de 8 · Tipo de aplicación</div><div class="labor-grid">'+tiles+'</div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoVia()">← Volver a vía</button>';
-  body.querySelectorAll('[data-cat]').forEach(function(el){el.addEventListener('click',function(){formulaCategoria=this.dataset.cat;renderFormulaPasoBombas();});});
+  body.querySelectorAll('[data-cat]').forEach(function(el){el.addEventListener('click',function(){formulaCategoria=this.dataset.cat;if(formulaVolverAResumen){formulaVolverAResumen=false;renderFormulaPasoNotas();}else renderFormulaPasoBombas();});});
 }
 
 function renderFormulaPasoBombas(){
@@ -1234,7 +1235,7 @@ function renderFormulaPasoBombas(){
   body.innerHTML='<div class="seccion-titulo">Paso 5 de 9 · ¿Con qué se aplica?</div><p class="hint">Elige el equipo que se va a usar para esta aplicación.</p><div class="labor-grid">'+tiles+'</div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoCategoria()">← Volver a tipo</button>';
   body.querySelectorAll('[data-bomba]').forEach(function(el){el.addEventListener('click',function(){
     formulaBombas=[this.dataset.bomba];
-    renderFormulaPasoFecha();
+    if(formulaVolverAResumen){formulaVolverAResumen=false;renderFormulaPasoNotas();}else renderFormulaPasoFecha();
   });});
 }
 
@@ -1243,7 +1244,7 @@ function renderFormulaPasoFecha(){
   body.innerHTML='<div class="seccion-titulo">Paso 6 de 9 · Fecha de aplicación</div><div class="form-card"><div class="form-group"><label>¿Cuándo se tiene que aplicar?</label><input type="date" id="fm-fecha-input" value="'+(window._formulaFechaExistente||new Date().toISOString().slice(0,10))+'"></div><p class="hint">Con esta fecha revisamos si el inventario alcanza a tiempo para hacer el pedido.</p><button class="btn-primary" id="fm-fecha-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoBombas()">← Volver a bombas</button>';
   document.getElementById('fm-fecha-continuar').addEventListener('click',function(){
     window._formulaFechaExistente=document.getElementById('fm-fecha-input').value||new Date().toISOString().slice(0,10);
-    renderFormulaPasoNombre();
+    if(formulaVolverAResumen){formulaVolverAResumen=false;renderFormulaPasoNotas();}else renderFormulaPasoNombre();
   });
 }
 
@@ -1255,7 +1256,7 @@ function renderFormulaPasoNombre(){
     var n=(document.getElementById('fm-nombre-input').value||'').trim();
     if(!n){alert('Escribe el nombre de la fórmula.');return;}
     window._formulaNombreExistente=n;
-    renderFormulaPasoComponentes();
+    if(formulaVolverAResumen){formulaVolverAResumen=false;renderFormulaPasoNotas();}else renderFormulaPasoComponentes();
   });
 }
 
@@ -1400,8 +1401,21 @@ function renderFormulaPasoNotas(){
   if(faltantes.length){
     alertaHtml='<div style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);border-radius:var(--radio-sm);padding:.75rem;margin-bottom:1rem;font-size:.82rem;"><strong style="color:var(--rojo);">⚠️ No alcanza el inventario para el '+fechaTxt+'</strong><br>Hay que pedir antes de esa fecha: '+faltantes.map(function(f){return f.nombre+' ('+numFmt(f.falta)+' '+f.unidad+')';}).join(', ')+'</div>';
   }
-  body.innerHTML='<div class="seccion-titulo">Paso 9 de 9 · Notas y confirmar</div>'+alertaHtml+'<div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row"><span class="resumen-key">Nombre</span><span class="resumen-val">'+window._formulaNombreExistente+'</span></div><div class="resumen-row"><span class="resumen-key">Ubicación</span><span class="resumen-val">📍 '+(p?p.nombre:'')+' · '+(t?t.nombre:'')+'</span></div><div class="resumen-row"><span class="resumen-key">Fecha de aplicación</span><span class="resumen-val">'+fechaTxt+'</span></div><div class="resumen-row"><span class="resumen-key">Vía</span><span class="resumen-val">'+VIA_ICONOS[formulaVia]+' '+formulaVia+'</span></div><div class="resumen-row"><span class="resumen-key">Tipo</span><span class="resumen-val">'+CATEGORIA_ICONOS[formulaCategoria]+' '+formulaCategoria+'</span></div><div class="resumen-row"><span class="resumen-key">Bomba</span><span class="resumen-val">'+bombasTxt+'</span></div><div class="resumen-row"><span class="resumen-key">Componentes</span></div><div style="font-size:.82rem;padding:.35rem 0;">'+resumenComp+'</div></div><p class="hint" style="margin-bottom:1rem;">ℹ️ Guardar esta fórmula <strong>no descuenta inventario todavía</strong> — solo es la receta planeada. El descuento real se hará cuando la asignes a un operario, en el módulo de Aplicaciones.</p><div class="form-group"><label>Notas (opcional)</label><input type="text" id="fm-notas-input" value="'+(window._formulaNotasExistente?window._formulaNotasExistente.replace(/"/g,'&quot;'):'')+'" placeholder="Instrucciones adicionales..."></div><button class="btn-primary" id="fm-guardar">'+(formulaEditId?'Guardar cambios':'Crear fórmula')+'</button></div>'+(formulaEditId?'<div class="form-card"><button type="button" id="fm-eliminar" style="width:100%;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.85rem;cursor:pointer;">🗑️ Eliminar fórmula</button></div>':'')+'<button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoComponentes()">← Volver a componentes</button>';
+  body.innerHTML='<div class="seccion-titulo">Paso 9 de 9 · Notas y confirmar</div>'+alertaHtml+'<div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row" data-editar="nombre" style="cursor:pointer;"><span class="resumen-key">Nombre ✏️</span><span class="resumen-val">'+window._formulaNombreExistente+'</span></div><div class="resumen-row" data-editar="ubicacion" style="cursor:pointer;"><span class="resumen-key">Ubicación ✏️</span><span class="resumen-val">📍 '+(p?p.nombre:'')+' · '+(t?t.nombre:'')+'</span></div><div class="resumen-row" data-editar="fecha" style="cursor:pointer;"><span class="resumen-key">Fecha de aplicación ✏️</span><span class="resumen-val">'+fechaTxt+'</span></div><div class="resumen-row" data-editar="via" style="cursor:pointer;"><span class="resumen-key">Vía ✏️</span><span class="resumen-val">'+VIA_ICONOS[formulaVia]+' '+formulaVia+'</span></div><div class="resumen-row" data-editar="tipo" style="cursor:pointer;"><span class="resumen-key">Tipo ✏️</span><span class="resumen-val">'+CATEGORIA_ICONOS[formulaCategoria]+' '+formulaCategoria+'</span></div><div class="resumen-row" data-editar="bomba" style="cursor:pointer;"><span class="resumen-key">Bomba ✏️</span><span class="resumen-val">'+bombasTxt+'</span></div><div class="resumen-row" data-editar="componentes" style="cursor:pointer;"><span class="resumen-key">Componentes ✏️</span></div><div style="font-size:.82rem;padding:.35rem 0;">'+resumenComp+'</div></div><p class="hint" style="margin-bottom:1rem;">Toca cualquier renglón de arriba para editarlo directo. ℹ️ Guardar esta fórmula <strong>no descuenta inventario todavía</strong> — solo es la receta planeada. El descuento real se hará cuando la asignes a un operario, en el módulo de Aplicaciones.</p><div class="form-group"><label>Notas (opcional)</label><input type="text" id="fm-notas-input" value="'+(window._formulaNotasExistente?window._formulaNotasExistente.replace(/"/g,'&quot;'):'')+'" placeholder="Instrucciones adicionales..."></div><button class="btn-primary" id="fm-guardar">'+(formulaEditId?'Guardar cambios':'Crear fórmula')+'</button></div>'+(formulaEditId?'<div class="form-card"><button type="button" id="fm-eliminar" style="width:100%;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.85rem;cursor:pointer;">🗑️ Eliminar fórmula</button></div>':'')+'<button class="btn-back" style="margin-top:1rem;" onclick="renderFormulas()">← Volver a fórmulas</button>';
   document.getElementById('fm-guardar').addEventListener('click',guardarFormula);
+  document.querySelectorAll('[data-editar]').forEach(function(el){
+    el.addEventListener('click',function(){
+      var campo=this.dataset.editar;
+      if(campo==='componentes'){renderFormulaPasoComponentes();return;}
+      formulaVolverAResumen=true;
+      if(campo==='nombre') renderFormulaPasoNombre();
+      else if(campo==='ubicacion') renderFormulaPasoPlantacion();
+      else if(campo==='fecha') renderFormulaPasoFecha();
+      else if(campo==='via') renderFormulaPasoVia();
+      else if(campo==='tipo') renderFormulaPasoCategoria();
+      else if(campo==='bomba') renderFormulaPasoBombas();
+    });
+  });
   if(formulaEditId){
     document.getElementById('fm-eliminar').addEventListener('click',function(){
       if(!confirm('¿Eliminar la fórmula "'+window._formulaNombreExistente+'"? Esta acción no se puede deshacer.')) return;
