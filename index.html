@@ -983,19 +983,22 @@ function renderInventarioItem(itemId){
   var it=cats.inventario.find(function(x){return x.id===itemId;});
   if(!it){renderInventario();return;}
   var tienePaquete=it.unidad_compra&&it.factor_compra>0;
-  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">'+it.nombre+'<button type="button" onclick="renderInventarioEditar(\''+itemId+'\')" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">✏️ Editar</button></div><div class="form-card"><div class="resumen-row"><span class="resumen-key">Stock actual</span><span class="resumen-val">'+numFmt(it.stock_actual)+' '+it.unidad+'</span></div><div class="resumen-row"><span class="resumen-key">Stock mínimo</span><span class="resumen-val">'+numFmt(it.stock_minimo)+' '+it.unidad+'</span></div>'+(tienePaquete?'<div class="resumen-row"><span class="resumen-key">Se compra normalmente en</span><span class="resumen-val">'+it.unidad_compra+' de '+numFmt(it.factor_compra)+' '+it.unidad+' c/u</span></div>':'')+'</div><div class="form-card"><div class="form-group"><label>¿Qué pasó?</label><div style="display:flex;flex-direction:column;gap:8px;" id="inv-mov-tipo-grp"><button type="button" class="op-chip sel" data-tipo="entrada" style="text-align:left;padding:.7rem .9rem;">➕ Entrada — llegó pedido/compra</button><button type="button" class="op-chip" data-tipo="salida" style="text-align:left;padding:.7rem .9rem;">➖ Salida — se usó o se perdió</button><button type="button" class="op-chip" data-tipo="ajuste" style="text-align:left;padding:.7rem .9rem;">✏️ Ajuste — corregir un conteo mal capturado</button></div></div>'+(tienePaquete?'<div class="form-group"><label>¿Cómo lo vas a contar?</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip sel" id="inv-mov-modo-base" data-modo="base">Por '+it.unidad+'</button><button type="button" class="op-chip" id="inv-mov-modo-paq" data-modo="paquete">Por '+it.unidad_compra+'</button></div></div><div class="form-group" id="inv-mov-tamano-wrap" style="display:none;"><label>Tamaño de este '+it.unidad_compra.toLowerCase()+' (esta vez)</label><input type="number" id="inv-mov-tamano" min="0" step="any" value="'+(it.factor_compra||'')+'"><p class="hint">Por si esta compra vino en un tamaño distinto al habitual (ej. hoy llegó de 10L en vez de los 20L de siempre) — no cambia lo que tienes configurado en el producto.</p></div>':'')+'<div class="form-group"><label id="inv-mov-cant-lbl">¿Cuánto? (en '+it.unidad+')</label><input type="number" id="inv-mov-cantidad" min="0" placeholder="0" step="any"><p class="hint" id="inv-mov-ejemplo">Ej: si llegaron 12 kg sueltos, escribe 12.</p></div><p class="hint" id="inv-mov-equiv" style="display:none;font-weight:700;color:var(--verde-mid);"></p><div class="form-group"><label>Nota (opcional)</label><input type="text" id="inv-mov-motivo" placeholder="Ej. Proveedor X, factura #123, o para qué se usó"></div><button class="btn-primary" id="inv-mov-guardar">Registrar</button></div><div id="inv-mov-historial"><div class="loading">Cargando movimientos...</div></div><button class="btn-back" style="margin-top:1rem;" onclick="renderInventario()">← Volver a inventario</button>';
+  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">'+it.nombre+'<button type="button" onclick="renderInventarioEditar(\''+itemId+'\')" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">✏️ Editar</button></div><div class="form-card"><div class="resumen-row"><span class="resumen-key">Stock actual</span><span class="resumen-val">'+numFmt(it.stock_actual)+' '+it.unidad+'</span></div><div class="resumen-row"><span class="resumen-key">Stock mínimo</span><span class="resumen-val">'+numFmt(it.stock_minimo)+' '+it.unidad+'</span></div>'+(tienePaquete?'<div class="resumen-row"><span class="resumen-key">Se compra normalmente en</span><span class="resumen-val">'+it.unidad_compra+' de '+numFmt(it.factor_compra)+' '+it.unidad+' c/u</span></div>':'')+'</div><div class="form-card"><div class="form-group"><label>¿Qué pasó?</label><div style="display:flex;flex-direction:column;gap:8px;" id="inv-mov-tipo-grp"><button type="button" class="op-chip sel" data-tipo="entrada" style="text-align:left;padding:.7rem .9rem;">✓ ➕ Entrada — llegó pedido/compra</button><button type="button" class="op-chip" data-tipo="salida" style="text-align:left;padding:.7rem .9rem;">➖ Salida — se usó o se perdió</button><button type="button" class="op-chip" data-tipo="ajuste" style="text-align:left;padding:.7rem .9rem;">✏️ Ajuste — corregir un conteo mal capturado</button></div><p class="hint" style="margin-top:.4rem;">La opción con ✓ es la que está activa ahora mismo.</p></div>'+(tienePaquete?'<div class="form-group"><label>¿Cómo lo vas a contar?</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip sel" id="inv-mov-modo-base" data-modo="base">✓ Por '+it.unidad+'</button><button type="button" class="op-chip" id="inv-mov-modo-paq" data-modo="paquete">Por '+it.unidad_compra+'</button></div></div><div class="form-group" id="inv-mov-tamano-wrap" style="display:none;"><label>Tamaño de este '+it.unidad_compra.toLowerCase()+' (esta vez)</label><input type="number" id="inv-mov-tamano" min="0" step="any" value="'+(it.factor_compra||'')+'"><p class="hint">Por si esta compra vino en un tamaño distinto al habitual (ej. hoy llegó de 10L en vez de los 20L de siempre) — no cambia lo que tienes configurado en el producto.</p></div>':'')+'<div class="form-group"><label id="inv-mov-cant-lbl">¿Cuánto? (en '+it.unidad+')</label><input type="number" id="inv-mov-cantidad" min="0" placeholder="0" step="any"><p class="hint" id="inv-mov-ejemplo">Ej: si llegaron 12 kg sueltos, escribe 12.</p></div><p class="hint" id="inv-mov-equiv" style="display:none;font-weight:700;color:var(--verde-mid);"></p><div class="form-group"><label>Nota (opcional)</label><input type="text" id="inv-mov-motivo" placeholder="Ej. Proveedor X, factura #123, o para qué se usó"></div><button class="btn-primary" id="inv-mov-guardar">Registrar</button></div><div id="inv-mov-historial"><div class="loading">Cargando movimientos...</div></div><button class="btn-back" style="margin-top:1rem;" onclick="renderInventario()">← Volver a inventario</button>';
   var modoCaptura='base', tipoMov='entrada';
+  var TIPO_LABELS={entrada:'➕ Entrada — llegó pedido/compra',salida:'➖ Salida — se usó o se perdió',ajuste:'✏️ Ajuste — corregir un conteo mal capturado'};
   document.querySelectorAll('#inv-mov-tipo-grp [data-tipo]').forEach(function(btn){
     btn.addEventListener('click',function(){
       tipoMov=this.dataset.tipo;
-      document.querySelectorAll('#inv-mov-tipo-grp [data-tipo]').forEach(function(b){b.classList.remove('sel');});
+      document.querySelectorAll('#inv-mov-tipo-grp [data-tipo]').forEach(function(b){b.classList.remove('sel');b.textContent=TIPO_LABELS[b.dataset.tipo];});
       this.classList.add('sel');
+      this.textContent='✓ '+TIPO_LABELS[this.dataset.tipo];
     });
   });
   if(tienePaquete){
     var tamanoWrap=document.getElementById('inv-mov-tamano-wrap');
-    document.getElementById('inv-mov-modo-base').addEventListener('click',function(){modoCaptura='base';this.classList.add('sel');document.getElementById('inv-mov-modo-paq').classList.remove('sel');tamanoWrap.style.display='none';actualizarEtiquetaMov();});
-    document.getElementById('inv-mov-modo-paq').addEventListener('click',function(){modoCaptura='paquete';this.classList.add('sel');document.getElementById('inv-mov-modo-base').classList.remove('sel');tamanoWrap.style.display='';actualizarEtiquetaMov();});
+    var btnBase=document.getElementById('inv-mov-modo-base'), btnPaq=document.getElementById('inv-mov-modo-paq');
+    btnBase.addEventListener('click',function(){modoCaptura='base';this.classList.add('sel');this.textContent='✓ Por '+it.unidad;btnPaq.classList.remove('sel');btnPaq.textContent='Por '+it.unidad_compra;tamanoWrap.style.display='none';actualizarEtiquetaMov();});
+    btnPaq.addEventListener('click',function(){modoCaptura='paquete';this.classList.add('sel');this.textContent='✓ Por '+it.unidad_compra;btnBase.classList.remove('sel');btnBase.textContent='Por '+it.unidad;tamanoWrap.style.display='';actualizarEtiquetaMov();});
     document.getElementById('inv-mov-tamano').addEventListener('input',calcularEquivalencia);
   }
   function tamanoPaqueteActual(){
@@ -1125,16 +1128,20 @@ var BOMBA_LABELS={'inyeccion':'Bomba Inyección','motor':'Bomba Motor','manual':
 var formulaVia=null, formulaCategoria=null, formulaBombas=[], formulaCompRows=[], formulaCompSeq=0, formulaEditId=null, formulaVolverAResumen=false;
 var formulaPlantacionId=null, formulaTablaId=null;
 
+function headerFormulas(){
+  return '<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Fórmulas<div><button type="button" onclick="renderFormulasFaltantes()" style="border:none;background:none;color:var(--rojo);font-size:.78rem;font-weight:600;cursor:pointer;margin-right:.75rem;">⚠️ Faltantes</button><button type="button" onclick="renderFormulaForm()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nueva fórmula</button></div></div>';
+}
+
 function renderFormulas(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Fórmulas<button type="button" onclick="renderFormulaForm()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nueva fórmula</button></div><div class="loading">Cargando fórmulas...</div>';
+  body.innerHTML=headerFormulas()+'<div class="loading">Cargando fórmulas...</div>';
   Promise.all([
     from('formulas_aplicacion').select('*,tabla:tablas(nombre,plantacion_id)').eq('activo',true).order('fecha_programada').get(),
     from('formula_componentes').select('*,item:inventario_items(nombre,unidad,stock_actual)').get()
   ]).then(function(r){
     var rows=r[0]||[], todosComps=r[1]||[];
-    if(!rows.length){body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Fórmulas<button type="button" onclick="renderFormulaForm()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nueva fórmula</button></div><div class="empty">🧪 Aún no hay fórmulas registradas.</div>';return;}
-    var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Fórmulas<button type="button" onclick="renderFormulaForm()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nueva fórmula</button></div>';
+    if(!rows.length){body.innerHTML=headerFormulas()+'<div class="empty">🧪 Aún no hay fórmulas registradas.</div>';return;}
+    var html=headerFormulas();
     html+=rows.map(function(f){
       var bombasTxt=(f.bombas_compatibles||[]).map(function(b){return BOMBA_ICONOS[b]+' '+(BOMBA_LABELS[b]||b);}).join(', ');
       var p=f.tabla?cats.plantaciones.find(function(x){return x.id===f.tabla.plantacion_id;}):null;
@@ -1158,6 +1165,56 @@ function renderFormulas(){
       });
     });
     body.querySelectorAll('[data-fid]').forEach(function(el){el.addEventListener('click',function(){renderFormulaForm(this.dataset.fid);});});
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function renderFormulasFaltantes(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo">⚠️ Faltantes de producto</div><div class="loading">Cargando...</div>';
+  from('formula_componentes').select('*,item:inventario_items(nombre,unidad,stock_actual),formula:formulas_aplicacion(nombre,fecha_programada,activo)').in('estado_faltante',['pendiente','autorizado']).order('estado_faltante',{ascending:true}).get().then(function(rows){
+    rows=(rows||[]).filter(function(c){return c.formula&&c.formula.activo;});
+    var header='<div class="seccion-titulo">⚠️ Faltantes de producto</div>';
+    if(!rows.length){body.innerHTML=header+'<div class="empty">🎉 Ninguna fórmula tiene faltante de producto pendiente.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulas()">← Volver a fórmulas</button>';return;}
+    var html=header+rows.map(function(c){
+      var autorizado=c.estado_faltante==='autorizado';
+      return '<div class="orden-card" style="border-left-color:'+(autorizado?'var(--verde-mid)':'var(--rojo)')+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(c.formula?c.formula.nombre:'')+'</strong><span style="font-size:.72rem;font-weight:700;color:'+(autorizado?'var(--verde-mid)':'var(--rojo)')+';">'+(autorizado?'✅ Autorizado':'⚠️ Pendiente')+'</span></div><div class="orden-meta">Componente: '+(c.item?c.item.nombre:'')+'<br/>Requiere: '+numFmt(c.cantidad_base)+' '+(c.item?c.item.unidad:'')+' · Disponible: '+numFmt(c.item?c.item.stock_actual:0)+' '+(c.item?c.item.unidad:'')+'<br/>Falta: <strong style="color:var(--rojo);">'+numFmt(c.faltante_detectado)+' '+(c.item?c.item.unidad:'')+'</strong>'+(c.formula&&c.formula.fecha_programada?'<br/>📅 Programada: '+c.formula.fecha_programada:'')+'</div>'+(autorizado?'':'<div style="display:flex;gap:8px;margin-top:.6rem;"><button class="btn-sm btn-completar" data-autorizar="'+c.id+'">✅ Autorizar de todas formas</button><button class="btn-sm btn-iniciar" data-cambiar="'+c.id+'" data-formula="'+c.formula_id+'">🔄 Cambiar producto</button></div>')+'</div>';
+    }).join('');
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderFormulas()">← Volver a fórmulas</button>';
+    body.querySelectorAll('[data-autorizar]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var cid=this.dataset.autorizar;
+        from('formula_componentes').eq('id',cid).update({estado_faltante:'autorizado',autorizado_por:usuario.id,autorizado_en:new Date().toISOString()}).then(function(){
+          showToast('✅ Faltante autorizado');
+          renderFormulasFaltantes();
+        }).catch(function(e){alert('Error: '+e.message);});
+      });
+    });
+    body.querySelectorAll('[data-cambiar]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        renderCambiarProductoFaltante(this.dataset.cambiar);
+      });
+    });
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function renderCambiarProductoFaltante(compId){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="loading">Cargando...</div>';
+  from('formula_componentes').select('*,item:inventario_items(nombre,unidad)').eq('id',compId).get().then(function(rows){
+    var c=rows[0];
+    var opts=cats.inventario.map(function(i){return '<option value="'+i.id+'">'+i.nombre+' ('+numFmt(i.stock_actual)+' '+i.unidad+' disponibles)</option>';}).join('');
+    body.innerHTML='<div class="seccion-titulo">🔄 Cambiar producto</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Reemplazando: <strong>'+(c.item?c.item.nombre:'')+'</strong> (faltaban '+numFmt(c.faltante_detectado)+' '+(c.item?c.item.unidad:'')+')</p><div class="form-group"><label>Nuevo producto</label><select id="cp-nuevo">'+opts+'</select></div><div class="form-group"><label>Cantidad requerida</label><input type="number" id="cp-cantidad" min="0" step="any" value="'+c.cantidad_base+'"></div><button class="btn-primary" id="cp-guardar">Guardar cambio</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulasFaltantes()">← Volver a Faltantes</button>';
+    document.getElementById('cp-guardar').addEventListener('click',function(){
+      var nuevoId=document.getElementById('cp-nuevo').value;
+      var cantidad=parseFloat(document.getElementById('cp-cantidad').value)||0;
+      var item=cats.inventario.find(function(i){return i.id===nuevoId;});
+      var disponible=item?item.stock_actual:0;
+      var faltante=Math.max(0,cantidad-disponible);
+      from('formula_componentes').eq('id',compId).update({item_id:nuevoId,cantidad_base:cantidad,faltante_detectado:faltante,estado_faltante:faltante>0?'pendiente':'ninguno',autorizado_por:null,autorizado_en:null}).then(function(){
+        showToast('✅ Producto actualizado en la fórmula');
+        renderFormulasFaltantes();
+      }).catch(function(e){alert('Error: '+e.message);});
+    });
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
@@ -1439,11 +1496,25 @@ function guardarFormula(){
     if(!fid){throw new Error('No se pudo obtener la fórmula guardada.');}
     var borrarViejos=formulaEditId?from('formula_componentes').eq('formula_id',fid).delete():Promise.resolve();
     return borrarViejos.then(function(){
-      return Promise.all(comps.map(function(c){return from('formula_componentes').insert({formula_id:fid,item_id:c.item_id,cantidad_base:c.cantidad});}));
+      return Promise.all(comps.map(function(c){
+        var item=cats.inventario.find(function(x){return x.id===c.item_id;});
+        var disponible=item?item.stock_actual:0;
+        var faltante=Math.max(0,c.cantidad-disponible);
+        var estadoFaltante=faltante>0?'pendiente':'ninguno';
+        return from('formula_componentes').insert({formula_id:fid,item_id:c.item_id,cantidad_base:c.cantidad,estado_faltante:estadoFaltante,faltante_detectado:faltante});
+      }));
     });
   }).then(function(){
-    showToast('✅ Fórmula guardada: '+nombre);
-    renderFormulas();
+    var hayFaltante=comps.some(function(c){
+      var item=cats.inventario.find(function(x){return x.id===c.item_id;});
+      var disponible=item?item.stock_actual:0;
+      return (c.cantidad-disponible)>0;
+    });
+    var avisoFaltante=hayFaltante?from('notificaciones').insert({titulo:'⚠️ Fórmula con faltante de producto',cuerpo:'La fórmula "'+nombre+'" quedó guardada con al menos un componente sin stock suficiente. Revísala en Fórmulas → ⚠️ Faltantes.',icono:'⚠️',leida:false,para_rol:'encargado'}):Promise.resolve();
+    return avisoFaltante.then(function(){
+      showToast(hayFaltante?'⚠️ Guardada con faltante de producto: '+nombre:'✅ Fórmula guardada: '+nombre);
+      renderFormulas();
+    });
   }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent=formulaEditId?'Guardar cambios':'Crear fórmula';});
 }
 
