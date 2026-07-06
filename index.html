@@ -983,7 +983,7 @@ function renderInventarioItem(itemId){
   var it=cats.inventario.find(function(x){return x.id===itemId;});
   if(!it){renderInventario();return;}
   var tienePaquete=it.unidad_compra&&it.factor_compra>0;
-  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">'+it.nombre+'<button type="button" onclick="renderInventarioEditar(\''+itemId+'\')" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">✏️ Editar</button></div><div class="form-card"><div class="resumen-row"><span class="resumen-key">Stock actual</span><span class="resumen-val">'+numFmt(it.stock_actual)+' '+it.unidad+'</span></div><div class="resumen-row"><span class="resumen-key">Stock mínimo</span><span class="resumen-val">'+numFmt(it.stock_minimo)+' '+it.unidad+'</span></div>'+(tienePaquete?'<div class="resumen-row"><span class="resumen-key">Se compra en</span><span class="resumen-val">'+it.unidad_compra+' de '+numFmt(it.factor_compra)+' '+it.unidad+' c/u</span></div>':'')+'</div><div class="form-card"><div class="form-group"><label>¿Qué pasó?</label><div style="display:flex;flex-direction:column;gap:8px;" id="inv-mov-tipo-grp"><button type="button" class="op-chip sel" data-tipo="entrada" style="text-align:left;padding:.7rem .9rem;">➕ Entrada — llegó pedido/compra</button><button type="button" class="op-chip" data-tipo="salida" style="text-align:left;padding:.7rem .9rem;">➖ Salida — se usó o se perdió</button><button type="button" class="op-chip" data-tipo="ajuste" style="text-align:left;padding:.7rem .9rem;">✏️ Ajuste — corregir un conteo mal capturado</button></div></div>'+(tienePaquete?'<div class="form-group"><label>¿Cómo lo vas a contar?</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip sel" id="inv-mov-modo-base" data-modo="base">Por '+it.unidad+'</button><button type="button" class="op-chip" id="inv-mov-modo-paq" data-modo="paquete">Por '+it.unidad_compra+' ('+numFmt(it.factor_compra)+' '+it.unidad+' c/u)</button></div></div>':'')+'<div class="form-group"><label id="inv-mov-cant-lbl">¿Cuánto? (en '+it.unidad+')</label><input type="number" id="inv-mov-cantidad" min="0" placeholder="0" step="any"><p class="hint" id="inv-mov-ejemplo">Ej: si llegaron 12 kg sueltos, escribe 12.</p></div><p class="hint" id="inv-mov-equiv" style="display:none;font-weight:700;color:var(--verde-mid);"></p><div class="form-group"><label>Nota (opcional)</label><input type="text" id="inv-mov-motivo" placeholder="Ej. Proveedor X, factura #123, o para qué se usó"></div><button class="btn-primary" id="inv-mov-guardar">Registrar</button></div><div id="inv-mov-historial"><div class="loading">Cargando movimientos...</div></div><button class="btn-back" style="margin-top:1rem;" onclick="renderInventario()">← Volver a inventario</button>';
+  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">'+it.nombre+'<button type="button" onclick="renderInventarioEditar(\''+itemId+'\')" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">✏️ Editar</button></div><div class="form-card"><div class="resumen-row"><span class="resumen-key">Stock actual</span><span class="resumen-val">'+numFmt(it.stock_actual)+' '+it.unidad+'</span></div><div class="resumen-row"><span class="resumen-key">Stock mínimo</span><span class="resumen-val">'+numFmt(it.stock_minimo)+' '+it.unidad+'</span></div>'+(tienePaquete?'<div class="resumen-row"><span class="resumen-key">Se compra normalmente en</span><span class="resumen-val">'+it.unidad_compra+' de '+numFmt(it.factor_compra)+' '+it.unidad+' c/u</span></div>':'')+'</div><div class="form-card"><div class="form-group"><label>¿Qué pasó?</label><div style="display:flex;flex-direction:column;gap:8px;" id="inv-mov-tipo-grp"><button type="button" class="op-chip sel" data-tipo="entrada" style="text-align:left;padding:.7rem .9rem;">➕ Entrada — llegó pedido/compra</button><button type="button" class="op-chip" data-tipo="salida" style="text-align:left;padding:.7rem .9rem;">➖ Salida — se usó o se perdió</button><button type="button" class="op-chip" data-tipo="ajuste" style="text-align:left;padding:.7rem .9rem;">✏️ Ajuste — corregir un conteo mal capturado</button></div></div>'+(tienePaquete?'<div class="form-group"><label>¿Cómo lo vas a contar?</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip sel" id="inv-mov-modo-base" data-modo="base">Por '+it.unidad+'</button><button type="button" class="op-chip" id="inv-mov-modo-paq" data-modo="paquete">Por '+it.unidad_compra+'</button></div></div><div class="form-group" id="inv-mov-tamano-wrap" style="display:none;"><label>Tamaño de este '+it.unidad_compra.toLowerCase()+' (esta vez)</label><input type="number" id="inv-mov-tamano" min="0" step="any" value="'+(it.factor_compra||'')+'"><p class="hint">Por si esta compra vino en un tamaño distinto al habitual (ej. hoy llegó de 10L en vez de los 20L de siempre) — no cambia lo que tienes configurado en el producto.</p></div>':'')+'<div class="form-group"><label id="inv-mov-cant-lbl">¿Cuánto? (en '+it.unidad+')</label><input type="number" id="inv-mov-cantidad" min="0" placeholder="0" step="any"><p class="hint" id="inv-mov-ejemplo">Ej: si llegaron 12 kg sueltos, escribe 12.</p></div><p class="hint" id="inv-mov-equiv" style="display:none;font-weight:700;color:var(--verde-mid);"></p><div class="form-group"><label>Nota (opcional)</label><input type="text" id="inv-mov-motivo" placeholder="Ej. Proveedor X, factura #123, o para qué se usó"></div><button class="btn-primary" id="inv-mov-guardar">Registrar</button></div><div id="inv-mov-historial"><div class="loading">Cargando movimientos...</div></div><button class="btn-back" style="margin-top:1rem;" onclick="renderInventario()">← Volver a inventario</button>';
   var modoCaptura='base', tipoMov='entrada';
   document.querySelectorAll('#inv-mov-tipo-grp [data-tipo]').forEach(function(btn){
     btn.addEventListener('click',function(){
@@ -993,8 +993,14 @@ function renderInventarioItem(itemId){
     });
   });
   if(tienePaquete){
-    document.getElementById('inv-mov-modo-base').addEventListener('click',function(){modoCaptura='base';this.classList.add('sel');document.getElementById('inv-mov-modo-paq').classList.remove('sel');actualizarEtiquetaMov();});
-    document.getElementById('inv-mov-modo-paq').addEventListener('click',function(){modoCaptura='paquete';this.classList.add('sel');document.getElementById('inv-mov-modo-base').classList.remove('sel');actualizarEtiquetaMov();});
+    var tamanoWrap=document.getElementById('inv-mov-tamano-wrap');
+    document.getElementById('inv-mov-modo-base').addEventListener('click',function(){modoCaptura='base';this.classList.add('sel');document.getElementById('inv-mov-modo-paq').classList.remove('sel');tamanoWrap.style.display='none';actualizarEtiquetaMov();});
+    document.getElementById('inv-mov-modo-paq').addEventListener('click',function(){modoCaptura='paquete';this.classList.add('sel');document.getElementById('inv-mov-modo-base').classList.remove('sel');tamanoWrap.style.display='';actualizarEtiquetaMov();});
+    document.getElementById('inv-mov-tamano').addEventListener('input',calcularEquivalencia);
+  }
+  function tamanoPaqueteActual(){
+    var el=document.getElementById('inv-mov-tamano');
+    return (el&&parseFloat(el.value))||it.factor_compra;
   }
   function actualizarEtiquetaMov(){
     document.getElementById('inv-mov-cant-lbl').textContent='¿Cuánto? (en '+(modoCaptura==='paquete'?it.unidad_compra:it.unidad)+')';
@@ -1006,7 +1012,7 @@ function renderInventarioItem(itemId){
     var cant=parseFloat(document.getElementById('inv-mov-cantidad').value)||0;
     if(modoCaptura==='paquete'&&cant>0){
       equivEl.style.display='block';
-      equivEl.textContent='= '+numFmt(cant*it.factor_compra)+' '+it.unidad+' en total';
+      equivEl.textContent='= '+numFmt(cant*tamanoPaqueteActual())+' '+it.unidad+' en total';
     } else { equivEl.style.display='none'; }
   }
   document.getElementById('inv-mov-cantidad').addEventListener('input',calcularEquivalencia);
@@ -1014,9 +1020,10 @@ function renderInventarioItem(itemId){
     var tipo=tipoMov;
     var cantInput=parseFloat(document.getElementById('inv-mov-cantidad').value)||0;
     if(cantInput<=0){alert('Captura una cantidad mayor a 0.');return;}
-    var cant=modoCaptura==='paquete'?cantInput*it.factor_compra:cantInput;
+    var factorUsado=modoCaptura==='paquete'?tamanoPaqueteActual():1;
+    var cant=modoCaptura==='paquete'?cantInput*factorUsado:cantInput;
     var motivoBase=document.getElementById('inv-mov-motivo').value||null;
-    var motivo=(modoCaptura==='paquete')?(numFmt(cantInput)+' '+it.unidad_compra+(it.unidad_compra.slice(-1)!=='s'&&cantInput!=1?'s':'')+(motivoBase?' · '+motivoBase:'')):motivoBase;
+    var motivo=(modoCaptura==='paquete')?(numFmt(cantInput)+' '+it.unidad_compra+(it.unidad_compra.slice(-1)!=='s'&&cantInput!=1?'s':'')+' de '+numFmt(factorUsado)+' '+it.unidad+' c/u'+(motivoBase?' · '+motivoBase:'')):motivoBase;
     var stockAntes=it.stock_actual;
     var nuevoStock=tipo==='entrada'?it.stock_actual+cant:tipo==='salida'?it.stock_actual-cant:cant;
     from('movimientos_inventario').insert({item_id:it.id,tipo:tipo,cantidad:cant,motivo:motivo,usuario_id:usuario.id,stock_anterior:stockAntes,stock_posterior:nuevoStock}).then(function(){
@@ -1263,12 +1270,38 @@ function renderFormulaPasoComponentes(){
   });
 }
 
+function unidadesAlternas(unidadBase){
+  if(unidadBase==='kg') return ['kg','gr'];
+  if(unidadBase==='litros') return ['litros','ml'];
+  return [unidadBase];
+}
+function convertirABase(valor,unidadEntrada,unidadBase){
+  if(!valor) return 0;
+  if(unidadEntrada===unidadBase) return valor;
+  if(unidadBase==='kg'&&unidadEntrada==='gr') return valor/1000;
+  if(unidadBase==='litros'&&unidadEntrada==='ml') return valor/1000;
+  return valor;
+}
+function convertirDesdeBase(valorBase,unidadEntrada,unidadBase){
+  if(!valorBase) return '';
+  if(unidadEntrada===unidadBase) return valorBase;
+  if(unidadBase==='kg'&&unidadEntrada==='gr') return valorBase*1000;
+  if(unidadBase==='litros'&&unidadEntrada==='ml') return valorBase*1000;
+  return valorBase;
+}
+
 function pintarFormulaCompList(){
   var cont=document.getElementById('fm-comp-list');
   if(!cont) return;
   var opts=cats.inventario.map(function(it){return '<option value="'+it.id+'">'+it.nombre+' ('+it.unidad+')</option>';}).join('');
   cont.innerHTML=formulaCompRows.map(function(r){
-    return '<div class="form-card" style="margin-bottom:.5rem;padding:.75rem;" data-row="'+r.row+'"><select class="fcomp-item" data-row="'+r.row+'"><option value="">Selecciona componente...</option>'+opts+'<option value="__nuevo__">+ Nuevo componente...</option></select><div class="fcomp-nuevo-box" data-row="'+r.row+'" style="display:none;margin-top:.5rem;gap:8px;"><input type="text" class="fcomp-nuevo-nombre" data-row="'+r.row+'" placeholder="Nombre del componente" style="width:100%;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;margin-bottom:.4rem;"><select class="fcomp-nuevo-unidad" data-row="'+r.row+'" style="width:100%;margin-bottom:.4rem;"><option value="litros">Litros</option><option value="ml">Mililitros</option><option value="kg">Kilogramos</option><option value="gr">Gramos</option><option value="pza">Piezas</option></select><div style="display:flex;gap:6px;margin-bottom:.4rem;"><input type="text" class="fcomp-nuevo-unidadcompra" data-row="'+r.row+'" placeholder="¿Se compra en? Ej. Saco (opcional)" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.8rem;"><input type="number" class="fcomp-nuevo-factorcompra" data-row="'+r.row+'" min="0" placeholder="Ej. 25" style="width:70px;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.8rem;"></div><button type="button" class="fcomp-crear" data-row="'+r.row+'" style="padding:6px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">Crear y usar</button></div><div style="display:flex;gap:8px;align-items:center;margin-top:.5rem;"><input type="number" class="fcomp-cant" data-row="'+r.row+'" min="0" placeholder="cantidad para 200L" value="'+(r.cantidad||'')+'" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><span style="font-size:.78rem;color:var(--gris-3);min-width:40px;" class="fcomp-unidad-lbl" data-row="'+r.row+'">'+(r.unidad||'')+'</span><button type="button" class="fcomp-quitar" data-row="'+r.row+'" style="border:none;background:none;color:var(--rojo);font-size:1.1rem;cursor:pointer;">✕</button></div><p class="hint" style="margin:.3rem 0 0;">La cantidad de arriba es lo que la fórmula usa, no el stock — el stock se registra aparte en Inventario.</p></div>';
+    var unidadEntrada=r.unidadEntrada||r.unidad;
+    var alternas=unidadesAlternas(r.unidad);
+    var unidadSelectHtml = alternas.length>1
+      ? '<select class="fcomp-unidad-sel" data-row="'+r.row+'" style="min-width:70px;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.8rem;">'+alternas.map(function(u){return '<option value="'+u+'"'+(u===unidadEntrada?' selected':'')+'>'+u+'</option>';}).join('')+'</select>'
+      : '<span style="font-size:.78rem;color:var(--gris-3);min-width:40px;" class="fcomp-unidad-lbl" data-row="'+r.row+'">'+(r.unidad||'')+'</span>';
+    var valorMostrado = convertirDesdeBase(r.cantidad,unidadEntrada,r.unidad);
+    return '<div class="form-card" style="margin-bottom:.5rem;padding:.75rem;" data-row="'+r.row+'"><select class="fcomp-item" data-row="'+r.row+'"><option value="">Selecciona componente...</option>'+opts+'<option value="__nuevo__">+ Nuevo componente...</option></select><div class="fcomp-nuevo-box" data-row="'+r.row+'" style="display:none;margin-top:.5rem;gap:8px;"><input type="text" class="fcomp-nuevo-nombre" data-row="'+r.row+'" placeholder="Nombre del componente" style="width:100%;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;margin-bottom:.4rem;"><select class="fcomp-nuevo-unidad" data-row="'+r.row+'" style="width:100%;margin-bottom:.4rem;"><option value="litros">Litros</option><option value="ml">Mililitros</option><option value="kg">Kilogramos</option><option value="gr">Gramos</option><option value="pza">Piezas</option></select><div style="display:flex;gap:6px;margin-bottom:.4rem;"><input type="text" class="fcomp-nuevo-unidadcompra" data-row="'+r.row+'" placeholder="¿Se compra en? Ej. Saco (opcional)" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.8rem;"><input type="number" class="fcomp-nuevo-factorcompra" data-row="'+r.row+'" min="0" placeholder="Ej. 25" style="width:70px;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.8rem;"></div><button type="button" class="fcomp-crear" data-row="'+r.row+'" style="padding:6px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">Crear y usar</button></div><div style="display:flex;gap:8px;align-items:center;margin-top:.5rem;"><input type="number" class="fcomp-cant" data-row="'+r.row+'" min="0" placeholder="cantidad para 200L" value="'+(valorMostrado||'')+'" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;">'+unidadSelectHtml+'<button type="button" class="fcomp-quitar" data-row="'+r.row+'" style="border:none;background:none;color:var(--rojo);font-size:1.1rem;cursor:pointer;">✕</button></div><p class="hint" style="margin:.3rem 0 0;">La cantidad de arriba es lo que la fórmula usa, no el stock — el stock se registra aparte en Inventario.</p></div>';
   }).join('');
   cont.querySelectorAll('.fcomp-item').forEach(function(sel){
     var rid=parseInt(sel.dataset.row);
@@ -1308,7 +1341,21 @@ function pintarFormulaCompList(){
     inp.addEventListener('input',function(){
       var rid=parseInt(this.dataset.row);
       var row=formulaCompRows.find(function(x){return x.row===rid;});
-      if(row) row.cantidad=parseFloat(this.value)||0;
+      if(row){
+        var unidadEntrada=row.unidadEntrada||row.unidad;
+        row.cantidad=convertirABase(parseFloat(this.value)||0,unidadEntrada,row.unidad);
+      }
+    });
+  });
+  cont.querySelectorAll('.fcomp-unidad-sel').forEach(function(sel){
+    sel.addEventListener('change',function(){
+      var rid=parseInt(this.dataset.row);
+      var row=formulaCompRows.find(function(x){return x.row===rid;});
+      if(row){
+        row.unidadEntrada=this.value;
+        var input=cont.querySelector('.fcomp-cant[data-row="'+rid+'"]');
+        if(input) input.value=convertirDesdeBase(row.cantidad,row.unidadEntrada,row.unidad)||'';
+      }
     });
   });
   cont.querySelectorAll('.fcomp-quitar').forEach(function(btn){
