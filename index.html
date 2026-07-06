@@ -1288,7 +1288,15 @@ function renderFormulaForm(formulaId){
       formulaTablaId=f.tabla_id||null;
       var tb=cats.tablas.find(function(t){return t.id===formulaTablaId;});
       formulaPlantacionId=tb?tb.plantacion_id:null;
-      formulaCompRows=comps.map(function(c){formulaCompSeq++;return {row:formulaCompSeq,item_id:c.item_id,nombre:c.item?c.item.nombre:'',unidad:c.item?c.item.unidad:'',cantidad:c.cantidad_base};});
+      formulaCompRows=comps.map(function(c){
+        formulaCompSeq++;
+        var unidad=c.item?c.item.unidad:'';
+        var cantidad=c.cantidad_base;
+        var unidadEntrada=unidad;
+        if(unidad==='kg'&&cantidad<1) unidadEntrada='gr';
+        else if(unidad==='litros'&&cantidad<1) unidadEntrada='ml';
+        return {row:formulaCompSeq,item_id:c.item_id,nombre:c.item?c.item.nombre:'',unidad:unidad,unidadEntrada:unidadEntrada,cantidad:cantidad};
+      });
       window._formulaNombreExistente=f.nombre; window._formulaNotasExistente=f.notas; window._formulaFechaExistente=f.fecha_programada;
       renderFormulaPasoNotas();
     });
