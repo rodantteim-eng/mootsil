@@ -188,6 +188,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <button class="tab" id="tab-notif" onclick="tabEncargado('notif')">Avisos <span id="badge-avisos" style="display:none;background:var(--tierra);color:#fff;border-radius:50%;width:16px;height:16px;font-size:.6rem;font-weight:700;align-items:center;justify-content:center;margin-left:3px;vertical-align:middle;">0</span></button>
     <button class="tab" id="tab-permisos" onclick="tabEncargado('permisos')" style="display:none">Permisos</button>
     <button class="tab" id="tab-alarmas" onclick="tabEncargado('alarmas')" style="display:none">🚨 Alarmas</button>
+    <button class="tab" id="tab-admin" onclick="tabEncargado('admin')" style="display:none">🏛️ Administración</button>
     <button class="tab" id="tab-reporte" onclick="tabEncargado('reporte')">Reporte</button>
     <button class="tab" id="tab-inventario" onclick="tabEncargado('inventario')" style="display:none">Inventario</button>
     <button class="tab" id="tab-formulas" onclick="tabEncargado('formulas')" style="display:none">Fórmulas</button>
@@ -426,6 +427,7 @@ function entrarSegunRol(){
     if(usuario.rol==='admin'||usuario.rol==='dueño') document.getElementById('tab-config').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='dueño') document.getElementById('tab-permisos').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='dueño') document.getElementById('tab-alarmas').style.display='';
+    if(usuario.rol==='admin'||usuario.rol==='dueño') document.getElementById('tab-admin').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='ingeniero') document.getElementById('tab-inventario').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='ingeniero') document.getElementById('tab-formulas').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='ingeniero') document.getElementById('tab-validar').style.display='';
@@ -470,13 +472,14 @@ function cargarCatalogos(){
 }
 
 function tabEncargado(tab){
-  ['tablero','asignar','notif','permisos','alarmas','reporte','inventario','formulas','validar','config'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
+  ['tablero','asignar','notif','permisos','alarmas','admin','reporte','inventario','formulas','validar','config'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
   var el=document.getElementById('tab-'+tab); if(el) el.classList.add('active');
   if(tab==='tablero') renderTablero();
   else if(tab==='asignar') renderAsignarMenu();
   else if(tab==='notif') renderNotifs('enc-body');
   else if(tab==='permisos') renderPermisosRevision();
   else if(tab==='alarmas') renderAlarmasRevision();
+  else if(tab==='admin') renderAdministracionMenu();
   else if(tab==='reporte') renderReporte();
   else if(tab==='inventario') renderInventario();
   else if(tab==='formulas') renderFormulas();
@@ -1630,6 +1633,7 @@ function renderPermisosRevision(){
     '<button type="button" onclick="renderEvaluarComportamiento()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">🤝 Comportamiento</button>'+
     (usuario.rol==='admin'||usuario.rol==='dueño'?'<button type="button" onclick="renderBonos()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">🎁 Bonos</button>':'')+
     (usuario.rol==='admin'||usuario.rol==='dueño'?'<button type="button" onclick="renderPagarSemanas()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">💳 Pagar semana</button>':'')+
+    (usuario.rol==='admin'||usuario.rol==='dueño'?'<button type="button" onclick="renderPrestamos()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">📝 Préstamos</button>':'')+
   '</div>';
   from('permisos').select('*,operario:usuarios!usuario_id(nombre)').order('creado_en',{ascending:false}).get().then(function(rows){
     if(!rows||!rows.length){body.innerHTML=headerHtml+'<div class="empty">Sin solicitudes de permiso.</div>';return;}
@@ -1815,7 +1819,7 @@ function renderResumenNomina(){
       Object.keys(porDia).forEach(function(f){var d=porDia[f];if(d.entrada&&d.salida) horasExtra+=(new Date(d.salida)-new Date(d.entrada))/3600000;});
       return '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+o.nombre+'</strong></div><div class="orden-meta" style="display:flex;gap:1rem;margin-top:.3rem;"><span>✅ '+resumen.trabajados+' trabajados</span><span style="color:var(--rojo);">❌ '+resumen.faltas+' faltas</span><span style="color:var(--tierra);">⏰ '+resumen.retardos+' retardos</span></div>'+(horasExtra>0?'<div class="orden-meta" style="margin-top:.2rem;">💰 '+horasExtra.toFixed(1)+' h extra</div>':'')+'</div>';
     }).join('');
-    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderPermisosRevision()">← Volver a Permisos</button>';
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderAdministracionMenu()">← Volver a Administración</button>';
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
@@ -1825,7 +1829,7 @@ function renderEvaluarComportamiento(){
   var hoyD=new Date();
   var primerDiaMes=new Date(hoyD.getFullYear(),hoyD.getMonth(),1).toISOString().slice(0,10);
   var ultimoDiaMes=new Date(hoyD.getFullYear(),hoyD.getMonth()+1,0).toISOString().slice(0,10);
-  body.innerHTML='<div class="seccion-titulo">🤝 Evaluar comportamiento</div><div class="form-card"><div class="form-group"><label>Colaborador</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Calificación (1 a 10)</label><input type="number" id="ev-calif" min="1" max="10" step="0.5" placeholder="Ej. 8.5"></div><div class="form-group"><label>Comentario (opcional)</label><input type="text" id="ev-comentario" placeholder="Ej. Buena actitud, apoya a sus compañeros..."></div><div class="form-group"><label>Periodo evaluado</label><div style="display:flex;gap:8px;"><input type="date" id="ev-desde" value="'+primerDiaMes+'"><input type="date" id="ev-hasta" value="'+ultimoDiaMes+'"></div></div><button class="btn-primary" id="ev-guardar">Guardar evaluación</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderPermisosRevision()">← Volver a Permisos</button>';
+  body.innerHTML='<div class="seccion-titulo">🤝 Evaluar comportamiento</div><div class="form-card"><div class="form-group"><label>Colaborador</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Calificación (1 a 10)</label><input type="number" id="ev-calif" min="1" max="10" step="0.5" placeholder="Ej. 8.5"></div><div class="form-group"><label>Comentario (opcional)</label><input type="text" id="ev-comentario" placeholder="Ej. Buena actitud, apoya a sus compañeros..."></div><div class="form-group"><label>Periodo evaluado</label><div style="display:flex;gap:8px;"><input type="date" id="ev-desde" value="'+primerDiaMes+'"><input type="date" id="ev-hasta" value="'+ultimoDiaMes+'"></div></div><button class="btn-primary" id="ev-guardar">Guardar evaluación</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAdministracionMenu()">← Volver a Administración</button>';
   document.getElementById('ev-guardar').addEventListener('click',function(){
     var opId=document.querySelector('.op-chip.sel');
     var calif=parseFloat(document.getElementById('ev-calif').value);
@@ -1835,7 +1839,7 @@ function renderEvaluarComportamiento(){
     var desde=document.getElementById('ev-desde').value, hasta=document.getElementById('ev-hasta').value;
     from('evaluaciones_comportamiento').insert({operario_id:opId.dataset.id,evaluado_por:usuario.id,periodo_inicio:desde,periodo_fin:hasta,calificacion:calif,comentario:comentario}).then(function(){
       showToast('✅ Evaluación guardada');
-      renderPermisosRevision();
+      renderAdministracionMenu();
     }).catch(function(e){alert('Error: '+e.message);});
   });
 }
@@ -1855,11 +1859,16 @@ function renderPagarSemanas(){
   Promise.all([
     from('usuarios').select('id,nombre,sueldo_base').eq('rol','operario').get(),
     from('asistencia_registros').select('*').gte('fecha',semanaInicio).lte('fecha',semanaFin).get(),
-    from('pagos_semana_estado').select('*').eq('semana_inicio',semanaInicio).get()
+    from('pagos_semana_estado').select('*').eq('semana_inicio',semanaInicio).get(),
+    from('pagos_extra_estado').select('*').eq('semana_inicio',semanaInicio).get(),
+    from('config_app').select('*').get()
   ]).then(function(r){
-    var operarios=r[0]||[], registros=r[1]||[], estados=r[2]||[];
+    var operarios=r[0]||[], registros=r[1]||[], estados=r[2]||[], estadosExtra=r[3]||[];
+    var cfg={}; (r[4]||[]).forEach(function(c){cfg[c.clave]=c.valor;});
+    var tarifa=parseFloat(cfg.tarifa_hora_extra)||70;
     var estadoPorOp={}; estados.forEach(function(e){estadoPorOp[e.operario_id]=e;});
-    var html='<div class="seccion-titulo">💳 Pagar semana '+numSemana+'</div><p class="hint" style="margin-bottom:1rem;">'+semanaInicio+' a '+semanaFin+'</p>';
+    var estadoExtraPorOp={}; estadosExtra.forEach(function(e){estadoExtraPorOp[e.operario_id]=e;});
+    var html='<div class="seccion-titulo">💳 Pagar semana '+numSemana+'</div><p class="hint" style="margin-bottom:1rem;">'+semanaInicio+' a '+semanaFin+' · Tarifa hora extra: $'+tarifa+'</p>';
     if(!operarios.length){html+='<div class="empty">No hay operarios registrados.</div>';}
     html+=operarios.map(function(o){
       var regsOp=registros.filter(function(r){return r.usuario_id===o.id;});
@@ -1868,7 +1877,22 @@ function renderPagarSemanas(){
       var total=resumen.trabajados*sueldoBase;
       var est=estadoPorOp[o.id];
       var pagado=est&&est.estado==='pagado';
-      return '<div class="orden-card" style="border-left-color:'+(pagado?'var(--verde-mid)':'var(--tierra)')+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+o.nombre+'</strong><span style="font-weight:800;color:'+(pagado?'var(--verde-mid)':'var(--tierra)')+';">$'+total.toFixed(2)+'</span></div><div class="orden-meta">'+resumen.trabajados+' días · '+resumen.faltas+' faltas · '+resumen.retardos+' retardos'+(sueldoBase?'':' · ⚠️ sin sueldo base configurado')+'</div>'+(pagado?'<button class="btn-sm btn-cancelar" data-despagar="'+o.id+'" style="margin-top:.5rem;">Marcar como pendiente</button>':'<button class="btn-sm btn-completar" data-pagar="'+o.id+'" data-total="'+total+'" style="margin-top:.5rem;">✅ Marcar como pagado</button>')+'</div>';
+
+      var porDiaExtra={};
+      regsOp.filter(function(x){return x.modalidad==='extras';}).forEach(function(reg){
+        if(!porDiaExtra[reg.fecha]) porDiaExtra[reg.fecha]={entrada:null,salida:null};
+        if(reg.tipo==='entrada'&&(!porDiaExtra[reg.fecha].entrada||reg.registrado_en<porDiaExtra[reg.fecha].entrada)) porDiaExtra[reg.fecha].entrada=reg.registrado_en;
+        if(reg.tipo==='salida'&&(!porDiaExtra[reg.fecha].salida||reg.registrado_en>porDiaExtra[reg.fecha].salida)) porDiaExtra[reg.fecha].salida=reg.registrado_en;
+      });
+      var horasExtra=0;
+      Object.keys(porDiaExtra).forEach(function(f){var d=porDiaExtra[f];if(d.entrada&&d.salida) horasExtra+=(new Date(d.salida)-new Date(d.entrada))/3600000;});
+      var totalExtra=horasExtra*tarifa;
+      var estExtra=estadoExtraPorOp[o.id];
+      var pagadoExtra=estExtra&&estExtra.estado==='pagado';
+
+      return '<div class="orden-card" style="border-left-color:'+(pagado?'var(--verde-mid)':'var(--tierra)')+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+o.nombre+'</strong><span style="font-weight:800;color:'+(pagado?'var(--verde-mid)':'var(--tierra)')+';">$'+total.toFixed(2)+'</span></div><div class="orden-meta">'+resumen.trabajados+' días · '+resumen.faltas+' faltas · '+resumen.retardos+' retardos'+(sueldoBase?'':' · ⚠️ sin sueldo base configurado')+'</div>'+(pagado?'<button class="btn-sm btn-cancelar" data-despagar="'+o.id+'" style="margin-top:.5rem;">Marcar como pendiente</button>':'<button class="btn-sm btn-completar" data-pagar="'+o.id+'" data-total="'+total+'" style="margin-top:.5rem;">✅ Marcar como pagado</button>')+
+      (horasExtra>0?'<div style="border-top:1px dashed var(--gris-2);margin-top:.6rem;padding-top:.6rem;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:.8rem;font-weight:700;color:var(--tierra);">⏰ Horas extra: '+horasExtra.toFixed(1)+'h</span><span style="font-weight:800;color:'+(pagadoExtra?'var(--verde-mid)':'var(--tierra)')+';">$'+totalExtra.toFixed(2)+'</span></div>'+(pagadoExtra?'<button class="btn-sm btn-cancelar" data-despagarextra="'+o.id+'" style="margin-top:.4rem;">Marcar extra como pendiente</button>':'<button class="btn-sm btn-completar" data-pagarextra="'+o.id+'" data-totalextra="'+totalExtra+'" data-horasextra="'+horasExtra+'" style="margin-top:.4rem;">✅ Marcar extra como pagado</button>')+'</div>':'')+
+      '</div>';
     }).join('');
     body.innerHTML=html;
     body.querySelectorAll('[data-pagar]').forEach(function(btn){
@@ -1890,7 +1914,100 @@ function renderPagarSemanas(){
         from('pagos_semana_estado').eq('id',existente.id).update({estado:'pendiente'}).then(function(){showToast('Marcado como pendiente');renderPagarSemanas();}).catch(function(e){alert('Error: '+e.message);});
       });
     });
+    body.querySelectorAll('[data-pagarextra]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var opId=this.dataset.pagarextra, total=parseFloat(this.dataset.totalextra), horas=parseFloat(this.dataset.horasextra);
+        var payload={operario_id:opId,semana_inicio:semanaInicio,semana_fin:semanaFin,estado:'pagado',horas:horas,monto_pagado:total,pagado_por:usuario.id,pagado_en:new Date().toISOString()};
+        var existente=estadoExtraPorOp[opId];
+        var accion = existente ? from('pagos_extra_estado').eq('id',existente.id).update(payload) : from('pagos_extra_estado').insert(payload);
+        accion.then(function(){
+          return from('notificaciones').insert({titulo:'⏰ Pago de horas extra registrado',cuerpo:'Tu pago de horas extra de la semana '+numSemana+' ($'+total.toFixed(2)+') fue marcado como pagado.',icono:'⏰',leida:false,para_rol:'operario',para_usuario:opId});
+        }).then(function(){showToast('✅ Extra marcado como pagado');renderPagarSemanas();}).catch(function(e){alert('Error: '+e.message);});
+      });
+    });
+    body.querySelectorAll('[data-despagarextra]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var opId=this.dataset.despagarextra;
+        var existente=estadoExtraPorOp[opId];
+        if(!existente) return;
+        from('pagos_extra_estado').eq('id',existente.id).update({estado:'pendiente'}).then(function(){showToast('Marcado como pendiente');renderPagarSemanas();}).catch(function(e){alert('Error: '+e.message);});
+      });
+    });
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function renderPrestamos(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📝 Préstamos<button type="button" onclick="renderNuevoPrestamo()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo préstamo</button></div><div class="loading">Cargando...</div>';
+  from('prestamos').select('*,operario:usuarios!operario_id(nombre)').order('creado_en',{ascending:false}).get().then(function(prestamos){
+    var header='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📝 Préstamos<button type="button" onclick="renderNuevoPrestamo()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo préstamo</button></div>';
+    if(!prestamos||!prestamos.length){body.innerHTML=header+'<div class="empty">Sin préstamos registrados.</div>';return;}
+    var ids=prestamos.map(function(p){return p.id;});
+    from('prestamo_pagos').select('*').in('prestamo_id',ids).order('numero_pago',{ascending:true}).get().then(function(pagos){
+      var html=header;
+      html+=prestamos.map(function(p){
+        var pagosDe=pagos.filter(function(x){return x.prestamo_id===p.id;});
+        var pendientes=pagosDe.filter(function(x){return x.estado==='pendiente';});
+        var restante=pendientes.reduce(function(s,x){return s+parseFloat(x.monto);},0);
+        var filas=pagosDe.map(function(pg){
+          var ns=numeroSemanaISO(new Date(pg.semana_inicio+'T00:00:00'));
+          var pagado=pg.estado==='descontado';
+          return '<div style="display:flex;justify-content:space-between;align-items:center;font-size:.8rem;padding:.3rem 0;border-bottom:1px solid var(--gris-1);"><span>Pago '+pg.numero_pago+'/'+p.num_pagos+' · Sem '+ns+' · $'+parseFloat(pg.monto).toFixed(2)+'</span>'+(pagado?'<span style="color:var(--verde-mid);font-weight:700;">✅ Descontado</span>':'<button class="btn-sm btn-completar" data-descontar="'+pg.id+'" data-prestamo="'+p.id+'">Marcar descontado</button>')+'</div>';
+        }).join('');
+        return '<div class="orden-card" style="border-left-color:'+(p.estado==='activo'?'var(--tierra)':'var(--gris-3)')+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(p.operario?p.operario.nombre:'')+' · '+p.concepto+'</strong><span style="font-size:.72rem;font-weight:700;color:'+(p.estado==='activo'?'var(--tierra)':'var(--verde-mid)')+';">'+(p.estado==='activo'?'Activo':'Liquidado')+'</span></div><div class="orden-meta">Total: $'+parseFloat(p.monto_total).toFixed(2)+' · Restante: $'+restante.toFixed(2)+'</div><div style="margin-top:.5rem;">'+filas+'</div></div>';
+      }).join('');
+      body.innerHTML=html;
+      body.querySelectorAll('[data-descontar]').forEach(function(btn){
+        btn.addEventListener('click',function(){
+          var pagoId=this.dataset.descontar, prestamoId=this.dataset.prestamo;
+          from('prestamo_pagos').eq('id',pagoId).update({estado:'descontado',descontado_en:new Date().toISOString()}).then(function(){
+            return from('prestamo_pagos').select('*').eq('prestamo_id',prestamoId).get();
+          }).then(function(todosPagos){
+            var todosDescontados=todosPagos.every(function(x){return x.estado==='descontado';});
+            if(todosDescontados) return from('prestamos').eq('id',prestamoId).update({estado:'liquidado'});
+          }).then(function(){showToast('✅ Pago marcado como descontado');renderPrestamos();}).catch(function(e){alert('Error: '+e.message);});
+        });
+      });
+    });
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function renderNuevoPrestamo(){
+  var body=document.getElementById('enc-body');
+  var opO=cats.operarios.map(function(o){return '<button type="button" class="op-chip" data-id="'+o.id+'" onclick="seleccionUnica(this)">'+o.nombre+'</button>';}).join('');
+  body.innerHTML='<div class="seccion-titulo">+ Nuevo préstamo</div><div class="form-card"><div class="form-group"><label>Colaborador</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Concepto</label><input type="text" id="pr-concepto" placeholder="Ej. Préstamo personal / Anticipo de nómina"></div><div class="form-group"><label>Monto total ($)</label><input type="number" id="pr-monto" min="0" step="1" placeholder="Ej. 600"></div><div class="form-group"><label>Número de pagos semanales</label><input type="number" id="pr-pagos" min="1" step="1" placeholder="Ej. 3"></div><div class="form-group"><label>Semana en que inicia el descuento</label><input type="date" id="pr-fecha" value="'+new Date().toISOString().slice(0,10)+'"></div><button class="btn-primary" id="pr-guardar">Registrar préstamo</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderPrestamos()">← Volver a Préstamos</button>';
+  document.getElementById('pr-guardar').addEventListener('click',function(){
+    var opBtn=document.querySelector('.op-chip.sel');
+    var concepto=document.getElementById('pr-concepto').value.trim();
+    var monto=parseFloat(document.getElementById('pr-monto').value);
+    var numPagos=parseInt(document.getElementById('pr-pagos').value);
+    var fechaIni=document.getElementById('pr-fecha').value;
+    if(!opBtn){alert('Selecciona un colaborador.');return;}
+    if(!concepto){alert('Describe el concepto.');return;}
+    if(!monto||monto<=0){alert('Captura un monto válido.');return;}
+    if(!numPagos||numPagos<1){alert('Captura el número de pagos.');return;}
+    var btn=this; btn.disabled=true; btn.textContent='Guardando...';
+    from('prestamos').insert({operario_id:opBtn.dataset.id,concepto:concepto,monto_total:monto,num_pagos:numPagos,fecha_inicio:fechaIni,estado:'activo',creado_por:usuario.id}).then(function(rows){
+      return from('prestamos').select('*').eq('operario_id',opBtn.dataset.id).order('creado_en',{ascending:false}).limit(1).get();
+    }).then(function(nuevoPrestamoRows){
+      var prestamo=nuevoPrestamoRows[0];
+      var montoPorPago=Math.round((monto/numPagos)*100)/100;
+      var lunes=inicioDeSemana(new Date(fechaIni+'T00:00:00'));
+      var pagosArr=[];
+      for(var i=0;i<numPagos;i++){
+        var sem=new Date(lunes); sem.setDate(sem.getDate()+i*7);
+        var esUltimo=i===numPagos-1;
+        var montoEste = esUltimo ? Math.round((monto-montoPorPago*(numPagos-1))*100)/100 : montoPorPago;
+        pagosArr.push({prestamo_id:prestamo.id,numero_pago:i+1,semana_inicio:sem.toISOString().slice(0,10),monto:montoEste,estado:'pendiente'});
+      }
+      return Promise.all(pagosArr.map(function(p){return from('prestamo_pagos').insert(p);}));
+    }).then(function(){
+      return from('notificaciones').insert({titulo:'📝 Nuevo préstamo registrado',cuerpo:usuario.nombre+' te registró: '+concepto+' — $'+monto+' en '+numPagos+' pago(s) semanales',icono:'📝',leida:false,para_rol:'operario',para_usuario:opBtn.dataset.id});
+    }).then(function(){
+      showToast('✅ Préstamo registrado');
+      renderPrestamos();
+    }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Registrar préstamo';});
+  });
 }
 
 function renderBonos(){
@@ -1900,7 +2017,7 @@ function renderBonos(){
     if(!rows||!rows.length){body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🎁 Bonos<button type="button" onclick="renderNuevoBono()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo bono</button></div><div class="empty">Sin bonos registrados.</div>';return;}
     var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🎁 Bonos<button type="button" onclick="renderNuevoBono()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo bono</button></div>';
     html+=rows.map(function(b){
-      return '<div class="orden-card" style="border-left-color:'+(b.estado==='activo'?'var(--verde-mid)':'var(--gris-3)')+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(b.tipo==='equipo'?'🤝 Equipo':'👤 Individual')+' · '+(b.tipo_recompensa==='economico'?'💰 Económico':'🎁 En especie')+'</strong><span style="font-size:.72rem;font-weight:700;color:'+(b.estado==='activo'?'var(--verde-mid)':'var(--gris-3)')+';">'+(b.estado==='activo'?'Activo':'Cerrado')+'</span></div><div class="orden-meta">'+b.descripcion+(b.umbral_minimo?'<br/>Requiere '+b.umbral_minimo+'/10 de rendimiento':'')+'<br/>📅 '+b.periodo_inicio+' a '+b.periodo_fin+'</div>'+(b.estado==='activo'?'<button class="btn-sm btn-cancelar" data-cerrar="'+b.id+'" style="margin-top:.5rem;">Cerrar bono</button>':'')+'</div>';
+      return '<div class="orden-card" style="border-left-color:'+(b.estado==='activo'?'var(--verde-mid)':'var(--gris-3)')+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(b.tipo==='equipo'?'🤝 Equipo':'👤 Individual')+' · '+(b.tipo_recompensa==='economico'?'💰 Económico':'🎁 En especie')+(b.monto?' · $'+b.monto:'')+'</strong><span style="font-size:.72rem;font-weight:700;color:'+(b.estado==='activo'?'var(--verde-mid)':'var(--gris-3)')+';">'+(b.estado==='activo'?'Activo':'Cerrado')+'</span></div><div class="orden-meta">'+b.descripcion+(b.umbral_minimo?'<br/>Requiere '+b.umbral_minimo+'/10 de rendimiento':'')+'<br/>📅 '+b.periodo_inicio+' a '+b.periodo_fin+'</div>'+(b.estado==='activo'?'<button class="btn-sm btn-cancelar" data-cerrar="'+b.id+'" style="margin-top:.5rem;">Cerrar bono</button>':'')+'</div>';
     }).join('');
     body.innerHTML=html;
     body.querySelectorAll('[data-cerrar]').forEach(function(btn){btn.addEventListener('click',function(){
@@ -1914,15 +2031,19 @@ function renderNuevoBono(){
   var hoyD=new Date();
   var primerDiaMes=new Date(hoyD.getFullYear(),hoyD.getMonth(),1).toISOString().slice(0,10);
   var ultimoDiaMes=new Date(hoyD.getFullYear(),hoyD.getMonth()+1,0).toISOString().slice(0,10);
-  body.innerHTML='<div class="seccion-titulo">+ Nuevo bono</div><div class="form-card"><div class="form-group"><label>Tipo</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip sel" data-tipo="individual" onclick="seleccionUnica(this)">👤 Individual</button><button type="button" class="op-chip" data-tipo="equipo" onclick="seleccionUnica(this)">🤝 Equipo</button></div></div><div class="form-group"><label>Tipo de recompensa</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip sel" data-rec="economico" onclick="seleccionUnica(this)">💰 Económico</button><button type="button" class="op-chip" data-rec="especie" onclick="seleccionUnica(this)">🎁 En especie</button></div></div><div class="form-group"><label>Descripción</label><input type="text" id="bo-desc" placeholder="Ej. $500 extra en la quincena / Día libre adicional"></div><div class="form-group"><label>Rendimiento mínimo requerido (opcional)</label><input type="number" id="bo-umbral" min="1" max="10" step="0.5" placeholder="Ej. 8.5"></div><div class="form-group"><label>Periodo</label><div style="display:flex;gap:8px;"><input type="date" id="bo-desde" value="'+primerDiaMes+'"><input type="date" id="bo-hasta" value="'+ultimoDiaMes+'"></div></div><button class="btn-primary" id="bo-guardar">Activar bono</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderBonos()">← Volver a Bonos</button>';
+  body.innerHTML='<div class="seccion-titulo">+ Nuevo bono</div><div class="form-card"><div class="form-group"><label>Tipo</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip sel" data-tipo="individual" onclick="seleccionUnica(this)">👤 Individual</button><button type="button" class="op-chip" data-tipo="equipo" onclick="seleccionUnica(this)">🤝 Equipo</button></div></div><div class="form-group"><label>Tipo de recompensa</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip sel" data-rec="economico" onclick="seleccionUnica(this)">💰 Económico</button><button type="button" class="op-chip" data-rec="especie" onclick="seleccionUnica(this)">🎁 En especie</button></div></div><div class="form-group" id="bo-monto-wrap"><label>Monto ($)</label><input type="number" id="bo-monto" min="0" step="1" placeholder="Ej. 500"><p class="hint">Se sumará automáticamente a su Cartera cuando califique.</p></div><div class="form-group"><label>Descripción</label><input type="text" id="bo-desc" placeholder="Ej. Bono de productividad / Día libre adicional"></div><div class="form-group"><label>Rendimiento mínimo requerido (opcional)</label><input type="number" id="bo-umbral" min="1" max="10" step="0.5" placeholder="Ej. 8.5"></div><div class="form-group"><label>Periodo</label><div style="display:flex;gap:8px;"><input type="date" id="bo-desde" value="'+primerDiaMes+'"><input type="date" id="bo-hasta" value="'+ultimoDiaMes+'"></div></div><button class="btn-primary" id="bo-guardar">Activar bono</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderBonos()">← Volver a Bonos</button>';
+  document.querySelectorAll('[data-rec]').forEach(function(b){b.addEventListener('click',function(){
+    document.getElementById('bo-monto-wrap').style.display=this.dataset.rec==='economico'?'':'none';
+  });});
   document.getElementById('bo-guardar').addEventListener('click',function(){
     var tipoBtn=document.querySelector('[data-tipo].sel'), recBtn=document.querySelector('[data-rec].sel');
     var desc=document.getElementById('bo-desc').value.trim();
     if(!desc){alert('Describe el bono.');return;}
+    var monto=recBtn.dataset.rec==='economico'?(parseFloat(document.getElementById('bo-monto').value)||null):null;
     var umbral=document.getElementById('bo-umbral').value||null;
     var desde=document.getElementById('bo-desde').value, hasta=document.getElementById('bo-hasta').value;
-    from('bonos').insert({tipo:tipoBtn.dataset.tipo,tipo_recompensa:recBtn.dataset.rec,descripcion:desc,umbral_minimo:umbral,periodo_inicio:desde,periodo_fin:hasta,activado_por:usuario.id,estado:'activo'}).then(function(){
-      return from('notificaciones').insert({titulo:'🎁 Nuevo bono activo',cuerpo:usuario.nombre+' activó un bono: '+desc,icono:'🎁',leida:false,para_rol:'operario'});
+    from('bonos').insert({tipo:tipoBtn.dataset.tipo,tipo_recompensa:recBtn.dataset.rec,descripcion:desc,monto:monto,umbral_minimo:umbral,periodo_inicio:desde,periodo_fin:hasta,activado_por:usuario.id,estado:'activo'}).then(function(){
+      return from('notificaciones').insert({titulo:'🎁 Nuevo bono activo',cuerpo:usuario.nombre+' activó un bono: '+desc+(monto?' ($'+monto+')':''),icono:'🎁',leida:false,para_rol:'operario'});
     }).then(function(){
       showToast('✅ Bono activado');
       renderBonos();
@@ -2140,8 +2261,8 @@ function renderPagosMenu(){
     '<div class="labor-tile" data-pago="historial"><div class="labor-tile-ic">📊</div><div class="labor-tile-lbl">Historial</div></div>'+
   '</div>';
   body.querySelector('[data-pago="semana"]').addEventListener('click',function(){renderPagoSemana(new Date());});
-  body.querySelector('[data-pago="extras"]').addEventListener('click',function(){body.innerHTML='<div class="empty">⏰ Próximamente</div><button class="btn-back" style="margin-top:1rem;" onclick="renderPagosMenu()">← Volver a Pagos</button>';});
-  body.querySelector('[data-pago="debo"]').addEventListener('click',function(){body.innerHTML='<div class="empty">📝 Próximamente</div><button class="btn-back" style="margin-top:1rem;" onclick="renderPagosMenu()">← Volver a Pagos</button>';});
+  body.querySelector('[data-pago="extras"]').addEventListener('click',function(){renderPagoHorasExtras(new Date());});
+  body.querySelector('[data-pago="debo"]').addEventListener('click',renderDebo);
   body.querySelector('[data-pago="cartera"]').addEventListener('click',function(){body.innerHTML='<div class="empty">👛 Próximamente</div><button class="btn-back" style="margin-top:1rem;" onclick="renderPagosMenu()">← Volver a Pagos</button>';});
   body.querySelector('[data-pago="historial"]').addEventListener('click',function(){body.innerHTML='<div class="empty">📊 Próximamente</div><button class="btn-back" style="margin-top:1rem;" onclick="renderPagosMenu()">← Volver a Pagos</button>';});
 }
@@ -2204,6 +2325,110 @@ function renderPagoSemana(fechaRef){
     var btnSig=document.getElementById('pg-sem-sig');
     if(btnSig) btnSig.addEventListener('click',function(){var d=new Date(lunes);d.setDate(d.getDate()+7);renderPagoSemana(d);});
   }).catch(function(e){body.innerHTML='<div class="empty">No se pudo calcular tu pago.<br/><span style="font-size:.7rem;color:var(--gris-3);">('+e.message+')</span></div><button class="btn-back" style="margin-top:1rem;" onclick="renderPagosMenu()">← Volver a Pagos</button>';});
+}
+
+function renderPagoHorasExtras(fechaRef){
+  var body=document.getElementById('op-body');
+  body.innerHTML='<div class="seccion-titulo">⏰ Pago de horas extra</div><div class="loading">Calculando...</div>';
+  var lunes=inicioDeSemana(fechaRef);
+  var domingo=new Date(lunes); domingo.setDate(lunes.getDate()+6);
+  var semanaInicio=lunes.toISOString().slice(0,10), semanaFin=domingo.toISOString().slice(0,10);
+  var numSemana=numeroSemanaISO(lunes);
+  Promise.all([
+    from('config_app').select('*').get(),
+    from('asistencia_registros').select('*').eq('usuario_id',usuario.id).eq('modalidad','extras').gte('fecha',semanaInicio).lte('fecha',semanaFin).get(),
+    from('pagos_extra_estado').select('*').eq('operario_id',usuario.id).eq('semana_inicio',semanaInicio).get()
+  ]).then(function(r){
+    var cfg={}; (r[0]||[]).forEach(function(c){cfg[c.clave]=c.valor;});
+    var tarifa=parseFloat(cfg.tarifa_hora_extra)||70;
+    var registros=r[1]||[];
+    var estadoRow=r[2]&&r[2][0];
+    var porDia={};
+    registros.forEach(function(reg){
+      if(!porDia[reg.fecha]) porDia[reg.fecha]={entrada:null,salida:null};
+      if(reg.tipo==='entrada'&&(!porDia[reg.fecha].entrada||reg.registrado_en<porDia[reg.fecha].entrada)) porDia[reg.fecha].entrada=reg.registrado_en;
+      if(reg.tipo==='salida'&&(!porDia[reg.fecha].salida||reg.registrado_en>porDia[reg.fecha].salida)) porDia[reg.fecha].salida=reg.registrado_en;
+    });
+    var dias=Object.keys(porDia).sort();
+    var totalHoras=0;
+    var detalle=dias.map(function(f){
+      var d=porDia[f];
+      var horas=(d.entrada&&d.salida)?(new Date(d.salida)-new Date(d.entrada))/3600000:0;
+      totalHoras+=horas;
+      var hE=d.entrada?new Date(d.entrada).toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',hour12:true}):'—';
+      var hS=d.salida?new Date(d.salida).toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',hour12:true}):'—';
+      return {fecha:f,horas:horas,texto:f+' · '+hE+' → '+hS+' ('+horas.toFixed(1)+'h)'};
+    });
+    var total=totalHoras*tarifa;
+    var pagado=estadoRow&&estadoRow.estado==='pagado';
+    var mesInicio=lunes.toLocaleDateString('es-MX',{month:'long'});
+    var mesFin=domingo.toLocaleDateString('es-MX',{month:'long'});
+    var rango=(mesInicio===mesFin)?('del '+lunes.getDate()+' al '+domingo.getDate()+' de '+mesFin+' '+domingo.getFullYear()):('del '+lunes.getDate()+' '+mesInicio+' al '+domingo.getDate()+' '+mesFin+' '+domingo.getFullYear());
+    var hoy=new Date().toISOString().slice(0,10);
+    var esSemanaActual = hoy>=semanaInicio && hoy<=semanaFin;
+
+    var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">⏰ Pago de horas extra<button type="button" onclick="renderPagosMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Pagos</button></div>';
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;"><button type="button" id="pg-ext-ant" style="border:none;background:var(--gris-1);border-radius:20px;padding:.4rem .9rem;font-size:.8rem;cursor:pointer;">← Semana anterior</button>'+(esSemanaActual?'':'<button type="button" id="pg-ext-sig" style="border:none;background:var(--gris-1);border-radius:20px;padding:.4rem .9rem;font-size:.8rem;cursor:pointer;">Semana siguiente →</button>')+'</div>';
+
+    html+='<div class="form-card" style="text-align:center;'+(pagado?'border:2px solid var(--verde-mid);':'border:2px solid var(--tierra);')+'">';
+    html+='<div style="font-size:.8rem;color:var(--gris-3);">Horas extra semana '+numSemana+'</div>';
+    html+='<div style="font-size:.85rem;font-weight:700;margin-bottom:.75rem;">'+rango+'</div>';
+    html+='<div style="font-size:2rem;font-weight:800;color:'+(pagado?'var(--verde-mid)':'var(--tierra)')+';">$'+total.toFixed(2)+'</div>';
+    html+='<div style="display:inline-block;margin-top:.5rem;padding:.3rem 1rem;border-radius:20px;background:'+(pagado?'var(--verde-tenue)':'var(--tierra-tenue)')+';color:'+(pagado?'var(--verde-mid)':'var(--tierra)')+';font-weight:700;font-size:.8rem;">'+(pagado?'✅ Pagado':'⏳ Pendiente')+'</div>';
+    html+='</div>';
+
+    html+='<div class="form-card" style="margin-top:.75rem;">';
+    html+='<div class="resumen-row"><span class="resumen-key">Tarifa por hora</span><span class="resumen-val">$'+tarifa.toFixed(2)+'</span></div>';
+    html+='<div class="resumen-row"><span class="resumen-key">Total de horas</span><span class="resumen-val" style="color:var(--verde-mid);">'+totalHoras.toFixed(1)+' h</span></div>';
+    html+='</div>';
+
+    if(detalle.length){
+      html+='<div class="seccion-titulo" style="margin-top:1rem;">Detalle por día</div>';
+      html+=detalle.map(function(d){return '<div style="background:var(--blanco);border-radius:10px;padding:.6rem .75rem;font-size:.8rem;margin-bottom:.35rem;">'+d.texto+'</div>';}).join('');
+    } else {
+      html+='<div class="empty" style="margin-top:1rem;">Sin horas extra esta semana.</div>';
+    }
+
+    body.innerHTML=html;
+    var btnAnt=document.getElementById('pg-ext-ant');
+    if(btnAnt) btnAnt.addEventListener('click',function(){var d=new Date(lunes);d.setDate(d.getDate()-7);renderPagoHorasExtras(d);});
+    var btnSig=document.getElementById('pg-ext-sig');
+    if(btnSig) btnSig.addEventListener('click',function(){var d=new Date(lunes);d.setDate(d.getDate()+7);renderPagoHorasExtras(d);});
+  }).catch(function(e){body.innerHTML='<div class="empty">No se pudo calcular tus horas extra.<br/><span style="font-size:.7rem;color:var(--gris-3);">('+e.message+')</span></div><button class="btn-back" style="margin-top:1rem;" onclick="renderPagosMenu()">← Volver a Pagos</button>';});
+}
+
+function renderDebo(){
+  var body=document.getElementById('op-body');
+  body.innerHTML='<div class="seccion-titulo">📝 Debo</div><div class="loading">Cargando...</div>';
+  from('prestamos').select('*').eq('operario_id',usuario.id).eq('estado','activo').order('creado_en',{ascending:false}).get().then(function(prestamos){
+    if(!prestamos||!prestamos.length){
+      body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📝 Debo<button type="button" onclick="renderPagosMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Pagos</button></div><div class="empty">🎉 No tienes préstamos ni adelantos activos.</div>';
+      return;
+    }
+    var ids=prestamos.map(function(p){return p.id;});
+    from('prestamo_pagos').select('*').in('prestamo_id',ids).order('numero_pago',{ascending:true}).get().then(function(pagos){
+      var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📝 Debo<button type="button" onclick="renderPagosMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Pagos</button></div>';
+      html+='<p class="hint" style="margin-bottom:1rem;">Tienes '+prestamos.length+' préstamo(s) activo(s)</p>';
+      prestamos.forEach(function(p){
+        var pagosDe=pagos.filter(function(x){return x.prestamo_id===p.id;});
+        var pagados=pagosDe.filter(function(x){return x.estado==='descontado';});
+        var pendientes=pagosDe.filter(function(x){return x.estado==='pendiente';});
+        var restante=pendientes.reduce(function(s,x){return s+parseFloat(x.monto);},0);
+        var proximo=pendientes.sort(function(a,b){return a.semana_inicio.localeCompare(b.semana_inicio);})[0];
+        var numSemProx=proximo?numeroSemanaISO(new Date(proximo.semana_inicio+'T00:00:00')):null;
+        html+='<div class="form-card" style="margin-bottom:.75rem;"><div style="font-weight:800;font-size:.95rem;">'+p.concepto+'</div><div class="hint" style="margin:.2rem 0 .6rem;">Monto total: $'+parseFloat(p.monto_total).toFixed(2)+'</div>';
+        html+=pagosDe.map(function(pg){
+          var ns=numeroSemanaISO(new Date(pg.semana_inicio+'T00:00:00'));
+          var pagado=pg.estado==='descontado';
+          return '<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--gris-1);"><span>Pago '+pg.numero_pago+' de '+p.num_pagos+' · Sem '+ns+'</span><span style="font-weight:700;color:'+(pagado?'var(--verde-mid)':'var(--tierra)')+';">$'+parseFloat(pg.monto).toFixed(2)+' '+(pagado?'✅':'⏳')+'</span></div>';
+        }).join('');
+        html+='<div style="margin-top:.6rem;padding-top:.5rem;border-top:2px solid var(--gris-1);display:flex;justify-content:space-between;"><strong style="font-size:.85rem;">Resta por pagar</strong><strong style="font-size:.95rem;color:var(--tierra);">$'+restante.toFixed(2)+'</strong></div>';
+        if(proximo) html+='<div class="hint" style="margin-top:.2rem;">Próximo descuento: semana '+numSemProx+' ('+proximo.semana_inicio+')</div>';
+        html+='</div>';
+      });
+      body.innerHTML=html;
+    });
+  }).catch(function(e){body.innerHTML='<div class="empty">Error: '+e.message+'</div><button class="btn-back" style="margin-top:1rem;" onclick="renderPagosMenu()">← Volver a Pagos</button>';});
 }
 
 function renderAsistenciaMenu(){
@@ -2727,7 +2952,7 @@ function renderRendimientoOperario(){
     if(bonosCalificando.length){
       html+='<div class="seccion-titulo" style="margin-top:1rem;">🎁 Bonos activos que calificas</div>';
       html+=bonosCalificando.map(function(b){
-        return '<div class="tarea-card" style="border-left-color:var(--verde-mid);"><div class="tarea-title">'+(b.tipo==='equipo'?'🤝 Equipo':'👤 Individual')+' · '+(b.tipo_recompensa==='economico'?'💰 Económico':'🎁 En especie')+'</div><div class="tarea-meta">'+b.descripcion+'<br/>Vigente: '+b.periodo_inicio+' a '+b.periodo_fin+'</div></div>';
+        return '<div class="tarea-card" style="border-left-color:var(--verde-mid);"><div class="tarea-title">'+(b.tipo==='equipo'?'🤝 Equipo':'👤 Individual')+' · '+(b.tipo_recompensa==='economico'?'💰 Económico':'🎁 En especie')+(b.monto?' · $'+b.monto:'')+'</div><div class="tarea-meta">'+b.descripcion+'<br/>Vigente: '+b.periodo_inicio+' a '+b.periodo_fin+'</div></div>';
       }).join('');
     }
 
@@ -3033,12 +3258,17 @@ function renderConfig(){
     var users=r[0]||[], cfg={};
     (r[1]||[]).forEach(function(c){cfg[c.clave]=c.valor;});
     var html='<div class="seccion-titulo">📞 Números de emergencia</div><div class="form-card"><div class="form-group"><label>Policía</label><input type="tel" id="cfg-policia" value="'+(cfg.emergencia_policia||'911')+'"></div><div class="form-group"><label>Bomberos</label><input type="tel" id="cfg-bomberos" value="'+(cfg.emergencia_bomberos||'911')+'"></div><div class="form-group"><label>Ambulancia</label><input type="tel" id="cfg-ambulancia" value="'+(cfg.emergencia_ambulancia||'911')+'"></div><button class="btn-primary" id="cfg-guardar-emerg">Guardar números</button></div>';
+    html+='<div class="seccion-titulo" style="margin-top:1.25rem;">⏰ Tarifa de hora extra</div><div class="form-card"><div class="form-group"><label>Pago por hora extra ($)</label><input type="number" id="cfg-tarifa-extra" min="0" step="1" value="'+(cfg.tarifa_hora_extra||70)+'"></div><button class="btn-primary" id="cfg-guardar-tarifa">Guardar tarifa</button></div>';
     html+='<div class="seccion-titulo" style="margin-top:1.25rem;">📍 Ubicación del rancho</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Párate dentro del rancho con tu celular y toca el botón — se usa para avisar si alguien marca asistencia fuera de zona.</p>'+(cfg.rancho_lat?'<p class="hint" style="margin-bottom:.75rem;color:var(--verde-mid);font-weight:700;">✅ Ubicación guardada</p>':'<p class="hint" style="margin-bottom:.75rem;color:var(--tierra);font-weight:700;">⚠️ Aún no se ha definido</p>')+'<button class="btn-primary" id="cfg-fijar-ubicacion">📍 Usar mi ubicación actual</button><div class="form-group" style="margin-top:.9rem;"><label>Radio permitido (metros)</label><input type="number" id="cfg-radio" value="'+(cfg.rancho_radio_metros||800)+'"><button class="btn-sm btn-completar" id="cfg-guardar-radio" style="margin-top:.5rem;">Guardar radio</button></div></div>';
     html+='<div style="display:flex;justify-content:space-between;align-items:center;margin:1.25rem 0 1rem;"><div class="seccion-titulo" style="margin:0">Usuarios</div><button class="btn-sm btn-completar" onclick="renderNuevoUsuario()">+ Nuevo</button></div>';
     html+=users.map(function(u){
       return '<div class="orden-card" style="border-left-color:var(--verde-mid)"><div class="orden-header"><div class="orden-labor">'+u.nombre+'</div><span class="orden-badge-rol" style="'+( ROLE_COLORS[u.rol]||'background:#888;color:#fff')+'">'+( ROLES[u.rol]||u.rol)+'</span></div><div class="orden-actions"><button class="btn-sm btn-iniciar" onclick="renderEditarUsuario(\''+u.id+'\',\''+u.nombre+'\',\''+u.rol+'\','+(u.certificado_ambas?'true':'false')+')">Editar</button><button class="btn-sm btn-completar" onclick="renderCambiarPin(\''+u.id+'\',\''+u.nombre+'\')">Cambiar PIN</button>'+(u.activo?'<button class="btn-sm btn-cancelar" onclick="bajaUsuario(\''+u.id+'\')">Dar de baja</button>':'<button class="btn-sm btn-iniciar" onclick="altaUsuario(\''+u.id+'\')">Reactivar</button>')+'</div></div>';
     }).join('');
     body.innerHTML=html;
+    document.getElementById('cfg-guardar-tarifa').addEventListener('click',function(){
+      var tarifa=document.getElementById('cfg-tarifa-extra').value||70;
+      from('config_app').eq('clave','tarifa_hora_extra').update({valor:String(tarifa)}).then(function(){showToast('✅ Tarifa guardada');}).catch(function(e){alert('Error: '+e.message);});
+    });
     document.getElementById('cfg-fijar-ubicacion').addEventListener('click',function(){
       var btn=this; btn.disabled=true; btn.textContent='Obteniendo ubicación...';
       if(!navigator.geolocation){alert('Tu navegador no soporta ubicación.');btn.disabled=false;btn.textContent='📍 Usar mi ubicación actual';return;}
