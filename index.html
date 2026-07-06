@@ -428,6 +428,7 @@ function entrarSegunRol(){
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='dueño') document.getElementById('tab-permisos').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='dueño') document.getElementById('tab-alarmas').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='dueño') document.getElementById('tab-admin').style.display='';
+    if(usuario.rol==='admin'||usuario.rol==='dueño') document.getElementById('tab-admin').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='ingeniero') document.getElementById('tab-inventario').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='ingeniero') document.getElementById('tab-formulas').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='ingeniero') document.getElementById('tab-validar').style.display='';
@@ -1625,15 +1626,39 @@ function renderAlarmasRevision(){
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
+function renderAdministracionMenu(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo">🏛️ Administración</div><div class="labor-grid" style="grid-template-columns:repeat(2,1fr);">'+
+    '<div class="labor-tile" data-admin="empleados"><div class="labor-tile-ic">👥</div><div class="labor-tile-lbl">Empleados</div></div>'+
+    '<div class="labor-tile" data-admin="nominas"><div class="labor-tile-ic">💰</div><div class="labor-tile-lbl">Nóminas</div></div>'+
+    '<div class="labor-tile" data-admin="compras"><div class="labor-tile-ic">🛒</div><div class="labor-tile-lbl">Compras</div></div>'+
+    '<div class="labor-tile" data-admin="asistencias"><div class="labor-tile-ic">📋</div><div class="labor-tile-lbl">Control de Asistencias</div></div>'+
+  '</div>';
+  body.querySelector('[data-admin="nominas"]').addEventListener('click',renderNominasMenu);
+  body.querySelector('[data-admin="empleados"]').addEventListener('click',function(){body.innerHTML='<div class="empty">👥 Próximamente<br/>Aquí manejarás altas, bajas y contratos.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderAdministracionMenu()">← Volver a Administración</button>';});
+  body.querySelector('[data-admin="compras"]').addEventListener('click',function(){body.innerHTML='<div class="empty">🛒 Próximamente</div><button class="btn-back" style="margin-top:1rem;" onclick="renderAdministracionMenu()">← Volver a Administración</button>';});
+  body.querySelector('[data-admin="asistencias"]').addEventListener('click',function(){body.innerHTML='<div class="empty">📋 Próximamente</div><button class="btn-back" style="margin-top:1rem;" onclick="renderAdministracionMenu()">← Volver a Administración</button>';});
+}
+
+function renderNominasMenu(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">💰 Nóminas<button type="button" onclick="renderAdministracionMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Administración</button></div><div class="labor-grid" style="grid-template-columns:repeat(2,1fr);">'+
+    '<div class="labor-tile" data-nom="sueldos"><div class="labor-tile-ic">💵</div><div class="labor-tile-lbl">Sueldos</div></div>'+
+    '<div class="labor-tile" data-nom="bonos"><div class="labor-tile-ic">🎁</div><div class="labor-tile-lbl">Bonos</div></div>'+
+    '<div class="labor-tile" data-nom="prestamos"><div class="labor-tile-ic">📝</div><div class="labor-tile-lbl">Préstamos</div></div>'+
+    '<div class="labor-tile" data-nom="historial"><div class="labor-tile-ic">📊</div><div class="labor-tile-lbl">Historial nómina</div></div>'+
+  '</div>';
+  body.querySelector('[data-nom="sueldos"]').addEventListener('click',renderPagarSemanas);
+  body.querySelector('[data-nom="bonos"]').addEventListener('click',renderBonos);
+  body.querySelector('[data-nom="prestamos"]').addEventListener('click',renderPrestamos);
+  body.querySelector('[data-nom="historial"]').addEventListener('click',renderResumenNomina);
+}
+
 function renderPermisosRevision(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo">Permisos</div><div class="loading">Cargando...</div>';
   var headerHtml='<div class="seccion-titulo">Permisos</div><div style="display:flex;flex-wrap:wrap;gap:.4rem 1rem;margin-bottom:1rem;">'+
-    '<button type="button" onclick="renderResumenNomina()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">📊 Resumen nómina</button>'+
     '<button type="button" onclick="renderEvaluarComportamiento()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">🤝 Comportamiento</button>'+
-    (usuario.rol==='admin'||usuario.rol==='dueño'?'<button type="button" onclick="renderBonos()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">🎁 Bonos</button>':'')+
-    (usuario.rol==='admin'||usuario.rol==='dueño'?'<button type="button" onclick="renderPagarSemanas()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">💳 Pagar semana</button>':'')+
-    (usuario.rol==='admin'||usuario.rol==='dueño'?'<button type="button" onclick="renderPrestamos()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">📝 Préstamos</button>':'')+
   '</div>';
   from('permisos').select('*,operario:usuarios!usuario_id(nombre)').order('creado_en',{ascending:false}).get().then(function(rows){
     if(!rows||!rows.length){body.innerHTML=headerHtml+'<div class="empty">Sin solicitudes de permiso.</div>';return;}
@@ -1793,7 +1818,7 @@ function renderPerfilOperario(){
 
 function renderResumenNomina(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo">📊 Resumen de nómina</div><div class="loading">Calculando...</div>';
+  body.innerHTML='<div class="seccion-titulo">📊 Historial nómina</div><div class="loading">Calculando...</div>';
   var hoyD=new Date();
   var primerDiaMes=new Date(hoyD.getFullYear(),hoyD.getMonth(),1).toISOString().slice(0,10);
   var nombreMes=hoyD.toLocaleDateString('es-MX',{month:'long',year:'numeric'});
@@ -1819,7 +1844,7 @@ function renderResumenNomina(){
       Object.keys(porDia).forEach(function(f){var d=porDia[f];if(d.entrada&&d.salida) horasExtra+=(new Date(d.salida)-new Date(d.entrada))/3600000;});
       return '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+o.nombre+'</strong></div><div class="orden-meta" style="display:flex;gap:1rem;margin-top:.3rem;"><span>✅ '+resumen.trabajados+' trabajados</span><span style="color:var(--rojo);">❌ '+resumen.faltas+' faltas</span><span style="color:var(--tierra);">⏰ '+resumen.retardos+' retardos</span></div>'+(horasExtra>0?'<div class="orden-meta" style="margin-top:.2rem;">💰 '+horasExtra.toFixed(1)+' h extra</div>':'')+'</div>';
     }).join('');
-    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderAdministracionMenu()">← Volver a Administración</button>';
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderNominasMenu()">← Volver a Nóminas</button>';
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
@@ -1851,7 +1876,7 @@ function seleccionUnica(btn){
 
 function renderPagarSemanas(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo">💳 Pagar semana</div><div class="loading">Calculando...</div>';
+  body.innerHTML='<div class="seccion-titulo">💵 Sueldos</div><div class="loading">Calculando...</div>';
   var lunes=inicioDeSemana(new Date());
   var domingo=new Date(lunes); domingo.setDate(lunes.getDate()+6);
   var semanaInicio=lunes.toISOString().slice(0,10), semanaFin=domingo.toISOString().slice(0,10);
@@ -1868,7 +1893,7 @@ function renderPagarSemanas(){
     var tarifa=parseFloat(cfg.tarifa_hora_extra)||70;
     var estadoPorOp={}; estados.forEach(function(e){estadoPorOp[e.operario_id]=e;});
     var estadoExtraPorOp={}; estadosExtra.forEach(function(e){estadoExtraPorOp[e.operario_id]=e;});
-    var html='<div class="seccion-titulo">💳 Pagar semana '+numSemana+'</div><p class="hint" style="margin-bottom:1rem;">'+semanaInicio+' a '+semanaFin+' · Tarifa hora extra: $'+tarifa+'</p>';
+    var html='<div class="seccion-titulo">💵 Sueldos · Semana '+numSemana+'</div><p class="hint" style="margin-bottom:1rem;">'+semanaInicio+' a '+semanaFin+' · Tarifa hora extra: $'+tarifa+'</p>';
     if(!operarios.length){html+='<div class="empty">No hay operarios registrados.</div>';}
     html+=operarios.map(function(o){
       var regsOp=registros.filter(function(r){return r.usuario_id===o.id;});
@@ -1894,7 +1919,7 @@ function renderPagarSemanas(){
       (horasExtra>0?'<div style="border-top:1px dashed var(--gris-2);margin-top:.6rem;padding-top:.6rem;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:.8rem;font-weight:700;color:var(--tierra);">⏰ Horas extra: '+horasExtra.toFixed(1)+'h</span><span style="font-weight:800;color:'+(pagadoExtra?'var(--verde-mid)':'var(--tierra)')+';">$'+totalExtra.toFixed(2)+'</span></div>'+(pagadoExtra?'<button class="btn-sm btn-cancelar" data-despagarextra="'+o.id+'" style="margin-top:.4rem;">Marcar extra como pendiente</button>':'<button class="btn-sm btn-completar" data-pagarextra="'+o.id+'" data-totalextra="'+totalExtra+'" data-horasextra="'+horasExtra+'" style="margin-top:.4rem;">✅ Marcar extra como pagado</button>')+'</div>':'')+
       '</div>';
     }).join('');
-    body.innerHTML=html;
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderNominasMenu()">← Volver a Nóminas</button>';
     body.querySelectorAll('[data-pagar]').forEach(function(btn){
       btn.addEventListener('click',function(){
         var opId=this.dataset.pagar, total=parseFloat(this.dataset.total);
@@ -1941,7 +1966,7 @@ function renderPrestamos(){
   body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📝 Préstamos<button type="button" onclick="renderNuevoPrestamo()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo préstamo</button></div><div class="loading">Cargando...</div>';
   from('prestamos').select('*,operario:usuarios!operario_id(nombre)').order('creado_en',{ascending:false}).get().then(function(prestamos){
     var header='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📝 Préstamos<button type="button" onclick="renderNuevoPrestamo()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo préstamo</button></div>';
-    if(!prestamos||!prestamos.length){body.innerHTML=header+'<div class="empty">Sin préstamos registrados.</div>';return;}
+    if(!prestamos||!prestamos.length){body.innerHTML=header+'<div class="empty">Sin préstamos registrados.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderNominasMenu()">← Volver a Nóminas</button>';return;}
     var ids=prestamos.map(function(p){return p.id;});
     from('prestamo_pagos').select('*').in('prestamo_id',ids).order('numero_pago',{ascending:true}).get().then(function(pagos){
       var html=header;
@@ -1956,7 +1981,7 @@ function renderPrestamos(){
         }).join('');
         return '<div class="orden-card" style="border-left-color:'+(p.estado==='activo'?'var(--tierra)':'var(--gris-3)')+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(p.operario?p.operario.nombre:'')+' · '+p.concepto+'</strong><span style="font-size:.72rem;font-weight:700;color:'+(p.estado==='activo'?'var(--tierra)':'var(--verde-mid)')+';">'+(p.estado==='activo'?'Activo':'Liquidado')+'</span></div><div class="orden-meta">Total: $'+parseFloat(p.monto_total).toFixed(2)+' · Restante: $'+restante.toFixed(2)+'</div><div style="margin-top:.5rem;">'+filas+'</div></div>';
       }).join('');
-      body.innerHTML=html;
+      body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderNominasMenu()">← Volver a Nóminas</button>';
       body.querySelectorAll('[data-descontar]').forEach(function(btn){
         btn.addEventListener('click',function(){
           var pagoId=this.dataset.descontar, prestamoId=this.dataset.prestamo;
@@ -2014,12 +2039,12 @@ function renderBonos(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🎁 Bonos<button type="button" onclick="renderNuevoBono()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo bono</button></div><div class="loading">Cargando...</div>';
   from('bonos').select('*').order('creado_en',{ascending:false}).get().then(function(rows){
-    if(!rows||!rows.length){body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🎁 Bonos<button type="button" onclick="renderNuevoBono()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo bono</button></div><div class="empty">Sin bonos registrados.</div>';return;}
+    if(!rows||!rows.length){body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🎁 Bonos<button type="button" onclick="renderNuevoBono()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo bono</button></div><div class="empty">Sin bonos registrados.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderNominasMenu()">← Volver a Nóminas</button>';return;}
     var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🎁 Bonos<button type="button" onclick="renderNuevoBono()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo bono</button></div>';
     html+=rows.map(function(b){
       return '<div class="orden-card" style="border-left-color:'+(b.estado==='activo'?'var(--verde-mid)':'var(--gris-3)')+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(b.tipo==='equipo'?'🤝 Equipo':'👤 Individual')+' · '+(b.tipo_recompensa==='economico'?'💰 Económico':'🎁 En especie')+(b.monto?' · $'+b.monto:'')+'</strong><span style="font-size:.72rem;font-weight:700;color:'+(b.estado==='activo'?'var(--verde-mid)':'var(--gris-3)')+';">'+(b.estado==='activo'?'Activo':'Cerrado')+'</span></div><div class="orden-meta">'+b.descripcion+(b.umbral_minimo?'<br/>Requiere '+b.umbral_minimo+'/10 de rendimiento':'')+'<br/>📅 '+b.periodo_inicio+' a '+b.periodo_fin+'</div>'+(b.estado==='activo'?'<button class="btn-sm btn-cancelar" data-cerrar="'+b.id+'" style="margin-top:.5rem;">Cerrar bono</button>':'')+'</div>';
     }).join('');
-    body.innerHTML=html;
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderNominasMenu()">← Volver a Nóminas</button>';
     body.querySelectorAll('[data-cerrar]').forEach(function(btn){btn.addEventListener('click',function(){
       from('bonos').eq('id',this.dataset.cerrar).update({estado:'cerrado'}).then(function(){showToast('Bono cerrado');renderBonos();});
     });});
