@@ -186,7 +186,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <button class="tab active" id="tab-tablero" onclick="tabEncargado('tablero')">Tablero</button>
     <button class="tab" id="tab-asignar" onclick="tabEncargado('asignar')">+ Asignar</button>
     <button class="tab" id="tab-notif" onclick="tabEncargado('notif')">Avisos <span id="badge-avisos" style="display:none;background:var(--tierra);color:#fff;border-radius:50%;width:16px;height:16px;font-size:.6rem;font-weight:700;align-items:center;justify-content:center;margin-left:3px;vertical-align:middle;">0</span></button>
-    <button class="tab" id="tab-permisos" onclick="tabEncargado('permisos')" style="display:none">Permisos</button>
     <button class="tab" id="tab-alarmas" onclick="tabEncargado('alarmas')" style="display:none">🚨 Alarmas</button>
     <button class="tab" id="tab-admin" onclick="tabEncargado('admin')" style="display:none">🏛️ Administración</button>
     <button class="tab" id="tab-reporte" onclick="tabEncargado('reporte')">Reporte</button>
@@ -425,7 +424,6 @@ function entrarSegunRol(){
     document.getElementById('enc-nombre').textContent=usuario.nombre+' · '+usuario.rol;
     mostrar('screen-encargado');
     if(usuario.rol==='admin'||usuario.rol==='dueño') document.getElementById('tab-config').style.display='';
-    if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='dueño') document.getElementById('tab-permisos').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='dueño') document.getElementById('tab-alarmas').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='dueño') document.getElementById('tab-admin').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='dueño') document.getElementById('tab-admin').style.display='';
@@ -1635,9 +1633,21 @@ function renderAdministracionMenu(){
     '<div class="labor-tile" data-admin="asistencias"><div class="labor-tile-ic">📋</div><div class="labor-tile-lbl">Control de Asistencias</div></div>'+
   '</div>';
   body.querySelector('[data-admin="nominas"]').addEventListener('click',renderNominasMenu);
-  body.querySelector('[data-admin="empleados"]').addEventListener('click',function(){body.innerHTML='<div class="empty">👥 Próximamente<br/>Aquí manejarás altas, bajas y contratos.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderAdministracionMenu()">← Volver a Administración</button>';});
+  body.querySelector('[data-admin="empleados"]').addEventListener('click',renderEmpleadosMenu);
   body.querySelector('[data-admin="compras"]').addEventListener('click',function(){body.innerHTML='<div class="empty">🛒 Próximamente</div><button class="btn-back" style="margin-top:1rem;" onclick="renderAdministracionMenu()">← Volver a Administración</button>';});
   body.querySelector('[data-admin="asistencias"]').addEventListener('click',function(){body.innerHTML='<div class="empty">📋 Próximamente</div><button class="btn-back" style="margin-top:1rem;" onclick="renderAdministracionMenu()">← Volver a Administración</button>';});
+}
+
+function renderEmpleadosMenu(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">👥 Empleados<button type="button" onclick="renderAdministracionMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Administración</button></div><div class="labor-grid" style="grid-template-columns:repeat(2,1fr);">'+
+    '<div class="labor-tile" data-emp="altasbajas"><div class="labor-tile-ic">👤</div><div class="labor-tile-lbl">Altas y Bajas</div></div>'+
+    '<div class="labor-tile" data-emp="contratos"><div class="labor-tile-ic">📄</div><div class="labor-tile-lbl">Contratos</div></div>'+
+    '<div class="labor-tile" data-emp="permisos"><div class="labor-tile-ic">📋</div><div class="labor-tile-lbl">Permisos</div></div>'+
+  '</div>';
+  body.querySelector('[data-emp="altasbajas"]').addEventListener('click',renderAltasBajas);
+  body.querySelector('[data-emp="contratos"]').addEventListener('click',renderContratos);
+  body.querySelector('[data-emp="permisos"]').addEventListener('click',renderPermisosRevision);
 }
 
 function renderNominasMenu(){
@@ -1657,7 +1667,7 @@ function renderNominasMenu(){
 function renderPermisosRevision(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo">Permisos</div><div class="loading">Cargando...</div>';
-  var headerHtml='<div class="seccion-titulo">Permisos</div><div style="display:flex;flex-wrap:wrap;gap:.4rem 1rem;margin-bottom:1rem;">'+
+  var headerHtml='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Permisos<button type="button" onclick="renderEmpleadosMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Empleados</button></div><div style="display:flex;flex-wrap:wrap;gap:.4rem 1rem;margin-bottom:1rem;">'+
     '<button type="button" onclick="renderEvaluarComportamiento()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">🤝 Comportamiento</button>'+
   '</div>';
   from('permisos').select('*,operario:usuarios!usuario_id(nombre)').order('creado_en',{ascending:false}).get().then(function(rows){
@@ -1854,7 +1864,7 @@ function renderEvaluarComportamiento(){
   var hoyD=new Date();
   var primerDiaMes=new Date(hoyD.getFullYear(),hoyD.getMonth(),1).toISOString().slice(0,10);
   var ultimoDiaMes=new Date(hoyD.getFullYear(),hoyD.getMonth()+1,0).toISOString().slice(0,10);
-  body.innerHTML='<div class="seccion-titulo">🤝 Evaluar comportamiento</div><div class="form-card"><div class="form-group"><label>Colaborador</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Calificación (1 a 10)</label><input type="number" id="ev-calif" min="1" max="10" step="0.5" placeholder="Ej. 8.5"></div><div class="form-group"><label>Comentario (opcional)</label><input type="text" id="ev-comentario" placeholder="Ej. Buena actitud, apoya a sus compañeros..."></div><div class="form-group"><label>Periodo evaluado</label><div style="display:flex;gap:8px;"><input type="date" id="ev-desde" value="'+primerDiaMes+'"><input type="date" id="ev-hasta" value="'+ultimoDiaMes+'"></div></div><button class="btn-primary" id="ev-guardar">Guardar evaluación</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAdministracionMenu()">← Volver a Administración</button>';
+  body.innerHTML='<div class="seccion-titulo">🤝 Evaluar comportamiento</div><div class="form-card"><div class="form-group"><label>Colaborador</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Calificación (1 a 10)</label><input type="number" id="ev-calif" min="1" max="10" step="0.5" placeholder="Ej. 8.5"></div><div class="form-group"><label>Comentario (opcional)</label><input type="text" id="ev-comentario" placeholder="Ej. Buena actitud, apoya a sus compañeros..."></div><div class="form-group"><label>Periodo evaluado</label><div style="display:flex;gap:8px;"><input type="date" id="ev-desde" value="'+primerDiaMes+'"><input type="date" id="ev-hasta" value="'+ultimoDiaMes+'"></div></div><button class="btn-primary" id="ev-guardar">Guardar evaluación</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderPermisosRevision()">← Volver a Permisos</button>';
   document.getElementById('ev-guardar').addEventListener('click',function(){
     var opId=document.querySelector('.op-chip.sel');
     var calif=parseFloat(document.getElementById('ev-calif').value);
@@ -1864,7 +1874,7 @@ function renderEvaluarComportamiento(){
     var desde=document.getElementById('ev-desde').value, hasta=document.getElementById('ev-hasta').value;
     from('evaluaciones_comportamiento').insert({operario_id:opId.dataset.id,evaluado_por:usuario.id,periodo_inicio:desde,periodo_fin:hasta,calificacion:calif,comentario:comentario}).then(function(){
       showToast('✅ Evaluación guardada');
-      renderAdministracionMenu();
+      renderPermisosRevision();
     }).catch(function(e){alert('Error: '+e.message);});
   });
 }
@@ -3275,20 +3285,12 @@ window.addEventListener('online',function(){
 
 function renderConfig(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="loading">Cargando usuarios...</div>';
-  Promise.all([
-    from('usuarios').select('id,nombre,rol,activo,certificado_ambas').order('nombre').get(),
-    from('config_app').select('*').get()
-  ]).then(function(r){
-    var users=r[0]||[], cfg={};
-    (r[1]||[]).forEach(function(c){cfg[c.clave]=c.valor;});
+  body.innerHTML='<div class="loading">Cargando...</div>';
+  from('config_app').select('*').get().then(function(rows){
+    var cfg={}; (rows||[]).forEach(function(c){cfg[c.clave]=c.valor;});
     var html='<div class="seccion-titulo">📞 Números de emergencia</div><div class="form-card"><div class="form-group"><label>Policía</label><input type="tel" id="cfg-policia" value="'+(cfg.emergencia_policia||'911')+'"></div><div class="form-group"><label>Bomberos</label><input type="tel" id="cfg-bomberos" value="'+(cfg.emergencia_bomberos||'911')+'"></div><div class="form-group"><label>Ambulancia</label><input type="tel" id="cfg-ambulancia" value="'+(cfg.emergencia_ambulancia||'911')+'"></div><button class="btn-primary" id="cfg-guardar-emerg">Guardar números</button></div>';
     html+='<div class="seccion-titulo" style="margin-top:1.25rem;">⏰ Tarifa de hora extra</div><div class="form-card"><div class="form-group"><label>Pago por hora extra ($)</label><input type="number" id="cfg-tarifa-extra" min="0" step="1" value="'+(cfg.tarifa_hora_extra||70)+'"></div><button class="btn-primary" id="cfg-guardar-tarifa">Guardar tarifa</button></div>';
     html+='<div class="seccion-titulo" style="margin-top:1.25rem;">📍 Ubicación del rancho</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Párate dentro del rancho con tu celular y toca el botón — se usa para avisar si alguien marca asistencia fuera de zona.</p>'+(cfg.rancho_lat?'<p class="hint" style="margin-bottom:.75rem;color:var(--verde-mid);font-weight:700;">✅ Ubicación guardada</p>':'<p class="hint" style="margin-bottom:.75rem;color:var(--tierra);font-weight:700;">⚠️ Aún no se ha definido</p>')+'<button class="btn-primary" id="cfg-fijar-ubicacion">📍 Usar mi ubicación actual</button><div class="form-group" style="margin-top:.9rem;"><label>Radio permitido (metros)</label><input type="number" id="cfg-radio" value="'+(cfg.rancho_radio_metros||800)+'"><button class="btn-sm btn-completar" id="cfg-guardar-radio" style="margin-top:.5rem;">Guardar radio</button></div></div>';
-    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin:1.25rem 0 1rem;"><div class="seccion-titulo" style="margin:0">Usuarios</div><button class="btn-sm btn-completar" onclick="renderNuevoUsuario()">+ Nuevo</button></div>';
-    html+=users.map(function(u){
-      return '<div class="orden-card" style="border-left-color:var(--verde-mid)"><div class="orden-header"><div class="orden-labor">'+u.nombre+'</div><span class="orden-badge-rol" style="'+( ROLE_COLORS[u.rol]||'background:#888;color:#fff')+'">'+( ROLES[u.rol]||u.rol)+'</span></div><div class="orden-actions"><button class="btn-sm btn-iniciar" onclick="renderEditarUsuario(\''+u.id+'\',\''+u.nombre+'\',\''+u.rol+'\','+(u.certificado_ambas?'true':'false')+')">Editar</button><button class="btn-sm btn-completar" onclick="renderCambiarPin(\''+u.id+'\',\''+u.nombre+'\')">Cambiar PIN</button>'+(u.activo?'<button class="btn-sm btn-cancelar" onclick="bajaUsuario(\''+u.id+'\')">Dar de baja</button>':'<button class="btn-sm btn-iniciar" onclick="altaUsuario(\''+u.id+'\')">Reactivar</button>')+'</div></div>';
-    }).join('');
     body.innerHTML=html;
     document.getElementById('cfg-guardar-tarifa').addEventListener('click',function(){
       var tarifa=document.getElementById('cfg-tarifa-extra').value||70;
@@ -3321,9 +3323,52 @@ function renderConfig(){
   });
 }
 
+function renderAltasBajas(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="loading">Cargando usuarios...</div>';
+  from('usuarios').select('id,nombre,rol,activo,certificado_ambas').order('nombre').get().then(function(users){
+    var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">👥 Altas y Bajas<button class="btn-sm btn-completar" onclick="renderNuevoUsuario()">+ Nuevo</button></div>';
+    html+=users.map(function(u){
+      return '<div class="orden-card" style="border-left-color:var(--verde-mid)"><div class="orden-header"><div class="orden-labor">'+u.nombre+'</div><span class="orden-badge-rol" style="'+( ROLE_COLORS[u.rol]||'background:#888;color:#fff')+'">'+( ROLES[u.rol]||u.rol)+'</span></div><div class="orden-actions"><button class="btn-sm btn-iniciar" onclick="renderEditarUsuario(\''+u.id+'\',\''+u.nombre+'\',\''+u.rol+'\','+(u.certificado_ambas?'true':'false')+')">Editar</button><button class="btn-sm btn-completar" onclick="renderCambiarPin(\''+u.id+'\',\''+u.nombre+'\')">Cambiar PIN</button>'+(u.activo?'<button class="btn-sm btn-cancelar" onclick="bajaUsuario(\''+u.id+'\')">Dar de baja</button>':'<button class="btn-sm btn-iniciar" onclick="altaUsuario(\''+u.id+'\')">Reactivar</button>')+'</div></div>';
+    }).join('');
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderEmpleadosMenu()">← Volver a Empleados</button>';
+  });
+}
+
+function renderContratos(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="loading">Cargando contratos...</div>';
+  from('contratos').select('*,operario:usuarios!operario_id(nombre)').order('creado_en',{ascending:false}).get().then(function(rows){
+    var header='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📄 Contratos<button type="button" onclick="renderNuevoContrato()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo contrato</button></div>';
+    if(!rows||!rows.length){body.innerHTML=header+'<div class="empty">Sin contratos registrados.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderEmpleadosMenu()">← Volver a Empleados</button>';return;}
+    var html=header+rows.map(function(c){
+      return '<div class="orden-card" style="border-left-color:var(--verde-mid);"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(c.operario?c.operario.nombre:'')+'</strong><span style="font-size:.72rem;color:var(--gris-3);">'+(c.fecha_inicio||'')+'</span></div><div class="orden-meta">'+(c.tipo_contrato||'Sin tipo especificado')+(c.notas?'<br/>📝 '+c.notas:'')+(c.url_documento?'<br/><a href="'+c.url_documento+'" target="_blank" style="color:var(--verde-mid);font-weight:700;">📎 Ver documento</a>':'')+'</div></div>';
+    }).join('');
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderEmpleadosMenu()">← Volver a Empleados</button>';
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function renderNuevoContrato(){
+  var body=document.getElementById('enc-body');
+  var opO=cats.operarios.map(function(o){return '<button type="button" class="op-chip" data-id="'+o.id+'" onclick="seleccionUnica(this)">'+o.nombre+'</button>';}).join('');
+  body.innerHTML='<div class="seccion-titulo">+ Nuevo contrato</div><div class="form-card"><div class="form-group"><label>Colaborador</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Tipo de contrato</label><input type="text" id="ct-tipo" placeholder="Ej. Tiempo completo / Por temporada"></div><div class="form-group"><label>Fecha de inicio</label><input type="date" id="ct-fecha" value="'+new Date().toISOString().slice(0,10)+'"></div><div class="form-group"><label>URL del documento (opcional)</label><input type="text" id="ct-url" placeholder="Ej. https://tusitio.pages.dev/contratos/lalo.pdf"><p class="hint">Sube el PDF a tu repo (junto a index.html) y pega aquí el link completo.</p></div><div class="form-group"><label>Notas</label><input type="text" id="ct-notas" placeholder="Opcional..."></div><button class="btn-primary" id="ct-guardar">Guardar contrato</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderContratos()">← Volver a Contratos</button>';
+  document.getElementById('ct-guardar').addEventListener('click',function(){
+    var opBtn=document.querySelector('.op-chip.sel');
+    if(!opBtn){alert('Selecciona un colaborador.');return;}
+    var tipo=document.getElementById('ct-tipo').value||null;
+    var fecha=document.getElementById('ct-fecha').value||null;
+    var url=document.getElementById('ct-url').value||null;
+    var notas=document.getElementById('ct-notas').value||null;
+    from('contratos').insert({operario_id:opBtn.dataset.id,tipo_contrato:tipo,fecha_inicio:fecha,url_documento:url,notas:notas,creado_por:usuario.id}).then(function(){
+      showToast('✅ Contrato guardado');
+      renderContratos();
+    }).catch(function(e){alert('Error: '+e.message);});
+  });
+}
+
 function renderNuevoUsuario(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="form-card"><h3>Nuevo usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="nu-n" placeholder="Nombre completo"/></div><div class="form-group"><label>Rol</label><select id="nu-r"><option value="operario">Operario</option><option value="encargado">Encargado</option><option value="ingeniero">Ingeniero</option><option value="cosechador">Cosechador</option><option value="galerista">Galerista</option><option value="dueño">Dueño</option><option value="inversionista">Inversionista</option><option value="admin">Admin</option></select></div><div class="form-group"><label>PIN (4 dígitos)</label><input type="number" id="nu-p" placeholder="1234" min="0" max="9999"/></div><div class="nav-row"><button class="btn-back" onclick="renderConfig()">← Cancelar</button><button class="btn-next" onclick="guardarNuevoUsuario()">Guardar</button></div></div>';
+  body.innerHTML='<div class="form-card"><h3>Nuevo usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="nu-n" placeholder="Nombre completo"/></div><div class="form-group"><label>Rol</label><select id="nu-r"><option value="operario">Operario</option><option value="encargado">Encargado</option><option value="ingeniero">Ingeniero</option><option value="cosechador">Cosechador</option><option value="galerista">Galerista</option><option value="dueño">Dueño</option><option value="inversionista">Inversionista</option><option value="admin">Admin</option></select></div><div class="form-group"><label>PIN (4 dígitos)</label><input type="number" id="nu-p" placeholder="1234" min="0" max="9999"/></div><div class="nav-row"><button class="btn-back" onclick="renderAltasBajas()">← Cancelar</button><button class="btn-next" onclick="guardarNuevoUsuario()">Guardar</button></div></div>';
 }
 
 function guardarNuevoUsuario(){
@@ -3334,7 +3379,7 @@ function guardarNuevoUsuario(){
   from('usuarios').insert({nombre:nombre,rol:rol,activo:true}).then(function(data){
     var uid=Array.isArray(data)?data[0].id:data.id;
     api('/rest/v1/rpc/set_pin',{method:'POST',body:{p_usuario_id:uid,p_pin:pin}}).then(function(){
-      cargarCatalogos().then(function(){renderConfig();});
+      cargarCatalogos().then(function(){renderAltasBajas();});
     });
   }).catch(function(e){alert('Error: '+e.message);});
 }
@@ -3345,7 +3390,7 @@ function renderEditarUsuario(id,nombre,rol,certAmbas){
   from('usuarios').select('avatar_url,sueldo_base').eq('id',id).get().then(function(rows){
     var avatarUrl=(rows&&rows[0]&&rows[0].avatar_url)||'';
     var sueldoBase=(rows&&rows[0]&&rows[0].sueldo_base)||'';
-    body.innerHTML='<div class="form-card"><h3>Editar usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="eu-n" value="'+nombre+'"/></div><div class="form-group"><label>Rol</label><select id="eu-r"><option value="operario"'+(rol==='operario'?' selected':'')+'>Operario</option><option value="encargado"'+(rol==='encargado'?' selected':'')+'>Encargado</option><option value="ingeniero"'+(rol==='ingeniero'?' selected':'')+'>Ingeniero</option><option value="cosechador"'+(rol==='cosechador'?' selected':'')+'>Cosechador</option><option value="galerista"'+(rol==='galerista'?' selected':'')+'>Galerista</option><option value="dueño"'+(rol==='dueño'?' selected':'')+'>Dueño</option><option value="inversionista"'+(rol==='inversionista'?' selected':'')+'>Inversionista</option><option value="admin"'+(rol==='admin'?' selected':'')+'>Admin</option></select></div><div class="form-group"><label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:.85rem;"><input type="checkbox" id="eu-cert" '+(certAmbas?'checked':'')+' style="width:18px;height:18px;"> Certificado para Labores y Cosecha (ambas)</label></div><div class="form-group"><label>Sueldo base diario ($)</label><input type="number" id="eu-sueldo" min="0" step="1" value="'+sueldoBase+'" placeholder="Ej. 350"></div><div class="form-group"><label>URL de su Mootsilito personalizado (opcional)</label><input type="text" id="eu-avatar" value="'+avatarUrl.replace(/"/g,'&quot;')+'" placeholder="Ej. https://tusitio.pages.dev/avatares/lalo.png"><p class="hint">Sube la imagen a tu repo (junto a index.html) y pega aquí el link completo.</p></div><div class="nav-row"><button class="btn-back" onclick="renderConfig()">← Cancelar</button><button class="btn-next" onclick="guardarEditarUsuario(\''+id+'\')">Guardar</button></div></div>';
+    body.innerHTML='<div class="form-card"><h3>Editar usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="eu-n" value="'+nombre+'"/></div><div class="form-group"><label>Rol</label><select id="eu-r"><option value="operario"'+(rol==='operario'?' selected':'')+'>Operario</option><option value="encargado"'+(rol==='encargado'?' selected':'')+'>Encargado</option><option value="ingeniero"'+(rol==='ingeniero'?' selected':'')+'>Ingeniero</option><option value="cosechador"'+(rol==='cosechador'?' selected':'')+'>Cosechador</option><option value="galerista"'+(rol==='galerista'?' selected':'')+'>Galerista</option><option value="dueño"'+(rol==='dueño'?' selected':'')+'>Dueño</option><option value="inversionista"'+(rol==='inversionista'?' selected':'')+'>Inversionista</option><option value="admin"'+(rol==='admin'?' selected':'')+'>Admin</option></select></div><div class="form-group"><label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:.85rem;"><input type="checkbox" id="eu-cert" '+(certAmbas?'checked':'')+' style="width:18px;height:18px;"> Certificado para Labores y Cosecha (ambas)</label></div><div class="form-group"><label>Sueldo base diario ($)</label><input type="number" id="eu-sueldo" min="0" step="1" value="'+sueldoBase+'" placeholder="Ej. 350"></div><div class="form-group"><label>URL de su Mootsilito personalizado (opcional)</label><input type="text" id="eu-avatar" value="'+avatarUrl.replace(/"/g,'&quot;')+'" placeholder="Ej. https://tusitio.pages.dev/avatares/lalo.png"><p class="hint">Sube la imagen a tu repo (junto a index.html) y pega aquí el link completo.</p></div><div class="nav-row"><button class="btn-back" onclick="renderAltasBajas()">← Cancelar</button><button class="btn-next" onclick="guardarEditarUsuario(\''+id+'\')">Guardar</button></div></div>';
   });
 }
 
@@ -3355,22 +3400,22 @@ function guardarEditarUsuario(id){
   var avatarUrl=document.getElementById('eu-avatar').value.trim()||null;
   var sueldoBase=parseFloat(document.getElementById('eu-sueldo').value)||null;
   if(!nn){alert('El nombre es obligatorio.');return;}
-  from('usuarios').eq('id',id).update({nombre:nn,rol:nr,certificado_ambas:certAmbas,avatar_url:avatarUrl,sueldo_base:sueldoBase}).then(function(){cargarCatalogos().then(function(){renderConfig();});});
+  from('usuarios').eq('id',id).update({nombre:nn,rol:nr,certificado_ambas:certAmbas,avatar_url:avatarUrl,sueldo_base:sueldoBase}).then(function(){cargarCatalogos().then(function(){renderAltasBajas();});});
 }
 
 function renderCambiarPin(id,nombre){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="form-card"><h3>Cambiar PIN — '+nombre+'</h3><div class="form-group"><label>Nuevo PIN (4 dígitos)</label><input type="number" id="cp-p" placeholder="0000" min="0" max="9999"/></div><div class="nav-row"><button class="btn-back" onclick="renderConfig()">← Cancelar</button><button class="btn-next" onclick="guardarPin(\''+id+'\')">Guardar PIN</button></div></div>';
+  body.innerHTML='<div class="form-card"><h3>Cambiar PIN — '+nombre+'</h3><div class="form-group"><label>Nuevo PIN (4 dígitos)</label><input type="number" id="cp-p" placeholder="0000" min="0" max="9999"/></div><div class="nav-row"><button class="btn-back" onclick="renderAltasBajas()">← Cancelar</button><button class="btn-next" onclick="guardarPin(\''+id+'\')">Guardar PIN</button></div></div>';
 }
 
 function guardarPin(id){
   var pin=String(document.getElementById('cp-p').value).padStart(4,'0');
   if(pin.length!==4){alert('El PIN debe tener 4 dígitos.');return;}
-  api('/rest/v1/rpc/set_pin',{method:'POST',body:{p_usuario_id:id,p_pin:pin}}).then(function(){alert('PIN actualizado.');renderConfig();});
+  api('/rest/v1/rpc/set_pin',{method:'POST',body:{p_usuario_id:id,p_pin:pin}}).then(function(){alert('PIN actualizado.');renderAltasBajas();});
 }
 
-function bajaUsuario(id){if(confirm('¿Dar de baja?')) from('usuarios').eq('id',id).update({activo:false}).then(function(){renderConfig();});}
-function altaUsuario(id){from('usuarios').eq('id',id).update({activo:true}).then(function(){renderConfig();});}
+function bajaUsuario(id){if(confirm('¿Dar de baja?')) from('usuarios').eq('id',id).update({activo:false}).then(function(){renderAltasBajas();});}
+function altaUsuario(id){from('usuarios').eq('id',id).update({activo:true}).then(function(){renderAltasBajas();});}
 function usarCamara(){document.getElementById('cam-input').click();}
 function abrirGaleria(){document.getElementById('gal-input').click();}
 
