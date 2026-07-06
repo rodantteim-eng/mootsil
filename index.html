@@ -191,7 +191,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <button class="tab" id="tab-reporte" onclick="tabEncargado('reporte')">Reporte</button>
     <button class="tab" id="tab-inventario" onclick="tabEncargado('inventario')" style="display:none">Inventario</button>
     <button class="tab" id="tab-formulas" onclick="tabEncargado('formulas')" style="display:none">Fórmulas</button>
-    <button class="tab" id="tab-validar" onclick="tabEncargado('validar')" style="display:none">Validar</button>
     <button class="tab" id="tab-config" onclick="tabEncargado('config')" style="display:none">⚙️</button>
   </div>
   <div class="app-body" id="enc-body"><div class="loading">Cargando...</div></div>
@@ -424,12 +423,12 @@ function entrarSegunRol(){
     document.getElementById('enc-nombre').textContent=usuario.nombre+' · '+usuario.rol;
     mostrar('screen-encargado');
     if(usuario.rol==='admin'||usuario.rol==='dueño') document.getElementById('tab-config').style.display='';
-    if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='dueño') document.getElementById('tab-alarmas').style.display='';
+    if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='dueño'||usuario.rol==='ingeniero') document.getElementById('tab-alarmas').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='dueño') document.getElementById('tab-admin').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='dueño') document.getElementById('tab-admin').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='ingeniero') document.getElementById('tab-inventario').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='ingeniero') document.getElementById('tab-formulas').style.display='';
-    if(usuario.rol==='admin'||usuario.rol==='ingeniero') document.getElementById('tab-validar').style.display='';
+    
     renderTablero();
     setInterval(actualizarBadgeAvisos,15000);
     actualizarBadgeAvisos();
@@ -486,6 +485,45 @@ function tabEncargado(tab){
   else if(tab==='config') renderConfig();
 }
 
+function renderSolicitudesLabor(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo">🔧 Labores sugeridas por ingeniero</div><div class="loading">Cargando...</div>';
+  from('solicitudes_labor').select('*,tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre),creador:usuarios!creado_por(nombre)').order('creado_en',{ascending:false}).get().then(function(rows){
+    rows=rows||[];
+    var pendientes=rows.filter(function(s){return s.estado==='pendiente';});
+    var resueltas=rows.filter(function(s){return s.estado!=='pendiente';});
+    if(!rows.length){body.innerHTML='<div class="seccion-titulo">🔧 Labores sugeridas por ingeniero</div><div class="empty">Sin sugerencias registradas.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderTablero()">← Volver al Tablero</button>';return;}
+    function tarjeta(s){
+      var p=s.tabla?cats.plantaciones.find(function(x){return x.id===s.tabla.plantacion_id;}):null;
+      var estColor=s.estado==='pendiente'?'var(--tierra)':(s.estado==='programada'?'var(--verde-mid)':'var(--gris-3)');
+      var estLbl=s.estado==='pendiente'?'⏳ Pendiente':(s.estado==='programada'?'✅ Programada':'❌ Descartada');
+      var acciones=s.estado==='pendiente'?'<div style="display:flex;gap:8px;margin-top:.6rem;"><button class="btn-sm btn-completar" data-programar="'+s.id+'">✅ Marcar como programada</button><button class="btn-sm btn-iniciar" onclick="renderAsignarMenu()">🧰 Ir a Asignar</button><button class="btn-sm btn-cancelar" data-descartar="'+s.id+'">Descartar</button></div>':'';
+      return '<div class="orden-card" style="border-left-color:'+estColor+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(ICONOS[s.tipo_labor?s.tipo_labor.nombre:'']||'🔧')+' '+(s.tipo_labor?s.tipo_labor.nombre:'')+'</strong><span style="font-size:.72rem;font-weight:700;color:'+estColor+';">'+estLbl+'</span></div><div class="orden-meta">📍 '+(p?p.nombre:'')+' · '+(s.tabla?s.tabla.nombre:'')+'<br/>📝 '+s.descripcion+'<br/>👤 Sugerida por '+(s.creador?s.creador.nombre:'')+'</div>'+acciones+'</div>';
+    }
+    var html='<div class="seccion-titulo">🔧 Labores sugeridas por ingeniero</div>';
+    if(pendientes.length) html+=pendientes.map(tarjeta).join('');
+    if(resueltas.length) html+='<div class="seccion-titulo" style="margin-top:1rem;">Resueltas</div>'+resueltas.map(tarjeta).join('');
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderTablero()">← Volver al Tablero</button>';
+    body.querySelectorAll('[data-programar]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        from('solicitudes_labor').eq('id',this.dataset.programar).update({estado:'programada',programada_por:usuario.id,programada_en:new Date().toISOString()}).then(function(){
+          showToast('✅ Marcada como programada');
+          renderSolicitudesLabor();
+        }).catch(function(e){alert('Error: '+e.message);});
+      });
+    });
+    body.querySelectorAll('[data-descartar]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        if(!confirm('¿Descartar esta sugerencia?')) return;
+        from('solicitudes_labor').eq('id',this.dataset.descartar).update({estado:'descartada'}).then(function(){
+          showToast('Descartada');
+          renderSolicitudesLabor();
+        }).catch(function(e){alert('Error: '+e.message);});
+      });
+    });
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
 function renderTablero(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="loading">Cargando tablero...</div>';
@@ -495,9 +533,10 @@ function renderTablero(){
     from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre),subtipo:subtipos_labor(nombre)').order('creado_en',{ascending:false}).get(),
     from('formulas_aplicacion').select('id,nombre,fecha_programada,tabla_id').eq('activo',true).get(),
     from('ordenes_trabajo').select('formula_id').not('formula_id','is','null').get(),
-    from('permisos').select('id').eq('estado','pendiente').get()
+    from('permisos').select('id').eq('estado','pendiente').get(),
+    from('solicitudes_labor').select('id').eq('estado','pendiente').get()
   ]).then(function(r){
-    var todas=r[0]||[], formulas=r[1]||[], ordenesConFormula=r[2]||[], permisosPendientes=r[3]||[];
+    var todas=r[0]||[], formulas=r[1]||[], ordenesConFormula=r[2]||[], permisosPendientes=r[3]||[], solicitudesPendientes=r[4]||[];
     var asignadas={};
     ordenesConFormula.forEach(function(o){asignadas[o.formula_id]=true;});
     var pendientesFormula=formulas.filter(function(f){return f.fecha_programada&&f.fecha_programada<=en7dias&&!asignadas[f.id];});
@@ -505,6 +544,9 @@ function renderTablero(){
     var avisoHtml='';
     if(permisosPendientes.length){
       avisoHtml+='<div style="background:var(--tierra-tenue);border:1.5px solid var(--tierra);border-radius:var(--radio-sm);padding:.85rem;margin-bottom:1rem;cursor:pointer;" id="aviso-permisos-pendientes"><strong style="color:var(--tierra);">📝 '+permisosPendientes.length+' solicitud(es) de permiso pendiente(s)</strong><div class="hint" style="margin-top:.25rem;">Toca para revisarlas y aprobar/rechazar</div></div>';
+    }
+    if(solicitudesPendientes.length){
+      avisoHtml+='<div style="background:var(--tierra-tenue);border:1.5px solid var(--tierra);border-radius:var(--radio-sm);padding:.85rem;margin-bottom:1rem;cursor:pointer;" id="aviso-solicitudes-labor"><strong style="color:var(--tierra);">🔧 '+solicitudesPendientes.length+' labor(es) sugerida(s) por ingeniero</strong><div class="hint" style="margin-top:.25rem;">Toca para revisarlas y programarlas</div></div>';
     }
     if(pendientesFormula.length){
       avisoHtml+='<div style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);border-radius:var(--radio-sm);padding:.85rem;margin-bottom:1rem;cursor:pointer;" id="aviso-aplic-pendientes"><strong style="color:var(--rojo);">🧪 '+pendientesFormula.length+' aplicación(es) programada(s)'+(hoyN?' — '+hoyN+' para HOY':' esta semana')+' sin asignar</strong><div class="hint" style="margin-top:.25rem;">Toca para ir a asignarlas</div></div>';
@@ -522,7 +564,9 @@ function renderTablero(){
     }
     body.innerHTML=html;
     var avisoPermisosEl=document.getElementById('aviso-permisos-pendientes');
-    if(avisoPermisosEl) avisoPermisosEl.addEventListener('click',function(){tabEncargado('permisos');});
+    if(avisoPermisosEl) avisoPermisosEl.addEventListener('click',renderPermisosRevision);
+    var avisoSolicitudesEl=document.getElementById('aviso-solicitudes-labor');
+    if(avisoSolicitudesEl) avisoSolicitudesEl.addEventListener('click',renderSolicitudesLabor);
     var avisoEl=document.getElementById('aviso-aplic-pendientes');
     if(avisoEl) avisoEl.addEventListener('click',function(){
       ['tablero','asignar','notif','reporte','inventario','formulas','validar','config'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
@@ -1134,8 +1178,50 @@ var BOMBA_LABELS={'inyeccion':'Bomba Inyección','motor':'Bomba Motor','manual':
 var formulaVia=null, formulaCategoria=null, formulaBombas=[], formulaCompRows=[], formulaCompSeq=0, formulaEditId=null, formulaVolverAResumen=false;
 var formulaPlantacionId=null, formulaTablaId=null;
 
-function headerFormulas(){
-  return '<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Fórmulas<div><button type="button" onclick="renderFormulasFaltantes()" style="border:none;background:none;color:var(--rojo);font-size:.78rem;font-weight:600;cursor:pointer;margin-right:.75rem;">⚠️ Faltantes</button><button type="button" onclick="renderFormulaForm()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nueva fórmula</button></div></div>';
+function headerFormulas(pendientesValidar){
+  var badge=pendientesValidar?(' ('+pendientesValidar+')'):'';
+  return '<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4rem;">Fórmulas<div><button type="button" onclick="renderValidar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;margin-right:.75rem;">✅ Validar'+badge+'</button><button type="button" onclick="renderFormulasFaltantes()" style="border:none;background:none;color:var(--rojo);font-size:.78rem;font-weight:600;cursor:pointer;margin-right:.75rem;">⚠️ Faltantes</button><button type="button" onclick="renderSolicitarLabor()" style="border:none;background:none;color:var(--tierra);font-size:.78rem;font-weight:600;cursor:pointer;margin-right:.75rem;">📋 Solicitar labor</button><button type="button" onclick="renderFormulaForm()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nueva fórmula</button></div></div>';
+}
+
+function renderSolicitarLabor(){
+  var body=document.getElementById('enc-body');
+  var pO=cats.plantaciones.map(function(p){return '<option value="'+p.id+'">'+p.nombre+'</option>';}).join('');
+  body.innerHTML='<div class="seccion-titulo">📋 Solicitar labor</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Esto no asigna la labor directamente — le avisa a encargado/admin/dueño para que la programen y la asignen a un operario.</p><div class="form-group"><label>Plantación</label><select id="sl-plantacion">'+pO+'</select></div><div class="form-group"><label>Tabla</label><select id="sl-tabla"><option value="">Selecciona plantación primero</option></select></div><div class="form-group"><label>Tipo de labor</label><div class="labor-grid" id="sl-labor-grid" style="grid-template-columns:repeat(3,1fr);"></div></div><div class="form-group"><label>Descripción</label><textarea id="sl-desc" rows="3" placeholder="Ej. Poda selectiva urgente, se ven ramas secas en surcos 10-20" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="sl-guardar">Enviar solicitud</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulas()">← Volver a fórmulas</button>';
+  var tipoSel=null;
+  var laborGrid=document.getElementById('sl-labor-grid');
+  laborGrid.innerHTML=cats.tiposLabor.filter(function(l){return !l.es_cosecha;}).map(function(l){
+    return '<div class="labor-tile" data-labid="'+l.id+'" style="padding:.5rem .3rem;"><div class="labor-tile-ic" style="font-size:1.2rem;">'+(ICONOS[l.nombre]||'🔧')+'</div><div class="labor-tile-lbl" style="font-size:.65rem;">'+l.nombre+'</div></div>';
+  }).join('');
+  laborGrid.querySelectorAll('[data-labid]').forEach(function(el){
+    el.addEventListener('click',function(){
+      laborGrid.querySelectorAll('[data-labid]').forEach(function(x){x.classList.remove('labor-tile-otra');});
+      this.classList.add('labor-tile-otra');
+      tipoSel=this.dataset.labid;
+    });
+  });
+  function pintarTablasSolicitud(){
+    var plId=document.getElementById('sl-plantacion').value;
+    var tabs=cats.tablas.filter(function(t){return t.plantacion_id===plId;});
+    document.getElementById('sl-tabla').innerHTML='<option value="">Selecciona...</option>'+tabs.map(function(t){return '<option value="'+t.id+'">'+t.nombre+'</option>';}).join('');
+  }
+  document.getElementById('sl-plantacion').addEventListener('change',pintarTablasSolicitud);
+  pintarTablasSolicitud();
+  document.getElementById('sl-guardar').addEventListener('click',function(){
+    var tablaId=document.getElementById('sl-tabla').value;
+    var desc=document.getElementById('sl-desc').value.trim();
+    if(!tablaId){alert('Selecciona la tabla.');return;}
+    if(!tipoSel){alert('Selecciona el tipo de labor.');return;}
+    if(!desc){alert('Describe la labor sugerida.');return;}
+    var btn=this; btn.disabled=true; btn.textContent='Enviando...';
+    var lb=cats.tiposLabor.find(function(l){return l.id===tipoSel;});
+    var tb=cats.tablas.find(function(t){return t.id===tablaId;});
+    from('solicitudes_labor').insert({creado_por:usuario.id,tabla_id:tablaId,tipo_labor_id:tipoSel,descripcion:desc,estado:'pendiente'}).then(function(){
+      return from('notificaciones').insert({titulo:'📋 Labor sugerida por ingeniero',cuerpo:usuario.nombre+' sugiere '+(lb?lb.nombre:'')+' en '+(tb?tb.nombre:'')+': '+desc,icono:'📋',leida:false,para_rol:'encargado'});
+    }).then(function(){
+      showToast('✅ Solicitud enviada a encargado/admin/dueño');
+      renderFormulas();
+    }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Enviar solicitud';});
+  });
 }
 
 function renderFormulas(){
@@ -1143,11 +1229,12 @@ function renderFormulas(){
   body.innerHTML=headerFormulas()+'<div class="loading">Cargando fórmulas...</div>';
   Promise.all([
     from('formulas_aplicacion').select('*,tabla:tablas(nombre,plantacion_id),creador:usuarios!creado_por(nombre)').eq('activo',true).order('fecha_programada').get(),
-    from('formula_componentes').select('*,item:inventario_items(nombre,unidad,stock_actual),autorizador:usuarios!autorizado_por(nombre)').get()
+    from('formula_componentes').select('*,item:inventario_items(nombre,unidad,stock_actual),autorizador:usuarios!autorizado_por(nombre)').get(),
+    from('ordenes_trabajo').select('id').eq('validado_ingeniero',false).not('formula_id','is','null').get()
   ]).then(function(r){
-    var rows=r[0]||[], todosComps=r[1]||[];
-    if(!rows.length){body.innerHTML=headerFormulas()+'<div class="empty">🧪 Aún no hay fórmulas registradas.</div>';return;}
-    var html=headerFormulas();
+    var rows=r[0]||[], todosComps=r[1]||[], pendValidar=(r[2]||[]).length;
+    if(!rows.length){body.innerHTML=headerFormulas(pendValidar)+'<div class="empty">🧪 Aún no hay fórmulas registradas.</div>';return;}
+    var html=headerFormulas(pendValidar);
     html+=rows.map(function(f){
       var bombasTxt=(f.bombas_compatibles||[]).map(function(b){return BOMBA_ICONOS[b]+' '+(BOMBA_LABELS[b]||b);}).join(', ');
       var p=f.tabla?cats.plantaciones.find(function(x){return x.id===f.tabla.plantacion_id;}):null;
@@ -2415,15 +2502,15 @@ function renderAsignarExtra(lb){
 
 function renderValidar(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo">Validar aplicaciones</div><div class="loading">Cargando...</div>';
+  body.innerHTML='<div class="seccion-titulo">✅ Validar aplicaciones</div><div class="loading">Cargando...</div>';
   from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id),formula:formulas_aplicacion(nombre,via,categoria),operario:usuarios!operario_id(nombre),asignador:usuarios!asignado_por(nombre)').eq('validado_ingeniero',false).not('formula_id','is','null').order('creado_en',{ascending:false}).get().then(function(rows){
-    if(!rows||!rows.length){body.innerHTML='<div class="seccion-titulo">Validar aplicaciones</div><div class="empty">✅ No hay aplicaciones pendientes de validar.</div>';return;}
-    var html='<div class="seccion-titulo">Validar aplicaciones <span style="font-size:.75rem;color:var(--gris-3);font-weight:600;">('+rows.length+' pendientes)</span></div>';
+    if(!rows||!rows.length){body.innerHTML='<div class="seccion-titulo">✅ Validar aplicaciones</div><div class="empty">✅ No hay aplicaciones pendientes de validar.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulas()">← Volver a fórmulas</button>';return;}
+    var html='<div class="seccion-titulo">✅ Validar aplicaciones <span style="font-size:.75rem;color:var(--gris-3);font-weight:600;">('+rows.length+' pendientes)</span></div>';
     html+=rows.map(function(o){
       var p=cats.plantaciones.find(function(x){return x.id===o.tabla.plantacion_id;});
       return '<div class="orden-card" data-oid="'+o.id+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem">'+(o.formula?o.formula.nombre:'')+'</strong><span style="font-size:.72rem;color:var(--gris-3)">'+(o.formula?o.formula.via:'')+'</span></div><div class="orden-meta">📍 '+(p?p.nombre:'')+' · '+o.tabla.nombre+'<br>👤 Asignó: '+(o.asignador?o.asignador.nombre:'')+' · Operario: '+(o.operario?o.operario.nombre:'')+'<br>💧 '+numFmt(o.volumen_aplicado_litros)+' L con '+(BOMBA_LABELS[o.bomba_usada]||o.bomba_usada)+' · 📅 '+o.fecha_asignacion+'</div><button type="button" class="btn-sm btn-completar" data-validar="'+o.id+'" style="margin-top:.5rem;">✅ Validar</button></div>';
     }).join('');
-    body.innerHTML=html;
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderFormulas()">← Volver a fórmulas</button>';
     body.querySelectorAll('[data-validar]').forEach(function(btn){
       btn.addEventListener('click',function(){
         var oid=this.dataset.validar;
