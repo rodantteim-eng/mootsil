@@ -183,7 +183,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <button class="btn-salir" onclick="salir()">Salir</button>
   </div>
   <div class="tabs">
-    <button class="tab active" id="tab-tablero" onclick="tabEncargado('tablero')">Tablero</button>
+    <button class="tab" id="tab-tablero" onclick="tabEncargado('tablero')" style="display:none">Tablero</button>
     <button class="tab" id="tab-asignar" onclick="tabEncargado('asignar')" style="display:none">+ Asignar</button>
     <button class="tab" id="tab-notif" onclick="tabEncargado('notif')">Avisos <span id="badge-avisos" style="display:none;background:var(--tierra);color:#fff;border-radius:50%;width:16px;height:16px;font-size:.6rem;font-weight:700;align-items:center;justify-content:center;margin-left:3px;vertical-align:middle;">0</span></button>
     <button class="tab" id="tab-alarmas" onclick="tabEncargado('alarmas')" style="display:none">🚨 Alarmas</button>
@@ -422,6 +422,7 @@ function entrarSegunRol(){
   } else {
     document.getElementById('enc-nombre').textContent=usuario.nombre+' · '+usuario.rol;
     mostrar('screen-encargado');
+    if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='dueño') document.getElementById('tab-tablero').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='dueño') document.getElementById('tab-asignar').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='dueño') document.getElementById('tab-config').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='dueño'||usuario.rol==='ingeniero') document.getElementById('tab-alarmas').style.display='';
@@ -429,8 +430,13 @@ function entrarSegunRol(){
     if(usuario.rol==='admin'||usuario.rol==='dueño') document.getElementById('tab-admin').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='ingeniero') document.getElementById('tab-inventario').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='ingeniero') document.getElementById('tab-formulas').style.display='';
-    
-    renderTablero();
+
+    if(usuario.rol==='ingeniero'){
+      tabEncargado('formulas');
+    } else {
+      document.getElementById('tab-tablero').classList.add('active');
+      renderTablero();
+    }
     setInterval(actualizarBadgeAvisos,15000);
     actualizarBadgeAvisos();
   }
@@ -525,6 +531,7 @@ function renderSolicitudesLabor(){
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
+var TABLERO_FILTRO=null;
 function renderTablero(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="loading">Cargando tablero...</div>';
@@ -555,15 +562,28 @@ function renderTablero(){
     var pend=todas.filter(function(o){return o.estado==='pendiente';}).length;
     var enP=todas.filter(function(o){return o.estado==='en_proceso';}).length;
     var comp=todas.filter(function(o){return o.estado==='completada';}).length;
-    var html=avisoHtml+'<div class="stats-row"><div class="stat-card"><div class="stat-num stat-am">'+pend+'</div><div class="stat-lbl">Pendientes</div></div><div class="stat-card"><div class="stat-num stat-vd">'+enP+'</div><div class="stat-lbl">En proceso</div></div><div class="stat-card"><div class="stat-num stat-az">'+comp+'</div><div class="stat-lbl">Completadas</div></div></div>';
-    if(!todas.length){html+='<div class="empty">Sin órdenes. Toca "+ Asignar" para crear una.</div>';}
-    else{
+    var html=avisoHtml+'<div class="stats-row"><div class="stat-card" data-filtro="pendiente" style="cursor:pointer;'+(TABLERO_FILTRO==='pendiente'?'box-shadow:0 0 0 2px var(--tierra) inset;':'')+'"><div class="stat-num stat-am">'+pend+'</div><div class="stat-lbl">Pendientes</div></div><div class="stat-card" data-filtro="en_proceso" style="cursor:pointer;'+(TABLERO_FILTRO==='en_proceso'?'box-shadow:0 0 0 2px var(--verde-mid) inset;':'')+'"><div class="stat-num stat-vd">'+enP+'</div><div class="stat-lbl">En proceso</div></div><div class="stat-card" data-filtro="completada" style="cursor:pointer;'+(TABLERO_FILTRO==='completada'?'box-shadow:0 0 0 2px #2980b9 inset;':'')+'"><div class="stat-num stat-az">'+comp+'</div><div class="stat-lbl">Completadas</div></div></div>';
+    if(TABLERO_FILTRO) html+='<p class="hint" style="margin-bottom:.5rem;">Filtrando por: <strong>'+(TABLERO_FILTRO==='pendiente'?'Pendientes':TABLERO_FILTRO==='en_proceso'?'En proceso':'Completadas')+'</strong> · <a href="#" id="tablero-quitar-filtro" style="color:var(--verde-mid);">Quitar filtro</a></p>';
+    var listado=TABLERO_FILTRO?todas.filter(function(o){return o.estado===TABLERO_FILTRO;}):todas;
+    if(!listado.length){html+='<div class="empty">'+(TABLERO_FILTRO?'Sin órdenes en este estado.':'Sin órdenes. Toca "+ Asignar" para crear una.')+'</div>';}
+    else if(TABLERO_FILTRO){
+      html+=listado.map(cardHtml).join('');
+    } else {
       var act=todas.filter(function(o){return o.estado!=='completada'&&o.estado!=='cancelada';});
       var cer=todas.filter(function(o){return o.estado==='completada'||o.estado==='cancelada';});
       if(act.length) html+='<div class="seccion-titulo">Activas</div>'+act.map(cardHtml).join('');
       if(cer.length) html+='<div class="seccion-titulo" style="margin-top:1rem">Cerradas</div>'+cer.map(cardHtml).join('');
     }
     body.innerHTML=html;
+    body.querySelectorAll('[data-filtro]').forEach(function(el){
+      el.addEventListener('click',function(){
+        var f=this.dataset.filtro;
+        TABLERO_FILTRO=(TABLERO_FILTRO===f)?null:f;
+        renderTablero();
+      });
+    });
+    var quitarFiltroEl=document.getElementById('tablero-quitar-filtro');
+    if(quitarFiltroEl) quitarFiltroEl.addEventListener('click',function(e){e.preventDefault();TABLERO_FILTRO=null;renderTablero();});
     var avisoPermisosEl=document.getElementById('aviso-permisos-pendientes');
     if(avisoPermisosEl) avisoPermisosEl.addEventListener('click',renderPermisosRevision);
     var avisoSolicitudesEl=document.getElementById('aviso-solicitudes-labor');
