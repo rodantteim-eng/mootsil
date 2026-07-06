@@ -937,6 +937,12 @@ function renderInventario(){
 }
 
 function numFmt(n){n=parseFloat(n)||0;return (Math.round(n*100)/100).toString();}
+function fmtAmigable(cantidad,unidad){
+  cantidad=parseFloat(cantidad)||0;
+  if(unidad==='kg'&&cantidad<1) return numFmt(cantidad*1000)+' gr';
+  if(unidad==='litros'&&cantidad<1) return numFmt(cantidad*1000)+' ml';
+  return numFmt(cantidad)+' '+unidad;
+}
 
 function renderInventarioNuevo(){
   var body=document.getElementById('enc-body');
@@ -1224,7 +1230,8 @@ function renderFormulasFaltantes(){
     if(!rows.length){body.innerHTML=header+'<div class="empty">🎉 Ninguna fórmula tiene faltante de producto pendiente.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulas()">← Volver a fórmulas</button>';return;}
     var html=header+rows.map(function(c){
       var autorizado=c.estado_faltante==='autorizado';
-      return '<div class="orden-card" style="border-left-color:'+(autorizado?'var(--verde-mid)':'var(--rojo)')+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(c.formula?c.formula.nombre:'')+'</strong><span style="font-size:.72rem;font-weight:700;color:'+(autorizado?'var(--verde-mid)':'var(--rojo)')+';">'+(autorizado?'✅ Autorizado':'⚠️ Pendiente')+'</span></div><div class="orden-meta">Componente: '+(c.item?c.item.nombre:'')+'<br/>Requiere: '+numFmt(c.cantidad_base)+' '+(c.item?c.item.unidad:'')+' · Disponible: '+numFmt(c.item?c.item.stock_actual:0)+' '+(c.item?c.item.unidad:'')+'<br/>Falta: <strong style="color:var(--rojo);">'+numFmt(c.faltante_detectado)+' '+(c.item?c.item.unidad:'')+'</strong>'+(c.formula&&c.formula.fecha_programada?'<br/>📅 Programada: '+c.formula.fecha_programada:'')+'</div>'+(autorizado?'':'<div style="display:flex;gap:8px;margin-top:.6rem;"><button class="btn-sm btn-completar" data-autorizar="'+c.id+'">✅ Autorizar de todas formas</button><button class="btn-sm btn-iniciar" data-cambiar="'+c.id+'" data-formula="'+c.formula_id+'">🔄 Cambiar producto</button></div>')+'</div>';
+      var unidadItem=c.item?c.item.unidad:'';
+      return '<div class="orden-card" style="border-left-color:'+(autorizado?'var(--verde-mid)':'var(--rojo)')+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(c.formula?c.formula.nombre:'')+'</strong><span style="font-size:.72rem;font-weight:700;color:'+(autorizado?'var(--verde-mid)':'var(--rojo)')+';">'+(autorizado?'✅ Autorizado':'⚠️ Pendiente')+'</span></div><div class="orden-meta">Componente: '+(c.item?c.item.nombre:'')+'<br/>Requiere: '+fmtAmigable(c.cantidad_base,unidadItem)+' · Disponible: '+fmtAmigable(c.item?c.item.stock_actual:0,unidadItem)+'<br/>Falta: <strong style="color:var(--rojo);">'+fmtAmigable(c.faltante_detectado,unidadItem)+'</strong>'+(c.formula&&c.formula.fecha_programada?'<br/>📅 Programada: '+c.formula.fecha_programada:'')+'</div>'+(autorizado?'':'<div style="display:flex;gap:8px;margin-top:.6rem;"><button class="btn-sm btn-completar" data-autorizar="'+c.id+'">✅ Autorizar de todas formas</button><button class="btn-sm btn-iniciar" data-cambiar="'+c.id+'" data-formula="'+c.formula_id+'">🔄 Cambiar producto</button></div>')+'</div>';
     }).join('');
     body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderFormulas()">← Volver a fórmulas</button>';
     body.querySelectorAll('[data-autorizar]').forEach(function(btn){
@@ -1499,8 +1506,8 @@ function renderFormulaPasoNotas(){
     var stock=it?it.stock_actual:0;
     var falta=c.cantidad-stock;
     var alerta='';
-    if(falta>0){faltantes.push({nombre:c.nombre,falta:falta,unidad:c.unidad});alerta=' · <span style="color:var(--rojo);font-weight:700;">⚠️ faltan '+numFmt(falta)+' '+c.unidad+'</span>';}
-    return c.nombre+' · '+c.cantidad+' '+c.unidad+' (hay '+numFmt(stock)+')'+alerta;
+    if(falta>0){faltantes.push({nombre:c.nombre,falta:falta,unidad:c.unidad});alerta=' · <span style="color:var(--rojo);font-weight:700;">⚠️ faltan '+fmtAmigable(falta,c.unidad)+'</span>';}
+    return c.nombre+' · '+fmtAmigable(c.cantidad,c.unidad)+' (hay '+fmtAmigable(stock,c.unidad)+')'+alerta;
   }).join('<br>');
   var fechaTxt=window._formulaFechaExistente||'';
   var alertaHtml='';
