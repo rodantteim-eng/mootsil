@@ -1419,7 +1419,8 @@ function pintarFormulaCompList(){
         box.style.display='none';
         var it=cats.inventario.find(function(x){return x.id===this.value;}.bind(this));
         row.item_id=this.value||null; row.nombre=it?it.nombre:''; row.unidad=it?it.unidad:'';
-        cont.querySelector('.fcomp-unidad-lbl[data-row="'+rid+'"]').textContent=row.unidad;
+        row.unidadEntrada=row.unidad;
+        pintarFormulaCompList();
       }
     });
   });
@@ -1474,7 +1475,7 @@ function pintarFormulaCompList(){
 
 function aplicarComponenteCreado(rid,item){
   var row=formulaCompRows.find(function(x){return x.row===rid;});
-  if(row&&item){row.item_id=item.id;row.nombre=item.nombre;row.unidad=item.unidad;}
+  if(row&&item){row.item_id=item.id;row.nombre=item.nombre;row.unidad=item.unidad;row.unidadEntrada=item.unidad;}
   pintarFormulaCompList();
   showToast('📦 Componente creado con 0 en stock: '+(item?item.nombre:''));
 }
