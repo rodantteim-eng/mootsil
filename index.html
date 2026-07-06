@@ -1460,7 +1460,8 @@ function pintarFormulaCompList(){
       if(row){
         row.unidadEntrada=this.value;
         var input=cont.querySelector('.fcomp-cant[data-row="'+rid+'"]');
-        if(input) input.value=convertirDesdeBase(row.cantidad,row.unidadEntrada,row.unidad)||'';
+        var valorActual=input?(parseFloat(input.value)||0):0;
+        row.cantidad=convertirABase(valorActual,row.unidadEntrada,row.unidad);
       }
     });
   });
