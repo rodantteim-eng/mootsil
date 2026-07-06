@@ -1150,7 +1150,7 @@ function renderFormulas(){
       var faltantes=comps.filter(function(c){return c.item&&(c.cantidad_base>c.item.stock_actual);});
       var colorBorde=faltantes.length?'var(--rojo)':'var(--verde-mid)';
       var alerta=faltantes.length?'<div style="color:var(--rojo);font-weight:700;font-size:.75rem;margin-top:.25rem;">⚠️ Falta material: '+faltantes.map(function(c){return c.item.nombre;}).join(', ')+' — pedir antes del '+(f.fecha_programada||'?')+'</div>':'';
-      return '<div class="orden-card" style="border-left-color:'+colorBorde+';display:flex;gap:.5rem;align-items:flex-start;"><div style="flex:1;cursor:pointer;" data-fid="'+f.id+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem">'+(VIA_ICONOS[f.via]||'')+' '+f.nombre+'</strong><span style="font-size:.72rem;color:var(--gris-3)">'+(CATEGORIA_ICONOS[f.categoria]||'')+' '+f.categoria+'</span></div><div class="orden-meta">📍 '+ubicacion+' · '+f.via+(f.fecha_programada?' · 📅 '+f.fecha_programada:'')+' · Base 🛢️ '+f.volumen_base_litros+' L'+(bombasTxt?' · '+bombasTxt:'')+'</div>'+alerta+'</div><button type="button" class="fm-borrar-rapido" data-borrar="'+f.id+'" data-nombre="'+f.nombre.replace(/"/g,'&quot;')+'" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-size:.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">🗑️</button></div>';
+      return '<div class="orden-card" style="border-left-color:'+colorBorde+';display:flex;gap:.5rem;align-items:flex-start;"><div style="flex:1;cursor:pointer;" data-fid="'+f.id+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem">'+(VIA_ICONOS[f.via]||'')+' '+f.nombre+'</strong><span style="font-size:.72rem;color:var(--gris-3)">'+(CATEGORIA_ICONOS[f.categoria]||'')+' '+f.categoria+'</span></div><div class="orden-meta">📍 '+ubicacion+' · '+f.via+(f.fecha_programada?' · 📅 '+f.fecha_programada:'')+' · Base 🛢️ '+f.volumen_base_litros+' L'+(bombasTxt?' · '+bombasTxt:'')+'</div>'+alerta+'</div><button type="button" class="fm-duplicar-rapido" data-duplicar="'+f.id+'" title="Duplicar para otras tablas" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">📋</button><button type="button" class="fm-borrar-rapido" data-borrar="'+f.id+'" data-nombre="'+f.nombre.replace(/"/g,'&quot;')+'" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-size:.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">🗑️</button></div>';
     }).join('');
     body.innerHTML=html;
     body.querySelectorAll('.fm-borrar-rapido').forEach(function(btn){
@@ -1164,7 +1164,54 @@ function renderFormulas(){
         }).catch(function(e){alert('Error: '+e.message);});
       });
     });
+    body.querySelectorAll('.fm-duplicar-rapido').forEach(function(btn){
+      btn.addEventListener('click',function(e){
+        e.stopPropagation();
+        renderDuplicarFormula(this.dataset.duplicar);
+      });
+    });
     body.querySelectorAll('[data-fid]').forEach(function(el){el.addEventListener('click',function(){renderFormulaForm(this.dataset.fid);});});
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function renderDuplicarFormula(formulaId){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="loading">Cargando fórmula...</div>';
+  Promise.all([
+    from('formulas_aplicacion').select('*,tabla:tablas(nombre,plantacion_id)').eq('id',formulaId).get(),
+    from('formula_componentes').select('*').eq('formula_id',formulaId).get()
+  ]).then(function(r){
+    var f=r[0][0], comps=r[1]||[];
+    var pOrigen=f.tabla?cats.plantaciones.find(function(x){return x.id===f.tabla.plantacion_id;}):null;
+    var pO=cats.plantaciones.map(function(p){return '<option value="'+p.id+'"'+(pOrigen&&p.id===pOrigen.id?' selected':'')+'>'+p.nombre+'</option>';}).join('');
+    body.innerHTML='<div class="seccion-titulo">📋 Duplicar fórmula</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Copiando: <strong>'+f.nombre+'</strong> ('+comps.length+' componente'+(comps.length!==1?'s':'')+', '+f.via+' · '+f.categoria+')<br/>Se creará una copia idéntica para cada tabla que elijas abajo (la de origen, '+(f.tabla?f.tabla.nombre:'')+', no hace falta repetirla).</p><div class="form-group"><label>Plantación</label><select id="dup-plantacion">'+pO+'</select></div><div class="form-group"><label>Tablas destino</label><div id="dup-tablas" style="display:flex;flex-wrap:wrap;gap:8px;"></div></div><div class="form-group"><label>Fecha programada para las copias</label><input type="date" id="dup-fecha" value="'+(f.fecha_programada||new Date().toISOString().slice(0,10))+'"></div><button class="btn-primary" id="dup-guardar">Crear copias</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulas()">← Volver a fórmulas</button>';
+    function pintarTablasDestino(){
+      var plId=document.getElementById('dup-plantacion').value;
+      var tabs=cats.tablas.filter(function(t){return t.plantacion_id===plId&&t.id!==f.tabla_id;});
+      document.getElementById('dup-tablas').innerHTML=tabs.length?tabs.map(function(t){return '<button type="button" class="op-chip" data-id="'+t.id+'" onclick="toggleChip(this)">'+t.nombre+'</button>';}).join(''):'<p class="hint">No hay otras tablas en esta plantación.</p>';
+    }
+    document.getElementById('dup-plantacion').addEventListener('change',pintarTablasDestino);
+    pintarTablasDestino();
+    document.getElementById('dup-guardar').addEventListener('click',function(){
+      var tablaIds=Array.from(document.querySelectorAll('#dup-tablas .op-chip.sel')).map(function(c){return c.dataset.id;});
+      if(!tablaIds.length){alert('Selecciona al menos una tabla destino.');return;}
+      var fechaNueva=document.getElementById('dup-fecha').value||f.fecha_programada;
+      var btn=this; btn.disabled=true; btn.textContent='Creando copias...';
+      Promise.all(tablaIds.map(function(tid){
+        return from('formulas_aplicacion').insert({nombre:f.nombre,via:f.via,categoria:f.categoria,bombas_compatibles:f.bombas_compatibles,tabla_id:tid,fecha_programada:fechaNueva,volumen_base_litros:f.volumen_base_litros,notas:f.notas,creado_por:usuario.id,activo:true}).then(function(resp){
+          var nuevoId=resp&&resp[0]&&resp[0].id;
+          return Promise.all(comps.map(function(c){
+            var item=cats.inventario.find(function(x){return x.id===c.item_id;});
+            var disponible=item?item.stock_actual:0;
+            var faltante=Math.max(0,c.cantidad_base-disponible);
+            return from('formula_componentes').insert({formula_id:nuevoId,item_id:c.item_id,cantidad_base:c.cantidad_base,estado_faltante:faltante>0?'pendiente':'ninguno',faltante_detectado:faltante});
+          }));
+        });
+      })).then(function(){
+        showToast('✅ '+tablaIds.length+' copia(s) creada(s)');
+        renderFormulas();
+      }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Crear copias';});
+    });
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
