@@ -1186,7 +1186,7 @@ function headerFormulas(pendientesValidar){
 function renderSolicitarLabor(){
   var body=document.getElementById('enc-body');
   var pO=cats.plantaciones.map(function(p){return '<option value="'+p.id+'">'+p.nombre+'</option>';}).join('');
-  body.innerHTML='<div class="seccion-titulo">📋 Solicitar labor</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Esto no asigna la labor directamente — le avisa a encargado/admin/dueño para que la programen y la asignen a un operario.</p><div class="form-group"><label>Plantación</label><select id="sl-plantacion">'+pO+'</select></div><div class="form-group"><label>Tabla</label><select id="sl-tabla"><option value="">Selecciona plantación primero</option></select></div><div class="form-group"><label>Tipo de labor</label><div class="labor-grid" id="sl-labor-grid" style="grid-template-columns:repeat(3,1fr);"></div></div><div class="form-group"><label>Descripción</label><textarea id="sl-desc" rows="3" placeholder="Ej. Poda selectiva urgente, se ven ramas secas en surcos 10-20" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="sl-guardar">Enviar solicitud</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulas()">← Volver a fórmulas</button>';
+  body.innerHTML='<div class="seccion-titulo">📋 Solicitar labor</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Esto no asigna la labor directamente — le avisa a encargado/admin/dueño para que la programen y la asignen a un operario.</p><div class="form-group"><label>Plantación</label><select id="sl-plantacion">'+pO+'</select></div><div class="form-group"><label>Tablas (puedes elegir varias)</label><div id="sl-tablas" style="display:flex;flex-wrap:wrap;gap:8px;"></div></div><div class="form-group"><label>Tipo de labor</label><div class="labor-grid" id="sl-labor-grid" style="grid-template-columns:repeat(3,1fr);"></div></div><div class="form-group"><label>Descripción</label><textarea id="sl-desc" rows="3" placeholder="Ej. Poda selectiva urgente, se ven ramas secas en surcos 10-20" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="sl-guardar">Enviar solicitud</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulas()">← Volver a fórmulas</button>';
   var tipoSel=null;
   var laborGrid=document.getElementById('sl-labor-grid');
   laborGrid.innerHTML=cats.tiposLabor.filter(function(l){return !l.es_cosecha;}).map(function(l){
@@ -1202,23 +1202,25 @@ function renderSolicitarLabor(){
   function pintarTablasSolicitud(){
     var plId=document.getElementById('sl-plantacion').value;
     var tabs=cats.tablas.filter(function(t){return t.plantacion_id===plId;});
-    document.getElementById('sl-tabla').innerHTML='<option value="">Selecciona...</option>'+tabs.map(function(t){return '<option value="'+t.id+'">'+t.nombre+'</option>';}).join('');
+    document.getElementById('sl-tablas').innerHTML=tabs.map(function(t){return '<button type="button" class="op-chip" data-id="'+t.id+'" onclick="toggleChip(this)">'+t.nombre+'</button>';}).join('');
   }
   document.getElementById('sl-plantacion').addEventListener('change',pintarTablasSolicitud);
   pintarTablasSolicitud();
   document.getElementById('sl-guardar').addEventListener('click',function(){
-    var tablaId=document.getElementById('sl-tabla').value;
+    var tablaIds=Array.from(document.querySelectorAll('#sl-tablas .op-chip.sel')).map(function(c){return c.dataset.id;});
     var desc=document.getElementById('sl-desc').value.trim();
-    if(!tablaId){alert('Selecciona la tabla.');return;}
+    if(!tablaIds.length){alert('Selecciona al menos una tabla.');return;}
     if(!tipoSel){alert('Selecciona el tipo de labor.');return;}
     if(!desc){alert('Describe la labor sugerida.');return;}
     var btn=this; btn.disabled=true; btn.textContent='Enviando...';
     var lb=cats.tiposLabor.find(function(l){return l.id===tipoSel;});
-    var tb=cats.tablas.find(function(t){return t.id===tablaId;});
-    from('solicitudes_labor').insert({creado_por:usuario.id,tabla_id:tablaId,tipo_labor_id:tipoSel,descripcion:desc,estado:'pendiente'}).then(function(){
-      return from('notificaciones').insert({titulo:'📋 Labor sugerida por ingeniero',cuerpo:usuario.nombre+' sugiere '+(lb?lb.nombre:'')+' en '+(tb?tb.nombre:'')+': '+desc,icono:'📋',leida:false,para_rol:'encargado'});
+    Promise.all(tablaIds.map(function(tablaId){
+      return from('solicitudes_labor').insert({creado_por:usuario.id,tabla_id:tablaId,tipo_labor_id:tipoSel,descripcion:desc,estado:'pendiente'});
+    })).then(function(){
+      var nombresTablas=tablaIds.map(function(tid){var t=cats.tablas.find(function(x){return x.id===tid;});return t?t.nombre:'';}).join(', ');
+      return from('notificaciones').insert({titulo:'📋 Labor sugerida por ingeniero',cuerpo:usuario.nombre+' sugiere '+(lb?lb.nombre:'')+' en '+nombresTablas+': '+desc,icono:'📋',leida:false,para_rol:'encargado'});
     }).then(function(){
-      showToast('✅ Solicitud enviada a encargado/admin/dueño');
+      showToast('✅ '+tablaIds.length+' solicitud(es) enviada(s) a encargado/admin/dueño');
       renderFormulas();
     }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Enviar solicitud';});
   });
