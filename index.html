@@ -1247,18 +1247,46 @@ function renderSolicitarLabor(){
   });
 }
 
+var FORMULA_SUBTAB='hoy';
+
+function barraSubtabsFormulas(){
+  var tabs=[['programadas','🆕 Programadas'],['hoy','🔥 Aplicar Hoy'],['aplicadas','✅ Aplicadas']];
+  return '<div style="display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap;">'+tabs.map(function(t){
+    return '<button type="button" class="rep-view-btn'+(FORMULA_SUBTAB===t[0]?' active':'')+'" onclick="FORMULA_SUBTAB=\''+t[0]+'\';renderFormulas();">'+t[1]+'</button>';
+  }).join('')+'</div>';
+}
+
 function renderFormulas(){
   var body=document.getElementById('enc-body');
-  body.innerHTML=headerFormulas()+'<div class="loading">Cargando fórmulas...</div>';
+  body.innerHTML=headerFormulas()+barraSubtabsFormulas()+'<div class="loading">Cargando fórmulas...</div>';
+  var hoy=new Date().toISOString().slice(0,10);
   Promise.all([
     from('formulas_aplicacion').select('*,tabla:tablas(nombre,plantacion_id),creador:usuarios!creado_por(nombre)').eq('activo',true).order('fecha_programada').get(),
     from('formula_componentes').select('*,item:inventario_items(nombre,unidad,stock_actual),autorizador:usuarios!autorizado_por(nombre)').get(),
-    from('ordenes_trabajo').select('id').eq('validado_ingeniero',false).not('formula_id','is','null').get()
+    from('ordenes_trabajo').select('id').eq('validado_ingeniero',false).not('formula_id','is','null').get(),
+    from('ordenes_trabajo').select('formula_id,estado,completado_en').not('formula_id','is','null').get()
   ]).then(function(r){
-    var rows=r[0]||[], todosComps=r[1]||[], pendValidar=(r[2]||[]).length;
-    if(!rows.length){body.innerHTML=headerFormulas(pendValidar)+'<div class="empty">🧪 Aún no hay fórmulas registradas.</div>';return;}
-    var html=headerFormulas(pendValidar);
-    html+=rows.map(function(f){
+    var rows=r[0]||[], todosComps=r[1]||[], pendValidar=(r[2]||[]).length, ordenesFormula=r[3]||[];
+    var aplicadaPorFormula={}, asignadaPorFormula={};
+    ordenesFormula.forEach(function(o){
+      asignadaPorFormula[o.formula_id]=true;
+      if(o.estado==='completada'){ if(!aplicadaPorFormula[o.formula_id]||o.completado_en>aplicadaPorFormula[o.formula_id]) aplicadaPorFormula[o.formula_id]=o.completado_en||true; }
+    });
+    rows.forEach(function(f){
+      f._aplicada=!!aplicadaPorFormula[f.id];
+      f._asignada=!!asignadaPorFormula[f.id];
+      f._estadoFicha=f._aplicada?'aplicadas':((f.fecha_programada&&f.fecha_programada<=hoy)?'hoy':'programadas');
+    });
+    var filtradas=rows.filter(function(f){return f._estadoFicha===FORMULA_SUBTAB;});
+    if(!rows.length){body.innerHTML=headerFormulas(pendValidar)+barraSubtabsFormulas()+'<div class="empty">🧪 Aún no hay fórmulas registradas.</div>';return;}
+    var html=headerFormulas(pendValidar)+barraSubtabsFormulas();
+    if(!filtradas.length){
+      var vacioTxt=FORMULA_SUBTAB==='programadas'?'No hay fórmulas programadas a futuro.':FORMULA_SUBTAB==='hoy'?'Nada por aplicar hoy. 🎉':'Aún no hay fórmulas aplicadas.';
+      html+='<div class="empty">'+vacioTxt+'</div>';
+      body.innerHTML=html;
+      return;
+    }
+    html+=filtradas.map(function(f){
       var bombasTxt=(f.bombas_compatibles||[]).map(function(b){return BOMBA_ICONOS[b]+' '+(BOMBA_LABELS[b]||b);}).join(', ');
       var p=f.tabla?cats.plantaciones.find(function(x){return x.id===f.tabla.plantacion_id;}):null;
       var ubicacion=(p?p.nombre+' · ':'')+(f.tabla?f.tabla.nombre:'sin tabla');
@@ -1266,12 +1294,16 @@ function renderFormulas(){
       var faltantes=comps.filter(function(c){return c.item&&(c.cantidad_base>c.item.stock_actual);});
       var pendientes=comps.filter(function(c){return c.estado_faltante==='pendiente';});
       var autorizados=comps.filter(function(c){return c.estado_faltante==='autorizado';});
-      var colorBorde=pendientes.length?'var(--rojo)':(autorizados.length?'var(--tierra)':'var(--verde-mid)');
-      var estatusTxt=pendientes.length?'⚠️ Falta autorizar':(autorizados.length?'✅ Autorizada con faltante':'✅ Completa');
-      var estatusColor=pendientes.length?'var(--rojo)':(autorizados.length?'var(--tierra)':'var(--verde-mid)');
+      var esAplicada=f._estadoFicha==='aplicadas';
+      var esHoy=f._estadoFicha==='hoy';
+      var colorBorde=esAplicada?'var(--verde-mid)':(pendientes.length?'var(--rojo)':(autorizados.length?'var(--tierra)':(esHoy?'var(--rojo)':'var(--verde-mid)')));
+      var estatusTxt=esAplicada?'✅ Aplicada':(pendientes.length?'⚠️ Falta autorizar':(autorizados.length?'✅ Autorizada con faltante':(esHoy?(f._asignada?'🔶 Asignada, en curso':'🔥 Aplicar hoy'):'🆕 Programada')));
+      var estatusColor=esAplicada?'var(--verde-mid)':(pendientes.length?'var(--rojo)':(autorizados.length?'var(--tierra)':(esHoy?'var(--rojo)':'var(--tierra)')));
       var alerta=faltantes.length?'<div style="color:var(--rojo);font-weight:700;font-size:.75rem;margin-top:.25rem;">⚠️ Falta material: '+faltantes.map(function(c){return c.item.nombre;}).join(', ')+' — pedir antes del '+(f.fecha_programada||'?')+'</div>':'';
       var autorInfo=autorizados.length?'<div style="font-size:.7rem;color:var(--tierra);margin-top:.2rem;">Autorizado por '+(autorizados[0].autorizador?autorizados[0].autorizador.nombre:'?')+'</div>':'';
-      return '<div class="orden-card" style="border-left-color:'+colorBorde+';display:flex;gap:.5rem;align-items:flex-start;"><div style="flex:1;cursor:pointer;" data-fid="'+f.id+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem">'+(VIA_ICONOS[f.via]||'')+' '+f.nombre+'</strong><span style="font-size:.7rem;font-weight:700;color:'+estatusColor+';">'+estatusTxt+'</span></div><div class="orden-meta">📍 '+ubicacion+' · '+f.via+(f.fecha_programada?' · 📅 '+f.fecha_programada:'')+' · Base 🛢️ '+f.volumen_base_litros+' L'+(bombasTxt?' · '+bombasTxt:'')+'</div><div style="font-size:.7rem;color:var(--gris-3);margin-top:.15rem;">👤 Creada por: '+(f.creador?f.creador.nombre:'?')+'</div>'+autorInfo+alerta+'</div><button type="button" class="fm-duplicar-rapido" data-duplicar="'+f.id+'" title="Duplicar para otras tablas" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">📋</button><button type="button" class="fm-borrar-rapido" data-borrar="'+f.id+'" data-nombre="'+f.nombre.replace(/"/g,'&quot;')+'" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-size:.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">🗑️</button></div>';
+      var fechaGrande='<div style="font-size:.85rem;font-weight:700;color:'+(esHoy?'var(--rojo)':'var(--gris-3)')+';margin-top:.2rem;">📅 '+(f.fecha_programada?fechaLarga(f.fecha_programada):'Sin fecha programada')+'</div>';
+      var accionesRapidas=(esAplicada||esHoy&&!f._asignada)?'':'';
+      return '<div class="orden-card" style="border-left-color:'+colorBorde+';display:flex;gap:.5rem;align-items:flex-start;'+(esAplicada?'opacity:.75;':'')+'"><div style="flex:1;cursor:pointer;" data-fid="'+f.id+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem">'+(VIA_ICONOS[f.via]||'')+' '+f.nombre+(esAplicada?' 🔒':'')+'</strong><span style="font-size:.7rem;font-weight:700;color:'+estatusColor+';">'+estatusTxt+'</span></div>'+fechaGrande+'<div class="orden-meta">📍 '+ubicacion+' · '+f.via+' · Base 🛢️ '+f.volumen_base_litros+' L'+(bombasTxt?' · '+bombasTxt:'')+'</div><div style="font-size:.7rem;color:var(--gris-3);margin-top:.15rem;">👤 Creada por: '+(f.creador?f.creador.nombre:'?')+'</div>'+autorInfo+alerta+'</div><button type="button" class="fm-duplicar-rapido" data-duplicar="'+f.id+'" title="Duplicar para otras tablas" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">📋</button><button type="button" class="fm-borrar-rapido" data-borrar="'+f.id+'" data-nombre="'+f.nombre.replace(/"/g,'&quot;')+'" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-size:.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">🗑️</button></div>';
     }).join('');
     body.innerHTML=html;
     body.querySelectorAll('.fm-borrar-rapido').forEach(function(btn){
@@ -1714,18 +1746,19 @@ function renderAsigAplicPorFecha(){
   var en7dias=new Date(Date.now()+7*86400000).toISOString().slice(0,10);
   Promise.all([
     from('formulas_aplicacion').select('*,tabla:tablas(nombre,plantacion_id)').eq('activo',true).not('fecha_programada','is','null').order('fecha_programada').get(),
-    from('ordenes_trabajo').select('formula_id').not('formula_id','is','null').get()
+    from('ordenes_trabajo').select('formula_id,estado').not('formula_id','is','null').get()
   ]).then(function(r){
     var formulas=r[0]||[], ordenesConFormula=r[1]||[];
-    var asignadas={};
-    ordenesConFormula.forEach(function(o){asignadas[o.formula_id]=true;});
+    var asignadas={}, aplicadas={};
+    ordenesConFormula.forEach(function(o){asignadas[o.formula_id]=true; if(o.estado==='completada') aplicadas[o.formula_id]=true;});
     var hoyF=formulas.filter(function(f){return f.fecha_programada===hoy;});
     var semanaF=formulas.filter(function(f){return f.fecha_programada>hoy&&f.fecha_programada<=en7dias;});
     var masF=formulas.filter(function(f){return f.fecha_programada>en7dias;});
     function tarjeta(f){
       var p=f.tabla?cats.plantaciones.find(function(x){return x.id===f.tabla.plantacion_id;}):null;
-      var yaAsig=asignadas[f.id];
-      return '<div class="orden-card" style="cursor:pointer;'+(yaAsig?'opacity:.55;':'')+'" data-fid="'+f.id+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem">'+(VIA_ICONOS[f.via]||'')+' '+f.nombre+'</strong>'+(yaAsig?'<span style="font-size:.7rem;color:var(--verde-mid);font-weight:700;">✅ Ya asignada</span>':'<span style="font-size:.7rem;color:var(--rojo);font-weight:700;">Sin asignar</span>')+'</div><div class="orden-meta">📍 '+(p?p.nombre:'')+' · '+(f.tabla?f.tabla.nombre:'')+' · 📅 '+f.fecha_programada+'</div></div>';
+      var yaAsig=asignadas[f.id], yaAplic=aplicadas[f.id];
+      var badge=yaAplic?'<span style="font-size:.7rem;color:var(--verde-mid);font-weight:700;">🔒 Ya aplicada</span>':(yaAsig?'<span style="font-size:.7rem;color:var(--tierra);font-weight:700;">🔶 Ya asignada</span>':'<span style="font-size:.7rem;color:var(--rojo);font-weight:700;">Sin asignar</span>');
+      return '<div class="orden-card" style="cursor:pointer;'+(yaAplic?'opacity:.5;':'')+'" data-fid="'+f.id+'" data-aplicada="'+(yaAplic?'1':'0')+'" data-nombre="'+f.nombre.replace(/"/g,'&quot;')+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem">'+(VIA_ICONOS[f.via]||'')+' '+f.nombre+'</strong>'+badge+'</div><div class="orden-meta">📍 '+(p?p.nombre:'')+' · '+(f.tabla?f.tabla.nombre:'')+' · 📅 '+f.fecha_programada+'</div></div>';
     }
     var html='';
     if(hoyF.length) html+='<div class="seccion-titulo">📅 Hoy</div>'+hoyF.map(tarjeta).join('');
@@ -1734,7 +1767,12 @@ function renderAsigAplicPorFecha(){
     if(!formulas.length) html='<div class="empty">No hay fórmulas con fecha programada.<br/>Puedes buscar por plantación abajo.</div>';
     html+='<button class="btn-back" style="margin-top:1.25rem;width:100%;" onclick="renderAsigAplicPlantaciones()">🔍 Buscar por plantación / tabla</button>';
     body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🧪 Aplicaciones<button type="button" onclick="renderFormAsignar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cambiar labor</button></div>'+html;
-    body.querySelectorAll('[data-fid]').forEach(function(el){el.addEventListener('click',function(){cargarFormulaParaAsignar(this.dataset.fid);});});
+    body.querySelectorAll('[data-fid]').forEach(function(el){el.addEventListener('click',function(){
+      if(this.dataset.aplicada==='1'){
+        if(!confirm('⚠️ La fórmula "'+this.dataset.nombre+'" ya fue aplicada anteriormente.\n\n¿Seguro que quieres asignarla otra vez? Esto puede causar una aplicación duplicada.')) return;
+      }
+      cargarFormulaParaAsignar(this.dataset.fid);
+    });});
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
@@ -3064,6 +3102,13 @@ function calcularResumenAsistencia(registros,primerDia){
   }
   var trabajadosFechas=Object.keys(trabajadosSet).sort().reverse();
   return {trabajados:trabajadosFechas.length,retardos:retardosFechas.length,faltas:faltasFechas.length,trabajadosFechas:trabajadosFechas,retardosFechas:retardosFechas.sort(function(a,b){return b.fecha.localeCompare(a.fecha);}),faltasFechas:faltasFechas.sort().reverse(),trabajadosHoras:trabajadosSet};
+}
+
+function fechaLarga(fechaStr){
+  if(!fechaStr) return '';
+  var d=new Date(fechaStr+'T00:00:00');
+  var txt=d.toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  return txt.charAt(0).toUpperCase()+txt.slice(1);
 }
 
 function numeroSemanaISO(fecha){
