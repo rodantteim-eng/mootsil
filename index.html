@@ -185,12 +185,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="tabs">
     <button class="tab" id="tab-tablero" onclick="tabEncargado('tablero')" style="display:none">Tablero</button>
     <button class="tab" id="tab-asignar" onclick="tabEncargado('asignar')" style="display:none">+ Asignar</button>
+    <button class="tab" id="tab-aplicaciones" onclick="tabEncargado('aplicaciones')" style="display:none">🧪 Aplicaciones</button>
+    <button class="tab" id="tab-labores" onclick="tabEncargado('labores')" style="display:none">🔧 Labores</button>
+    <button class="tab" id="tab-formulas" onclick="tabEncargado('formulas')" style="display:none">📐 Fórmulas</button>
+    <button class="tab" id="tab-reporte" onclick="tabEncargado('reporte')">Reporte</button>
     <button class="tab" id="tab-notif" onclick="tabEncargado('notif')">Avisos <span id="badge-avisos" style="display:none;background:var(--tierra);color:#fff;border-radius:50%;width:16px;height:16px;font-size:.6rem;font-weight:700;align-items:center;justify-content:center;margin-left:3px;vertical-align:middle;">0</span></button>
     <button class="tab" id="tab-alarmas" onclick="tabEncargado('alarmas')" style="display:none">🚨 Alarmas</button>
     <button class="tab" id="tab-admin" onclick="tabEncargado('admin')" style="display:none">🏛️ Administración</button>
-    <button class="tab" id="tab-reporte" onclick="tabEncargado('reporte')">Reporte</button>
     <button class="tab" id="tab-inventario" onclick="tabEncargado('inventario')" style="display:none">Inventario</button>
-    <button class="tab" id="tab-formulas" onclick="tabEncargado('formulas')" style="display:none">Fórmulas</button>
     <button class="tab" id="tab-config" onclick="tabEncargado('config')" style="display:none">⚙️</button>
   </div>
   <div class="app-body" id="enc-body"><div class="loading">Cargando...</div></div>
@@ -430,9 +432,11 @@ function entrarSegunRol(){
     if(usuario.rol==='admin'||usuario.rol==='dueño') document.getElementById('tab-admin').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='ingeniero') document.getElementById('tab-inventario').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='ingeniero') document.getElementById('tab-formulas').style.display='';
+    if(usuario.rol==='admin'||usuario.rol==='ingeniero') document.getElementById('tab-aplicaciones').style.display='';
+    if(usuario.rol==='admin'||usuario.rol==='ingeniero') document.getElementById('tab-labores').style.display='';
 
     if(usuario.rol==='ingeniero'){
-      tabEncargado('formulas');
+      tabEncargado('aplicaciones');
     } else {
       document.getElementById('tab-tablero').classList.add('active');
       renderTablero();
@@ -477,7 +481,7 @@ function cargarCatalogos(){
 }
 
 function tabEncargado(tab){
-  ['tablero','asignar','notif','permisos','alarmas','admin','reporte','inventario','formulas','validar','config'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
+  ['tablero','asignar','notif','permisos','alarmas','admin','reporte','inventario','aplicaciones','labores','formulas','validar','config'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
   var el=document.getElementById('tab-'+tab); if(el) el.classList.add('active');
   if(tab==='tablero') renderTablero();
   else if(tab==='asignar') renderAsignarMenu();
@@ -487,7 +491,9 @@ function tabEncargado(tab){
   else if(tab==='admin') renderAdministracionMenu();
   else if(tab==='reporte') renderReporte();
   else if(tab==='inventario') renderInventario();
-  else if(tab==='formulas') renderFormulas();
+  else if(tab==='aplicaciones') renderAplicacionesEstatus();
+  else if(tab==='labores') renderLaboresEstatus();
+  else if(tab==='formulas') renderFormulasMenu();
   else if(tab==='validar') renderValidar();
   else if(tab==='config') renderConfig();
 }
@@ -495,26 +501,38 @@ function tabEncargado(tab){
 function renderSolicitudesLabor(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo">🔧 Labores sugeridas por ingeniero</div><div class="loading">Cargando...</div>';
-  from('solicitudes_labor').select('*,tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre),creador:usuarios!creado_por(nombre)').order('creado_en',{ascending:false}).get().then(function(rows){
+  from('solicitudes_labor').select('*,tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre),creador:usuarios!creado_por(nombre)').neq('estado','descartada').order('creado_en',{ascending:false}).get().then(function(rows){
     rows=rows||[];
     var pendientes=rows.filter(function(s){return s.estado==='pendiente';});
-    var resueltas=rows.filter(function(s){return s.estado!=='pendiente';});
+    var programadas=rows.filter(function(s){return s.estado==='programada';});
+    var terminadas=rows.filter(function(s){return s.estado==='terminada';});
     if(!rows.length){body.innerHTML='<div class="seccion-titulo">🔧 Labores sugeridas por ingeniero</div><div class="empty">Sin sugerencias registradas.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderTablero()">← Volver al Tablero</button>';return;}
     function tarjeta(s){
       var p=s.tabla?cats.plantaciones.find(function(x){return x.id===s.tabla.plantacion_id;}):null;
       var estColor=s.estado==='pendiente'?'var(--tierra)':(s.estado==='programada'?'var(--verde-mid)':'var(--gris-3)');
-      var estLbl=s.estado==='pendiente'?'⏳ Pendiente':(s.estado==='programada'?'✅ Programada':'❌ Descartada');
-      var acciones=s.estado==='pendiente'?'<div style="display:flex;gap:8px;margin-top:.6rem;"><button class="btn-sm btn-completar" data-programar="'+s.id+'">✅ Marcar como programada</button><button class="btn-sm btn-iniciar" onclick="renderAsignarMenu()">🧰 Ir a Asignar</button><button class="btn-sm btn-cancelar" data-descartar="'+s.id+'">Descartar</button></div>':'';
-      return '<div class="orden-card" style="border-left-color:'+estColor+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(ICONOS[s.tipo_labor?s.tipo_labor.nombre:'']||'🔧')+' '+(s.tipo_labor?s.tipo_labor.nombre:'')+'</strong><span style="font-size:.72rem;font-weight:700;color:'+estColor+';">'+estLbl+'</span></div><div class="orden-meta">📍 '+(p?p.nombre:'')+' · '+(s.tabla?s.tabla.nombre:'')+'<br/>📝 '+s.descripcion+'<br/>👤 Sugerida por '+(s.creador?s.creador.nombre:'')+'</div>'+acciones+'</div>';
+      var estLbl=s.estado==='pendiente'?'⏳ Pendiente':(s.estado==='programada'?'🔶 Programada':'✅ Terminada');
+      var acciones='';
+      if(s.estado==='pendiente') acciones='<div style="display:flex;gap:8px;margin-top:.6rem;flex-wrap:wrap;"><button class="btn-sm btn-completar" data-programar="'+s.id+'">✅ Marcar como programada</button><button class="btn-sm btn-iniciar" onclick="renderAsignarMenu()">🧰 Ir a Asignar</button><button class="btn-sm btn-cancelar" data-descartar="'+s.id+'">Descartar</button></div>';
+      else if(s.estado==='programada') acciones='<div style="display:flex;gap:8px;margin-top:.6rem;"><button class="btn-sm btn-completar" data-terminar="'+s.id+'">✅ Marcar como terminada</button></div>';
+      return '<div class="orden-card" style="border-left-color:'+estColor+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(ICONOS[s.tipo_labor?s.tipo_labor.nombre:'']||'🔧')+' '+(s.tipo_labor?s.tipo_labor.nombre:'')+'</strong><span style="font-size:.72rem;font-weight:700;color:'+estColor+';">'+estLbl+'</span></div><div class="orden-meta">📅 '+(s.fecha_sugerida?fechaLarga(s.fecha_sugerida):'Sin fecha sugerida')+'<br/>📍 '+(p?p.nombre:'')+' · '+(s.tabla?s.tabla.nombre:'')+'<br/>📝 '+s.descripcion+'<br/>👤 Sugerida por '+(s.creador?s.creador.nombre:'')+'</div>'+acciones+'</div>';
     }
     var html='<div class="seccion-titulo">🔧 Labores sugeridas por ingeniero</div>';
-    if(pendientes.length) html+=pendientes.map(tarjeta).join('');
-    if(resueltas.length) html+='<div class="seccion-titulo" style="margin-top:1rem;">Resueltas</div>'+resueltas.map(tarjeta).join('');
+    if(pendientes.length) html+='<div class="seccion-titulo" style="margin-top:0;">Pendientes</div>'+pendientes.map(tarjeta).join('');
+    if(programadas.length) html+='<div class="seccion-titulo" style="margin-top:1rem;">Programadas</div>'+programadas.map(tarjeta).join('');
+    if(terminadas.length) html+='<div class="seccion-titulo" style="margin-top:1rem;">Terminadas</div>'+terminadas.map(tarjeta).join('');
     body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderTablero()">← Volver al Tablero</button>';
     body.querySelectorAll('[data-programar]').forEach(function(btn){
       btn.addEventListener('click',function(){
         from('solicitudes_labor').eq('id',this.dataset.programar).update({estado:'programada',programada_por:usuario.id,programada_en:new Date().toISOString()}).then(function(){
           showToast('✅ Marcada como programada');
+          renderSolicitudesLabor();
+        }).catch(function(e){alert('Error: '+e.message);});
+      });
+    });
+    body.querySelectorAll('[data-terminar]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        from('solicitudes_labor').eq('id',this.dataset.terminar).update({estado:'terminada'}).then(function(){
+          showToast('✅ Marcada como terminada');
           renderSolicitudesLabor();
         }).catch(function(e){alert('Error: '+e.message);});
       });
@@ -1193,21 +1211,77 @@ function renderInventarioEditar(itemId){
 }
 
 var VIA_ICONOS={'Riego':'💧','Foliar':'🌿','Drench':'🧪'};
-var CATEGORIA_ICONOS={'Nutrición':'🌱','Plaga':'🐛','Estimulación':'⚡'};
+var CATEGORIA_ICONOS={'Nutrición':'🌱','Plaga':'🐛','Estimulación':'⚡','Combinada':'🧬'};
 var BOMBA_ICONOS={'inyeccion':'🛢️','motor':'⚙️','manual':'🤲'};
 var BOMBA_LABELS={'inyeccion':'Bomba Inyección','motor':'Bomba Motor','manual':'Bomba Manual'};
 var formulaVia=null, formulaCategoria=null, formulaBombas=[], formulaCompRows=[], formulaCompSeq=0, formulaEditId=null, formulaVolverAResumen=false;
 var formulaPlantacionId=null, formulaTablaId=null;
 
-function headerFormulas(pendientesValidar){
+function headerAplicaciones(pendientesValidar){
   var badge=pendientesValidar?(' ('+pendientesValidar+')'):'';
-  return '<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4rem;">Fórmulas<div><button type="button" onclick="renderValidar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;margin-right:.75rem;">✅ Validar'+badge+'</button><button type="button" onclick="renderFormulasFaltantes()" style="border:none;background:none;color:var(--rojo);font-size:.78rem;font-weight:600;cursor:pointer;margin-right:.75rem;">⚠️ Faltantes</button><button type="button" onclick="renderSolicitarLabor()" style="border:none;background:none;color:var(--tierra);font-size:.78rem;font-weight:600;cursor:pointer;margin-right:.75rem;">📋 Solicitar labor</button><button type="button" onclick="renderFormulaForm()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nueva fórmula</button></div></div>';
+  return '<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4rem;">🧪 Aplicaciones<div><button type="button" onclick="renderValidar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;margin-right:.75rem;">✅ Validar'+badge+'</button><button type="button" onclick="renderFormulasFaltantes()" style="border:none;background:none;color:var(--rojo);font-size:.78rem;font-weight:600;cursor:pointer;">⚠️ Faltantes</button></div></div>';
+}
+
+function headerFormulasMenu(){
+  return '<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4rem;">📐 Fórmulas<div><button type="button" onclick="renderCatalogoFormulas()" style="border:none;background:none;color:var(--tierra);font-size:.78rem;font-weight:600;cursor:pointer;margin-right:.75rem;">📚 Catálogo</button><button type="button" onclick="renderFormulaForm()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nueva</button></div></div>';
+}
+
+function renderFormulasMenu(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML=headerFormulasMenu()+'<div class="labor-grid" style="grid-template-columns:repeat(2,1fr);margin-top:.5rem;">'+
+    '<div class="labor-tile" data-fm="nueva"><div class="labor-tile-ic">➕</div><div class="labor-tile-lbl">Nueva</div></div>'+
+    '<div class="labor-tile" data-fm="catalogo"><div class="labor-tile-ic">📚</div><div class="labor-tile-lbl">Catálogo</div></div>'+
+  '</div><p class="hint" style="margin-top:1rem;">"Nueva" crea una fórmula desde cero. "Catálogo" parte de una fórmula ya existente (Nutrición/Plaga/Estimulación/Combinada) como plantilla, para no volver a escribir todo.</p><p class="hint" style="margin-top:.5rem;">El seguimiento de estatus (Programadas / Aplicar Hoy / Aplicadas) vive en la pestaña 🧪 Aplicaciones.</p>';
+  body.querySelector('[data-fm="nueva"]').addEventListener('click',function(){renderFormulaForm();});
+  body.querySelector('[data-fm="catalogo"]').addEventListener('click',renderCatalogoFormulas);
+}
+
+function headerLabores(){
+  return '<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4rem;">🔧 Labores<button type="button" onclick="renderSolicitarLabor()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nueva solicitud</button></div>';
+}
+
+var LABOR_SUBTAB='hoy';
+
+function barraSubtabsLabores(){
+  var tabs=[['programadas','🆕 Programadas'],['hoy','🔥 Realizar Hoy'],['terminadas','✅ Terminadas']];
+  return '<div style="display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap;">'+tabs.map(function(t){
+    return '<button type="button" class="rep-view-btn'+(LABOR_SUBTAB===t[0]?' active':'')+'" onclick="LABOR_SUBTAB=\''+t[0]+'\';renderLaboresEstatus();">'+t[1]+'</button>';
+  }).join('')+'</div>';
+}
+
+function renderLaboresEstatus(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML=headerLabores()+barraSubtabsLabores()+'<div class="loading">Cargando...</div>';
+  var hoy=new Date().toISOString().slice(0,10);
+  from('solicitudes_labor').select('*,tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre)').eq('creado_por',usuario.id).neq('estado','descartada').order('fecha_sugerida',{ascending:true}).get().then(function(rows){
+    rows=rows||[];
+    rows.forEach(function(s){
+      if(s.estado==='terminada') s._ficha='terminadas';
+      else if(s.estado==='programada'||(s.fecha_sugerida&&s.fecha_sugerida<=hoy)) s._ficha='hoy';
+      else s._ficha='programadas';
+    });
+    var filtradas=rows.filter(function(s){return s._ficha===LABOR_SUBTAB;});
+    var html=headerLabores()+barraSubtabsLabores();
+    if(!filtradas.length){
+      var vacioTxt=LABOR_SUBTAB==='programadas'?'No hay labores programadas a futuro.':LABOR_SUBTAB==='hoy'?'Nada por realizar hoy. 🎉':'Aún no hay labores terminadas.';
+      html+='<div class="empty">'+vacioTxt+'</div>';
+      body.innerHTML=html;
+      return;
+    }
+    html+=filtradas.map(function(s){
+      var p=s.tabla?cats.plantaciones.find(function(x){return x.id===s.tabla.plantacion_id;}):null;
+      var estColor=s._ficha==='terminadas'?'var(--verde-mid)':(s._ficha==='hoy'?'var(--rojo)':'var(--tierra)');
+      var estTxt=s.estado==='programada'?'🔶 Programada por encargado':(s._ficha==='terminadas'?'✅ Terminada':(s._ficha==='hoy'?'🔥 Realizar hoy':'🆕 Programada'));
+      return '<div class="orden-card" style="border-left-color:'+estColor+';'+(s._ficha==='terminadas'?'opacity:.75;':'')+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(ICONOS[s.tipo_labor?s.tipo_labor.nombre:'']||'🔧')+' '+(s.tipo_labor?s.tipo_labor.nombre:'')+'</strong><span style="font-size:.7rem;font-weight:700;color:'+estColor+';">'+estTxt+'</span></div><div style="font-size:.82rem;font-weight:700;color:var(--gris-3);margin-top:.15rem;">📅 '+(s.fecha_sugerida?fechaLarga(s.fecha_sugerida):'Sin fecha')+'</div><div class="orden-meta">📍 '+(p?p.nombre:'')+' · '+(s.tabla?s.tabla.nombre:'')+'<br/>📝 '+s.descripcion+'</div></div>';
+    }).join('');
+    body.innerHTML=html;
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
 function renderSolicitarLabor(){
   var body=document.getElementById('enc-body');
   var pO=cats.plantaciones.map(function(p){return '<option value="'+p.id+'">'+p.nombre+'</option>';}).join('');
-  body.innerHTML='<div class="seccion-titulo">📋 Solicitar labor</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Esto no asigna la labor directamente — le avisa a encargado/admin/dueño para que la programen y la asignen a un operario.</p><div class="form-group"><label>Plantación</label><select id="sl-plantacion">'+pO+'</select></div><div class="form-group"><label>Tablas (puedes elegir varias)</label><div id="sl-tablas" style="display:flex;flex-wrap:wrap;gap:8px;"></div></div><div class="form-group"><label>Tipo de labor</label><div class="labor-grid" id="sl-labor-grid" style="grid-template-columns:repeat(3,1fr);"></div></div><div class="form-group"><label>Descripción</label><textarea id="sl-desc" rows="3" placeholder="Ej. Poda selectiva urgente, se ven ramas secas en surcos 10-20" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="sl-guardar">Enviar solicitud</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulas()">← Volver a fórmulas</button>';
+  body.innerHTML='<div class="seccion-titulo">📋 Solicitar labor</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Esto no asigna la labor directamente — le avisa a encargado/admin/dueño para que la programen y la asignen a un operario.</p><div class="form-group"><label>Plantación</label><select id="sl-plantacion">'+pO+'</select></div><div class="form-group"><label>Tablas (puedes elegir varias)</label><div id="sl-tablas" style="display:flex;flex-wrap:wrap;gap:8px;"></div></div><div class="form-group"><label>Tipo de labor</label><div class="labor-grid" id="sl-labor-grid" style="grid-template-columns:repeat(3,1fr);"></div></div><div class="form-group"><label>Fecha sugerida</label><input type="date" id="sl-fecha" value="'+new Date().toISOString().slice(0,10)+'"></div><div class="form-group"><label>Descripción</label><textarea id="sl-desc" rows="3" placeholder="Ej. Poda selectiva urgente, se ven ramas secas en surcos 10-20" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="sl-guardar">Enviar solicitud</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderLaboresEstatus()">← Volver a labores</button>';
   var tipoSel=null;
   var laborGrid=document.getElementById('sl-labor-grid');
   laborGrid.innerHTML=cats.tiposLabor.filter(function(l){return !l.es_cosecha;}).map(function(l){
@@ -1230,19 +1304,20 @@ function renderSolicitarLabor(){
   document.getElementById('sl-guardar').addEventListener('click',function(){
     var tablaIds=Array.from(document.querySelectorAll('#sl-tablas .op-chip.sel')).map(function(c){return c.dataset.id;});
     var desc=document.getElementById('sl-desc').value.trim();
+    var fechaSug=document.getElementById('sl-fecha').value||null;
     if(!tablaIds.length){alert('Selecciona al menos una tabla.');return;}
     if(!tipoSel){alert('Selecciona el tipo de labor.');return;}
     if(!desc){alert('Describe la labor sugerida.');return;}
     var btn=this; btn.disabled=true; btn.textContent='Enviando...';
     var lb=cats.tiposLabor.find(function(l){return l.id===tipoSel;});
     Promise.all(tablaIds.map(function(tablaId){
-      return from('solicitudes_labor').insert({creado_por:usuario.id,tabla_id:tablaId,tipo_labor_id:tipoSel,descripcion:desc,estado:'pendiente'});
+      return from('solicitudes_labor').insert({creado_por:usuario.id,tabla_id:tablaId,tipo_labor_id:tipoSel,descripcion:desc,fecha_sugerida:fechaSug,estado:'pendiente'});
     })).then(function(){
       var nombresTablas=tablaIds.map(function(tid){var t=cats.tablas.find(function(x){return x.id===tid;});return t?t.nombre:'';}).join(', ');
       return from('notificaciones').insert({titulo:'📋 Labor sugerida por ingeniero',cuerpo:usuario.nombre+' sugiere '+(lb?lb.nombre:'')+' en '+nombresTablas+': '+desc,icono:'📋',leida:false,para_rol:'encargado'});
     }).then(function(){
       showToast('✅ '+tablaIds.length+' solicitud(es) enviada(s) a encargado/admin/dueño');
-      renderFormulas();
+      renderLaboresEstatus();
     }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Enviar solicitud';});
   });
 }
@@ -1252,13 +1327,13 @@ var FORMULA_SUBTAB='hoy';
 function barraSubtabsFormulas(){
   var tabs=[['programadas','🆕 Programadas'],['hoy','🔥 Aplicar Hoy'],['aplicadas','✅ Aplicadas']];
   return '<div style="display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap;">'+tabs.map(function(t){
-    return '<button type="button" class="rep-view-btn'+(FORMULA_SUBTAB===t[0]?' active':'')+'" onclick="FORMULA_SUBTAB=\''+t[0]+'\';renderFormulas();">'+t[1]+'</button>';
+    return '<button type="button" class="rep-view-btn'+(FORMULA_SUBTAB===t[0]?' active':'')+'" onclick="FORMULA_SUBTAB=\''+t[0]+'\';renderAplicacionesEstatus();">'+t[1]+'</button>';
   }).join('')+'</div>';
 }
 
-function renderFormulas(){
+function renderAplicacionesEstatus(){
   var body=document.getElementById('enc-body');
-  body.innerHTML=headerFormulas()+barraSubtabsFormulas()+'<div class="loading">Cargando fórmulas...</div>';
+  body.innerHTML=headerAplicaciones()+barraSubtabsFormulas()+'<div class="loading">Cargando fórmulas...</div>';
   var hoy=new Date().toISOString().slice(0,10);
   Promise.all([
     from('formulas_aplicacion').select('*,tabla:tablas(nombre,plantacion_id),creador:usuarios!creado_por(nombre)').eq('activo',true).order('fecha_programada').get(),
@@ -1278,8 +1353,8 @@ function renderFormulas(){
       f._estadoFicha=f._aplicada?'aplicadas':((f.fecha_programada&&f.fecha_programada<=hoy)?'hoy':'programadas');
     });
     var filtradas=rows.filter(function(f){return f._estadoFicha===FORMULA_SUBTAB;});
-    if(!rows.length){body.innerHTML=headerFormulas(pendValidar)+barraSubtabsFormulas()+'<div class="empty">🧪 Aún no hay fórmulas registradas.</div>';return;}
-    var html=headerFormulas(pendValidar)+barraSubtabsFormulas();
+    if(!rows.length){body.innerHTML=headerAplicaciones(pendValidar)+barraSubtabsFormulas()+'<div class="empty">🧪 Aún no hay fórmulas registradas.</div>';return;}
+    var html=headerAplicaciones(pendValidar)+barraSubtabsFormulas();
     if(!filtradas.length){
       var vacioTxt=FORMULA_SUBTAB==='programadas'?'No hay fórmulas programadas a futuro.':FORMULA_SUBTAB==='hoy'?'Nada por aplicar hoy. 🎉':'Aún no hay fórmulas aplicadas.';
       html+='<div class="empty">'+vacioTxt+'</div>';
@@ -1313,7 +1388,7 @@ function renderFormulas(){
         if(!confirm('¿Eliminar la fórmula "'+nombre+'"? Esta acción no se puede deshacer.')) return;
         from('formulas_aplicacion').eq('id',fid).update({activo:false}).then(function(){
           showToast('🗑️ Fórmula eliminada');
-          renderFormulas();
+          renderAplicacionesEstatus();
         }).catch(function(e){alert('Error: '+e.message);});
       });
     });
@@ -1337,7 +1412,7 @@ function renderDuplicarFormula(formulaId){
     var f=r[0][0], comps=r[1]||[];
     var pOrigen=f.tabla?cats.plantaciones.find(function(x){return x.id===f.tabla.plantacion_id;}):null;
     var pO=cats.plantaciones.map(function(p){return '<option value="'+p.id+'"'+(pOrigen&&p.id===pOrigen.id?' selected':'')+'>'+p.nombre+'</option>';}).join('');
-    body.innerHTML='<div class="seccion-titulo">📋 Duplicar fórmula</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Copiando: <strong>'+f.nombre+'</strong> ('+comps.length+' componente'+(comps.length!==1?'s':'')+', '+f.via+' · '+f.categoria+')<br/>Se creará una copia idéntica para cada tabla que elijas abajo (la de origen, '+(f.tabla?f.tabla.nombre:'')+', no hace falta repetirla).</p><div class="form-group"><label>Plantación</label><select id="dup-plantacion">'+pO+'</select></div><div class="form-group"><label>Tablas destino</label><div id="dup-tablas" style="display:flex;flex-wrap:wrap;gap:8px;"></div></div><div class="form-group"><label>Fecha programada para las copias</label><input type="date" id="dup-fecha" value="'+(f.fecha_programada||new Date().toISOString().slice(0,10))+'"></div><button class="btn-primary" id="dup-guardar">Crear copias</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulas()">← Volver a fórmulas</button>';
+    body.innerHTML='<div class="seccion-titulo">📋 Duplicar fórmula</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Copiando: <strong>'+f.nombre+'</strong> ('+comps.length+' componente'+(comps.length!==1?'s':'')+', '+f.via+' · '+f.categoria+')<br/>Se creará una copia idéntica para cada tabla que elijas abajo (la de origen, '+(f.tabla?f.tabla.nombre:'')+', no hace falta repetirla).</p><div class="form-group"><label>Plantación</label><select id="dup-plantacion">'+pO+'</select></div><div class="form-group"><label>Tablas destino</label><div id="dup-tablas" style="display:flex;flex-wrap:wrap;gap:8px;"></div></div><div class="form-group"><label>Fecha programada para las copias</label><input type="date" id="dup-fecha" value="'+(f.fecha_programada||new Date().toISOString().slice(0,10))+'"></div><button class="btn-primary" id="dup-guardar">Crear copias</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAplicacionesEstatus()">← Volver a fórmulas</button>';
     function pintarTablasDestino(){
       var plId=document.getElementById('dup-plantacion').value;
       var tabs=cats.tablas.filter(function(t){return t.plantacion_id===plId&&t.id!==f.tabla_id;});
@@ -1362,7 +1437,7 @@ function renderDuplicarFormula(formulaId){
         });
       })).then(function(){
         showToast('✅ '+tablaIds.length+' copia(s) creada(s)');
-        renderFormulas();
+        renderAplicacionesEstatus();
       }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Crear copias';});
     });
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
@@ -1374,14 +1449,14 @@ function renderFormulasFaltantes(){
   from('formula_componentes').select('*,item:inventario_items(nombre,unidad,stock_actual),formula:formulas_aplicacion(nombre,fecha_programada,activo),autorizador:usuarios!autorizado_por(nombre)').in('estado_faltante',['pendiente','autorizado']).order('estado_faltante',{ascending:true}).get().then(function(rows){
     rows=(rows||[]).filter(function(c){return c.formula&&c.formula.activo;});
     var header='<div class="seccion-titulo">⚠️ Faltantes de producto</div>';
-    if(!rows.length){body.innerHTML=header+'<div class="empty">🎉 Ninguna fórmula tiene faltante de producto pendiente.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulas()">← Volver a fórmulas</button>';return;}
+    if(!rows.length){body.innerHTML=header+'<div class="empty">🎉 Ninguna fórmula tiene faltante de producto pendiente.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderAplicacionesEstatus()">← Volver a fórmulas</button>';return;}
     var html=header+rows.map(function(c){
       var autorizado=c.estado_faltante==='autorizado';
       var unidadItem=c.item?c.item.unidad:'';
       var autorInfo=autorizado?('<br/>✅ Autorizado por '+(c.autorizador?c.autorizador.nombre:'?')+(c.autorizado_en?' el '+c.autorizado_en.slice(0,10):'')):'';
       return '<div class="orden-card" style="border-left-color:'+(autorizado?'var(--verde-mid)':'var(--rojo)')+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(c.formula?c.formula.nombre:'')+'</strong><span style="font-size:.72rem;font-weight:700;color:'+(autorizado?'var(--verde-mid)':'var(--rojo)')+';">'+(autorizado?'✅ Autorizado':'⚠️ Pendiente')+'</span></div><div class="orden-meta">Componente: '+(c.item?c.item.nombre:'')+'<br/>Requiere: '+fmtAmigable(c.cantidad_base,unidadItem)+' · Disponible: '+fmtAmigable(c.item?c.item.stock_actual:0,unidadItem)+'<br/>Falta: <strong style="color:var(--rojo);">'+fmtAmigable(c.faltante_detectado,unidadItem)+'</strong>'+(c.formula&&c.formula.fecha_programada?'<br/>📅 Programada: '+c.formula.fecha_programada:'')+autorInfo+'</div>'+(autorizado?'':'<div style="display:flex;gap:8px;margin-top:.6rem;"><button class="btn-sm btn-completar" data-autorizar="'+c.id+'">✅ Autorizar de todas formas</button><button class="btn-sm btn-iniciar" data-cambiar="'+c.id+'" data-formula="'+c.formula_id+'">🔄 Cambiar producto</button></div>')+'</div>';
     }).join('');
-    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderFormulas()">← Volver a fórmulas</button>';
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderAplicacionesEstatus()">← Volver a fórmulas</button>';
     body.querySelectorAll('[data-autorizar]').forEach(function(btn){
       btn.addEventListener('click',function(){
         var cid=this.dataset.autorizar;
@@ -1420,6 +1495,73 @@ function renderCambiarProductoFaltante(compId){
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
+var CATALOGO_TIPO_SEL=null;
+
+function renderCatalogoFormulas(){
+  var body=document.getElementById('enc-body');
+  var tipos=['Nutrición','Plaga','Estimulación','Combinada'];
+  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📚 Catálogo · Paso 1 de 10<button type="button" onclick="renderFormulasMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Fórmulas</button></div><p class="hint" style="margin-bottom:.75rem;">Elige el tipo de fórmula que necesitas como base.</p><div class="labor-grid" id="cat-tipo-grid" style="grid-template-columns:repeat(2,1fr);"></div><div id="cat-lista" style="margin-top:1rem;"></div>';
+  var tipoGrid=document.getElementById('cat-tipo-grid');
+  tipoGrid.innerHTML=tipos.map(function(cat){
+    return '<div class="labor-tile" data-cat="'+cat+'"><div class="labor-tile-ic">'+(CATEGORIA_ICONOS[cat]||'🧪')+'</div><div class="labor-tile-lbl">'+cat+'</div></div>';
+  }).join('');
+  tipoGrid.querySelectorAll('[data-cat]').forEach(function(el){
+    el.addEventListener('click',function(){
+      tipoGrid.querySelectorAll('[data-cat]').forEach(function(x){x.classList.remove('labor-tile-otra');});
+      this.classList.add('labor-tile-otra');
+      cargarCatalogoLista(this.dataset.cat);
+    });
+  });
+}
+
+function cargarCatalogoLista(categoria){
+  var lista=document.getElementById('cat-lista');
+  lista.innerHTML='<div class="loading">Cargando fórmulas de '+categoria+'...</div>';
+  from('formulas_aplicacion').select('*,tabla:tablas(nombre,plantacion_id)').eq('activo',true).eq('categoria',categoria).order('nombre').get().then(function(rows){
+    if(!rows||!rows.length){lista.innerHTML='<div class="empty">Aún no hay fórmulas de '+categoria+' guardadas para usar como plantilla.</div>';return;}
+    lista.innerHTML='<div class="seccion-titulo" style="margin-top:0;">Elige una como plantilla</div>'+rows.map(function(f){
+      var p=f.tabla?cats.plantaciones.find(function(x){return x.id===f.tabla.plantacion_id;}):null;
+      return '<div class="orden-card" style="cursor:pointer;" data-tid="'+f.id+'"><strong style="font-size:.9rem">'+(VIA_ICONOS[f.via]||'')+' '+f.nombre+'</strong><div class="orden-meta">📍 '+(p?p.nombre:'')+' · '+(f.tabla?f.tabla.nombre:'')+' · '+f.via+'</div></div>';
+    }).join('');
+    lista.querySelectorAll('[data-tid]').forEach(function(el){el.addEventListener('click',function(){cargarPlantillaCatalogo(this.dataset.tid);});});
+  }).catch(function(e){lista.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function cargarPlantillaCatalogo(formulaId){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="loading">Cargando plantilla...</div>';
+  Promise.all([
+    from('formulas_aplicacion').select('*').eq('id',formulaId).get(),
+    from('formula_componentes').select('*,item:inventario_items(nombre,unidad)').eq('formula_id',formulaId).get()
+  ]).then(function(r){
+    var f=r[0]&&r[0][0], comps=r[1]||[];
+    if(!f){renderCatalogoFormulas();return;}
+    formulaEditId=null;
+    formulaVolverAResumen=false;
+    formulaVia=f.via; formulaCategoria=f.categoria; formulaBombas=(f.bombas_compatibles||[]).slice();
+    formulaTablaId=f.tabla_id||null;
+    var tb=cats.tablas.find(function(t){return t.id===formulaTablaId;});
+    formulaPlantacionId=tb?tb.plantacion_id:null;
+    formulaCompSeq=0;
+    formulaCompRows=comps.map(function(c){
+      formulaCompSeq++;
+      var unidad=c.item?c.item.unidad:'';
+      var cantidad=c.cantidad_base;
+      var unidadEntrada=unidad;
+      if(unidad==='kg'&&cantidad<1) unidadEntrada='gr';
+      else if(unidad==='litros'&&cantidad<1) unidadEntrada='ml';
+      return {row:formulaCompSeq,item_id:c.item_id,nombre:c.item?c.item.nombre:'',unidad:unidad,unidadEntrada:unidadEntrada,cantidad:cantidad};
+    });
+    window._formulaNombreExistente=f.nombre+' (copia)';
+    window._formulaNotasExistente=f.notas;
+    window._formulaFechaExistente=new Date().toISOString().slice(0,10);
+    window._formulaCreadorExistente=null;
+    window._formulaVolumenExistente=f.volumen_base_litros;
+    showToast('📚 Plantilla cargada — ajusta lo que necesites');
+    renderFormulaPasoPlantacion();
+  }).catch(function(e){alert('Error: '+e.message);renderCatalogoFormulas();});
+}
+
 function renderFormulaForm(formulaId){
   formulaEditId=formulaId||null;
   formulaVolverAResumen=false;
@@ -1432,7 +1574,7 @@ function renderFormulaForm(formulaId){
       from('formula_componentes').select('*,item:inventario_items(nombre,unidad)').eq('formula_id',formulaId).get()
     ]).then(function(r){
       var f=r[0]&&r[0][0], comps=r[1]||[];
-      if(!f){renderFormulas();return;}
+      if(!f){renderAplicacionesEstatus();return;}
       formulaVia=f.via; formulaCategoria=f.categoria; formulaBombas=(f.bombas_compatibles||[]).slice();
       formulaTablaId=f.tabla_id||null;
       var tb=cats.tablas.find(function(t){return t.id===formulaTablaId;});
@@ -1456,7 +1598,7 @@ function renderFormulaForm(formulaId){
   }
 }
 
-function formulaCancelarLink(){return '<button type="button" onclick="renderFormulas()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cancelar</button>';}
+function formulaCancelarLink(){return '<button type="button" onclick="renderFormulasMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cancelar</button>';}
 
 function renderFormulaPasoPlantacion(){
   var body=document.getElementById('enc-body');
@@ -1489,10 +1631,10 @@ function renderFormulaPasoVia(){
 
 function renderFormulaPasoCategoria(){
   var body=document.getElementById('enc-body');
-  var tiles=['Nutrición','Plaga','Estimulación'].map(function(c){
+  var tiles=['Nutrición','Plaga','Estimulación','Combinada'].map(function(c){
     return '<div class="labor-tile'+(formulaCategoria===c?' labor-tile-otra':'')+'" data-cat="'+c+'"><div class="labor-tile-ic">'+CATEGORIA_ICONOS[c]+'</div><div class="labor-tile-lbl">'+c+'</div></div>';
   }).join('');
-  body.innerHTML='<div class="seccion-titulo">Paso 4 de 8 · Tipo de aplicación</div><div class="labor-grid">'+tiles+'</div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoVia()">← Volver a vía</button>';
+  body.innerHTML='<div class="seccion-titulo">Paso 4 de 9 · Tipo de fórmula</div><div class="labor-grid">'+tiles+'</div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoVia()">← Volver a vía</button>';
   body.querySelectorAll('[data-cat]').forEach(function(el){el.addEventListener('click',function(){formulaCategoria=this.dataset.cat;if(formulaVolverAResumen){formulaVolverAResumen=false;renderFormulaPasoNotas();}else renderFormulaPasoBombas();});});
 }
 
@@ -1654,6 +1796,15 @@ function agregarFormulaComponenteRow(){
 
 function renderFormulaPasoNotas(){
   var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="loading">Cargando...</div>';
+  var traerPersistidos = formulaEditId ? from('formula_componentes').select('*').eq('formula_id',formulaEditId).get() : Promise.resolve([]);
+  traerPersistidos.then(function(persistidos){
+    pintarFormulaPasoNotas(persistidos||[]);
+  }).catch(function(){ pintarFormulaPasoNotas([]); });
+}
+
+function pintarFormulaPasoNotas(persistidos){
+  var body=document.getElementById('enc-body');
   var comps=formulaCompRows.filter(function(r){return r.item_id&&r.cantidad>0;});
   var bombasTxt=formulaBombas.map(function(b){return BOMBA_ICONOS[b]+' '+BOMBA_LABELS[b];}).join(', ');
   var p=cats.plantaciones.find(function(x){return x.id===formulaPlantacionId;});
@@ -1664,7 +1815,20 @@ function renderFormulaPasoNotas(){
     var stock=it?it.stock_actual:0;
     var falta=c.cantidad-stock;
     var alerta='';
-    if(falta>0){faltantes.push({nombre:c.nombre,falta:falta,unidad:c.unidad});alerta=' · <span style="color:var(--rojo);font-weight:700;">⚠️ faltan '+fmtAmigable(falta,c.unidad)+'</span>';}
+    if(falta>0){
+      faltantes.push({nombre:c.nombre,falta:falta,unidad:c.unidad});
+      var persistido=persistidos.find(function(pc){return pc.item_id===c.item_id;});
+      if(persistido&&persistido.estado_faltante==='autorizado'){
+        alerta=' · <span style="color:var(--tierra);font-weight:700;">✅ Autorizado</span>';
+      } else {
+        alerta=' · <span style="color:var(--rojo);font-weight:700;">⚠️ faltan '+fmtAmigable(falta,c.unidad)+'</span>';
+        if(persistido){
+          alerta+=' <button type="button" class="btn-sm btn-completar" data-autorizar-inline="'+persistido.id+'" style="margin-left:.4rem;padding:2px 8px;font-size:.68rem;">✅ Autorizar</button> <button type="button" class="btn-sm btn-iniciar" data-cambiar-inline="'+persistido.id+'" style="padding:2px 8px;font-size:.68rem;">🔄 Cambiar</button>';
+        } else if(formulaEditId){
+          alerta+=' <span class="hint" style="margin:0;">(guarda cambios para poder autorizar)</span>';
+        }
+      }
+    }
     return c.nombre+' · '+fmtAmigable(c.cantidad,c.unidad)+' (hay '+fmtAmigable(stock,c.unidad)+')'+alerta;
   }).join('<br>');
   var fechaTxt=window._formulaFechaExistente||'';
@@ -1672,8 +1836,24 @@ function renderFormulaPasoNotas(){
   if(faltantes.length){
     alertaHtml='<div style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);border-radius:var(--radio-sm);padding:.75rem;margin-bottom:1rem;font-size:.82rem;"><strong style="color:var(--rojo);">⚠️ No alcanza el inventario para el '+fechaTxt+'</strong><br>Hay que pedir antes de esa fecha: '+faltantes.map(function(f){return f.nombre+' ('+numFmt(f.falta)+' '+f.unidad+')';}).join(', ')+'</div>';
   }
-  body.innerHTML='<div class="seccion-titulo">Paso 9 de 9 · Notas y confirmar</div>'+alertaHtml+(window._formulaCreadorExistente?'<p class="hint" style="margin-bottom:.75rem;">👤 Creada por: <strong>'+window._formulaCreadorExistente+'</strong></p>':'')+'<div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row" data-editar="nombre" style="cursor:pointer;"><span class="resumen-key">Nombre ✏️</span><span class="resumen-val">'+window._formulaNombreExistente+'</span></div><div class="resumen-row" data-editar="ubicacion" style="cursor:pointer;"><span class="resumen-key">Ubicación ✏️</span><span class="resumen-val">📍 '+(p?p.nombre:'')+' · '+(t?t.nombre:'')+'</span></div><div class="resumen-row" data-editar="fecha" style="cursor:pointer;"><span class="resumen-key">Fecha de aplicación ✏️</span><span class="resumen-val">'+fechaTxt+'</span></div><div class="resumen-row" data-editar="via" style="cursor:pointer;"><span class="resumen-key">Vía ✏️</span><span class="resumen-val">'+VIA_ICONOS[formulaVia]+' '+formulaVia+'</span></div><div class="resumen-row" data-editar="tipo" style="cursor:pointer;"><span class="resumen-key">Tipo ✏️</span><span class="resumen-val">'+CATEGORIA_ICONOS[formulaCategoria]+' '+formulaCategoria+'</span></div><div class="resumen-row" data-editar="bomba" style="cursor:pointer;"><span class="resumen-key">Bomba ✏️</span><span class="resumen-val">'+bombasTxt+'</span></div><div class="resumen-row" data-editar="componentes" style="cursor:pointer;"><span class="resumen-key">Componentes ✏️</span></div><div style="font-size:.82rem;padding:.35rem 0;">'+resumenComp+'</div></div><p class="hint" style="margin-bottom:1rem;">Toca cualquier renglón de arriba para editarlo directo. ℹ️ Guardar esta fórmula <strong>no descuenta inventario todavía</strong> — solo es la receta planeada. El descuento real se hará cuando la asignes a un operario, en el módulo de Aplicaciones.</p><div class="form-group"><label>Notas (opcional)</label><input type="text" id="fm-notas-input" value="'+(window._formulaNotasExistente?window._formulaNotasExistente.replace(/"/g,'&quot;'):'')+'" placeholder="Instrucciones adicionales..."></div><button class="btn-primary" id="fm-guardar">'+(formulaEditId?'Guardar cambios':'Crear fórmula')+'</button></div>'+(formulaEditId?'<div class="form-card"><button type="button" id="fm-eliminar" style="width:100%;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.85rem;cursor:pointer;">🗑️ Eliminar fórmula</button></div>':'')+'<button class="btn-back" style="margin-top:1rem;" onclick="renderFormulas()">← Volver a fórmulas</button>';
+  body.innerHTML='<div class="seccion-titulo">Paso 9 de 9 · Notas y confirmar</div>'+alertaHtml+(window._formulaCreadorExistente?'<p class="hint" style="margin-bottom:.75rem;">👤 Creada por: <strong>'+window._formulaCreadorExistente+'</strong></p>':'')+'<div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row" data-editar="nombre" style="cursor:pointer;"><span class="resumen-key">Nombre ✏️</span><span class="resumen-val">'+window._formulaNombreExistente+'</span></div><div class="resumen-row" data-editar="ubicacion" style="cursor:pointer;"><span class="resumen-key">Ubicación ✏️</span><span class="resumen-val">📍 '+(p?p.nombre:'')+' · '+(t?t.nombre:'')+'</span></div><div class="resumen-row" data-editar="fecha" style="cursor:pointer;"><span class="resumen-key">Fecha de aplicación ✏️</span><span class="resumen-val">'+fechaTxt+'</span></div><div class="resumen-row" data-editar="via" style="cursor:pointer;"><span class="resumen-key">Vía ✏️</span><span class="resumen-val">'+VIA_ICONOS[formulaVia]+' '+formulaVia+'</span></div><div class="resumen-row" data-editar="tipo" style="cursor:pointer;"><span class="resumen-key">Tipo ✏️</span><span class="resumen-val">'+CATEGORIA_ICONOS[formulaCategoria]+' '+formulaCategoria+'</span></div><div class="resumen-row" data-editar="bomba" style="cursor:pointer;"><span class="resumen-key">Bomba ✏️</span><span class="resumen-val">'+bombasTxt+'</span></div><div class="resumen-row" data-editar="componentes" style="cursor:pointer;"><span class="resumen-key">Componentes ✏️</span></div><div style="font-size:.82rem;padding:.35rem 0;">'+resumenComp+'</div></div><p class="hint" style="margin-bottom:1rem;">Toca cualquier renglón de arriba para editarlo directo. ℹ️ Guardar esta fórmula <strong>no descuenta inventario todavía</strong> — solo es la receta planeada. El descuento real se hará cuando la asignes a un operario, en el módulo de Aplicaciones.</p><div class="form-group"><label>Notas (opcional)</label><input type="text" id="fm-notas-input" value="'+(window._formulaNotasExistente?window._formulaNotasExistente.replace(/"/g,'&quot;'):'')+'" placeholder="Instrucciones adicionales..."></div><button class="btn-primary" id="fm-guardar">'+(formulaEditId?'Guardar cambios':'Crear fórmula')+'</button></div>'+(formulaEditId?'<div class="form-card"><button type="button" id="fm-eliminar" style="width:100%;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.85rem;cursor:pointer;">🗑️ Eliminar fórmula</button></div>':'')+'<button class="btn-back" style="margin-top:1rem;" onclick="renderAplicacionesEstatus()">← Volver a fórmulas</button>';
   document.getElementById('fm-guardar').addEventListener('click',guardarFormula);
+  document.querySelectorAll('[data-autorizar-inline]').forEach(function(btn){
+    btn.addEventListener('click',function(e){
+      e.stopPropagation();
+      var cid=this.dataset.autorizarInline;
+      from('formula_componentes').eq('id',cid).update({estado_faltante:'autorizado',autorizado_por:usuario.id,autorizado_en:new Date().toISOString()}).then(function(){
+        showToast('✅ Faltante autorizado');
+        renderFormulaPasoNotas();
+      }).catch(function(err){alert('Error: '+err.message);});
+    });
+  });
+  document.querySelectorAll('[data-cambiar-inline]').forEach(function(btn){
+    btn.addEventListener('click',function(e){
+      e.stopPropagation();
+      renderCambiarProductoFaltante(this.dataset.cambiarInline);
+    });
+  });
   document.querySelectorAll('[data-editar]').forEach(function(el){
     el.addEventListener('click',function(){
       var campo=this.dataset.editar;
@@ -1692,7 +1872,7 @@ function renderFormulaPasoNotas(){
       if(!confirm('¿Eliminar la fórmula "'+window._formulaNombreExistente+'"? Esta acción no se puede deshacer.')) return;
       from('formulas_aplicacion').eq('id',formulaEditId).update({activo:false}).then(function(){
         showToast('🗑️ Fórmula eliminada');
-        renderFormulas();
+        renderAplicacionesEstatus();
       }).catch(function(e){alert('Error: '+e.message);});
     });
   }
@@ -1727,7 +1907,7 @@ function guardarFormula(){
     var avisoFaltante=hayFaltante?from('notificaciones').insert({titulo:'⚠️ Fórmula con faltante de producto',cuerpo:'La fórmula "'+nombre+'" quedó guardada con al menos un componente sin stock suficiente. Revísala en Fórmulas → ⚠️ Faltantes.',icono:'⚠️',leida:false,para_rol:'encargado'}):Promise.resolve();
     return avisoFaltante.then(function(){
       showToast(hayFaltante?'⚠️ Guardada con faltante de producto: '+nombre:'✅ Fórmula guardada: '+nombre);
-      renderFormulas();
+      renderAplicacionesEstatus();
     });
   }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent=formulaEditId?'Guardar cambios':'Crear fórmula';});
 }
@@ -1960,20 +2140,63 @@ function guardarAplicacion(){
 function renderAlarmasRevision(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo">🚨 Alarmas de campo</div><div class="loading">Cargando...</div>';
-  from('alertas_campo').select('*,usuario:usuarios(nombre),tabla:tablas(nombre,plantacion_id)').order('creado_en',{ascending:false}).limit(50).get().then(function(rows){
-    if(!rows||!rows.length){body.innerHTML='<div class="seccion-titulo">🚨 Alarmas de campo</div><div class="empty">Sin reportes todavía.</div>';return;}
+  Promise.all([
+    from('alertas_campo').select('*,usuario:usuarios(nombre),tabla:tablas(nombre,plantacion_id)').order('creado_en',{ascending:false}).limit(50).get(),
+    from('alertas_recomendaciones').select('*,autor:usuarios!creado_por(nombre)').get()
+  ]).then(function(r){
+    var rows=r[0]||[], recoms=r[1]||[];
+    if(!rows.length){body.innerHTML='<div class="seccion-titulo">🚨 Alarmas de campo</div><div class="empty">Sin reportes todavía.</div>';return;}
     var iconos={plantacion:'🌱',plagas:'🐛',infraestructura:'🏗️',accidente:'🤕',emergencia:'🆘'};
     var nombres={plantacion:'Plantación',plagas:'Plagas',infraestructura:'Infraestructura',accidente:'Accidente',emergencia:'Emergencia'};
+    var esIngeniero=usuario.rol==='ingeniero'||usuario.rol==='admin';
     var html='<div class="seccion-titulo">🚨 Alarmas de campo</div>';
     html+=rows.map(function(a){
       var p=a.tabla?cats.plantaciones.find(function(x){return x.id===a.tabla.plantacion_id;}):null;
       var ubicacion=(p||a.tabla)?('📍 '+(p?p.nombre:'')+(a.tabla?' · '+a.tabla.nombre:'')):'';
       var f=new Date(a.creado_en).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'numeric',minute:'2-digit',hour12:true});
       var esEmerg=a.categoria==='emergencia';
-      return '<div class="orden-card" style="'+(esEmerg?'border-left-color:var(--rojo);':'')+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(iconos[a.categoria]||'🚨')+' '+(nombres[a.categoria]||a.categoria)+'</strong><span style="font-size:.72rem;color:var(--gris-3);">'+f+'</span></div>'+(ubicacion?'<div class="orden-meta" style="font-weight:700;">'+ubicacion+'</div>':'')+'<div class="orden-meta">👤 '+(a.usuario?a.usuario.nombre:'')+'</div>'+(a.descripcion?'<div class="orden-meta" style="margin-top:.2rem;">📝 '+a.descripcion+'</div>':'')+(a.evidencia_url?'<div style="margin-top:.4rem;"><a href="'+a.evidencia_url+'" target="_blank"><img src="'+a.evidencia_url+'" style="max-width:140px;max-height:140px;border-radius:8px;border:1px solid var(--gris-2);"></a></div>':'')+'</div>';
+      var misRecoms=recoms.filter(function(r2){return r2.alerta_id===a.id;});
+      var recomHtml=misRecoms.length?('<div style="margin-top:.4rem;border-top:1px dashed var(--gris-2);padding-top:.4rem;">'+misRecoms.map(function(r2){return '<div style="font-size:.78rem;color:var(--verde-mid);">💡 '+(r2.tipo==='aplicacion'?'Se creó una aplicación':(r2.texto||''))+' — '+(r2.autor?r2.autor.nombre:'')+'</div>';}).join('')+'</div>'):'';
+      var botonRecom=(esIngeniero&&a.categoria!=='emergencia'&&a.tabla_id)?'<div style="margin-top:.5rem;"><button type="button" class="btn-sm btn-completar" data-recomendar="'+a.id+'" data-tabla="'+a.tabla_id+'">💡 Recomendar solución</button></div>':'';
+      return '<div class="orden-card" style="'+(esEmerg?'border-left-color:var(--rojo);':'')+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(iconos[a.categoria]||'🚨')+' '+(nombres[a.categoria]||a.categoria)+'</strong><span style="font-size:.72rem;color:var(--gris-3);">'+f+'</span></div>'+(ubicacion?'<div class="orden-meta" style="font-weight:700;">'+ubicacion+'</div>':'')+'<div class="orden-meta">👤 '+(a.usuario?a.usuario.nombre:'')+'</div>'+(a.descripcion?'<div class="orden-meta" style="margin-top:.2rem;">📝 '+a.descripcion+'</div>':'')+(a.evidencia_url?'<div style="margin-top:.4rem;"><a href="'+a.evidencia_url+'" target="_blank"><img src="'+a.evidencia_url+'" style="max-width:140px;max-height:140px;border-radius:8px;border:1px solid var(--gris-2);"></a></div>':'')+recomHtml+botonRecom+'</div>';
     }).join('');
     body.innerHTML=html;
+    body.querySelectorAll('[data-recomendar]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        renderRecomendarAlarma(this.dataset.recomendar,this.dataset.tabla);
+      });
+    });
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function renderRecomendarAlarma(alertaId,tablaId){
+  var body=document.getElementById('enc-body');
+  var tb=cats.tablas.find(function(t){return t.id===tablaId;});
+  var p=tb?cats.plantaciones.find(function(x){return x.id===tb.plantacion_id;}):null;
+  body.innerHTML='<div class="seccion-titulo">💡 Recomendar solución</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Para: 📍 '+(p?p.nombre:'')+' · '+(tb?tb.nombre:'')+'</p><div style="display:flex;flex-direction:column;gap:10px;"><button type="button" class="op-chip" style="text-align:left;padding:.8rem;" id="rec-aplicacion">🧪 Crear una aplicación (fórmula) para esto</button><button type="button" class="op-chip" style="text-align:left;padding:.8rem;" id="rec-general">📝 Dejar una recomendación general (sin fórmula)</button></div><div id="rec-general-box" style="display:none;margin-top:1rem;"><div class="form-group"><label>Recomendación</label><textarea id="rec-texto" rows="3" placeholder="Ej. Revisar sistema de riego de esa tabla, posible exceso de humedad" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="rec-guardar">Enviar recomendación</button></div></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAlarmasRevision()">← Volver a Alarmas</button>';
+  document.getElementById('rec-aplicacion').addEventListener('click',function(){
+    from('alertas_recomendaciones').insert({alerta_id:alertaId,creado_por:usuario.id,tipo:'aplicacion'}).then(function(){
+      formulaEditId=null; formulaVolverAResumen=false;
+      formulaVia=null; formulaCategoria=null; formulaBombas=[]; formulaCompRows=[]; formulaCompSeq=0;
+      formulaTablaId=tablaId; formulaPlantacionId=tb?tb.plantacion_id:null;
+      window._formulaCreadorExistente=null;
+      showToast('💡 Te llevamos a crear la fórmula para esa tabla');
+      renderFormulaPasoVia();
+    }).catch(function(e){alert('Error: '+e.message);});
+  });
+  document.getElementById('rec-general').addEventListener('click',function(){
+    document.getElementById('rec-general-box').style.display='block';
+  });
+  document.getElementById('rec-guardar').addEventListener('click',function(){
+    var texto=document.getElementById('rec-texto').value.trim();
+    if(!texto){alert('Escribe la recomendación.');return;}
+    from('alertas_recomendaciones').insert({alerta_id:alertaId,creado_por:usuario.id,tipo:'general',texto:texto}).then(function(){
+      return from('notificaciones').insert({titulo:'💡 Recomendación del ingeniero',cuerpo:usuario.nombre+' recomienda: '+texto,icono:'💡',leida:false,para_rol:'encargado'});
+    }).then(function(){
+      showToast('✅ Recomendación enviada');
+      renderAlarmasRevision();
+    }).catch(function(e){alert('Error: '+e.message);});
+  });
 }
 
 function renderAdministracionMenu(){
@@ -2565,13 +2788,13 @@ function renderValidar(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo">✅ Validar aplicaciones</div><div class="loading">Cargando...</div>';
   from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id),formula:formulas_aplicacion(nombre,via,categoria),operario:usuarios!operario_id(nombre),asignador:usuarios!asignado_por(nombre)').eq('validado_ingeniero',false).not('formula_id','is','null').order('creado_en',{ascending:false}).get().then(function(rows){
-    if(!rows||!rows.length){body.innerHTML='<div class="seccion-titulo">✅ Validar aplicaciones</div><div class="empty">✅ No hay aplicaciones pendientes de validar.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulas()">← Volver a fórmulas</button>';return;}
+    if(!rows||!rows.length){body.innerHTML='<div class="seccion-titulo">✅ Validar aplicaciones</div><div class="empty">✅ No hay aplicaciones pendientes de validar.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderAplicacionesEstatus()">← Volver a fórmulas</button>';return;}
     var html='<div class="seccion-titulo">✅ Validar aplicaciones <span style="font-size:.75rem;color:var(--gris-3);font-weight:600;">('+rows.length+' pendientes)</span></div>';
     html+=rows.map(function(o){
       var p=cats.plantaciones.find(function(x){return x.id===o.tabla.plantacion_id;});
       return '<div class="orden-card" data-oid="'+o.id+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem">'+(o.formula?o.formula.nombre:'')+'</strong><span style="font-size:.72rem;color:var(--gris-3)">'+(o.formula?o.formula.via:'')+'</span></div><div class="orden-meta">📍 '+(p?p.nombre:'')+' · '+o.tabla.nombre+'<br>👤 Asignó: '+(o.asignador?o.asignador.nombre:'')+' · Operario: '+(o.operario?o.operario.nombre:'')+'<br>💧 '+numFmt(o.volumen_aplicado_litros)+' L con '+(BOMBA_LABELS[o.bomba_usada]||o.bomba_usada)+' · 📅 '+o.fecha_asignacion+'</div><button type="button" class="btn-sm btn-completar" data-validar="'+o.id+'" style="margin-top:.5rem;">✅ Validar</button></div>';
     }).join('');
-    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderFormulas()">← Volver a fórmulas</button>';
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderAplicacionesEstatus()">← Volver a fórmulas</button>';
     body.querySelectorAll('[data-validar]').forEach(function(btn){
       btn.addEventListener('click',function(){
         var oid=this.dataset.validar;
