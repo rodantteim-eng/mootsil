@@ -1211,10 +1211,10 @@ function renderInventarioEditar(itemId){
 }
 
 var VIA_ICONOS={'Riego':'💧','Foliar':'🌿','Drench':'🧪'};
-var CATEGORIA_ICONOS={'Nutrición':'🌱','Plaga':'🐛','Estimulación':'⚡','Combinada':'🧬'};
+var CATEGORIA_ICONOS={'Nutrición':'🌱','Plaga':'🐛','Estimulación':'⚡','Combinada':'🧬','Herbicida':'🍂'};
 var BOMBA_ICONOS={'inyeccion':'🛢️','motor':'⚙️','manual':'🤲'};
 var BOMBA_LABELS={'inyeccion':'Bomba Inyección','motor':'Bomba Motor','manual':'Bomba Manual'};
-var formulaVia=null, formulaCategoria=null, formulaBombas=[], formulaCompRows=[], formulaCompSeq=0, formulaEditId=null, formulaVolverAResumen=false;
+var formulaVia=null, formulaCategoria=null, formulaCategoriasCombinadas=[], formulaBombas=[], formulaCompRows=[], formulaCompSeq=0, formulaEditId=null, formulaVolverAResumen=false, formulaEsPlantilla=false;
 var formulaPlantacionId=null, formulaTablaId=null;
 
 function headerAplicaciones(pendientesValidar){
@@ -1339,13 +1339,16 @@ function renderAplicacionesEstatus(){
     from('formulas_aplicacion').select('*,tabla:tablas(nombre,plantacion_id),creador:usuarios!creado_por(nombre)').eq('activo',true).order('fecha_programada').get(),
     from('formula_componentes').select('*,item:inventario_items(nombre,unidad,stock_actual),autorizador:usuarios!autorizado_por(nombre)').get(),
     from('ordenes_trabajo').select('id').eq('validado_ingeniero',false).not('formula_id','is','null').get(),
-    from('ordenes_trabajo').select('formula_id,estado,completado_en').not('formula_id','is','null').get()
+    from('ordenes_trabajo').select('id,formula_id,estado,completado_en,validado_ingeniero').not('formula_id','is','null').get()
   ]).then(function(r){
     var rows=r[0]||[], todosComps=r[1]||[], pendValidar=(r[2]||[]).length, ordenesFormula=r[3]||[];
-    var aplicadaPorFormula={}, asignadaPorFormula={};
+    var aplicadaPorFormula={}, asignadaPorFormula={}, ordenPorValidar={};
     ordenesFormula.forEach(function(o){
       asignadaPorFormula[o.formula_id]=true;
-      if(o.estado==='completada'){ if(!aplicadaPorFormula[o.formula_id]||o.completado_en>aplicadaPorFormula[o.formula_id]) aplicadaPorFormula[o.formula_id]=o.completado_en||true; }
+      if(o.estado==='completada'){
+        if(!aplicadaPorFormula[o.formula_id]||o.completado_en>aplicadaPorFormula[o.formula_id]) aplicadaPorFormula[o.formula_id]=o.completado_en||true;
+        if(!o.validado_ingeniero) ordenPorValidar[o.formula_id]=o.id;
+      }
     });
     rows.forEach(function(f){
       f._aplicada=!!aplicadaPorFormula[f.id];
@@ -1377,10 +1380,32 @@ function renderAplicacionesEstatus(){
       var alerta=faltantes.length?'<div style="color:var(--rojo);font-weight:700;font-size:.75rem;margin-top:.25rem;">⚠️ Falta material: '+faltantes.map(function(c){return c.item.nombre;}).join(', ')+' — pedir antes del '+(f.fecha_programada||'?')+'</div>':'';
       var autorInfo=autorizados.length?'<div style="font-size:.7rem;color:var(--tierra);margin-top:.2rem;">Autorizado por '+(autorizados[0].autorizador?autorizados[0].autorizador.nombre:'?')+'</div>':'';
       var fechaGrande='<div style="font-size:.85rem;font-weight:700;color:'+(esHoy?'var(--rojo)':'var(--gris-3)')+';margin-top:.2rem;">📅 '+(f.fecha_programada?fechaLarga(f.fecha_programada):'Sin fecha programada')+'</div>';
-      var accionesRapidas=(esAplicada||esHoy&&!f._asignada)?'':'';
-      return '<div class="orden-card" style="border-left-color:'+colorBorde+';display:flex;gap:.5rem;align-items:flex-start;'+(esAplicada?'opacity:.75;':'')+'"><div style="flex:1;cursor:pointer;" data-fid="'+f.id+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem">'+(VIA_ICONOS[f.via]||'')+' '+f.nombre+(esAplicada?' 🔒':'')+'</strong><span style="font-size:.7rem;font-weight:700;color:'+estatusColor+';">'+estatusTxt+'</span></div>'+fechaGrande+'<div class="orden-meta">📍 '+ubicacion+' · '+f.via+' · Base 🛢️ '+f.volumen_base_litros+' L'+(bombasTxt?' · '+bombasTxt:'')+'</div><div style="font-size:.7rem;color:var(--gris-3);margin-top:.15rem;">👤 Creada por: '+(f.creador?f.creador.nombre:'?')+'</div>'+autorInfo+alerta+'</div><button type="button" class="fm-duplicar-rapido" data-duplicar="'+f.id+'" title="Duplicar para otras tablas" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">📋</button><button type="button" class="fm-borrar-rapido" data-borrar="'+f.id+'" data-nombre="'+f.nombre.replace(/"/g,'&quot;')+'" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-size:.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">🗑️</button></div>';
+      var ordenIdValidar=ordenPorValidar[f.id];
+      var accionesRapidas='';
+      if(pendientes.length) accionesRapidas+='<button type="button" class="btn-sm btn-completar" data-autorizar-todo="'+f.id+'" style="margin-top:.5rem;margin-right:6px;">✅ Autorizar faltante</button>';
+      if(esAplicada&&ordenIdValidar) accionesRapidas+='<button type="button" class="btn-sm btn-completar" data-validar-rapido="'+ordenIdValidar+'" style="margin-top:.5rem;">✅ Validar</button>';
+      return '<div class="orden-card" style="border-left-color:'+colorBorde+';display:flex;gap:.5rem;align-items:flex-start;flex-wrap:wrap;'+(esAplicada?'opacity:.85;':'')+'"><div style="flex:1;min-width:200px;cursor:pointer;" data-fid="'+f.id+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem">'+(VIA_ICONOS[f.via]||'')+' '+f.nombre+(esAplicada?' 🔒':'')+'</strong><span style="font-size:.7rem;font-weight:700;color:'+estatusColor+';">'+estatusTxt+'</span></div>'+fechaGrande+'<div class="orden-meta">📍 '+ubicacion+' · '+f.via+' · Base 🛢️ '+f.volumen_base_litros+' L'+(bombasTxt?' · '+bombasTxt:'')+'</div><div style="font-size:.7rem;color:var(--gris-3);margin-top:.15rem;">👤 Creada por: '+(f.creador?f.creador.nombre:'?')+'</div>'+autorInfo+alerta+'<div onclick="event.stopPropagation()">'+accionesRapidas+'</div></div><button type="button" class="fm-duplicar-rapido" data-duplicar="'+f.id+'" title="Duplicar para otras tablas" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">📋</button><button type="button" class="fm-borrar-rapido" data-borrar="'+f.id+'" data-nombre="'+f.nombre.replace(/"/g,'&quot;')+'" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-size:.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">🗑️</button></div>';
     }).join('');
     body.innerHTML=html;
+    body.querySelectorAll('[data-autorizar-todo]').forEach(function(btn){
+      btn.addEventListener('click',function(e){
+        e.stopPropagation();
+        var fid=this.dataset.autorizarTodo;
+        from('formula_componentes').eq('formula_id',fid).eq('estado_faltante','pendiente').update({estado_faltante:'autorizado',autorizado_por:usuario.id,autorizado_en:new Date().toISOString()}).then(function(){
+          showToast('✅ Faltante(s) autorizado(s)');
+          renderAplicacionesEstatus();
+        }).catch(function(err){alert('Error: '+err.message);});
+      });
+    });
+    body.querySelectorAll('[data-validar-rapido]').forEach(function(btn){
+      btn.addEventListener('click',function(e){
+        e.stopPropagation();
+        from('ordenes_trabajo').eq('id',this.dataset.validarRapido).update({validado_ingeniero:true,validado_por:usuario.id,validado_en:new Date().toISOString()}).then(function(){
+          showToast('✅ Aplicación validada');
+          renderAplicacionesEstatus();
+        }).catch(function(err){alert('Error: '+err.message);});
+      });
+    });
     body.querySelectorAll('.fm-borrar-rapido').forEach(function(btn){
       btn.addEventListener('click',function(e){
         e.stopPropagation();
@@ -1499,8 +1524,8 @@ var CATALOGO_TIPO_SEL=null;
 
 function renderCatalogoFormulas(){
   var body=document.getElementById('enc-body');
-  var tipos=['Nutrición','Plaga','Estimulación','Combinada'];
-  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📚 Catálogo · Paso 1 de 10<button type="button" onclick="renderFormulasMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Fórmulas</button></div><p class="hint" style="margin-bottom:.75rem;">Elige el tipo de fórmula que necesitas como base.</p><div class="labor-grid" id="cat-tipo-grid" style="grid-template-columns:repeat(2,1fr);"></div><div id="cat-lista" style="margin-top:1rem;"></div>';
+  var tipos=['Nutrición','Plaga','Estimulación','Herbicida','Combinada'];
+  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📚 Catálogo · Paso 1 de 10<button type="button" onclick="renderFormulasMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Fórmulas</button></div><p class="hint" style="margin-bottom:.75rem;">Elige el tipo de fórmula que necesitas como base.</p><div class="labor-grid" id="cat-tipo-grid" style="grid-template-columns:repeat(3,1fr);"></div><div id="cat-lista" style="margin-top:1rem;"></div>';
   var tipoGrid=document.getElementById('cat-tipo-grid');
   tipoGrid.innerHTML=tipos.map(function(cat){
     return '<div class="labor-tile" data-cat="'+cat+'"><div class="labor-tile-ic">'+(CATEGORIA_ICONOS[cat]||'🧪')+'</div><div class="labor-tile-lbl">'+cat+'</div></div>';
@@ -1509,21 +1534,32 @@ function renderCatalogoFormulas(){
     el.addEventListener('click',function(){
       tipoGrid.querySelectorAll('[data-cat]').forEach(function(x){x.classList.remove('labor-tile-otra');});
       this.classList.add('labor-tile-otra');
-      cargarCatalogoLista(this.dataset.cat);
+      cargarCatalogoLista(this.dataset.cat,true);
     });
   });
 }
 
-function cargarCatalogoLista(categoria){
+function cargarCatalogoLista(categoria,soloPlantillas){
   var lista=document.getElementById('cat-lista');
   lista.innerHTML='<div class="loading">Cargando fórmulas de '+categoria+'...</div>';
-  from('formulas_aplicacion').select('*,tabla:tablas(nombre,plantacion_id)').eq('activo',true).eq('categoria',categoria).order('nombre').get().then(function(rows){
-    if(!rows||!rows.length){lista.innerHTML='<div class="empty">Aún no hay fórmulas de '+categoria+' guardadas para usar como plantilla.</div>';return;}
-    lista.innerHTML='<div class="seccion-titulo" style="margin-top:0;">Elige una como plantilla</div>'+rows.map(function(f){
+  var q=from('formulas_aplicacion').select('*,tabla:tablas(nombre,plantacion_id)').eq('activo',true).eq('categoria',categoria);
+  if(soloPlantillas) q=q.eq('es_plantilla',true);
+  q.order('nombre').get().then(function(rows){
+    rows=rows||[];
+    if(!rows.length&&soloPlantillas){
+      lista.innerHTML='<div class="empty">Aún no hay plantillas frecuentes de '+categoria+'.<br/><button type="button" id="cat-vertodas" style="border:none;background:none;color:var(--verde-mid);font-weight:600;cursor:pointer;margin-top:.5rem;">Ver todas las fórmulas de '+categoria+'</button></div>';
+      var btnTodas=document.getElementById('cat-vertodas');
+      if(btnTodas) btnTodas.addEventListener('click',function(){cargarCatalogoLista(categoria,false);});
+      return;
+    }
+    var tituloLista=soloPlantillas?'📌 Plantillas frecuentes':'Todas las fórmulas de '+categoria;
+    lista.innerHTML='<div class="seccion-titulo" style="margin-top:0;">'+tituloLista+'</div>'+rows.map(function(f){
       var p=f.tabla?cats.plantaciones.find(function(x){return x.id===f.tabla.plantacion_id;}):null;
-      return '<div class="orden-card" style="cursor:pointer;" data-tid="'+f.id+'"><strong style="font-size:.9rem">'+(VIA_ICONOS[f.via]||'')+' '+f.nombre+'</strong><div class="orden-meta">📍 '+(p?p.nombre:'')+' · '+(f.tabla?f.tabla.nombre:'')+' · '+f.via+'</div></div>';
-    }).join('');
+      return '<div class="orden-card" style="cursor:pointer;" data-tid="'+f.id+'"><strong style="font-size:.9rem">'+(VIA_ICONOS[f.via]||'')+' '+f.nombre+(f.es_plantilla?' 📌':'')+'</strong><div class="orden-meta">📍 '+(p?p.nombre:'')+' · '+(f.tabla?f.tabla.nombre:'')+' · '+f.via+'</div></div>';
+    }).join('')+(soloPlantillas?'<button type="button" id="cat-vertodas" style="border:none;background:none;color:var(--verde-mid);font-weight:600;cursor:pointer;margin-top:.5rem;font-size:.8rem;">Ver todas las fórmulas de '+categoria+'</button>':'');
     lista.querySelectorAll('[data-tid]').forEach(function(el){el.addEventListener('click',function(){cargarPlantillaCatalogo(this.dataset.tid);});});
+    var btnTodas=document.getElementById('cat-vertodas');
+    if(btnTodas) btnTodas.addEventListener('click',function(){cargarCatalogoLista(categoria,false);});
   }).catch(function(e){lista.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
@@ -1538,7 +1574,7 @@ function cargarPlantillaCatalogo(formulaId){
     if(!f){renderCatalogoFormulas();return;}
     formulaEditId=null;
     formulaVolverAResumen=false;
-    formulaVia=f.via; formulaCategoria=f.categoria; formulaBombas=(f.bombas_compatibles||[]).slice();
+    formulaVia=f.via; formulaCategoria=f.categoria; formulaCategoriasCombinadas=f.categorias_combinadas||[]; formulaEsPlantilla=false; formulaBombas=(f.bombas_compatibles||[]).slice();
     formulaTablaId=f.tabla_id||null;
     var tb=cats.tablas.find(function(t){return t.id===formulaTablaId;});
     formulaPlantacionId=tb?tb.plantacion_id:null;
@@ -1565,7 +1601,7 @@ function cargarPlantillaCatalogo(formulaId){
 function renderFormulaForm(formulaId){
   formulaEditId=formulaId||null;
   formulaVolverAResumen=false;
-  formulaVia=null; formulaCategoria=null; formulaBombas=[]; formulaCompRows=[]; formulaCompSeq=0;
+  formulaVia=null; formulaCategoria=null; formulaCategoriasCombinadas=[]; formulaEsPlantilla=false; formulaBombas=[]; formulaCompRows=[]; formulaCompSeq=0;
   formulaPlantacionId=null; formulaTablaId=null;
   window._formulaCreadorExistente=null;
   if(formulaId){
@@ -1575,7 +1611,7 @@ function renderFormulaForm(formulaId){
     ]).then(function(r){
       var f=r[0]&&r[0][0], comps=r[1]||[];
       if(!f){renderAplicacionesEstatus();return;}
-      formulaVia=f.via; formulaCategoria=f.categoria; formulaBombas=(f.bombas_compatibles||[]).slice();
+      formulaVia=f.via; formulaCategoria=f.categoria; formulaCategoriasCombinadas=f.categorias_combinadas||[]; formulaEsPlantilla=!!f.es_plantilla; formulaBombas=(f.bombas_compatibles||[]).slice();
       formulaTablaId=f.tabla_id||null;
       var tb=cats.tablas.find(function(t){return t.id===formulaTablaId;});
       formulaPlantacionId=tb?tb.plantacion_id:null;
@@ -1631,11 +1667,28 @@ function renderFormulaPasoVia(){
 
 function renderFormulaPasoCategoria(){
   var body=document.getElementById('enc-body');
-  var tiles=['Nutrición','Plaga','Estimulación','Combinada'].map(function(c){
+  var tipos=['Nutrición','Plaga','Estimulación','Herbicida','Combinada'];
+  var tiles=tipos.map(function(c){
     return '<div class="labor-tile'+(formulaCategoria===c?' labor-tile-otra':'')+'" data-cat="'+c+'"><div class="labor-tile-ic">'+CATEGORIA_ICONOS[c]+'</div><div class="labor-tile-lbl">'+c+'</div></div>';
   }).join('');
-  body.innerHTML='<div class="seccion-titulo">Paso 4 de 9 · Tipo de fórmula</div><div class="labor-grid">'+tiles+'</div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoVia()">← Volver a vía</button>';
-  body.querySelectorAll('[data-cat]').forEach(function(el){el.addEventListener('click',function(){formulaCategoria=this.dataset.cat;if(formulaVolverAResumen){formulaVolverAResumen=false;renderFormulaPasoNotas();}else renderFormulaPasoBombas();});});
+  var combinadaBox='<div class="form-group" id="fc-combinada-box" style="display:'+(formulaCategoria==='Combinada'?'':'none')+';margin-top:1rem;"><label>¿Con cuáles se combina?</label><div style="display:flex;flex-wrap:wrap;gap:8px;" id="fc-combinada-chips">'+['Nutrición','Plaga','Estimulación','Herbicida'].map(function(c){
+    return '<button type="button" class="op-chip'+(formulaCategoriasCombinadas.indexOf(c)>-1?' sel':'')+'" data-comb="'+c+'" onclick="toggleChip(this)">'+CATEGORIA_ICONOS[c]+' '+c+'</button>';
+  }).join('')+'</div></div>';
+  body.innerHTML='<div class="seccion-titulo">Paso 4 de 9 · Tipo de fórmula</div><div class="labor-grid" style="grid-template-columns:repeat(3,1fr);">'+tiles+'</div>'+combinadaBox+'<button class="btn-primary" id="fc-continuar" style="margin-top:1.25rem;">Continuar →</button><button class="btn-back" style="margin-top:.75rem;" onclick="renderFormulaPasoVia()">← Volver a vía</button>';
+  body.querySelectorAll('[data-cat]').forEach(function(el){el.addEventListener('click',function(){
+    formulaCategoria=this.dataset.cat;
+    body.querySelectorAll('[data-cat]').forEach(function(x){x.classList.remove('labor-tile-otra');});
+    this.classList.add('labor-tile-otra');
+    document.getElementById('fc-combinada-box').style.display=(formulaCategoria==='Combinada')?'':'none';
+  });});
+  document.getElementById('fc-continuar').addEventListener('click',function(){
+    if(!formulaCategoria){alert('Selecciona el tipo de fórmula.');return;}
+    if(formulaCategoria==='Combinada'){
+      formulaCategoriasCombinadas=Array.from(document.querySelectorAll('#fc-combinada-chips .op-chip.sel')).map(function(c){return c.dataset.comb;});
+      if(!formulaCategoriasCombinadas.length){alert('Selecciona con cuáles tipos se combina.');return;}
+    } else { formulaCategoriasCombinadas=[]; }
+    if(formulaVolverAResumen){formulaVolverAResumen=false;renderFormulaPasoNotas();}else renderFormulaPasoBombas();
+  });
 }
 
 function renderFormulaPasoBombas(){
@@ -1836,7 +1889,7 @@ function pintarFormulaPasoNotas(persistidos){
   if(faltantes.length){
     alertaHtml='<div style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);border-radius:var(--radio-sm);padding:.75rem;margin-bottom:1rem;font-size:.82rem;"><strong style="color:var(--rojo);">⚠️ No alcanza el inventario para el '+fechaTxt+'</strong><br>Hay que pedir antes de esa fecha: '+faltantes.map(function(f){return f.nombre+' ('+numFmt(f.falta)+' '+f.unidad+')';}).join(', ')+'</div>';
   }
-  body.innerHTML='<div class="seccion-titulo">Paso 9 de 9 · Notas y confirmar</div>'+alertaHtml+(window._formulaCreadorExistente?'<p class="hint" style="margin-bottom:.75rem;">👤 Creada por: <strong>'+window._formulaCreadorExistente+'</strong></p>':'')+'<div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row" data-editar="nombre" style="cursor:pointer;"><span class="resumen-key">Nombre ✏️</span><span class="resumen-val">'+window._formulaNombreExistente+'</span></div><div class="resumen-row" data-editar="ubicacion" style="cursor:pointer;"><span class="resumen-key">Ubicación ✏️</span><span class="resumen-val">📍 '+(p?p.nombre:'')+' · '+(t?t.nombre:'')+'</span></div><div class="resumen-row" data-editar="fecha" style="cursor:pointer;"><span class="resumen-key">Fecha de aplicación ✏️</span><span class="resumen-val">'+fechaTxt+'</span></div><div class="resumen-row" data-editar="via" style="cursor:pointer;"><span class="resumen-key">Vía ✏️</span><span class="resumen-val">'+VIA_ICONOS[formulaVia]+' '+formulaVia+'</span></div><div class="resumen-row" data-editar="tipo" style="cursor:pointer;"><span class="resumen-key">Tipo ✏️</span><span class="resumen-val">'+CATEGORIA_ICONOS[formulaCategoria]+' '+formulaCategoria+'</span></div><div class="resumen-row" data-editar="bomba" style="cursor:pointer;"><span class="resumen-key">Bomba ✏️</span><span class="resumen-val">'+bombasTxt+'</span></div><div class="resumen-row" data-editar="componentes" style="cursor:pointer;"><span class="resumen-key">Componentes ✏️</span></div><div style="font-size:.82rem;padding:.35rem 0;">'+resumenComp+'</div></div><p class="hint" style="margin-bottom:1rem;">Toca cualquier renglón de arriba para editarlo directo. ℹ️ Guardar esta fórmula <strong>no descuenta inventario todavía</strong> — solo es la receta planeada. El descuento real se hará cuando la asignes a un operario, en el módulo de Aplicaciones.</p><div class="form-group"><label>Notas (opcional)</label><input type="text" id="fm-notas-input" value="'+(window._formulaNotasExistente?window._formulaNotasExistente.replace(/"/g,'&quot;'):'')+'" placeholder="Instrucciones adicionales..."></div><button class="btn-primary" id="fm-guardar">'+(formulaEditId?'Guardar cambios':'Crear fórmula')+'</button></div>'+(formulaEditId?'<div class="form-card"><button type="button" id="fm-eliminar" style="width:100%;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.85rem;cursor:pointer;">🗑️ Eliminar fórmula</button></div>':'')+'<button class="btn-back" style="margin-top:1rem;" onclick="renderAplicacionesEstatus()">← Volver a fórmulas</button>';
+  body.innerHTML='<div class="seccion-titulo">Paso 9 de 9 · Notas y confirmar</div>'+alertaHtml+(window._formulaCreadorExistente?'<p class="hint" style="margin-bottom:.75rem;">👤 Creada por: <strong>'+window._formulaCreadorExistente+'</strong></p>':'')+'<div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row" data-editar="nombre" style="cursor:pointer;"><span class="resumen-key">Nombre ✏️</span><span class="resumen-val">'+window._formulaNombreExistente+'</span></div><div class="resumen-row" data-editar="ubicacion" style="cursor:pointer;"><span class="resumen-key">Ubicación ✏️</span><span class="resumen-val">📍 '+(p?p.nombre:'')+' · '+(t?t.nombre:'')+'</span></div><div class="resumen-row" data-editar="fecha" style="cursor:pointer;"><span class="resumen-key">Fecha de aplicación ✏️</span><span class="resumen-val">'+fechaTxt+'</span></div><div class="resumen-row" data-editar="via" style="cursor:pointer;"><span class="resumen-key">Vía ✏️</span><span class="resumen-val">'+VIA_ICONOS[formulaVia]+' '+formulaVia+'</span></div><div class="resumen-row" data-editar="tipo" style="cursor:pointer;"><span class="resumen-key">Tipo ✏️</span><span class="resumen-val">'+CATEGORIA_ICONOS[formulaCategoria]+' '+formulaCategoria+(formulaCategoria==='Combinada'&&formulaCategoriasCombinadas.length?' ('+formulaCategoriasCombinadas.join(' + ')+')':'')+'</span></div><div class="resumen-row" data-editar="bomba" style="cursor:pointer;"><span class="resumen-key">Bomba ✏️</span><span class="resumen-val">'+bombasTxt+'</span></div><div class="resumen-row" data-editar="componentes" style="cursor:pointer;"><span class="resumen-key">Componentes ✏️</span></div><div style="font-size:.82rem;padding:.35rem 0;">'+resumenComp+'</div></div><p class="hint" style="margin-bottom:1rem;">Toca cualquier renglón de arriba para editarlo directo. ℹ️ Guardar esta fórmula <strong>no descuenta inventario todavía</strong> — solo es la receta planeada. El descuento real se hará cuando la asignes a un operario, en el módulo de Aplicaciones.</p><div class="form-group"><label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:.85rem;"><input type="checkbox" id="fm-plantilla" '+(formulaEsPlantilla?'checked':'')+' style="width:18px;height:18px;"> 📌 Es una fórmula que se repite mucho (guardar como plantilla frecuente en el Catálogo)</label></div><div class="form-group"><label>Notas (opcional)</label><input type="text" id="fm-notas-input" value="'+(window._formulaNotasExistente?window._formulaNotasExistente.replace(/"/g,'&quot;'):'')+'" placeholder="Instrucciones adicionales..."></div><button class="btn-primary" id="fm-guardar">'+(formulaEditId?'Guardar cambios':'Crear fórmula')+'</button></div>'+(formulaEditId?'<div class="form-card"><button type="button" id="fm-eliminar" style="width:100%;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.85rem;cursor:pointer;">🗑️ Eliminar fórmula</button></div>':'')+'<button class="btn-back" style="margin-top:1rem;" onclick="renderAplicacionesEstatus()">← Volver a fórmulas</button>';
   document.getElementById('fm-guardar').addEventListener('click',guardarFormula);
   document.querySelectorAll('[data-autorizar-inline]').forEach(function(btn){
     btn.addEventListener('click',function(e){
@@ -1881,9 +1934,10 @@ function pintarFormulaPasoNotas(persistidos){
 function guardarFormula(){
   var nombre=window._formulaNombreExistente;
   var notas=document.getElementById('fm-notas-input').value||null;
+  var esPlantilla=document.getElementById('fm-plantilla').checked;
   var comps=formulaCompRows.filter(function(r){return r.item_id&&r.cantidad>0;});
   var btn=document.getElementById('fm-guardar'); btn.disabled=true; btn.textContent='Guardando...';
-  var payload={nombre:nombre,via:formulaVia,categoria:formulaCategoria,bombas_compatibles:formulaBombas,tabla_id:formulaTablaId,fecha_programada:window._formulaFechaExistente||null,volumen_base_litros:200,notas:notas,creado_por:usuario.id,activo:true};
+  var payload={nombre:nombre,via:formulaVia,categoria:formulaCategoria,categorias_combinadas:formulaCategoria==='Combinada'?formulaCategoriasCombinadas:null,es_plantilla:esPlantilla,bombas_compatibles:formulaBombas,tabla_id:formulaTablaId,fecha_programada:window._formulaFechaExistente||null,volumen_base_litros:200,notas:notas,creado_por:usuario.id,activo:true};
   var guardar=formulaEditId?from('formulas_aplicacion').eq('id',formulaEditId).update(payload):from('formulas_aplicacion').insert(payload);
   guardar.then(function(resp){
     var fid=formulaEditId||(resp&&resp[0]&&resp[0].id);
