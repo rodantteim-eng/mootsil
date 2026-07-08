@@ -1411,12 +1411,16 @@ function renderAplicacionesEstatus(){
     from('formulas_aplicacion').select('*,tabla:tablas(nombre,plantacion_id),creador:usuarios!creado_por(nombre)').eq('activo',true).order('fecha_programada').get(),
     from('formula_componentes').select('*,item:inventario_items(nombre,unidad,stock_actual),autorizador:usuarios!autorizado_por(nombre)').get(),
     from('ordenes_trabajo').select('id').eq('validado_ingeniero',false).not('formula_id','is','null').get(),
-    from('ordenes_trabajo').select('id,formula_id,estado,completado_en,validado_ingeniero').not('formula_id','is','null').get()
+    from('ordenes_trabajo').select('id,formula_id,estado,completado_en,validado_ingeniero,operario:usuarios!operario_id(nombre)').not('formula_id','is','null').get()
   ]).then(function(r){
     var rows=r[0]||[], todosComps=r[1]||[], pendValidar=(r[2]||[]).length, ordenesFormula=r[3]||[];
-    var aplicadaPorFormula={}, asignadaPorFormula={}, ordenPorValidar={}, porValidarPorFormula={};
+    var aplicadaPorFormula={}, asignadaPorFormula={}, ordenPorValidar={}, porValidarPorFormula={}, asignadoAPorFormula={};
     ordenesFormula.forEach(function(o){
       asignadaPorFormula[o.formula_id]=true;
+      if(o.estado!=='completada'&&o.operario){
+        if(!asignadoAPorFormula[o.formula_id]) asignadoAPorFormula[o.formula_id]=[];
+        if(asignadoAPorFormula[o.formula_id].indexOf(o.operario.nombre)===-1) asignadoAPorFormula[o.formula_id].push(o.operario.nombre);
+      }
       if(o.estado==='completada'){
         if(o.validado_ingeniero){
           if(!aplicadaPorFormula[o.formula_id]||o.completado_en>aplicadaPorFormula[o.formula_id]) aplicadaPorFormula[o.formula_id]=o.completado_en||true;
@@ -1456,13 +1460,15 @@ function renderAplicacionesEstatus(){
       var estatusColor=esAplicada?'var(--verde-mid)':(pendientes.length?'var(--rojo)':(porValidar?'var(--tierra)':(autorizados.length?'var(--tierra)':(esHoy?'var(--rojo)':'var(--tierra)'))));
       var alerta=faltantes.length?'<div style="color:var(--rojo);font-weight:700;font-size:.75rem;margin-top:.25rem;">⚠️ Falta material: '+faltantes.map(function(c){return c.item.nombre;}).join(', ')+' — pedir antes del '+(f.fecha_programada||'?')+'</div>':'';
       var autorInfo=autorizados.length?'<div style="font-size:.7rem;color:var(--tierra);margin-top:.2rem;">Autorizado por '+(autorizados[0].autorizador?autorizados[0].autorizador.nombre:'?')+'</div>':'';
+      var asignadoNombres=asignadoAPorFormula[f.id];
+      var asignadoInfo=(asignadoNombres&&asignadoNombres.length)?'<div style="font-size:.7rem;color:var(--verde-mid);font-weight:700;margin-top:.2rem;">👷 Asignada a: '+asignadoNombres.join(', ')+'</div>':'';
       var fechaGrande='<div style="font-size:.85rem;font-weight:700;color:'+(esHoy?'var(--rojo)':'var(--gris-3)')+';margin-top:.2rem;">📅 '+(f.fecha_programada?fechaLarga(f.fecha_programada):'Sin fecha programada')+'</div>';
       var ordenIdValidar=ordenPorValidar[f.id];
       var accionesRapidas='';
       if(pendientes.length) accionesRapidas+='<button type="button" class="btn-sm btn-completar" data-autorizar-todo="'+f.id+'" style="margin-top:.5rem;margin-right:6px;">✅ Autorizar faltante</button>';
       if(ordenIdValidar) accionesRapidas+='<button type="button" class="btn-sm btn-completar" data-validar-rapido="'+ordenIdValidar+'" style="margin-top:.5rem;">✅ Validar</button>';
       if(!esAplicada&&!pendientes.length) accionesRapidas+='<button type="button" class="btn-sm btn-iniciar" data-asignar-rapido="'+f.id+'" data-nombre="'+f.nombre.replace(/"/g,'&quot;')+'" data-yaaplicada="'+(f._asignada?'1':'0')+'" style="margin-top:.5rem;margin-right:6px;">🧰 '+(f._asignada?'Asignar de nuevo':'Asignar')+'</button>';
-      return '<div class="orden-card" style="border-left-color:'+colorBorde+';display:flex;gap:.5rem;align-items:flex-start;flex-wrap:wrap;'+(esAplicada?'opacity:.85;':'')+'"><div style="flex:1;min-width:200px;cursor:pointer;" data-fid="'+f.id+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem">'+(VIA_ICONOS[f.via]||'')+' '+f.nombre+(esAplicada?' 🔒':'')+'</strong><span style="font-size:.7rem;font-weight:700;color:'+estatusColor+';">'+estatusTxt+'</span></div>'+fechaGrande+'<div class="orden-meta">📍 '+ubicacion+' · '+f.via+' · Base 🛢️ '+f.volumen_base_litros+' L'+(bombasTxt?' · '+bombasTxt:'')+'</div><div style="font-size:.7rem;color:var(--gris-3);margin-top:.15rem;">👤 Creada por: '+(f.creador?f.creador.nombre:'?')+'</div>'+autorInfo+alerta+'<div onclick="event.stopPropagation()">'+accionesRapidas+'</div></div><button type="button" class="fm-duplicar-rapido" data-duplicar="'+f.id+'" title="Duplicar para otras tablas" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">📋</button><button type="button" class="fm-borrar-rapido" data-borrar="'+f.id+'" data-nombre="'+f.nombre.replace(/"/g,'&quot;')+'" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-size:.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">🗑️</button></div>';
+      return '<div class="orden-card" style="border-left-color:'+colorBorde+';display:flex;gap:.5rem;align-items:flex-start;flex-wrap:wrap;'+(esAplicada?'opacity:.85;':'')+'"><div style="flex:1;min-width:200px;cursor:pointer;" data-fid="'+f.id+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem">'+(VIA_ICONOS[f.via]||'')+' '+f.nombre+(esAplicada?' 🔒':'')+'</strong><span style="font-size:.7rem;font-weight:700;color:'+estatusColor+';">'+estatusTxt+'</span></div>'+fechaGrande+'<div class="orden-meta">📍 '+ubicacion+' · '+f.via+' · Base 🛢️ '+f.volumen_base_litros+' L'+(bombasTxt?' · '+bombasTxt:'')+'</div><div style="font-size:.7rem;color:var(--gris-3);margin-top:.15rem;">👤 Creada por: '+(f.creador?f.creador.nombre:'?')+'</div>'+autorInfo+asignadoInfo+alerta+'<div onclick="event.stopPropagation()">'+accionesRapidas+'</div></div><button type="button" class="fm-duplicar-rapido" data-duplicar="'+f.id+'" title="Duplicar para otras tablas" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">📋</button><button type="button" class="fm-borrar-rapido" data-borrar="'+f.id+'" data-nombre="'+f.nombre.replace(/"/g,'&quot;')+'" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-size:.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">🗑️</button></div>';
     }).join('');
     body.innerHTML=html;
     body.querySelectorAll('[data-autorizar-todo]').forEach(function(btn){
