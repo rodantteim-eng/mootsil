@@ -1751,7 +1751,7 @@ function renderFormulaForm(formulaId){
         var unidadEntrada=unidad;
         if(unidad==='kg'&&cantidad<1) unidadEntrada='gr';
         else if(unidad==='litros'&&cantidad<1) unidadEntrada='ml';
-        return {row:formulaCompSeq,item_id:c.item_id,nombre:c.item?c.item.nombre:'',unidad:unidad,unidadEntrada:unidadEntrada,cantidad:cantidad,estadoFaltante:c.estado_faltante,sustituidoPorItemId:c.sustituido_por_item_id,sustitutoDeItemId:c.sustituto_de_item_id};
+        return {row:formulaCompSeq,item_id:c.item_id,nombre:c.item?c.item.nombre:'',unidad:unidad,unidadEntrada:unidadEntrada,cantidad:cantidad,estadoFaltante:c.estado_faltante,sustituidoPorItemId:c.sustituido_por_item_id,sustitutoDeItemId:c.sustituto_de_item_id,faltanteDetectado:c.faltante_detectado,autorizadoPor:c.autorizado_por,autorizadoEn:c.autorizado_en};
       });
       window._formulaNombreExistente=f.nombre; window._formulaNotasExistente=f.notas; window._formulaFechaExistente=f.fecha_programada;
       window._formulaCreadorExistente=f.creador?f.creador.nombre:null;
@@ -2118,11 +2118,15 @@ function guardarFormula(){
     var borrarViejos=formulaEditId?from('formula_componentes').eq('formula_id',fid).delete():Promise.resolve();
     return borrarViejos.then(function(){
       return Promise.all(comps.map(function(c){
+        if(c.estadoFaltante==='sustituido'){
+          return from('formula_componentes').insert({formula_id:fid,item_id:c.item_id,cantidad_base:c.cantidad,estado_faltante:'sustituido',sustituido_por_item_id:c.sustituidoPorItemId||null,faltante_detectado:c.faltanteDetectado||0});
+        }
         var item=cats.inventario.find(function(x){return x.id===c.item_id;});
         var disponible=item?item.stock_actual:0;
         var faltante=Math.max(0,c.cantidad-disponible);
-        var estadoFaltante=faltante>0?'pendiente':'ninguno';
-        return from('formula_componentes').insert({formula_id:fid,item_id:c.item_id,cantidad_base:c.cantidad,estado_faltante:estadoFaltante,faltante_detectado:faltante});
+        var yaResuelto=c.estadoFaltante==='autorizado'&&faltante>0;
+        var estadoFaltante=yaResuelto?'autorizado':(faltante>0?'pendiente':'ninguno');
+        return from('formula_componentes').insert({formula_id:fid,item_id:c.item_id,cantidad_base:c.cantidad,estado_faltante:estadoFaltante,faltante_detectado:faltante,sustituto_de_item_id:c.sustitutoDeItemId||null,autorizado_por:yaResuelto?c.autorizadoPor:null,autorizado_en:yaResuelto?c.autorizadoEn:null});
       }));
     });
   }).then(function(){
