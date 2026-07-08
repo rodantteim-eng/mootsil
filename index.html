@@ -1295,7 +1295,7 @@ function headerAplicaciones(pendientesValidar){
 }
 
 function headerFormulasMenu(){
-  return '<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4rem;">📐 Fórmulas<div><button type="button" onclick="renderCatalogoFormulas()" style="border:none;background:none;color:var(--tierra);font-size:.78rem;font-weight:600;cursor:pointer;margin-right:.75rem;">📚 Catálogo</button><button type="button" onclick="renderFormulaForm()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nueva</button></div></div>';
+  return '<div class="seccion-titulo">📐 Fórmulas</div>';
 }
 
 function renderFormulasMenu(){
@@ -1461,6 +1461,7 @@ function renderAplicacionesEstatus(){
       var accionesRapidas='';
       if(pendientes.length) accionesRapidas+='<button type="button" class="btn-sm btn-completar" data-autorizar-todo="'+f.id+'" style="margin-top:.5rem;margin-right:6px;">✅ Autorizar faltante</button>';
       if(ordenIdValidar) accionesRapidas+='<button type="button" class="btn-sm btn-completar" data-validar-rapido="'+ordenIdValidar+'" style="margin-top:.5rem;">✅ Validar</button>';
+      if(!esAplicada&&!pendientes.length) accionesRapidas+='<button type="button" class="btn-sm btn-iniciar" data-asignar-rapido="'+f.id+'" data-nombre="'+f.nombre.replace(/"/g,'&quot;')+'" data-yaaplicada="'+(f._asignada?'1':'0')+'" style="margin-top:.5rem;margin-right:6px;">🧰 '+(f._asignada?'Asignar de nuevo':'Asignar')+'</button>';
       return '<div class="orden-card" style="border-left-color:'+colorBorde+';display:flex;gap:.5rem;align-items:flex-start;flex-wrap:wrap;'+(esAplicada?'opacity:.85;':'')+'"><div style="flex:1;min-width:200px;cursor:pointer;" data-fid="'+f.id+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem">'+(VIA_ICONOS[f.via]||'')+' '+f.nombre+(esAplicada?' 🔒':'')+'</strong><span style="font-size:.7rem;font-weight:700;color:'+estatusColor+';">'+estatusTxt+'</span></div>'+fechaGrande+'<div class="orden-meta">📍 '+ubicacion+' · '+f.via+' · Base 🛢️ '+f.volumen_base_litros+' L'+(bombasTxt?' · '+bombasTxt:'')+'</div><div style="font-size:.7rem;color:var(--gris-3);margin-top:.15rem;">👤 Creada por: '+(f.creador?f.creador.nombre:'?')+'</div>'+autorInfo+alerta+'<div onclick="event.stopPropagation()">'+accionesRapidas+'</div></div><button type="button" class="fm-duplicar-rapido" data-duplicar="'+f.id+'" title="Duplicar para otras tablas" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">📋</button><button type="button" class="fm-borrar-rapido" data-borrar="'+f.id+'" data-nombre="'+f.nombre.replace(/"/g,'&quot;')+'" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-size:.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">🗑️</button></div>';
     }).join('');
     body.innerHTML=html;
@@ -1472,6 +1473,16 @@ function renderAplicacionesEstatus(){
           showToast('✅ Faltante(s) autorizado(s)');
           renderAplicacionesEstatus();
         }).catch(function(err){alert('Error: '+err.message);});
+      });
+    });
+    body.querySelectorAll('[data-asignar-rapido]').forEach(function(btn){
+      btn.addEventListener('click',function(e){
+        e.stopPropagation();
+        var fid=this.dataset.asignarRapido, nombre=this.dataset.nombre;
+        if(this.dataset.yaaplicada==='1'){
+          if(!confirm('⚠️ La fórmula "'+nombre+'" ya tiene una asignación en curso.\n\n¿Seguro que quieres asignarla otra vez? Esto puede causar una aplicación duplicada.')) return;
+        }
+        cargarFormulaParaAsignar(fid);
       });
     });
     body.querySelectorAll('[data-validar-rapido]').forEach(function(btn){
