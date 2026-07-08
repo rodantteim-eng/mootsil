@@ -1440,6 +1440,10 @@ function renderAplicacionesEstatus(){
       f._estadoFicha=f._aplicada?'aplicadas':((f.fecha_programada&&f.fecha_programada<=hoy)?'hoy':'programadas');
     });
     var filtradas=rows.filter(function(f){return f._estadoFicha===FORMULA_SUBTAB;});
+    var resueltosStale=todosComps.filter(function(c){return c.estado_faltante==='pendiente'&&c.item&&(c.cantidad_base<=c.item.stock_actual);});
+    if(resueltosStale.length){
+      Promise.all(resueltosStale.map(function(c){return from('formula_componentes').eq('id',c.id).update({estado_faltante:'ninguno',faltante_detectado:0});})).catch(function(){});
+    }
     if(!rows.length){body.innerHTML=headerAplicaciones(pendValidar)+barraSubtabsFormulas()+'<div class="empty">🧪 Aún no hay fórmulas registradas.</div>';return;}
     var html=headerAplicaciones(pendValidar)+barraSubtabsFormulas();
     if(!filtradas.length){
@@ -1454,7 +1458,7 @@ function renderAplicacionesEstatus(){
       var ubicacion=(p?p.nombre+' · ':'')+(f.tabla?f.tabla.nombre:'sin tabla');
       var comps=todosComps.filter(function(c){return c.formula_id===f.id;});
       var faltantes=comps.filter(function(c){return c.item&&c.estado_faltante!=='sustituido'&&(c.cantidad_base>c.item.stock_actual);});
-      var pendientes=comps.filter(function(c){return c.estado_faltante==='pendiente';});
+      var pendientes=comps.filter(function(c){return c.estado_faltante==='pendiente'&&c.item&&(c.cantidad_base>c.item.stock_actual);});
       var autorizados=comps.filter(function(c){return c.estado_faltante==='autorizado';});
       var esAplicada=f._estadoFicha==='aplicadas';
       var esHoy=f._estadoFicha==='hoy';
