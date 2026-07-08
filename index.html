@@ -1453,7 +1453,7 @@ function renderAplicacionesEstatus(){
       var p=f.tabla?cats.plantaciones.find(function(x){return x.id===f.tabla.plantacion_id;}):null;
       var ubicacion=(p?p.nombre+' · ':'')+(f.tabla?f.tabla.nombre:'sin tabla');
       var comps=todosComps.filter(function(c){return c.formula_id===f.id;});
-      var faltantes=comps.filter(function(c){return c.item&&(c.cantidad_base>c.item.stock_actual);});
+      var faltantes=comps.filter(function(c){return c.item&&c.estado_faltante!=='sustituido'&&(c.cantidad_base>c.item.stock_actual);});
       var pendientes=comps.filter(function(c){return c.estado_faltante==='pendiente';});
       var autorizados=comps.filter(function(c){return c.estado_faltante==='autorizado';});
       var esAplicada=f._estadoFicha==='aplicadas';
