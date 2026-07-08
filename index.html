@@ -2383,9 +2383,9 @@ function renderOrdenCompra(){
       return;
     }
     if(listaComprar.length){
-      html+='<p class="hint" style="margin-bottom:.5rem;">Marca lo que sí vas a pedir — se arma una lista abajo para copiar.</p>';
-      html+=listaComprar.map(function(n){
-        return '<label class="orden-card" style="display:flex;align-items:center;gap:.6rem;cursor:pointer;"><input type="checkbox" class="oc-check" data-nombre="'+n.item.nombre.replace(/"/g,'&quot;')+'" data-cant="'+fmtAmigable(n.cantidad,n.item.unidad)+'" checked style="width:22px;height:22px;flex-shrink:0;"><div style="flex:1;"><strong style="font-size:.88rem;">'+n.item.nombre+'</strong><div class="orden-meta">Pedir: '+fmtAmigable(n.cantidad,n.item.unidad)+' · '+n.motivos.join(', ')+'</div></div></label>';
+      html+='<p class="hint" style="margin-bottom:.5rem;">Ajusta la cantidad si vas a pedir más o menos de lo sugerido. Desmarca lo que no vas a pedir esta vez.</p>';
+      html+=listaComprar.map(function(n,idx){
+        return '<div class="orden-card" style="display:flex;align-items:center;gap:.6rem;"><input type="checkbox" class="oc-check" data-idx="'+idx+'" checked style="width:22px;height:22px;flex-shrink:0;"><div style="flex:1;"><strong style="font-size:.88rem;">'+n.item.nombre+'</strong><div class="orden-meta">Sugerido: '+fmtAmigable(n.cantidad,n.item.unidad)+' · '+n.motivos.join(', ')+'</div></div><div style="display:flex;align-items:center;gap:4px;flex-shrink:0;"><input type="number" class="oc-cantidad" data-idx="'+idx+'" value="'+numFmt(n.cantidad)+'" min="0" step="any" style="width:75px;padding:.4rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;text-align:right;"><span style="font-size:.78rem;color:var(--gris-3);">'+n.item.unidad+'</span></div></div>';
       }).join('');
     }
     if(porCaducar.length){
@@ -2395,18 +2395,69 @@ function renderOrdenCompra(){
         return '<div class="orden-card" style="border-left-color:'+(vencido?'var(--rojo)':'var(--tierra)')+';"><strong style="font-size:.88rem;">'+it.nombre+'</strong><div class="orden-meta">'+(vencido?'⚠️ Ya venció el ':'Caduca el ')+it.fecha_caducidad+' · Stock: '+numFmt(it.stock_actual)+' '+it.unidad+'</div></div>';
       }).join('');
     }
-    if(listaComprar.length) html+='<button class="btn-primary" id="oc-copiar" style="margin-top:1.25rem;">📋 Copiar lista de compra</button>';
+    if(listaComprar.length) html+='<button class="btn-primary" id="oc-pdf" style="margin-top:1.25rem;">📄 Generar PDF para el proveedor</button><p class="hint" style="text-align:center;margin-top:.4rem;" id="oc-pdf-status"></p>';
     html+='<button class="btn-back" style="margin-top:1rem;" onclick="renderAdministracionMenu()">← Volver a Administración</button>';
     body.innerHTML=html;
-    var btnCopiar=document.getElementById('oc-copiar');
-    if(btnCopiar) btnCopiar.addEventListener('click',function(){
-      var seleccionados=Array.from(document.querySelectorAll('.oc-check:checked')).map(function(c){return '• '+c.dataset.nombre+' — '+c.dataset.cant;});
-      var texto='Orden de compra ('+hoy+'):\n'+seleccionados.join('\n');
-      if(navigator.clipboard&&navigator.clipboard.writeText){
-        navigator.clipboard.writeText(texto).then(function(){showToast('📋 Lista copiada');}).catch(function(){alert(texto);});
-      } else { alert(texto); }
+    var btnPdf=document.getElementById('oc-pdf');
+    if(btnPdf) btnPdf.addEventListener('click',function(){
+      var seleccionados=Array.from(document.querySelectorAll('.oc-check:checked')).map(function(chk){
+        var idx=chk.dataset.idx;
+        var n=listaComprar[idx];
+        var cantInput=document.querySelector('.oc-cantidad[data-idx="'+idx+'"]');
+        var cant=parseFloat(cantInput.value)||0;
+        return {nombre:n.item.nombre,cantidad:cant,unidad:n.item.unidad};
+      }).filter(function(x){return x.cantidad>0;});
+      if(!seleccionados.length){alert('Marca al menos un producto con cantidad mayor a 0.');return;}
+      generarPdfOrdenCompra(seleccionados);
     });
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function cargarJsPDF(cb){
+  if(window.jspdf){cb();return;}
+  var s=document.createElement('script');
+  s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+  s.onload=function(){cb();};
+  s.onerror=function(){document.getElementById('oc-pdf-status').textContent='No se pudo cargar el generador de PDF. Revisa tu conexión.';};
+  document.head.appendChild(s);
+}
+
+function generarPdfOrdenCompra(productos){
+  var status=document.getElementById('oc-pdf-status');
+  if(status) status.textContent='Generando PDF...';
+  cargarJsPDF(function(){
+    try{
+      var jsPDF=window.jspdf.jsPDF;
+      var doc=new jsPDF();
+      var hoy=new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
+      doc.setFontSize(18); doc.text('Mootsil — Orden de Compra',14,20);
+      doc.setFontSize(10); doc.setTextColor(100); doc.text('Fecha: '+hoy,14,28);
+      doc.setTextColor(0);
+      var y=42;
+      doc.setFontSize(11);
+      doc.setFont(undefined,'bold');
+      doc.text('Producto',14,y); doc.text('Cantidad',140,y); doc.text('Unidad',175,y);
+      doc.setFont(undefined,'normal');
+      doc.line(14,y+2,196,y+2);
+      y+=10;
+      productos.forEach(function(p){
+        if(y>270){doc.addPage();y=20;}
+        doc.text(p.nombre,14,y,{maxWidth:120});
+        doc.text(numFmt(p.cantidad),140,y);
+        doc.text(p.unidad,175,y);
+        y+=9;
+      });
+      y+=6;
+      doc.line(14,y,196,y);
+      y+=10;
+      doc.setFontSize(9); doc.setTextColor(120);
+      doc.text('Proveedor: _______________________________     Fecha de entrega esperada: ______________',14,y);
+      doc.save('orden_compra_'+new Date().toISOString().slice(0,10)+'.pdf');
+      if(status) status.textContent='✅ PDF descargado';
+    }catch(e){
+      if(status) status.textContent='Error al generar el PDF: '+e.message;
+    }
+  });
 }
 
 function renderAdministracionMenu(){
