@@ -1604,13 +1604,25 @@ function renderCambiarProductoFaltante(compId){
   body.innerHTML='<div class="loading">Cargando...</div>';
   from('formula_componentes').select('*,item:inventario_items!item_id(nombre,unidad)').eq('id',compId).get().then(function(rows){
     var c=rows[0];
-    var opts=cats.inventario.filter(function(i){return i.id!==c.item_id;}).map(function(i){return '<option value="'+i.id+'">'+i.nombre+' ('+numFmt(i.stock_actual)+' '+i.unidad+' disponibles)</option>';}).join('');
-    body.innerHTML='<div class="seccion-titulo">🔄 Sustituir producto</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Sustituyendo: <strong>'+(c.item?c.item.nombre:'')+'</strong> (faltaban '+numFmt(c.faltante_detectado)+' '+(c.item?c.item.unidad:'')+')<br/>El original se queda visible en la fórmula marcado como sustituido, para dejar rastro de qué se cambió.</p><div class="form-group"><label>Producto sustituto</label><select id="cp-nuevo">'+opts+'</select></div><div class="form-group"><label>Cantidad requerida</label><input type="number" id="cp-cantidad" min="0" step="any" value="'+c.cantidad_base+'"></div><button class="btn-primary" id="cp-guardar">Guardar sustitución</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAplicacionesEstatus()">← Volver a Aplicaciones</button>';
+    var opts=cats.inventario.filter(function(i){return i.id!==c.item_id;}).map(function(i){return '<option value="'+i.id+'" data-unidad="'+i.unidad+'">'+i.nombre+' ('+numFmt(i.stock_actual)+' '+i.unidad+' disponibles)</option>';}).join('');
+    body.innerHTML='<div class="seccion-titulo">🔄 Sustituir producto</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Sustituyendo: <strong>'+(c.item?c.item.nombre:'')+'</strong> (faltaban '+numFmt(c.faltante_detectado)+' '+(c.item?c.item.unidad:'')+')<br/>El original se queda visible en la fórmula marcado como sustituido, para dejar rastro de qué se cambió.</p><div class="form-group"><label>Producto sustituto</label><select id="cp-nuevo">'+opts+'</select></div><div class="form-group"><label>Cantidad requerida</label><div style="display:flex;gap:8px;"><input type="number" id="cp-cantidad" min="0" step="any" value="'+c.cantidad_base+'" style="flex:1;"><select id="cp-unidad" style="min-width:70px;"></select></div></div><button class="btn-primary" id="cp-guardar">Guardar sustitución</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAplicacionesEstatus()">← Volver a Aplicaciones</button>';
+    var selNuevo=document.getElementById('cp-nuevo');
+    var selUnidad=document.getElementById('cp-unidad');
+    function pintarUnidades(){
+      var opt=selNuevo.options[selNuevo.selectedIndex];
+      var unidadBase=opt?opt.dataset.unidad:'';
+      var alternas=unidadesAlternas(unidadBase);
+      selUnidad.innerHTML=alternas.map(function(u){return '<option value="'+u+'">'+u+'</option>';}).join('');
+    }
+    selNuevo.addEventListener('change',pintarUnidades);
+    pintarUnidades();
     document.getElementById('cp-guardar').addEventListener('click',function(){
-      var nuevoId=document.getElementById('cp-nuevo').value;
-      var cantidad=parseFloat(document.getElementById('cp-cantidad').value)||0;
+      var nuevoId=selNuevo.value;
+      var cantidadEntrada=parseFloat(document.getElementById('cp-cantidad').value)||0;
+      var unidadEntrada=selUnidad.value;
       if(!nuevoId){alert('Selecciona el producto sustituto.');return;}
       var item=cats.inventario.find(function(i){return i.id===nuevoId;});
+      var cantidad=convertirABase(cantidadEntrada,unidadEntrada,item?item.unidad:unidadEntrada);
       var disponible=item?item.stock_actual:0;
       var faltante=Math.max(0,cantidad-disponible);
       var btn=this; btn.disabled=true; btn.textContent='Guardando...';
