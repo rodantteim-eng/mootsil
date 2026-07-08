@@ -558,11 +558,11 @@ function renderTablero(){
   Promise.all([
     from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre),subtipo:subtipos_labor(nombre)').order('creado_en',{ascending:false}).get(),
     from('formulas_aplicacion').select('id,nombre,fecha_programada,tabla_id').eq('activo',true).get(),
-    from('ordenes_trabajo').select('formula_id').not('formula_id','is','null').get(),
+    from('ordenes_trabajo').select('formula_id,estado').not('formula_id','is','null').get(),
     from('permisos').select('id').eq('estado','pendiente').get(),
     from('solicitudes_labor').select('id').eq('estado','pendiente').get()
   ]).then(function(r){
-    var todas=r[0]||[], formulas=r[1]||[], ordenesConFormula=r[2]||[], permisosPendientes=r[3]||[], solicitudesPendientes=r[4]||[];
+    var todas=r[0]||[], formulas=r[1]||[], ordenesConFormula=(r[2]||[]).filter(function(o){return o.estado!=='cancelada';}), permisosPendientes=r[3]||[], solicitudesPendientes=r[4]||[];
     var asignadas={};
     ordenesConFormula.forEach(function(o){asignadas[o.formula_id]=true;});
     var pendientesFormula=formulas.filter(function(f){return f.fecha_programada&&f.fecha_programada<=en7dias&&!asignadas[f.id];});
@@ -1413,7 +1413,7 @@ function renderAplicacionesEstatus(){
     from('ordenes_trabajo').select('id').eq('validado_ingeniero',false).not('formula_id','is','null').get(),
     from('ordenes_trabajo').select('id,formula_id,estado,completado_en,validado_ingeniero,operario:usuarios!operario_id(nombre)').not('formula_id','is','null').get()
   ]).then(function(r){
-    var rows=r[0]||[], todosComps=r[1]||[], pendValidar=(r[2]||[]).length, ordenesFormula=r[3]||[];
+    var rows=r[0]||[], todosComps=r[1]||[], pendValidar=(r[2]||[]).length, ordenesFormula=(r[3]||[]).filter(function(o){return o.estado!=='cancelada';});
     var aplicadaPorFormula={}, asignadaPorFormula={}, ordenPorValidar={}, sinValidarPorFormula={}, asignadoAPorFormula={}, aplicadoPorFormula={};
     ordenesFormula.forEach(function(o){
       asignadaPorFormula[o.formula_id]=true;
@@ -2100,7 +2100,7 @@ function renderAsigAplicPorFecha(){
     from('formulas_aplicacion').select('*,tabla:tablas(nombre,plantacion_id)').eq('activo',true).not('fecha_programada','is','null').order('fecha_programada').get(),
     from('ordenes_trabajo').select('formula_id,estado').not('formula_id','is','null').get()
   ]).then(function(r){
-    var formulas=r[0]||[], ordenesConFormula=r[1]||[];
+    var formulas=r[0]||[], ordenesConFormula=(r[1]||[]).filter(function(o){return o.estado!=='cancelada';});
     var asignadas={}, aplicadas={};
     ordenesConFormula.forEach(function(o){asignadas[o.formula_id]=true; if(o.estado==='completada') aplicadas[o.formula_id]=true;});
     var hoyF=formulas.filter(function(f){return f.fecha_programada===hoy;});
