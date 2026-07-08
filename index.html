@@ -1409,7 +1409,7 @@ function renderAplicacionesEstatus(){
   var hoy=new Date().toISOString().slice(0,10);
   Promise.all([
     from('formulas_aplicacion').select('*,tabla:tablas(nombre,plantacion_id),creador:usuarios!creado_por(nombre)').eq('activo',true).order('fecha_programada').get(),
-    from('formula_componentes').select('*,item:inventario_items(nombre,unidad,stock_actual),autorizador:usuarios!autorizado_por(nombre)').get(),
+    from('formula_componentes').select('*,item:inventario_items!item_id(nombre,unidad,stock_actual),autorizador:usuarios!autorizado_por(nombre)').get(),
     from('ordenes_trabajo').select('id').eq('validado_ingeniero',false).not('formula_id','is','null').get(),
     from('ordenes_trabajo').select('id,formula_id,estado,completado_en,validado_ingeniero,operario:usuarios!operario_id(nombre)').not('formula_id','is','null').get()
   ]).then(function(r){
@@ -1571,7 +1571,7 @@ function renderDuplicarFormula(formulaId){
 function renderFormulasFaltantes(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo">⚠️ Faltantes de producto</div><div class="loading">Cargando...</div>';
-  from('formula_componentes').select('*,item:inventario_items(nombre,unidad,stock_actual),formula:formulas_aplicacion(nombre,fecha_programada,activo),autorizador:usuarios!autorizado_por(nombre)').in('estado_faltante',['pendiente','autorizado']).order('estado_faltante',{ascending:true}).get().then(function(rows){
+  from('formula_componentes').select('*,item:inventario_items!item_id(nombre,unidad,stock_actual),formula:formulas_aplicacion(nombre,fecha_programada,activo),autorizador:usuarios!autorizado_por(nombre)').in('estado_faltante',['pendiente','autorizado']).order('estado_faltante',{ascending:true}).get().then(function(rows){
     rows=(rows||[]).filter(function(c){return c.formula&&c.formula.activo;});
     var header='<div class="seccion-titulo">⚠️ Faltantes de producto</div>';
     if(!rows.length){body.innerHTML=header+'<div class="empty">🎉 Ninguna fórmula tiene faltante de producto pendiente.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderAplicacionesEstatus()">← Volver a fórmulas</button>';return;}
@@ -1602,7 +1602,7 @@ function renderFormulasFaltantes(){
 function renderCambiarProductoFaltante(compId){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="loading">Cargando...</div>';
-  from('formula_componentes').select('*,item:inventario_items(nombre,unidad)').eq('id',compId).get().then(function(rows){
+  from('formula_componentes').select('*,item:inventario_items!item_id(nombre,unidad)').eq('id',compId).get().then(function(rows){
     var c=rows[0];
     var opts=cats.inventario.filter(function(i){return i.id!==c.item_id;}).map(function(i){return '<option value="'+i.id+'">'+i.nombre+' ('+numFmt(i.stock_actual)+' '+i.unidad+' disponibles)</option>';}).join('');
     body.innerHTML='<div class="seccion-titulo">🔄 Sustituir producto</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Sustituyendo: <strong>'+(c.item?c.item.nombre:'')+'</strong> (faltaban '+numFmt(c.faltante_detectado)+' '+(c.item?c.item.unidad:'')+')<br/>El original se queda visible en la fórmula marcado como sustituido, para dejar rastro de qué se cambió.</p><div class="form-group"><label>Producto sustituto</label><select id="cp-nuevo">'+opts+'</select></div><div class="form-group"><label>Cantidad requerida</label><input type="number" id="cp-cantidad" min="0" step="any" value="'+c.cantidad_base+'"></div><button class="btn-primary" id="cp-guardar">Guardar sustitución</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAplicacionesEstatus()">← Volver a Aplicaciones</button>';
@@ -1680,7 +1680,7 @@ function cargarPlantillaCatalogo(formulaId){
   body.innerHTML='<div class="loading">Cargando plantilla...</div>';
   Promise.all([
     from('formulas_aplicacion').select('*').eq('id',formulaId).get(),
-    from('formula_componentes').select('*,item:inventario_items(nombre,unidad)').eq('formula_id',formulaId).get()
+    from('formula_componentes').select('*,item:inventario_items!item_id(nombre,unidad)').eq('formula_id',formulaId).get()
   ]).then(function(r){
     var f=r[0]&&r[0][0], comps=r[1]||[];
     if(!f){renderCatalogoFormulas();return;}
@@ -1723,7 +1723,7 @@ function renderFormulaForm(formulaId){
   if(formulaId){
     Promise.all([
       from('formulas_aplicacion').select('*,creador:usuarios!creado_por(nombre)').eq('id',formulaId).get(),
-      from('formula_componentes').select('*,item:inventario_items(nombre,unidad)').eq('formula_id',formulaId).get()
+      from('formula_componentes').select('*,item:inventario_items!item_id(nombre,unidad)').eq('formula_id',formulaId).get()
     ]).then(function(r){
       var f=r[0]&&r[0][0], comps=r[1]||[];
       if(!f){renderAplicacionesEstatus();return;}
@@ -2223,7 +2223,7 @@ function cargarFormulaParaAsignar(formulaId){
   body.innerHTML='<div class="loading">Cargando fórmula...</div>';
   Promise.all([
     from('formulas_aplicacion').select('*').eq('id',formulaId).get(),
-    from('formula_componentes').select('*,item:inventario_items(nombre,unidad,stock_actual)').eq('formula_id',formulaId).get()
+    from('formula_componentes').select('*,item:inventario_items!item_id(nombre,unidad,stock_actual)').eq('formula_id',formulaId).get()
   ]).then(function(r){
     aplic.formula=r[0]&&r[0][0];
     aplic.componentes=r[1]||[];
@@ -2422,7 +2422,7 @@ function renderOrdenCompra(){
   var en30str=en30.toISOString().slice(0,10);
   Promise.all([
     from('inventario_items').select('*').eq('activo',true).get(),
-    from('formula_componentes').select('*,item:inventario_items(nombre,unidad),formula:formulas_aplicacion(nombre,activo)').eq('estado_faltante','pendiente').get()
+    from('formula_componentes').select('*,item:inventario_items!item_id(nombre,unidad),formula:formulas_aplicacion(nombre,activo)').eq('estado_faltante','pendiente').get()
   ]).then(function(r){
     var items=r[0]||[], pendientes=(r[1]||[]).filter(function(c){return c.formula&&c.formula.activo;});
     var necesidadPorItem={};
@@ -4135,7 +4135,7 @@ function iniciarEjecucion(oid){
     if(o.tipo_labor&&o.tipo_labor.requiere_formula&&o.formula_id){
       Promise.all([
         from('formulas_aplicacion').select('*').eq('id',o.formula_id).get(),
-        from('formula_componentes').select('*,item:inventario_items(nombre,unidad,imagen_url)').eq('formula_id',o.formula_id).get()
+        from('formula_componentes').select('*,item:inventario_items!item_id(nombre,unidad,imagen_url)').eq('formula_id',o.formula_id).get()
       ]).then(function(r){
         ordenEjecutando.formula=r[0]&&r[0][0];
         ordenEjecutando.componentesFormula=r[1]||[];
