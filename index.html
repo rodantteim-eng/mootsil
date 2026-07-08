@@ -1286,7 +1286,7 @@ var VIA_ICONOS={'Riego':'💧','Foliar':'🌿','Drench':'🧪'};
 var CATEGORIA_ICONOS={'Nutrición':'🌱','Plaga':'🐛','Estimulación':'⚡','Combinada':'🧬','Herbicida':'🍂'};
 var BOMBA_ICONOS={'inyeccion':'🛢️','motor':'⚙️','manual':'🤲'};
 var BOMBA_LABELS={'inyeccion':'Bomba Inyección','motor':'Bomba Motor','manual':'Bomba Manual'};
-var formulaVia=null, formulaCategoria=null, formulaCategoriasCombinadas=[], formulaBombas=[], formulaCompRows=[], formulaCompSeq=0, formulaEditId=null, formulaVolverAResumen=false, formulaEsPlantilla=false;
+var formulaVia=null, formulaCategoria=null, formulaCategoriasCombinadas=[], formulaBombas=[], formulaCompRows=[], formulaCompSeq=0, formulaEditId=null, formulaVolverAResumen=false, formulaEsPlantilla=false, formulaModoCatalogoDirecto=false;
 var formulaPlantacionId=null, formulaTablaId=null;
 
 function headerAplicaciones(pendientesValidar){
@@ -1604,18 +1604,22 @@ function renderCambiarProductoFaltante(compId){
   body.innerHTML='<div class="loading">Cargando...</div>';
   from('formula_componentes').select('*,item:inventario_items(nombre,unidad)').eq('id',compId).get().then(function(rows){
     var c=rows[0];
-    var opts=cats.inventario.map(function(i){return '<option value="'+i.id+'">'+i.nombre+' ('+numFmt(i.stock_actual)+' '+i.unidad+' disponibles)</option>';}).join('');
-    body.innerHTML='<div class="seccion-titulo">🔄 Cambiar producto</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Reemplazando: <strong>'+(c.item?c.item.nombre:'')+'</strong> (faltaban '+numFmt(c.faltante_detectado)+' '+(c.item?c.item.unidad:'')+')</p><div class="form-group"><label>Nuevo producto</label><select id="cp-nuevo">'+opts+'</select></div><div class="form-group"><label>Cantidad requerida</label><input type="number" id="cp-cantidad" min="0" step="any" value="'+c.cantidad_base+'"></div><button class="btn-primary" id="cp-guardar">Guardar cambio</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAplicacionesEstatus()">← Volver a Aplicaciones</button>';
+    var opts=cats.inventario.filter(function(i){return i.id!==c.item_id;}).map(function(i){return '<option value="'+i.id+'">'+i.nombre+' ('+numFmt(i.stock_actual)+' '+i.unidad+' disponibles)</option>';}).join('');
+    body.innerHTML='<div class="seccion-titulo">🔄 Sustituir producto</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Sustituyendo: <strong>'+(c.item?c.item.nombre:'')+'</strong> (faltaban '+numFmt(c.faltante_detectado)+' '+(c.item?c.item.unidad:'')+')<br/>El original se queda visible en la fórmula marcado como sustituido, para dejar rastro de qué se cambió.</p><div class="form-group"><label>Producto sustituto</label><select id="cp-nuevo">'+opts+'</select></div><div class="form-group"><label>Cantidad requerida</label><input type="number" id="cp-cantidad" min="0" step="any" value="'+c.cantidad_base+'"></div><button class="btn-primary" id="cp-guardar">Guardar sustitución</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAplicacionesEstatus()">← Volver a Aplicaciones</button>';
     document.getElementById('cp-guardar').addEventListener('click',function(){
       var nuevoId=document.getElementById('cp-nuevo').value;
       var cantidad=parseFloat(document.getElementById('cp-cantidad').value)||0;
+      if(!nuevoId){alert('Selecciona el producto sustituto.');return;}
       var item=cats.inventario.find(function(i){return i.id===nuevoId;});
       var disponible=item?item.stock_actual:0;
       var faltante=Math.max(0,cantidad-disponible);
-      from('formula_componentes').eq('id',compId).update({item_id:nuevoId,cantidad_base:cantidad,faltante_detectado:faltante,estado_faltante:faltante>0?'pendiente':'ninguno',autorizado_por:null,autorizado_en:null}).then(function(){
-        showToast('✅ Producto actualizado en la fórmula');
+      var btn=this; btn.disabled=true; btn.textContent='Guardando...';
+      from('formula_componentes').eq('id',compId).update({estado_faltante:'sustituido',sustituido_por_item_id:nuevoId,autorizado_por:null,autorizado_en:null}).then(function(){
+        return from('formula_componentes').insert({formula_id:c.formula_id,item_id:nuevoId,cantidad_base:cantidad,sustituto_de_item_id:c.item_id,faltante_detectado:faltante,estado_faltante:faltante>0?'pendiente':'ninguno'});
+      }).then(function(){
+        showToast('✅ Sustitución guardada');
         renderAplicacionesEstatus();
-      }).catch(function(e){alert('Error: '+e.message);});
+      }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Guardar sustitución';});
     });
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
@@ -1682,12 +1686,14 @@ function cargarPlantillaCatalogo(formulaId){
     if(!f){renderCatalogoFormulas();return;}
     formulaEditId=null;
     formulaVolverAResumen=false;
+    formulaModoCatalogoDirecto=true;
     formulaVia=f.via; formulaCategoria=f.categoria; formulaCategoriasCombinadas=f.categorias_combinadas||[]; formulaEsPlantilla=false; formulaBombas=(f.bombas_compatibles||[]).slice();
+    window._formulaDuracionSurcos=f.duracion_o_surcos||null;
     formulaTablaId=f.tabla_id||null;
     var tb=cats.tablas.find(function(t){return t.id===formulaTablaId;});
     formulaPlantacionId=tb?tb.plantacion_id:null;
     formulaCompSeq=0;
-    formulaCompRows=comps.map(function(c){
+    formulaCompRows=comps.filter(function(c){return c.estado_faltante!=='sustituido';}).map(function(c){
       formulaCompSeq++;
       var unidad=c.item?c.item.unidad:'';
       var cantidad=c.cantidad_base;
@@ -1712,6 +1718,8 @@ function renderFormulaForm(formulaId){
   formulaVia=null; formulaCategoria=null; formulaCategoriasCombinadas=[]; formulaEsPlantilla=false; formulaBombas=[]; formulaCompRows=[]; formulaCompSeq=0;
   formulaPlantacionId=null; formulaTablaId=null;
   window._formulaCreadorExistente=null;
+  window._formulaDuracionSurcos=null;
+  formulaModoCatalogoDirecto=false;
   if(formulaId){
     Promise.all([
       from('formulas_aplicacion').select('*,creador:usuarios!creado_por(nombre)').eq('id',formulaId).get(),
@@ -1720,6 +1728,7 @@ function renderFormulaForm(formulaId){
       var f=r[0]&&r[0][0], comps=r[1]||[];
       if(!f){renderAplicacionesEstatus();return;}
       formulaVia=f.via; formulaCategoria=f.categoria; formulaCategoriasCombinadas=f.categorias_combinadas||[]; formulaEsPlantilla=!!f.es_plantilla; formulaBombas=(f.bombas_compatibles||[]).slice();
+      window._formulaDuracionSurcos=f.duracion_o_surcos||null;
       formulaTablaId=f.tabla_id||null;
       var tb=cats.tablas.find(function(t){return t.id===formulaTablaId;});
       formulaPlantacionId=tb?tb.plantacion_id:null;
@@ -1730,7 +1739,7 @@ function renderFormulaForm(formulaId){
         var unidadEntrada=unidad;
         if(unidad==='kg'&&cantidad<1) unidadEntrada='gr';
         else if(unidad==='litros'&&cantidad<1) unidadEntrada='ml';
-        return {row:formulaCompSeq,item_id:c.item_id,nombre:c.item?c.item.nombre:'',unidad:unidad,unidadEntrada:unidadEntrada,cantidad:cantidad};
+        return {row:formulaCompSeq,item_id:c.item_id,nombre:c.item?c.item.nombre:'',unidad:unidad,unidadEntrada:unidadEntrada,cantidad:cantidad,estadoFaltante:c.estado_faltante,sustituidoPorItemId:c.sustituido_por_item_id,sustitutoDeItemId:c.sustituto_de_item_id};
       });
       window._formulaNombreExistente=f.nombre; window._formulaNotasExistente=f.notas; window._formulaFechaExistente=f.fecha_programada;
       window._formulaCreadorExistente=f.creador?f.creador.nombre:null;
@@ -1770,7 +1779,12 @@ function renderFormulaPasoVia(){
     return '<div class="labor-tile'+(formulaVia===v?' labor-tile-otra':'')+'" data-via="'+v+'"><div class="labor-tile-ic">'+VIA_ICONOS[v]+'</div><div class="labor-tile-lbl">'+v+'</div></div>';
   }).join('');
   body.innerHTML='<div class="seccion-titulo">Paso 3 de 8 · Vía de aplicación</div><div class="labor-grid">'+tiles+'</div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoTabla()">← Volver a tabla</button>';
-  body.querySelectorAll('[data-via]').forEach(function(el){el.addEventListener('click',function(){formulaVia=this.dataset.via;if(formulaVolverAResumen){formulaVolverAResumen=false;renderFormulaPasoNotas();}else renderFormulaPasoCategoria();});});
+  body.querySelectorAll('[data-via]').forEach(function(el){el.addEventListener('click',function(){
+    formulaVia=this.dataset.via;
+    if(formulaVolverAResumen){formulaVolverAResumen=false;renderFormulaPasoNotas();}
+    else if(formulaModoCatalogoDirecto){renderFormulaPasoBombas();}
+    else renderFormulaPasoCategoria();
+  });});
 }
 
 function renderFormulaPasoCategoria(){
@@ -1804,11 +1818,28 @@ function renderFormulaPasoBombas(){
   var tiles=['inyeccion','motor','manual'].map(function(b){
     return '<div class="labor-tile'+(formulaBombas.indexOf(b)>-1?' labor-tile-otra':'')+'" data-bomba="'+b+'"><div class="labor-tile-ic">'+BOMBA_ICONOS[b]+'</div><div class="labor-tile-lbl">'+BOMBA_LABELS[b]+'</div></div>';
   }).join('');
-  body.innerHTML='<div class="seccion-titulo">Paso 5 de 9 · ¿Con qué se aplica?</div><p class="hint">Elige el equipo que se va a usar para esta aplicación.</p><div class="labor-grid">'+tiles+'</div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoCategoria()">← Volver a tipo</button>';
+  var bombaActual=formulaBombas[0]||null;
+  var campoExtra=bombaActual?campoDuracionSurcos(bombaActual):'';
+  body.innerHTML='<div class="seccion-titulo">Paso 5 de 9 · ¿Con qué se aplica?</div><p class="hint">Elige el equipo que se va a usar para esta aplicación.</p><div class="labor-grid">'+tiles+'</div><div id="fm-bomba-extra">'+campoExtra+'</div><button class="btn-primary" id="fm-bomba-continuar" style="margin-top:1.25rem;">Continuar →</button><button class="btn-back" style="margin-top:.75rem;" onclick="renderFormulaPasoCategoria()">← Volver a tipo</button>';
   body.querySelectorAll('[data-bomba]').forEach(function(el){el.addEventListener('click',function(){
     formulaBombas=[this.dataset.bomba];
-    if(formulaVolverAResumen){formulaVolverAResumen=false;renderFormulaPasoNotas();}else renderFormulaPasoFecha();
+    body.querySelectorAll('[data-bomba]').forEach(function(x){x.classList.remove('labor-tile-otra');});
+    this.classList.add('labor-tile-otra');
+    document.getElementById('fm-bomba-extra').innerHTML=campoDuracionSurcos(this.dataset.bomba);
   });});
+  document.getElementById('fm-bomba-continuar').addEventListener('click',function(){
+    if(!formulaBombas.length){alert('Selecciona con qué se va a aplicar.');return;}
+    var inputExtra=document.getElementById('fm-duracion-surcos-input');
+    window._formulaDuracionSurcos=inputExtra?(parseFloat(inputExtra.value)||null):null;
+    if(formulaVolverAResumen){formulaVolverAResumen=false;renderFormulaPasoNotas();}else renderFormulaPasoFecha();
+  });
+}
+
+function campoDuracionSurcos(bomba){
+  if(bomba==='inyeccion'){
+    return '<div class="form-group" style="margin-top:1rem;"><label>Duración estimada de la aplicación (minutos)</label><input type="number" id="fm-duracion-surcos-input" min="0" placeholder="Ej. 15" value="'+(window._formulaDuracionSurcos||'')+'"></div>';
+  }
+  return '<div class="form-group" style="margin-top:1rem;"><label>¿Cuántos surcos cubre con un tambo (200L)?</label><input type="number" id="fm-duracion-surcos-input" min="0" placeholder="Ej. 6" value="'+(window._formulaDuracionSurcos||'')+'"><p class="hint">Con esto se calcula cuántos tambos se necesitan para cubrir toda la tabla.</p></div>';
 }
 
 function renderFormulaPasoFecha(){
@@ -1816,7 +1847,14 @@ function renderFormulaPasoFecha(){
   body.innerHTML='<div class="seccion-titulo">Paso 6 de 9 · Fecha de aplicación</div><div class="form-card"><div class="form-group"><label>¿Cuándo se tiene que aplicar?</label><input type="date" id="fm-fecha-input" value="'+(window._formulaFechaExistente||new Date().toISOString().slice(0,10))+'"></div><p class="hint">Con esta fecha revisamos si el inventario alcanza a tiempo para hacer el pedido.</p><button class="btn-primary" id="fm-fecha-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoBombas()">← Volver a bombas</button>';
   document.getElementById('fm-fecha-continuar').addEventListener('click',function(){
     window._formulaFechaExistente=document.getElementById('fm-fecha-input').value||new Date().toISOString().slice(0,10);
-    if(formulaVolverAResumen){formulaVolverAResumen=false;renderFormulaPasoNotas();}else renderFormulaPasoNombre();
+    if(formulaVolverAResumen){formulaVolverAResumen=false;renderFormulaPasoNotas();}
+    else if(formulaModoCatalogoDirecto){
+      var p=cats.plantaciones.find(function(x){return x.id===formulaPlantacionId;});
+      var t=cats.tablas.find(function(x){return x.id===formulaTablaId;});
+      window._formulaNombreExistente=(p?p.nombre:'')+' | '+(t?t.nombre:'')+' | '+formulaCategoria;
+      renderFormulaPasoNotas();
+    }
+    else renderFormulaPasoNombre();
   });
 }
 
@@ -1972,25 +2010,30 @@ function pintarFormulaPasoNotas(persistidos){
   var t=cats.tablas.find(function(x){return x.id===formulaTablaId;});
   var faltantes=[];
   var resumenComp=comps.map(function(c){
+    if(c.estadoFaltante==='sustituido'){
+      var sustItem=cats.inventario.find(function(x){return x.id===c.sustituidoPorItemId;});
+      return '<span style="text-decoration:line-through;color:var(--gris-3);">'+c.nombre+' · '+fmtAmigable(c.cantidad,c.unidad)+'</span> <span style="color:var(--tierra);font-weight:700;">→ sustituido por '+(sustItem?sustItem.nombre:'?')+'</span>';
+    }
     var it=cats.inventario.find(function(x){return x.id===c.item_id;});
     var stock=it?it.stock_actual:0;
     var falta=c.cantidad-stock;
     var alerta='';
+    var notaSustituto=c.sustitutoDeItemId?' <span style="color:var(--tierra);font-size:.75rem;">(sustituto)</span>':'';
     if(falta>0){
       faltantes.push({nombre:c.nombre,falta:falta,unidad:c.unidad});
-      var persistido=persistidos.find(function(pc){return pc.item_id===c.item_id;});
+      var persistido=persistidos.find(function(pc){return pc.item_id===c.item_id&&pc.estado_faltante!=='sustituido';});
       if(persistido&&persistido.estado_faltante==='autorizado'){
         alerta=' · <span style="color:var(--tierra);font-weight:700;">✅ Autorizado</span>';
       } else {
         alerta=' · <span style="color:var(--rojo);font-weight:700;">⚠️ faltan '+fmtAmigable(falta,c.unidad)+'</span>';
         if(persistido){
-          alerta+=' <button type="button" class="btn-sm btn-completar" data-autorizar-inline="'+persistido.id+'" style="margin-left:.4rem;padding:2px 8px;font-size:.68rem;">✅ Autorizar</button> <button type="button" class="btn-sm btn-iniciar" data-cambiar-inline="'+persistido.id+'" style="padding:2px 8px;font-size:.68rem;">🔄 Cambiar</button>';
+          alerta+=' <button type="button" class="btn-sm btn-completar" data-autorizar-inline="'+persistido.id+'" style="margin-left:.4rem;padding:2px 8px;font-size:.68rem;">✅ Autorizar</button> <button type="button" class="btn-sm btn-iniciar" data-cambiar-inline="'+persistido.id+'" style="padding:2px 8px;font-size:.68rem;">🔄 Sustituir</button>';
         } else if(formulaEditId){
           alerta+=' <span class="hint" style="margin:0;">(guarda cambios para poder autorizar)</span>';
         }
       }
     }
-    return c.nombre+' · '+fmtAmigable(c.cantidad,c.unidad)+' (hay '+fmtAmigable(stock,c.unidad)+')'+alerta;
+    return c.nombre+notaSustituto+' · '+fmtAmigable(c.cantidad,c.unidad)+' (hay '+fmtAmigable(stock,c.unidad)+')'+alerta;
   }).join('<br>');
   var fechaTxt=window._formulaFechaExistente||'';
   var alertaHtml='';
@@ -2055,7 +2098,7 @@ function guardarFormula(){
   }
   var comps=formulaCompRows.filter(function(r){return r.item_id&&r.cantidad>0;});
   var btn=document.getElementById('fm-guardar'); btn.disabled=true; btn.textContent='Guardando...';
-  var payload={nombre:nombre,via:formulaVia,categoria:formulaCategoria,categoria_catalogo:catCatalogo,categorias_combinadas:formulaCategoria==='Combinada'?formulaCategoriasCombinadas:null,es_plantilla:esPlantilla,bombas_compatibles:formulaBombas,tabla_id:formulaTablaId,fecha_programada:window._formulaFechaExistente||null,volumen_base_litros:200,notas:notas,creado_por:usuario.id,activo:true};
+  var payload={nombre:nombre,via:formulaVia,categoria:formulaCategoria,categoria_catalogo:catCatalogo,categorias_combinadas:formulaCategoria==='Combinada'?formulaCategoriasCombinadas:null,es_plantilla:esPlantilla,bombas_compatibles:formulaBombas,duracion_o_surcos:window._formulaDuracionSurcos||null,tabla_id:formulaTablaId,fecha_programada:window._formulaFechaExistente||null,volumen_base_litros:200,notas:notas,creado_por:usuario.id,activo:true};
   var guardar=formulaEditId?from('formulas_aplicacion').eq('id',formulaEditId).update(payload):from('formulas_aplicacion').insert(payload);
   guardar.then(function(resp){
     var fid=formulaEditId||(resp&&resp[0]&&resp[0].id);
