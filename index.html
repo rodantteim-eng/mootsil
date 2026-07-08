@@ -2028,8 +2028,8 @@ function pintarFormulaPasoNotas(persistidos){
         alerta=' · <span style="color:var(--rojo);font-weight:700;">⚠️ faltan '+fmtAmigable(falta,c.unidad)+'</span>';
         if(persistido){
           alerta+=' <button type="button" class="btn-sm btn-completar" data-autorizar-inline="'+persistido.id+'" style="margin-left:.4rem;padding:2px 8px;font-size:.68rem;">✅ Autorizar</button> <button type="button" class="btn-sm btn-iniciar" data-cambiar-inline="'+persistido.id+'" style="padding:2px 8px;font-size:.68rem;">🔄 Sustituir</button>';
-        } else if(formulaEditId){
-          alerta+=' <span class="hint" style="margin:0;">(guarda cambios para poder autorizar)</span>';
+        } else {
+          alerta+=' <span class="hint" style="margin:0;">('+(formulaEditId?'guarda cambios':'crea la fórmula primero')+' para poder autorizar o sustituir)</span>';
         }
       }
     }
