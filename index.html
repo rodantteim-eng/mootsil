@@ -1477,7 +1477,7 @@ function renderAplicacionesEstatus(){
       var accionesRapidas='';
       if(pendientes.length) accionesRapidas+='<button type="button" class="btn-sm btn-completar" data-autorizar-todo="'+f.id+'" style="margin-top:.5rem;margin-right:6px;">✅ Autorizar faltante</button>';
       if(ordenIdValidar) accionesRapidas+='<button type="button" class="btn-sm btn-completar" data-validar-rapido="'+ordenIdValidar+'" style="margin-top:.5rem;">✅ Validar</button>';
-      if(!esAplicada&&!pendientes.length) accionesRapidas+='<button type="button" class="btn-sm btn-iniciar" data-asignar-rapido="'+f.id+'" data-nombre="'+f.nombre.replace(/"/g,'&quot;')+'" data-yaaplicada="'+(f._asignada?'1':'0')+'" style="margin-top:.5rem;margin-right:6px;">🧰 '+(f._asignada?'Asignar de nuevo':'Asignar')+'</button>';
+      if(!esAplicada&&!pendientes.length) accionesRapidas+='<button type="button" class="btn-sm btn-iniciar" data-asignar-rapido="'+f.id+'" data-nombre="'+f.nombre.replace(/"/g,'&quot;')+'" data-yaaplicada="'+(f._asignada?'1':'0')+'" data-asignados="'+(asignadoNombres?asignadoNombres.join(', '):'')+'" style="margin-top:.5rem;margin-right:6px;">'+(f._asignada?'➕ Agregar otro operario':'🧰 Asignar')+'</button>';
       return '<div class="orden-card" style="border-left-color:'+colorBorde+';display:flex;gap:.5rem;align-items:flex-start;flex-wrap:wrap;'+(esAplicada&&!sinValidar?'opacity:.85;':'')+'"><div style="flex:1;min-width:200px;cursor:pointer;" data-fid="'+f.id+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem">'+(VIA_ICONOS[f.via]||'')+' '+f.nombre+(esAplicada&&!sinValidar?' 🔒':'')+'</strong><span style="font-size:.7rem;font-weight:700;color:'+estatusColor+';">'+estatusTxt+'</span></div>'+fechaGrande+'<div class="orden-meta">📍 '+ubicacion+' · '+f.via+' · Base 🛢️ '+f.volumen_base_litros+' L'+(bombasTxt?' · '+bombasTxt:'')+'</div><div style="font-size:.7rem;color:var(--gris-3);margin-top:.15rem;">👤 Creada por: '+(f.creador?f.creador.nombre:'?')+'</div>'+autorInfo+asignadoInfo+aplicadoInfo+alerta+'<div onclick="event.stopPropagation()">'+accionesRapidas+'</div></div><button type="button" class="fm-duplicar-rapido" data-duplicar="'+f.id+'" title="Duplicar para otras tablas" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">📋</button><button type="button" class="fm-borrar-rapido" data-borrar="'+f.id+'" data-nombre="'+f.nombre.replace(/"/g,'&quot;')+'" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-size:.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">🗑️</button></div>';
     }).join('');
     body.innerHTML=html;
@@ -1494,9 +1494,10 @@ function renderAplicacionesEstatus(){
     body.querySelectorAll('[data-asignar-rapido]').forEach(function(btn){
       btn.addEventListener('click',function(e){
         e.stopPropagation();
-        var fid=this.dataset.asignarRapido, nombre=this.dataset.nombre;
+        var fid=this.dataset.asignarRapido, nombre=this.dataset.nombre, asignadosTxt=this.dataset.asignados;
         if(this.dataset.yaaplicada==='1'){
-          if(!confirm('⚠️ La fórmula "'+nombre+'" ya tiene una asignación en curso.\n\n¿Seguro que quieres asignarla otra vez? Esto puede causar una aplicación duplicada.')) return;
+          renderElegirTipoReasignacion(fid,nombre,asignadosTxt);
+          return;
         }
         cargarFormulaParaAsignar(fid);
       });
@@ -2235,6 +2236,23 @@ function renderAsigAplicFormulas(){
     html+='<button class="btn-back" style="margin-top:1rem;" onclick="renderAsigAplicTablas()">← Volver a tabla</button>';
     body.innerHTML=html;
     body.querySelectorAll('[data-fid]').forEach(function(el){el.addEventListener('click',function(){cargarFormulaParaAsignar(this.dataset.fid);});});
+  });
+}
+
+function renderElegirTipoReasignacion(formulaId,nombre,asignadosTxt){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo">👷 '+nombre+'</div><div class="form-card"><p class="hint" style="margin-bottom:1rem;">Ya está asignada a: <strong>'+asignadosTxt+'</strong>. ¿Qué necesitas hacer?</p><div style="display:flex;flex-direction:column;gap:10px;"><button type="button" class="op-chip" id="reasig-agregar" style="text-align:left;padding:.85rem;">➕ Agregar a alguien más<br><span class="hint" style="margin:0;">'+asignadosTxt+' sigue con la suya, y se suma otra persona en paralelo.</span></button><button type="button" class="op-chip" id="reasig-reemplazar" style="text-align:left;padding:.85rem;">🔄 Reemplazar<br><span class="hint" style="margin:0;">Se cancela la tarea de '+asignadosTxt+' y se asigna a alguien nuevo en su lugar.</span></button></div></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAplicacionesEstatus()">← Volver a Aplicaciones</button>';
+  document.getElementById('reasig-agregar').addEventListener('click',function(){
+    cargarFormulaParaAsignar(formulaId);
+  });
+  document.getElementById('reasig-reemplazar').addEventListener('click',function(){
+    if(!confirm('Esto va a cancelar la(s) tarea(s) activa(s) de '+asignadosTxt+' para esta aplicación. ¿Seguro?')) return;
+    from('ordenes_trabajo').select('id').eq('formula_id',formulaId).not('estado','eq','completada').not('estado','eq','cancelada').get().then(function(rows){
+      return Promise.all((rows||[]).map(function(o){return from('ordenes_trabajo').eq('id',o.id).update({estado:'cancelada'});}));
+    }).then(function(){
+      showToast('✅ Tarea(s) anterior(es) cancelada(s)');
+      cargarFormulaParaAsignar(formulaId);
+    }).catch(function(e){alert('Error: '+e.message);});
   });
 }
 
