@@ -1476,7 +1476,7 @@ function renderAplicacionesEstatus(){
       var alerta=faltantes.length?'<div style="color:var(--rojo);font-weight:700;font-size:.75rem;margin-top:.25rem;">⚠️ Falta material: '+faltantes.map(function(c){return c.item.nombre;}).join(', ')+' — pedir antes del '+(f.fecha_programada||'?')+'</div>':'';
       var autorInfo=autorizados.length?'<div style="font-size:.7rem;color:var(--tierra);margin-top:.2rem;">Autorizado por '+(autorizados[0].autorizador?autorizados[0].autorizador.nombre:'?')+'</div>':'';
       var asignadoNombres=asignadoAPorFormula[f.id];
-      var asignadoInfo=(asignadoNombres&&asignadoNombres.length)?'<div style="font-size:.7rem;color:var(--verde-mid);font-weight:700;margin-top:.2rem;">👷 Asignada a: '+asignadoNombres.join(', ')+'</div>':'';
+      var asignadoInfo=(asignadoNombres&&asignadoNombres.length)?'<div style="font-size:.7rem;color:var(--verde-mid);font-weight:700;margin-top:.2rem;">👷 Asignada a: '+asignadoNombres.join(', ')+' <button type="button" class="edit-modo-rapido" data-formula="'+f.id+'" style="border:none;background:none;color:var(--tierra);font-size:.7rem;font-weight:700;cursor:pointer;text-decoration:underline;padding:0;">✏️ gestionar</button></div>':'';
       var aplicadoNombres=aplicadoPorFormula[f.id];
       var aplicadoInfo=(aplicadoNombres&&aplicadoNombres.length)?'<div style="font-size:.7rem;color:var(--verde-mid);font-weight:700;margin-top:.2rem;">✅ Aplicada por: '+aplicadoNombres.join(', ')+'</div>':'';
       var fechaGrande='<div style="font-size:.85rem;font-weight:700;color:'+(esHoy?'var(--rojo)':'var(--gris-3)')+';margin-top:.2rem;">📅 '+(f.fecha_programada?fechaLarga(f.fecha_programada):'Sin fecha programada')+'</div>';
@@ -1496,6 +1496,12 @@ function renderAplicacionesEstatus(){
           showToast('✅ Faltante(s) autorizado(s)');
           renderAplicacionesEstatus();
         }).catch(function(err){alert('Error: '+err.message);});
+      });
+    });
+    body.querySelectorAll('.edit-modo-rapido').forEach(function(btn){
+      btn.addEventListener('click',function(e){
+        e.stopPropagation();
+        renderEditarModoAsignacion(this.dataset.formula);
       });
     });
     body.querySelectorAll('[data-asignar-rapido]').forEach(function(btn){
@@ -2247,6 +2253,45 @@ function renderAsigAplicFormulas(){
     body.innerHTML=html;
     body.querySelectorAll('[data-fid]').forEach(function(el){el.addEventListener('click',function(){cargarFormulaParaAsignar(this.dataset.fid);});});
   });
+}
+
+function renderEditarModoAsignacion(formulaId){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo">✏️ Gestionar operarios asignados</div><div class="loading">Cargando...</div>';
+  from('ordenes_trabajo').select('id,es_hora_extra,operario_id,tipo_labor_id,fecha_asignacion,notas_encargado,operario:usuarios!operario_id(nombre)').eq('formula_id',formulaId).not('estado','eq','completada').not('estado','eq','cancelada').get().then(function(rows){
+    rows=rows||[];
+    if(!rows.length){body.innerHTML='<div class="seccion-titulo">✏️ Gestionar operarios asignados</div><div class="empty">No hay asignaciones activas para esta fórmula.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderAplicacionesEstatus()">← Volver a Aplicaciones</button>';return;}
+    var html='<div class="seccion-titulo">✏️ Gestionar operarios asignados</div>'+(rows.length>1?'<p class="hint" style="margin-bottom:.75rem;">Hay '+rows.length+' operarios en esta aplicación.</p>':'')+rows.map(function(o){
+      return '<div class="orden-card"><strong style="font-size:.9rem;">'+(o.operario?o.operario.nombre:'')+'</strong><div class="orden-meta">Actualmente: '+(o.es_hora_extra?'⏰ Hora Extra':'🕐 Normal')+'</div><div style="display:flex;gap:8px;margin-top:.5rem;flex-wrap:wrap;"><button type="button" class="btn-sm btn-completar" data-toggle-modo="'+o.id+'" data-actual="'+(o.es_hora_extra?'1':'0')+'" data-op="'+o.operario_id+'" data-labor="'+o.tipo_labor_id+'" data-fecha="'+o.fecha_asignacion+'">Cambiar a '+(o.es_hora_extra?'🕐 Normal':'⏰ Hora Extra')+'</button>'+(rows.length>1?'<button type="button" class="btn-sm btn-cancelar" data-quitar="'+o.id+'" data-nombre="'+(o.operario?o.operario.nombre:'').replace(/"/g,'&quot;')+'">🗑️ Quitar de esta aplicación</button>':'')+'</div></div>';
+    }).join('');
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderAplicacionesEstatus()">← Volver a Aplicaciones</button>';
+    body.querySelectorAll('[data-toggle-modo]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var oid=this.dataset.toggleModo, eraExtra=this.dataset.actual==='1', opId=this.dataset.op, laborId=this.dataset.labor, fecha=this.dataset.fecha;
+        var nuevoValor=!eraExtra;
+        from('ordenes_trabajo').eq('id',oid).update({es_hora_extra:nuevoValor}).then(function(){
+          if(nuevoValor){
+            return from('horas_extra_asignadas').insert({operario_id:opId,asignado_por:usuario.id,fecha:fecha,motivo:'Corrección de modo',tipo_labor_id:laborId,estado:'aprobada'});
+          } else {
+            return from('horas_extra_asignadas').eq('operario_id',opId).eq('fecha',fecha).eq('tipo_labor_id',laborId).delete();
+          }
+        }).then(function(){
+          showToast('✅ Modo actualizado');
+          renderEditarModoAsignacion(formulaId);
+        }).catch(function(e){alert('Error: '+e.message);});
+      });
+    });
+    body.querySelectorAll('[data-quitar]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var oid=this.dataset.quitar, nombre=this.dataset.nombre;
+        if(!confirm('¿Quitar a '+nombre+' de esta aplicación? Su tarea se cancela, los demás siguen igual.')) return;
+        from('ordenes_trabajo').eq('id',oid).update({estado:'cancelada'}).then(function(){
+          showToast('✅ '+nombre+' fue quitado de esta aplicación');
+          renderEditarModoAsignacion(formulaId);
+        }).catch(function(e){alert('Error: '+e.message);});
+      });
+    });
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
 function renderElegirTipoReasignacion(formulaId,nombre,asignadosTxt){
