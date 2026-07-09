@@ -180,7 +180,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div id="screen-encargado" class="screen">
   <div class="app-header">
     <div><h1>🫐 Mootsil</h1><div class="header-sub" id="enc-nombre">Encargado</div></div>
-    <button class="btn-salir" onclick="salir()">Salir</button>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button onclick="renderCambiarMiPin()" style="border:none;background:rgba(255,255,255,.12);color:#fff;font-size:.72rem;font-weight:600;cursor:pointer;padding:.4rem .7rem;border-radius:var(--radio-sm);">🔒 PIN</button>
+      <button class="btn-salir" onclick="salir()">Salir</button>
+    </div>
   </div>
   <div class="tabs">
     <button class="tab" id="tab-tablero" onclick="tabEncargado('tablero')" style="display:none">Tablero</button>
@@ -202,6 +205,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="app-header">
     <div><h1>🌱 Mootsil | Labores</h1><div class="header-sub" id="op-nombre">Colaborador</div></div>
     <div style="display:flex;align-items:center;gap:8px;">
+      <button onclick="renderCambiarMiPin()" style="border:none;background:rgba(255,255,255,.12);color:#fff;font-size:.72rem;font-weight:600;cursor:pointer;padding:.4rem .7rem;border-radius:var(--radio-sm);">🔒 PIN</button>
       <button onclick="renderAlarmasMenu()" style="width:38px;height:38px;border-radius:50%;background:rgba(192,57,43,.25);border:none;color:#fff;font-size:1rem;cursor:pointer;">🚨</button>
       <button class="btn-salir" onclick="salir()">Salir</button>
     </div>
@@ -4526,6 +4530,32 @@ function guardarEditarUsuario(id){
 function renderCambiarPin(id,nombre){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="form-card"><h3>Cambiar PIN — '+nombre+'</h3><div class="form-group"><label>Nuevo PIN (4 dígitos)</label><input type="number" id="cp-p" placeholder="0000" min="0" max="9999"/></div><div class="nav-row"><button class="btn-back" onclick="renderAltasBajas()">← Cancelar</button><button class="btn-next" onclick="guardarPin(\''+id+'\')">Guardar PIN</button></div></div>';
+}
+
+function renderCambiarMiPin(){
+  var esOperario = usuario.rol==='operario'||usuario.rol==='cosechador'||usuario.rol==='galerista';
+  var body=document.getElementById(esOperario?'op-body':'enc-body');
+  var volver = esOperario?'cargarTareas()':'renderTablero()';
+  body.innerHTML='<div class="seccion-titulo">🔒 Cambiar mi PIN</div><div class="form-card"><div class="form-group"><label>Tu PIN actual</label><input type="number" id="mp-actual" placeholder="0000" min="0" max="9999"></div><div class="form-group"><label>Nuevo PIN (4 dígitos)</label><input type="number" id="mp-nuevo" placeholder="0000" min="0" max="9999"></div><div class="form-group"><label>Repite el nuevo PIN</label><input type="number" id="mp-nuevo2" placeholder="0000" min="0" max="9999"></div><button class="btn-primary" id="mp-guardar">Guardar nuevo PIN</button></div><button class="btn-back" style="margin-top:1rem;" onclick="'+volver+'">← Cancelar</button>';
+  document.getElementById('mp-guardar').addEventListener('click',function(){
+    var actual=String(document.getElementById('mp-actual').value||'').padStart(4,'0');
+    var nuevo=String(document.getElementById('mp-nuevo').value||'').padStart(4,'0');
+    var nuevo2=String(document.getElementById('mp-nuevo2').value||'').padStart(4,'0');
+    if(actual.length!==4||nuevo.length!==4){alert('Cada PIN debe tener 4 dígitos.');return;}
+    if(nuevo!==nuevo2){alert('El nuevo PIN no coincide en los dos campos.');return;}
+    var btn=this; btn.disabled=true; btn.textContent='Verificando...';
+    rpc('verificar_pin',{p_pin:actual}).then(function(data){
+      if(!data||!data.length||data[0].usuario_id!==usuario.id){
+        alert('Tu PIN actual no es correcto.');
+        btn.disabled=false; btn.textContent='Guardar nuevo PIN';
+        return;
+      }
+      return api('/rest/v1/rpc/set_pin',{method:'POST',body:{p_usuario_id:usuario.id,p_pin:nuevo}}).then(function(){
+        showToast('✅ PIN actualizado');
+        if(esOperario) cargarTareas(); else renderTablero();
+      });
+    }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Guardar nuevo PIN';});
+  });
 }
 
 function guardarPin(id){
