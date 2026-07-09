@@ -858,13 +858,19 @@ function guardarOrden(){
   if(lb&&lb.requiere_tiempo){
     var filas=Array.from(document.querySelectorAll('.riego-min')).map(function(i){return {tabla:i.dataset.tabla,min:parseInt(i.value)||0};}).filter(function(r){return r.min>0;});
     if(!filas.length){alert('Captura al menos una duración de riego.');return;}
+    var esExtraRiego=modoAsignacionLabor==='extra';
     var tareas=[];
-    opIds.forEach(function(oid){filas.forEach(function(r){tareas.push({asignado_por:usuario.id,operario_id:oid,tabla_id:r.tabla,tipo_labor_id:lbId,duracion_minutos:r.min,duracion:dur,fecha_asignacion:fec,notas_encargado:not,estado:'pendiente'});});});
+    opIds.forEach(function(oid){filas.forEach(function(r){tareas.push({asignado_por:usuario.id,operario_id:oid,tabla_id:r.tabla,tipo_labor_id:lbId,duracion_minutos:r.min,duracion:dur,fecha_asignacion:fec,notas_encargado:not,estado:'pendiente',es_hora_extra:esExtraRiego});});});
     Promise.all(tareas.map(function(t){return from('ordenes_trabajo').insert(t);})).then(function(){
-      Promise.all(opIds.map(function(oid){
-        return from('notificaciones').insert({titulo:'💧 Riego asignado',cuerpo:usuario.nombre+' asignó riego a '+(cats.operarios.find(function(o){return o.id===oid;})||{}).nombre+' en '+filas.length+' tabla(s)',icono:'💧',leida:false,para_rol:'operario',para_usuario:oid});
-      })).then(function(){showToast('💧 Riego asignado. Puedes asignar otra labor.');renderFormAsignar();});
-    }).catch(function(e){alert('Error: '+e.message);});
+      var autorizarExtraRiego = esExtraRiego ? Promise.all(opIds.map(function(oid){
+        return from('horas_extra_asignadas').insert({operario_id:oid,asignado_por:usuario.id,fecha:fec,motivo:not,tipo_labor_id:lbId,estado:'aprobada'});
+      })) : Promise.resolve();
+      return autorizarExtraRiego.then(function(){
+        return Promise.all(opIds.map(function(oid){
+          return from('notificaciones').insert({titulo:esExtraRiego?'⏰ Riego (hora extra) asignado':'💧 Riego asignado',cuerpo:usuario.nombre+' asignó riego a '+(cats.operarios.find(function(o){return o.id===oid;})||{}).nombre+' en '+filas.length+' tabla(s)'+(esExtraRiego?' (hora extra)':''),icono:esExtraRiego?'⏰':'💧',leida:false,para_rol:'operario',para_usuario:oid});
+        }));
+      });
+    }).then(function(){showToast((esExtraRiego?'⏰ Riego asignado como hora extra. ':'💧 Riego asignado. ')+'Puedes asignar otra labor.');renderFormAsignar();}).catch(function(e){alert('Error: '+e.message);});
     return;
   }
 
@@ -1414,7 +1420,7 @@ function renderAplicacionesEstatus(){
     from('ordenes_trabajo').select('id,formula_id,estado,completado_en,validado_ingeniero,operario:usuarios!operario_id(nombre)').not('formula_id','is','null').get()
   ]).then(function(r){
     var rows=r[0]||[], todosComps=r[1]||[], pendValidar=(r[2]||[]).length, ordenesFormula=(r[3]||[]).filter(function(o){return o.estado!=='cancelada';});
-    var aplicadaPorFormula={}, asignadaPorFormula={}, ordenPorValidar={}, sinValidarPorFormula={}, asignadoAPorFormula={}, aplicadoPorFormula={};
+    var aplicadaPorFormula={}, asignadaPorFormula={}, ordenesPorValidar={}, sinValidarPorFormula={}, asignadoAPorFormula={}, aplicadoPorFormula={};
     ordenesFormula.forEach(function(o){
       asignadaPorFormula[o.formula_id]=true;
       if(o.operario){
@@ -1430,7 +1436,8 @@ function renderAplicacionesEstatus(){
         if(!aplicadaPorFormula[o.formula_id]||o.completado_en>aplicadaPorFormula[o.formula_id]) aplicadaPorFormula[o.formula_id]=o.completado_en||true;
         if(!o.validado_ingeniero){
           sinValidarPorFormula[o.formula_id]=true;
-          ordenPorValidar[o.formula_id]=o.id;
+          if(!ordenesPorValidar[o.formula_id]) ordenesPorValidar[o.formula_id]=[];
+          ordenesPorValidar[o.formula_id].push({id:o.id,nombre:o.operario?o.operario.nombre:'?'});
         }
       }
     });
@@ -1473,10 +1480,10 @@ function renderAplicacionesEstatus(){
       var aplicadoNombres=aplicadoPorFormula[f.id];
       var aplicadoInfo=(aplicadoNombres&&aplicadoNombres.length)?'<div style="font-size:.7rem;color:var(--verde-mid);font-weight:700;margin-top:.2rem;">✅ Aplicada por: '+aplicadoNombres.join(', ')+'</div>':'';
       var fechaGrande='<div style="font-size:.85rem;font-weight:700;color:'+(esHoy?'var(--rojo)':'var(--gris-3)')+';margin-top:.2rem;">📅 '+(f.fecha_programada?fechaLarga(f.fecha_programada):'Sin fecha programada')+'</div>';
-      var ordenIdValidar=ordenPorValidar[f.id];
+      var ordenesValidarLista=ordenesPorValidar[f.id]||[];
       var accionesRapidas='';
       if(pendientes.length) accionesRapidas+='<button type="button" class="btn-sm btn-completar" data-autorizar-todo="'+f.id+'" style="margin-top:.5rem;margin-right:6px;">✅ Autorizar faltante</button>';
-      if(ordenIdValidar) accionesRapidas+='<button type="button" class="btn-sm btn-completar" data-validar-rapido="'+ordenIdValidar+'" style="margin-top:.5rem;">✅ Validar</button>';
+      if(ordenesValidarLista.length) accionesRapidas+='<button type="button" class="btn-sm btn-completar" data-validar-rapido="'+ordenesValidarLista.map(function(x){return x.id;}).join(',')+'" style="margin-top:.5rem;">✅ Validar todas ('+ordenesValidarLista.length+': '+ordenesValidarLista.map(function(x){return x.nombre;}).join(', ')+')</button>';
       if(!esAplicada&&!pendientes.length) accionesRapidas+='<button type="button" class="btn-sm btn-iniciar" data-asignar-rapido="'+f.id+'" data-nombre="'+f.nombre.replace(/"/g,'&quot;')+'" data-yaaplicada="'+(f._asignada?'1':'0')+'" data-asignados="'+(asignadoNombres?asignadoNombres.join(', '):'')+'" style="margin-top:.5rem;margin-right:6px;">'+(f._asignada?'➕ Agregar otro operario':'🧰 Asignar')+'</button>';
       return '<div class="orden-card" style="border-left-color:'+colorBorde+';display:flex;gap:.5rem;align-items:flex-start;flex-wrap:wrap;'+(esAplicada&&!sinValidar?'opacity:.85;':'')+'"><div style="flex:1;min-width:200px;cursor:pointer;" data-fid="'+f.id+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem">'+(VIA_ICONOS[f.via]||'')+' '+f.nombre+(esAplicada&&!sinValidar?' 🔒':'')+'</strong><span style="font-size:.7rem;font-weight:700;color:'+estatusColor+';">'+estatusTxt+'</span></div>'+fechaGrande+'<div class="orden-meta">📍 '+ubicacion+' · '+f.via+' · Base 🛢️ '+f.volumen_base_litros+' L'+(bombasTxt?' · '+bombasTxt:'')+'</div><div style="font-size:.7rem;color:var(--gris-3);margin-top:.15rem;">👤 Creada por: '+(f.creador?f.creador.nombre:'?')+'</div>'+autorInfo+asignadoInfo+aplicadoInfo+alerta+'<div onclick="event.stopPropagation()">'+accionesRapidas+'</div></div><button type="button" class="fm-duplicar-rapido" data-duplicar="'+f.id+'" title="Duplicar para otras tablas" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">📋</button><button type="button" class="fm-borrar-rapido" data-borrar="'+f.id+'" data-nombre="'+f.nombre.replace(/"/g,'&quot;')+'" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-size:.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">🗑️</button></div>';
     }).join('');
@@ -1505,8 +1512,11 @@ function renderAplicacionesEstatus(){
     body.querySelectorAll('[data-validar-rapido]').forEach(function(btn){
       btn.addEventListener('click',function(e){
         e.stopPropagation();
-        from('ordenes_trabajo').eq('id',this.dataset.validarRapido).update({validado_ingeniero:true,validado_por:usuario.id,validado_en:new Date().toISOString(),validacion_estado:'validada'}).then(function(){
-          showToast('✅ Aplicación validada');
+        var ids=this.dataset.validarRapido.split(',');
+        Promise.all(ids.map(function(id){
+          return from('ordenes_trabajo').eq('id',id).update({validado_ingeniero:true,validado_por:usuario.id,validado_en:new Date().toISOString(),validacion_estado:'validada'});
+        })).then(function(){
+          showToast('✅ '+ids.length+' aplicación(es) validada(s)');
           renderAplicacionesEstatus();
         }).catch(function(err){alert('Error: '+err.message);});
       });
