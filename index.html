@@ -2159,10 +2159,10 @@ function guardarFormula(){
 }
 
 var BOMBA_CAPACIDAD={'inyeccion':200,'motor':25,'manual':20};
-var aplic={plantacionId:null,tablaId:null,formula:null,componentes:[],bomba:null,numBombas:null,volumen:null,factor:1,operarios:[],fecha:null,notas:null};
+var aplic={plantacionId:null,tablaId:null,formula:null,componentes:[],bomba:null,numBombas:null,volumen:null,factor:1,operarios:[],fecha:null,notas:null,esExtra:false};
 
 function aplicReset(){
-  aplic={plantacionId:null,tablaId:null,formula:null,componentes:[],bomba:null,numBombas:null,volumen:200,factor:1,operarios:[],fecha:new Date().toISOString().slice(0,10),notas:null};
+  aplic={plantacionId:null,tablaId:null,formula:null,componentes:[],bomba:null,numBombas:null,volumen:200,factor:1,operarios:[],fecha:new Date().toISOString().slice(0,10),notas:null,esExtra:false};
 }
 
 function renderAsigAplicPorFecha(){
@@ -2342,9 +2342,11 @@ function renderAsigAplicComponentes(){
 function renderAsigAplicOperarios(){
   var body=document.getElementById('enc-body');
   var opO=cats.operarios.map(function(o){return '<button type="button" class="op-chip'+(aplic.operarios.indexOf(o.id)>-1?' sel':'')+'" data-id="'+o.id+'" onclick="toggleChip(this)">'+o.nombre+'</button>';}).join('');
-  body.innerHTML='<div class="seccion-titulo">🧪 ¿Quién la aplica?</div><div class="form-card"><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1rem;">'+opO+'</div><button class="btn-primary" id="aplic-op-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigAplicComponentes()">← Volver a receta</button>';
+  body.innerHTML='<div class="seccion-titulo">🧪 ¿Quién la aplica?</div><div class="form-card"><div class="form-group"><label>¿Cómo se asigna?</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip'+(aplic.esExtra?'':' sel')+'" id="aplic-modo-normal">🕐 Normal</button><button type="button" class="op-chip'+(aplic.esExtra?' sel':'')+'" id="aplic-modo-extra">⏰ Hora Extra</button></div></div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1rem;">'+opO+'</div><button class="btn-primary" id="aplic-op-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigAplicComponentes()">← Volver a receta</button>';
+  document.getElementById('aplic-modo-normal').addEventListener('click',function(){aplic.esExtra=false;this.classList.add('sel');document.getElementById('aplic-modo-extra').classList.remove('sel');});
+  document.getElementById('aplic-modo-extra').addEventListener('click',function(){aplic.esExtra=true;this.classList.add('sel');document.getElementById('aplic-modo-normal').classList.remove('sel');});
   document.getElementById('aplic-op-continuar').addEventListener('click',function(){
-    var opIds=Array.from(document.querySelectorAll('.op-chip.sel')).map(function(c){return c.dataset.id;});
+    var opIds=Array.from(document.querySelectorAll('.op-chip.sel[data-id]')).map(function(c){return c.dataset.id;});
     if(!opIds.length){alert('Selecciona al menos un operario.');return;}
     aplic.operarios=opIds;
     renderAsigAplicFecha();
@@ -2366,7 +2368,7 @@ function renderAsigAplicNotas(){
   var p=cats.plantaciones.find(function(x){return x.id===aplic.plantacionId;});
   var opNombres=aplic.operarios.map(function(id){var o=cats.operarios.find(function(x){return x.id===id;});return o?o.nombre:'';}).join(', ');
   var resumenComp=aplic.componentes.map(function(c){return (c.item?c.item.nombre:'')+' · '+fmtAmigable(c.cantidad_base*aplic.factor,c.item?c.item.unidad:'');}).join('<br>');
-  body.innerHTML='<div class="seccion-titulo">🧪 Confirmar aplicación</div><div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row"><span class="resumen-key">Fórmula</span><span class="resumen-val">'+aplic.formula.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Ubicación</span><span class="resumen-val">📍 '+(p?p.nombre:'')+' · '+(t?t.nombre:'')+'</span></div><div class="resumen-row"><span class="resumen-key">Equipo</span><span class="resumen-val">'+BOMBA_ICONOS[aplic.bomba]+' '+BOMBA_LABELS[aplic.bomba]+(aplic.bomba!=='inyeccion'?' × '+aplic.numBombas:'')+'</span></div><div class="resumen-row"><span class="resumen-key">Volumen</span><span class="resumen-val">'+numFmt(aplic.volumen)+' L</span></div><div class="resumen-row"><span class="resumen-key">Operarios</span><span class="resumen-val">'+opNombres+'</span></div><div class="resumen-row"><span class="resumen-key">Fecha</span><span class="resumen-val">'+aplic.fecha+'</span></div><div class="resumen-row"><span class="resumen-key">Componentes a usar</span></div><div style="font-size:.82rem;padding:.35rem 0;">'+resumenComp+'</div></div><p class="hint" style="margin-bottom:1rem;">⚠️ Al confirmar, esta cantidad se descuenta del inventario de inmediato. Queda pendiente de validación por un ingeniero.</p><div class="form-group"><label>Notas (opcional)</label><input type="text" id="aplic-notas-input" placeholder="Instrucciones para el operario..."></div><button class="btn-primary" id="aplic-finalizar">✅ Asignar aplicación</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigAplicFecha()">← Volver a fecha</button>';
+  body.innerHTML='<div class="seccion-titulo">🧪 Confirmar aplicación</div><div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row"><span class="resumen-key">Fórmula</span><span class="resumen-val">'+aplic.formula.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Ubicación</span><span class="resumen-val">📍 '+(p?p.nombre:'')+' · '+(t?t.nombre:'')+'</span></div><div class="resumen-row"><span class="resumen-key">Equipo</span><span class="resumen-val">'+BOMBA_ICONOS[aplic.bomba]+' '+BOMBA_LABELS[aplic.bomba]+(aplic.bomba!=='inyeccion'?' × '+aplic.numBombas:'')+'</span></div><div class="resumen-row"><span class="resumen-key">Volumen</span><span class="resumen-val">'+numFmt(aplic.volumen)+' L</span></div><div class="resumen-row"><span class="resumen-key">Modo</span><span class="resumen-val">'+(aplic.esExtra?'⏰ Hora Extra':'🕐 Normal')+'</span></div><div class="resumen-row"><span class="resumen-key">Operarios</span><span class="resumen-val">'+opNombres+'</span></div><div class="resumen-row"><span class="resumen-key">Fecha</span><span class="resumen-val">'+aplic.fecha+'</span></div><div class="resumen-row"><span class="resumen-key">Componentes a usar</span></div><div style="font-size:.82rem;padding:.35rem 0;">'+resumenComp+'</div></div><p class="hint" style="margin-bottom:1rem;">⚠️ Al confirmar, esta cantidad se descuenta del inventario de inmediato. Queda pendiente de validación por un ingeniero.</p><div class="form-group"><label>Notas (opcional)</label><input type="text" id="aplic-notas-input" placeholder="Instrucciones para el operario..."></div><button class="btn-primary" id="aplic-finalizar">✅ Asignar aplicación</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigAplicFecha()">← Volver a fecha</button>';
   document.getElementById('aplic-finalizar').addEventListener('click',guardarAplicacion);
 }
 
@@ -2374,12 +2376,15 @@ function guardarAplicacion(){
   var btn=document.getElementById('aplic-finalizar'); btn.disabled=true; btn.textContent='Guardando...';
   var notas=document.getElementById('aplic-notas-input').value||null;
   var lbAplic=cats.tiposLabor.find(function(l){return l.requiere_formula;});
-  var payloadBase={asignado_por:usuario.id,tabla_id:aplic.tablaId,tipo_labor_id:lbAplic.id,formula_id:aplic.formula.id,bomba_usada:aplic.bomba,volumen_aplicado_litros:aplic.volumen,factor_escala:aplic.factor,fecha_asignacion:aplic.fecha,notas_encargado:notas,estado:'pendiente',validado_ingeniero:false,duracion:'dia'};
+  var payloadBase={asignado_por:usuario.id,tabla_id:aplic.tablaId,tipo_labor_id:lbAplic.id,formula_id:aplic.formula.id,bomba_usada:aplic.bomba,volumen_aplicado_litros:aplic.volumen,factor_escala:aplic.factor,fecha_asignacion:aplic.fecha,notas_encargado:notas,estado:'pendiente',validado_ingeniero:false,duracion:'dia',es_hora_extra:aplic.esExtra};
   var ordenesPromesa=Promise.all(aplic.operarios.map(function(oid){
     return from('ordenes_trabajo').insert(Object.assign({},payloadBase,{operario_id:oid}));
   }));
   ordenesPromesa.then(function(resultados){
     var primeraOrdenId=resultados&&resultados[0]&&resultados[0][0]&&resultados[0][0].id;
+    var autorizarExtra = aplic.esExtra ? Promise.all(aplic.operarios.map(function(oid){
+      return from('horas_extra_asignadas').insert({operario_id:oid,asignado_por:usuario.id,fecha:aplic.fecha,motivo:notas,tipo_labor_id:lbAplic.id,estado:'aprobada'});
+    })) : Promise.resolve();
     var movs=aplic.componentes.map(function(c){
       var cant=c.cantidad_base*aplic.factor;
       var nuevoStock=(c.item?c.item.stock_actual:0)-cant;
@@ -2387,16 +2392,16 @@ function guardarAplicacion(){
         return from('inventario_items').eq('id',c.item_id).update({stock_actual:nuevoStock});
       });
     });
-    return Promise.all(movs);
+    return autorizarExtra.then(function(){return Promise.all(movs);});
   }).then(function(){
     return from('inventario_items').select('*').eq('activo',true).order('nombre').get();
   }).then(function(rows){
     cats.inventario=rows||[];
     return Promise.all(aplic.operarios.map(function(oid){
-      return from('notificaciones').insert({titulo:'🧪 Aplicación asignada',cuerpo:usuario.nombre+' asignó a '+(cats.operarios.find(function(o){return o.id===oid;})||{}).nombre+': '+aplic.formula.nombre,icono:'🧪',leida:false,para_rol:'operario',para_usuario:oid});
+      return from('notificaciones').insert({titulo:aplic.esExtra?'⏰ Aplicación (hora extra) asignada':'🧪 Aplicación asignada',cuerpo:usuario.nombre+' asignó a '+(cats.operarios.find(function(o){return o.id===oid;})||{}).nombre+': '+aplic.formula.nombre+(aplic.esExtra?' (hora extra)':''),icono:aplic.esExtra?'⏰':'🧪',leida:false,para_rol:'operario',para_usuario:oid});
     }));
   }).then(function(){
-    showToast('✅ Aplicación asignada. Inventario descontado, pendiente de validar.');
+    showToast('✅ Aplicación asignada'+(aplic.esExtra?' como hora extra':'')+'. Inventario descontado, pendiente de validar.');
     renderFormAsignar();
   }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='✅ Asignar aplicación';});
 }
