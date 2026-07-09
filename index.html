@@ -265,6 +265,7 @@ function from(table) {
   var q = {_t:table, _f:[], _s:'*', _o:'', _l:'',
     select:function(s){this._s=s;return this;},
     eq:function(c,v){this._f.push(c+'=eq.'+encodeURIComponent(v));return this;},
+    neq:function(c,v){this._f.push(c+'=neq.'+encodeURIComponent(v));return this;},
     gte:function(c,v){this._f.push(c+'=gte.'+encodeURIComponent(v));return this;},
     lte:function(c,v){this._f.push(c+'=lte.'+encodeURIComponent(v));return this;},
     in:function(c,v){this._f.push(c+'=in.("'+v.join('","')+'")');return this;},
