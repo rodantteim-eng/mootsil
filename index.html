@@ -4179,11 +4179,11 @@ function iniciarEjecucion(oid){
         ordenEjecutando.formula=r[0]&&r[0][0];
         ordenEjecutando.componentesFormula=r[1]||[];
         renderEjec();
-      });
+      }).catch(function(e){alert('No se pudo cargar la fórmula de esta aplicación.\n\nError: '+e.message);});
     } else {
       renderEjec();
     }
-  });
+  }).catch(function(e){alert('No se pudo abrir esta tarea.\n\nError: '+e.message);});
 }
 
 function renderEjec(){
