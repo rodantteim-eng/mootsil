@@ -555,14 +555,16 @@ function renderTablero(){
   body.innerHTML='<div class="loading">Cargando tablero...</div>';
   var hoy=new Date().toISOString().slice(0,10);
   var en7dias=new Date(Date.now()+7*86400000).toISOString().slice(0,10);
+  var hace30dias=new Date(Date.now()-30*86400000).toISOString().slice(0,10);
   Promise.all([
-    from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre),subtipo:subtipos_labor(nombre)').order('creado_en',{ascending:false}).get(),
+    from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre),subtipo:subtipos_labor(nombre)').in('estado',['pendiente','en_proceso']).order('creado_en',{ascending:false}).get(),
+    from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre),subtipo:subtipos_labor(nombre)').in('estado',['completada','cancelada']).gte('fecha_asignacion',hace30dias).order('creado_en',{ascending:false}).limit(150).get(),
     from('formulas_aplicacion').select('id,nombre,fecha_programada,tabla_id').eq('activo',true).get(),
     from('ordenes_trabajo').select('formula_id,estado').not('formula_id','is','null').get(),
     from('permisos').select('id').eq('estado','pendiente').get(),
     from('solicitudes_labor').select('id').eq('estado','pendiente').get()
   ]).then(function(r){
-    var todas=r[0]||[], formulas=r[1]||[], ordenesConFormula=(r[2]||[]).filter(function(o){return o.estado!=='cancelada';}), permisosPendientes=r[3]||[], solicitudesPendientes=r[4]||[];
+    var todas=(r[0]||[]).concat(r[1]||[]), formulas=r[2]||[], ordenesConFormula=(r[3]||[]).filter(function(o){return o.estado!=='cancelada';}), permisosPendientes=r[4]||[], solicitudesPendientes=r[5]||[];
     var asignadas={};
     ordenesConFormula.forEach(function(o){asignadas[o.formula_id]=true;});
     var pendientesFormula=formulas.filter(function(f){return f.fecha_programada&&f.fecha_programada<=en7dias&&!asignadas[f.id];});
