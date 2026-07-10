@@ -189,7 +189,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <button class="tab" id="tab-tablero" onclick="tabEncargado('tablero')" style="display:none">Tablero</button>
     <button class="tab" id="tab-asignar" onclick="tabEncargado('asignar')" style="display:none">+ Asignar</button>
     <button class="tab" id="tab-aplicaciones" onclick="tabEncargado('aplicaciones')" style="display:none">🧪 Aplicaciones</button>
-    <button class="tab" id="tab-labores" onclick="tabEncargado('labores')" style="display:none">🔧 Labores</button>
+    <button class="tab" id="tab-labores" onclick="tabEncargado('labores')" style="display:none">📋 Solicitudes</button>
     <button class="tab" id="tab-formulas" onclick="tabEncargado('formulas')" style="display:none">📐 Fórmulas</button>
     <button class="tab" id="tab-reporte" onclick="tabEncargado('reporte')">Reporte</button>
     <button class="tab" id="tab-notif" onclick="tabEncargado('notif')">Avisos <span id="badge-avisos" style="display:none;background:var(--tierra);color:#fff;border-radius:50%;width:16px;height:16px;font-size:.6rem;font-weight:700;align-items:center;justify-content:center;margin-left:3px;vertical-align:middle;">0</span></button>
@@ -435,10 +435,10 @@ function entrarSegunRol(){
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='dueño'||usuario.rol==='ingeniero') document.getElementById('tab-alarmas').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='dueño') document.getElementById('tab-admin').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='dueño') document.getElementById('tab-admin').style.display='';
-    if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='ingeniero') document.getElementById('tab-inventario').style.display='';
-    if(usuario.rol==='admin'||usuario.rol==='ingeniero') document.getElementById('tab-formulas').style.display='';
-    if(usuario.rol==='admin'||usuario.rol==='ingeniero') document.getElementById('tab-aplicaciones').style.display='';
-    if(usuario.rol==='admin'||usuario.rol==='ingeniero') document.getElementById('tab-labores').style.display='';
+    if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='ingeniero'||usuario.rol==='dueño') document.getElementById('tab-inventario').style.display='';
+    if(usuario.rol==='admin'||usuario.rol==='ingeniero'||usuario.rol==='dueño') document.getElementById('tab-formulas').style.display='';
+    if(usuario.rol==='admin'||usuario.rol==='ingeniero'||usuario.rol==='dueño') document.getElementById('tab-aplicaciones').style.display='';
+    if(usuario.rol==='admin'||usuario.rol==='ingeniero'||usuario.rol==='dueño') document.getElementById('tab-labores').style.display='';
 
     if(usuario.rol==='ingeniero'){
       tabEncargado('aplicaciones');
@@ -1322,7 +1322,7 @@ function renderFormulasMenu(){
 }
 
 function headerLabores(){
-  return '<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4rem;">🔧 Labores<button type="button" onclick="renderSolicitarLabor()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nueva solicitud</button></div>';
+  return '<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4rem;">📋 Solicitudes de Labor<button type="button" onclick="renderSolicitarLabor()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nueva solicitud</button></div><p class="hint" style="margin-bottom:.75rem;">Aquí se ven las labores que un ingeniero sugiere para programar — no las que ya asignaste al equipo (esas están en el Tablero).</p>';
 }
 
 var LABOR_SUBTAB='hoy';
