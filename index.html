@@ -557,9 +557,36 @@ function renderSolicitudesLabor(){
 
 var TABLERO_FILTRO=null;
 var TABLERO_TIPO_FILTRO=null;
+function generarTareasMantenimientoVencidas(){
+  var hoy=new Date().toISOString().slice(0,10);
+  return Promise.all([
+    from('activos_rancho').select('*').eq('activo',true).not('asignado_a','is','null').not('frecuencia_mantenimiento_dias','is','null').get(),
+    from('tipos_labor').select('id').eq('nombre','Mantenimiento de herramienta').get(),
+    from('ordenes_trabajo').select('activo_rancho_id,estado').not('activo_rancho_id','is','null').in('estado',['pendiente','en_proceso']).get()
+  ]).then(function(r){
+    var activos=r[0]||[], lbMant=r[1]&&r[1][0], ordenesActivas=r[2]||[];
+    if(!lbMant) return;
+    var yaTieneTarea={}; ordenesActivas.forEach(function(o){yaTieneTarea[o.activo_rancho_id]=true;});
+    var pendientesGenerar=activos.filter(function(a){
+      if(yaTieneTarea[a.id]) return false;
+      if(!a.fecha_ultimo_mantenimiento) return true;
+      var venc=new Date(a.fecha_ultimo_mantenimiento+'T00:00:00');
+      venc.setDate(venc.getDate()+a.frecuencia_mantenimiento_dias);
+      return venc.toISOString().slice(0,10)<=hoy;
+    });
+    if(!pendientesGenerar.length) return;
+    return Promise.all(pendientesGenerar.map(function(a){
+      return from('ordenes_trabajo').insert({asignado_por:usuario.id,operario_id:a.asignado_a,tipo_labor_id:lbMant.id,activo_rancho_id:a.id,fecha_asignacion:hoy,notas_encargado:'Mantenimiento programado de: '+a.nombre,estado:'pendiente'}).then(function(){
+        return from('notificaciones').insert({titulo:'🔧 Mantenimiento asignado',cuerpo:'Toca darle mantenimiento a: '+a.nombre,icono:'🔧',leida:false,para_rol:'operario',para_usuario:a.asignado_a});
+      });
+    }));
+  }).catch(function(){});
+}
+
 function renderTablero(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="loading">Cargando tablero...</div>';
+  generarTareasMantenimientoVencidas();
   var hoy=new Date().toISOString().slice(0,10);
   var en7dias=new Date(Date.now()+7*86400000).toISOString().slice(0,10);
   var hace30dias=new Date(Date.now()-30*86400000).toISOString().slice(0,10);
@@ -593,7 +620,7 @@ function renderTablero(){
       avisoHtml+='<div style="background:var(--tierra-tenue);border:1.5px solid var(--tierra);border-radius:var(--radio-sm);padding:.85rem;margin-bottom:1rem;cursor:pointer;" id="aviso-solicitudes-operario"><strong style="color:var(--tierra);">📨 '+solicitudesOpPendientes.length+' solicitud(es) de colaboradores pendiente(s)</strong><div class="hint" style="margin-top:.25rem;">Préstamos y otros asuntos — toca para revisarlas</div></div>';
     }
     if(activosVencidos.length){
-      avisoHtml+='<div style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);border-radius:var(--radio-sm);padding:.85rem;margin-bottom:1rem;cursor:pointer;" id="aviso-mantenimiento"><strong style="color:var(--rojo);">🔧 '+activosVencidos.length+' herramienta(s)/equipo(s) requieren mantenimiento</strong><div class="hint" style="margin-top:.25rem;">'+activosVencidos.slice(0,3).map(function(a){return a.nombre;}).join(', ')+(activosVencidos.length>3?'...':'')+'</div></div>';
+      avisoHtml+='<div style="background:var(--tierra-tenue);border:1.5px solid var(--tierra);border-radius:var(--radio-sm);padding:.85rem;margin-bottom:1rem;cursor:pointer;" id="aviso-mantenimiento"><strong style="color:var(--tierra);">🔧 '+activosVencidos.length+' herramienta(s)/equipo(s) con mantenimiento vencido</strong><div class="hint" style="margin-top:.25rem;">Ya se les asignó la tarea a quien las tiene — '+activosVencidos.slice(0,3).map(function(a){return a.nombre;}).join(', ')+(activosVencidos.length>3?'...':'')+'</div></div>';
     }
     if(solicitudesPendientes.length){
       avisoHtml+='<div style="background:var(--tierra-tenue);border:1.5px solid var(--tierra);border-radius:var(--radio-sm);padding:.85rem;margin-bottom:1rem;cursor:pointer;" id="aviso-solicitudes-labor"><strong style="color:var(--tierra);">🔧 '+solicitudesPendientes.length+' labor(es) sugerida(s) por ingeniero</strong><div class="hint" style="margin-top:.25rem;">Toca para revisarlas y programarlas</div></div>';
@@ -2882,11 +2909,13 @@ function renderEmpleadosMenu(){
   body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">👥 Empleados<button type="button" onclick="renderAdministracionMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Administración</button></div><div class="labor-grid" style="grid-template-columns:repeat(2,1fr);">'+
     '<div class="labor-tile" data-emp="altasbajas"><div class="labor-tile-ic">👤</div><div class="labor-tile-lbl">Altas y Bajas</div></div>'+
     '<div class="labor-tile" data-emp="contratos"><div class="labor-tile-ic">📄</div><div class="labor-tile-lbl">Contratos</div></div>'+
+    '<div class="labor-tile" data-emp="documentos"><div class="labor-tile-ic">🪪</div><div class="labor-tile-lbl">Documentos</div></div>'+
     '<div class="labor-tile" data-emp="permisos"><div class="labor-tile-ic">📋</div><div class="labor-tile-lbl">Permisos</div></div>'+
     '<div class="labor-tile" data-emp="solicitudes"><div class="labor-tile-ic">📨</div><div class="labor-tile-lbl">Solicitudes</div></div>'+
   '</div>';
   body.querySelector('[data-emp="altasbajas"]').addEventListener('click',renderAltasBajas);
   body.querySelector('[data-emp="contratos"]').addEventListener('click',renderContratos);
+  body.querySelector('[data-emp="documentos"]').addEventListener('click',renderDocumentosPersonales);
   body.querySelector('[data-emp="permisos"]').addEventListener('click',renderPermisosRevision);
   body.querySelector('[data-emp="solicitudes"]').addEventListener('click',renderSolicitudesOperarioRevision);
 }
@@ -3083,6 +3112,56 @@ function notificarEmergencia(tipo,desc){
   }).catch(function(e){alert('Error: '+e.message);});
 }
 
+function renderMisHerramientas(){
+  var body=document.getElementById('op-body');
+  body.innerHTML='<div class="seccion-titulo">🔧 Mis herramientas y equipo</div><div class="loading">Cargando...</div>';
+  from('activos_rancho').select('*').eq('asignado_a',usuario.id).eq('activo',true).get().then(function(rows){
+    rows=rows||[];
+    if(!rows.length){body.innerHTML='<div class="seccion-titulo">🔧 Mis herramientas y equipo</div><div class="empty">No tienes herramientas o equipo asignado.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderPerfilOperario()">← Volver a Perfil</button>';return;}
+    var hoy=new Date().toISOString().slice(0,10);
+    var html='<div class="seccion-titulo">🔧 Mis herramientas y equipo</div><p class="hint" style="margin-bottom:.75rem;">Aquí solo consultas — el mantenimiento se hace desde tus tareas asignadas en "Mis tareas".</p>';
+    html+=rows.map(function(it){
+      var requiereMant=false;
+      if(it.fecha_ultimo_mantenimiento&&it.frecuencia_mantenimiento_dias){
+        var venc=new Date(it.fecha_ultimo_mantenimiento+'T00:00:00');
+        venc.setDate(venc.getDate()+it.frecuencia_mantenimiento_dias);
+        requiereMant=venc.toISOString().slice(0,10)<=hoy;
+      } else if(!it.fecha_ultimo_mantenimiento&&it.frecuencia_mantenimiento_dias){
+        requiereMant=true;
+      }
+      var thumb=it.imagen_url?'<img src="'+it.imagen_url+'" style="width:44px;height:44px;object-fit:cover;border-radius:8px;border:1px solid var(--gris-2);margin-right:.5rem;flex-shrink:0;">':'<div style="width:44px;height:44px;border-radius:8px;background:var(--gris-1);display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin-right:.5rem;flex-shrink:0;">🔧</div>';
+      var ultMant=it.fecha_ultimo_mantenimiento?('Último mantenimiento: '+new Date(it.fecha_ultimo_mantenimiento+'T00:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'})):'Sin mantenimiento registrado aún';
+      return '<div class="orden-card" style="display:flex;align-items:center;'+(requiereMant?'border-left-color:var(--tierra);':'')+'">'+thumb+'<div style="flex:1;"><strong style="font-size:.9rem;">'+it.nombre+'</strong>'+(requiereMant?'<div style="color:var(--tierra);font-weight:700;font-size:.78rem;margin-top:.15rem;">🔧 Pronto te va a llegar la tarea de mantenimiento</div>':'')+'<div class="orden-meta">'+ultMant+'</div></div></div>';
+    }).join('');
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderPerfilOperario()">← Volver a Perfil</button>';
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function renderMisDocumentos(){
+  var body=document.getElementById('op-body');
+  body.innerHTML='<div class="seccion-titulo">📄 Mis documentos</div><div class="loading">Cargando...</div>';
+  from('documentos_personales').select('*').eq('operario_id',usuario.id).order('creado_en',{ascending:false}).get().then(function(rows){
+    rows=rows||[];
+    if(!rows.length){body.innerHTML='<div class="seccion-titulo">📄 Mis documentos</div><div class="empty">Aún no tienes documentos guardados. Pídele a administración que los suba.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderPerfilOperario()">← Volver a Perfil</button>';return;}
+    var html='<div class="seccion-titulo">📄 Mis documentos</div>'+rows.map(function(d){
+      return '<div class="orden-card"><strong style="font-size:.9rem;">'+d.tipo+'</strong><div class="orden-meta">'+(d.notas?d.notas+'<br/>':'')+'<a href="'+d.url_documento+'" target="_blank" style="color:var(--verde-mid);font-weight:700;">📎 Ver documento</a></div></div>';
+    }).join('');
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderPerfilOperario()">← Volver a Perfil</button>';
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function renderMisContratos(){
+  var body=document.getElementById('op-body');
+  body.innerHTML='<div class="seccion-titulo">📝 Mis contratos</div><div class="loading">Cargando...</div>';
+  from('contratos').select('*').eq('operario_id',usuario.id).order('creado_en',{ascending:false}).get().then(function(rows){
+    rows=rows||[];
+    if(!rows.length){body.innerHTML='<div class="seccion-titulo">📝 Mis contratos</div><div class="empty">Aún no tienes contratos guardados.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderPerfilOperario()">← Volver a Perfil</button>';return;}
+    var html='<div class="seccion-titulo">📝 Mis contratos</div>'+rows.map(function(c){
+      return '<div class="orden-card"><strong style="font-size:.9rem;">'+(c.tipo_contrato||'Contrato')+'</strong><div class="orden-meta">Desde: '+(c.fecha_inicio||'?')+(c.notas?'<br/>'+c.notas:'')+(c.url_documento?'<br/><a href="'+c.url_documento+'" target="_blank" style="color:var(--verde-mid);font-weight:700;">📎 Ver documento</a>':'')+'</div></div>';
+    }).join('');
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderPerfilOperario()">← Volver a Perfil</button>';
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
 function renderPerfilOperario(){
   var body=document.getElementById('op-body');
   body.innerHTML='<div class="seccion-titulo">Perfil</div><div class="loading">Cargando...</div>';
@@ -3100,6 +3179,7 @@ function renderPerfilOperario(){
     body.innerHTML='<div class="seccion-titulo">Perfil</div>'+
     '<div class="tarea-card"><div class="tarea-title">👤 '+usuario.nombre+'</div><div class="tarea-meta">'+asignacionLbl+antiguedadTxt+'</div></div>'+
     '<div class="tarea-card" style="cursor:pointer;margin-top:.6rem;" onclick="renderCambiarMiPin()"><div class="tarea-title">🔒 Cambiar mi PIN</div><div class="tarea-meta">Actualiza tu código de acceso</div></div>'+
+    '<div class="tarea-card" style="cursor:pointer;margin-top:.6rem;" onclick="renderMisHerramientas()"><div class="tarea-title">🔧 Mis herramientas y equipo</div><div class="tarea-meta">Consulta lo que tienes asignado y su historial</div></div>'+
     '<div class="seccion-titulo" style="margin-top:1rem;font-size:.85rem;">📞 Contacto</div>'+
     '<div class="form-card"><label style="display:block;font-size:.75rem;font-weight:600;color:var(--gris-3);margin-bottom:.4rem;text-transform:uppercase;">Mi teléfono</label><input type="tel" id="perf-tel" value="'+(u.telefono||'').replace(/"/g,'&quot;')+'" placeholder="10 dígitos" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;margin-bottom:.75rem;">'+
     '<label style="display:block;font-size:.75rem;font-weight:600;color:var(--gris-3);margin-bottom:.4rem;text-transform:uppercase;">Contacto de emergencia — nombre</label><input type="text" id="perf-ce-nombre" value="'+(u.contacto_emergencia_nombre||'').replace(/"/g,'&quot;')+'" placeholder="Nombre completo" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;margin-bottom:.75rem;">'+
@@ -3112,8 +3192,8 @@ function renderPerfilOperario(){
     '<button class="btn-primary" id="perf-guardar-medico">Guardar ficha médica</button></div>'+
     '<div class="seccion-titulo" style="margin-top:1rem;font-size:.85rem;">📁 Documentos</div>'+
     '<div style="display:flex;flex-direction:column;gap:.6rem;">'+
-    '<div class="tarea-card" style="opacity:.6;"><div class="tarea-title">📄 Documentos personales (INE, SAT, etc.)</div><div class="tarea-meta">Próximamente</div></div>'+
-    '<div class="tarea-card" style="opacity:.6;"><div class="tarea-title">📝 Contratos</div><div class="tarea-meta">Próximamente</div></div>'+
+    '<div class="tarea-card" style="cursor:pointer;" onclick="renderMisDocumentos()"><div class="tarea-title">📄 Documentos personales (INE, SAT, etc.)</div><div class="tarea-meta">Ver mis documentos guardados</div></div>'+
+    '<div class="tarea-card" style="cursor:pointer;" onclick="renderMisContratos()"><div class="tarea-title">📝 Contratos</div><div class="tarea-meta">Ver mis contratos</div></div>'+
     '</div>';
     document.getElementById('perf-guardar').addEventListener('click',function(){
       var tel=document.getElementById('perf-tel').value||null;
@@ -4341,9 +4421,9 @@ function cargarTareas(subtab){
   body.innerHTML=barraSubtabsTareas()+'<div id="tareas-contenido"><div class="loading">Cargando tus tareas...</div></div>';
   var hoy=new Date().toISOString().slice(0,10);
   Promise.all([
-    from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_cantidad_insumo,unidad_insumo,requiere_tiempo),subtipo:subtipos_labor(nombre)').eq('operario_id',usuario.id).in('estado',['pendiente','en_proceso']).order('fecha_asignacion',{ascending:true}).get(),
-    from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo)').eq('operario_id',usuario.id).eq('fecha_asignacion',hoy).order('creado_en',{ascending:false}).get(),
-    from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo)').eq('operario_id',usuario.id).eq('estado','completada').order('fecha_asignacion',{ascending:false}).limit(60).get()
+    from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_cantidad_insumo,unidad_insumo,requiere_tiempo),subtipo:subtipos_labor(nombre),activo_rancho:activos_rancho(nombre,imagen_url)').eq('operario_id',usuario.id).in('estado',['pendiente','en_proceso']).order('fecha_asignacion',{ascending:true}).get(),
+    from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo),activo_rancho:activos_rancho(nombre,imagen_url)').eq('operario_id',usuario.id).eq('fecha_asignacion',hoy).order('creado_en',{ascending:false}).get(),
+    from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo),activo_rancho:activos_rancho(nombre,imagen_url)').eq('operario_id',usuario.id).eq('estado','completada').order('fecha_asignacion',{ascending:false}).limit(60).get()
   ]).then(function(res){
     var todas=res[0]||[], hoyOrdenes=res[1]||[], completadas=res[2]||[];
     var idsComp=completadas.map(function(o){return o.id;});
@@ -4386,12 +4466,17 @@ function pintarTareas(todas,hoyOrdenes,esCache,completadas,evidenciaPorOrden){
   try{
     var hoy=new Date().toISOString().slice(0,10);
     riegoOrdenes=hoyOrdenes.filter(function(o){return o.tipo_labor&&o.tipo_labor.requiere_tiempo;});
-    var tareasTodas=todas.filter(function(t){return t.tabla&&!(t.tipo_labor&&t.tipo_labor.requiere_tiempo);});
+    var tareasTodas=todas.filter(function(t){return (t.tabla||t.activo_rancho_id)&&!(t.tipo_labor&&t.tipo_labor.requiere_tiempo);});
     var porHacer=tareasTodas.filter(function(t){return t.estado==='pendiente';});
     var enProceso=tareasTodas.filter(function(t){return t.estado==='en_proceso';});
-    var completadasNormales=completadas.filter(function(o){return o.tabla&&!(o.tipo_labor&&o.tipo_labor.requiere_tiempo);});
+    var completadasNormales=completadas.filter(function(o){return (o.tabla||o.activo_rancho_id)&&!(o.tipo_labor&&o.tipo_labor.requiere_tiempo);});
 
     function tarjetaTarea(t){
+      if(t.activo_rancho_id){
+        var an=t.activo_rancho?t.activo_rancho.nombre:'Herramienta';
+        var atrasadaM=t.fecha_asignacion<hoy;
+        return '<div class="tarea-card" style="'+(atrasadaM?'border-left-color:var(--rojo);':'border-left-color:var(--tierra);')+'"><div class="tarea-title">🔧 Mantenimiento — '+an+(atrasadaM?' <span style="color:var(--rojo);font-size:.72rem;font-weight:700;">⚠️ Desde '+t.fecha_asignacion+'</span>':'')+'</div><div class="tarea-meta">'+(t.notas_encargado||'Dale mantenimiento y confirma cuando termines.')+'</div><div style="margin-top:.75rem;display:flex;gap:8px;">'+(t.estado==='pendiente'?'<button class="btn-sm btn-iniciar" data-ini="'+t.id+'">▶ Iniciar</button>':'')+(t.estado==='en_proceso'?'<button class="btn-sm btn-completar" data-eje="'+t.id+'">✅ Registrar avance</button>':'')+'</div></div>';
+      }
       var p=cats.plantaciones.find(function(x){return x.id===t.tabla.plantacion_id;});
       var ic=ICONOS[t.tipo_labor.nombre]||'🔧';
       var su=(t.surcos_asignados&&t.surcos_asignados.length)?t.surcos_asignados.join(', '):'Todos';
@@ -4653,8 +4738,9 @@ function sonarAlarmaRiego(){
 }
 
 function iniciarEjecucion(oid){
-  from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_cantidad_insumo,unidad_insumo,requiere_formula),subtipo:subtipos_labor(nombre)').eq('id',oid).single().then(function(o){
+  from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_cantidad_insumo,unidad_insumo,requiere_formula),subtipo:subtipos_labor(nombre),activo_rancho:activos_rancho(nombre,imagen_url,descripcion)').eq('id',oid).single().then(function(o){
     ordenEjecutando=o; pasoEjec=1; capturaEjec={surcos:[],cantidad:0,foto:false,herramientaLimpia:false};
+    if(o.activo_rancho_id){renderEjecMantenimiento();return;}
     if(o.tipo_labor&&o.tipo_labor.requiere_formula&&o.formula_id){
       Promise.all([
         from('formulas_aplicacion').select('*').eq('id',o.formula_id).get(),
@@ -4668,6 +4754,16 @@ function iniciarEjecucion(oid){
       renderEjec();
     }
   }).catch(function(e){alert('No se pudo abrir esta tarea.\n\nError: '+e.message);});
+}
+
+function renderEjecMantenimiento(){
+  var body=document.getElementById('op-body');
+  var o=ordenEjecutando;
+  capturaEjec.herramientaLimpia=true;
+  var a=o.activo_rancho||{};
+  var evid=capturaEjec.foto?'<div style="padding:.75rem;background:var(--verde-tenue);border-radius:var(--radio);color:var(--verde);font-size:.85rem;text-align:center;margin-bottom:1rem;">✅ Evidencia capturada</div>':'';
+  var img=a.imagen_url?'<img src="'+a.imagen_url+'" style="width:64px;height:64px;object-fit:cover;border-radius:10px;border:1px solid var(--gris-2);">':'<div style="width:64px;height:64px;border-radius:10px;background:var(--gris-1);display:flex;align-items:center;justify-content:center;font-size:1.6rem;">🔧</div>';
+  body.innerHTML='<div class="step-label">Mantenimiento de herramienta</div><div class="form-card" style="display:flex;gap:1rem;align-items:center;margin-bottom:1rem;">'+img+'<div><div style="font-weight:800;font-size:1rem;">'+a.nombre+'</div>'+(a.descripcion?'<div class="hint" style="margin:0;">'+a.descripcion+'</div>':'')+'</div></div><p class="hint" style="margin-bottom:1rem;">Revísala, límpiala, y confirma que quedó lista para seguir usándose.</p><div style="display:flex;gap:8px;margin-bottom:1rem;"><button onclick="abrirCamaraApp()" style="flex:1;padding:1rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio);background:var(--verde-tenue);color:var(--verde);font-size:.9rem;font-weight:600;cursor:pointer;">📷 Cámara</button><button onclick="abrirGaleria()" style="flex:1;padding:1rem;border:1.5px solid var(--gris-2);border-radius:var(--radio);background:var(--gris-1);font-size:.9rem;cursor:pointer;">🖼️ Galería</button></div>'+evid+'<div class="nav-row"><button class="btn-back" onclick="ordenEjecutando=null;cargarTareas()">← Cancelar</button><button class="btn-next" onclick="guardarEjec()" style="background:var(--tierra)">✅ Marcar como hecho</button></div>';
 }
 
 function renderEjec(){
@@ -4771,9 +4867,10 @@ function calcularProgresoSurcos(o){
 
 function ejecutarGuardadoFinal(o){
   var esAplic=o.tipo_labor&&o.tipo_labor.requiere_formula;
-  var progreso = esAplic ? {completo:true,union:[],faltan:[]} : calcularProgresoSurcos(o);
+  var esMantenimiento=!!o.activo_rancho_id;
+  var progreso = (esAplic||esMantenimiento) ? {completo:true,union:[],faltan:[]} : calcularProgresoSurcos(o);
   var nuevoEstado = progreso.completo ? 'completada' : 'en_proceso';
-  var updatePayload = esAplic ? {estado:nuevoEstado, herramienta_limpia:capturaEjec.herramientaLimpia||false} : {estado:nuevoEstado, surcos_completados:progreso.union, herramienta_limpia:capturaEjec.herramientaLimpia||false};
+  var updatePayload = (esAplic||esMantenimiento) ? {estado:nuevoEstado, herramienta_limpia:capturaEjec.herramientaLimpia||false} : {estado:nuevoEstado, surcos_completados:progreso.union, herramienta_limpia:capturaEjec.herramientaLimpia||false};
   if(nuevoEstado==='completada') updatePayload.completado_en=new Date().toISOString();
   var reg={usuario_id:usuario.id,tabla_id:o.tabla_id,tipo_labor_id:o.tipo_labor_id,subtipo_labor_id:o.subtipo_labor_id||null,surcos_trabajados:esAplic?[]:capturaEjec.surcos,cantidad_insumo:esAplic?o.volumen_aplicado_litros:(capturaEjec.cantidad||null),foto_url:capturaEjec.fotoUrl||null,capturado_en:new Date().toISOString(),orden_id:o.id};
   var fotoQuedoLocal = capturaEjec.fotoUrl && capturaEjec.fotoUrl.indexOf('offline:')===0;
@@ -4781,6 +4878,7 @@ function ejecutarGuardadoFinal(o){
     colaOffline.push(reg);
     localStorage.setItem('mootsil_cola',JSON.stringify(colaOffline));
     from('ordenes_trabajo').eq('id',o.id).update(updatePayload).then(function(){
+      if(nuevoEstado==='completada'&&o.activo_rancho_id) from('activos_rancho').eq('id',o.activo_rancho_id).update({fecha_ultimo_mantenimiento:new Date().toISOString().slice(0,10)}).catch(function(){});
       if(!document.getElementById('exito-sub').textContent) document.getElementById('exito-sub').textContent='Sin señal. Guardado en tu dispositivo y se subirá cuando haya internet.';
       mostrar('screen-exito'); ordenEjecutando=null;
     }).catch(function(){
@@ -4791,6 +4889,7 @@ function ejecutarGuardadoFinal(o){
   }
   from('registros_labor').insert(reg).then(function(){
     from('ordenes_trabajo').eq('id',o.id).update(updatePayload).then(function(){
+      if(nuevoEstado==='completada'&&o.activo_rancho_id) from('activos_rancho').eq('id',o.activo_rancho_id).update({fecha_ultimo_mantenimiento:new Date().toISOString().slice(0,10)}).catch(function(){});
       var lb=cats.tiposLabor.find(function(l){return l.id===o.tipo_labor_id;}), tb=cats.tablas.find(function(t){return t.id===o.tabla_id;});
       var verbo = progreso.completo ? 'completó' : 'avanzó en';
       showToast('✅ '+usuario.nombre+' '+verbo+' '+(lb?lb.nombre:'')+' en '+(tb?tb.nombre:''));
@@ -4871,13 +4970,36 @@ function renderConfig(){
   });
 }
 
+function renderCredencialId(id){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="loading">Generando credencial...</div>';
+  from('usuarios').select('*').eq('id',id).get().then(function(rows){
+    var u=rows&&rows[0];
+    if(!u){renderAltasBajas();return;}
+    var idCorto=u.id.slice(0,8).toUpperCase();
+    var qrData=encodeURIComponent('MOOTSIL-ID:'+u.id);
+    var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+qrData;
+    var fotoHtml=u.avatar_url?'<img src="'+u.avatar_url+'" style="width:90px;height:90px;object-fit:cover;border-radius:50%;border:3px solid #fff;">':'<div style="width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:2.2rem;border:3px solid #fff;">👤</div>';
+    var ingresoTxt=u.fecha_ingreso?new Date(u.fecha_ingreso+'T00:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}):'—';
+    body.innerHTML='<div class="seccion-titulo">🪪 Credencial — '+u.nombre+'</div>'+
+    '<div id="credencial-card" style="background:linear-gradient(135deg,var(--verde-mid),var(--verde));border-radius:18px;padding:1.5rem;color:#fff;max-width:340px;margin:0 auto;box-shadow:0 4px 16px rgba(0,0,0,.2);">'+
+    '<div style="text-align:center;font-weight:800;font-size:1.1rem;letter-spacing:.5px;margin-bottom:1rem;">🫐 MOOTSIL</div>'+
+    '<div style="display:flex;gap:1rem;align-items:center;margin-bottom:1rem;">'+fotoHtml+'<div><div style="font-size:1.15rem;font-weight:800;">'+u.nombre+'</div><div style="font-size:.8rem;opacity:.9;">'+(ROLES[u.rol]||u.rol)+'</div></div></div>'+
+    '<div style="background:rgba(255,255,255,.15);border-radius:10px;padding:.75rem;font-size:.78rem;line-height:1.6;margin-bottom:1rem;">ID: '+idCorto+'<br/>Ingreso: '+ingresoTxt+'</div>'+
+    '<div style="background:#fff;border-radius:10px;padding:.6rem;text-align:center;"><img src="'+qrUrl+'" style="width:100%;max-width:150px;display:block;margin:0 auto;"></div>'+
+    '</div>'+
+    '<p class="hint" style="text-align:center;margin-top:1rem;">Puedes tomarle una captura de pantalla a la credencial para imprimirla o guardarla.</p>'+
+    '<button class="btn-back" style="margin-top:1rem;" onclick="renderAltasBajas()">← Volver a Altas y Bajas</button>';
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
 function renderAltasBajas(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="loading">Cargando usuarios...</div>';
   from('usuarios').select('id,nombre,rol,activo,certificado_ambas').order('nombre').get().then(function(users){
     var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">👥 Altas y Bajas<button class="btn-sm btn-completar" onclick="renderNuevoUsuario()">+ Nuevo</button></div>';
     html+=users.map(function(u){
-      return '<div class="orden-card" style="border-left-color:var(--verde-mid)"><div class="orden-header"><div class="orden-labor">'+u.nombre+'</div><span class="orden-badge-rol" style="'+( ROLE_COLORS[u.rol]||'background:#888;color:#fff')+'">'+( ROLES[u.rol]||u.rol)+'</span></div><div class="orden-actions"><button class="btn-sm btn-iniciar" onclick="renderEditarUsuario(\''+u.id+'\',\''+u.nombre+'\',\''+u.rol+'\','+(u.certificado_ambas?'true':'false')+')">Editar</button><button class="btn-sm btn-completar" onclick="renderCambiarPin(\''+u.id+'\',\''+u.nombre+'\')">Cambiar PIN</button>'+(u.activo?'<button class="btn-sm btn-cancelar" onclick="bajaUsuario(\''+u.id+'\')">Dar de baja</button>':'<button class="btn-sm btn-iniciar" onclick="altaUsuario(\''+u.id+'\')">Reactivar</button>')+'</div></div>';
+      return '<div class="orden-card" style="border-left-color:var(--verde-mid)"><div class="orden-header"><div class="orden-labor">'+u.nombre+'</div><span class="orden-badge-rol" style="'+( ROLE_COLORS[u.rol]||'background:#888;color:#fff')+'">'+( ROLES[u.rol]||u.rol)+'</span></div><div class="orden-actions"><button class="btn-sm btn-iniciar" onclick="renderEditarUsuario(\''+u.id+'\',\''+u.nombre+'\',\''+u.rol+'\','+(u.certificado_ambas?'true':'false')+')">Editar</button><button class="btn-sm btn-completar" onclick="renderCambiarPin(\''+u.id+'\',\''+u.nombre+'\')">Cambiar PIN</button><button class="btn-sm btn-iniciar" onclick="renderCredencialId(\''+u.id+'\')">🪪 Credencial</button>'+(u.activo?'<button class="btn-sm btn-cancelar" onclick="bajaUsuario(\''+u.id+'\')">Dar de baja</button>':'<button class="btn-sm btn-iniciar" onclick="altaUsuario(\''+u.id+'\')">Reactivar</button>')+'</div></div>';
     }).join('');
     body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderEmpleadosMenu()">← Volver a Empleados</button>';
   });
@@ -4899,7 +5021,20 @@ function renderContratos(){
 function renderNuevoContrato(){
   var body=document.getElementById('enc-body');
   var opO=cats.operarios.map(function(o){return '<button type="button" class="op-chip" data-id="'+o.id+'" onclick="seleccionUnica(this)">'+o.nombre+'</button>';}).join('');
-  body.innerHTML='<div class="seccion-titulo">+ Nuevo contrato</div><div class="form-card"><div class="form-group"><label>Colaborador</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Tipo de contrato</label><input type="text" id="ct-tipo" placeholder="Ej. Tiempo completo / Por temporada"></div><div class="form-group"><label>Fecha de inicio</label><input type="date" id="ct-fecha" value="'+new Date().toISOString().slice(0,10)+'"></div><div class="form-group"><label>URL del documento (opcional)</label><input type="text" id="ct-url" placeholder="Ej. https://tusitio.pages.dev/contratos/lalo.pdf"><p class="hint">Sube el PDF a tu repo (junto a index.html) y pega aquí el link completo.</p></div><div class="form-group"><label>Notas</label><input type="text" id="ct-notas" placeholder="Opcional..."></div><button class="btn-primary" id="ct-guardar">Guardar contrato</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderContratos()">← Volver a Contratos</button>';
+  body.innerHTML='<div class="seccion-titulo">+ Nuevo contrato</div><div class="form-card"><div class="form-group"><label>Colaborador</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Tipo de contrato</label><input type="text" id="ct-tipo" placeholder="Ej. Tiempo completo / Por temporada"></div><div class="form-group"><label>Fecha de inicio</label><input type="date" id="ct-fecha" value="'+new Date().toISOString().slice(0,10)+'"></div><div class="form-group"><label>Documento (foto o PDF, opcional)</label><button type="button" onclick="document.getElementById(\'ct-archivo\').click()" style="width:100%;padding:.75rem;border:1.5px dashed var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📎 Adjuntar archivo</button><div id="ct-archivo-status" style="margin-top:.5rem;"></div><input type="hidden" id="ct-url"><input type="file" id="ct-archivo" accept="image/*,.pdf" style="display:none"></div><div class="form-group"><label>Notas</label><input type="text" id="ct-notas" placeholder="Opcional..."></div><button class="btn-primary" id="ct-guardar">Guardar contrato</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderContratos()">← Volver a Contratos</button>';
+  document.getElementById('ct-archivo').addEventListener('change',function(){
+    var f=this.files&&this.files[0];
+    if(!f) return;
+    var status=document.getElementById('ct-archivo-status');
+    status.innerHTML='<span class="hint">Subiendo...</span>';
+    var nombre='contrato_'+Date.now()+'_'+Math.round(Math.random()*9999)+'_'+f.name.replace(/[^a-zA-Z0-9.]/g,'');
+    fetch(URL_SB+'/storage/v1/object/evidencias/'+nombre,{method:'POST',headers:{'apikey':KEY_SB,'Authorization':'Bearer '+KEY_SB,'Content-Type':f.type||'application/octet-stream','x-upsert':'true'},body:f}).then(function(r){
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      var url=URL_SB+'/storage/v1/object/public/evidencias/'+nombre;
+      document.getElementById('ct-url').value=url;
+      status.innerHTML='✅ Archivo listo: '+f.name;
+    }).catch(function(e){status.innerHTML='<span style="color:var(--rojo);">No se pudo subir: '+e.message+'</span>';});
+  });
   document.getElementById('ct-guardar').addEventListener('click',function(){
     var opBtn=document.querySelector('.op-chip.sel');
     if(!opBtn){alert('Selecciona un colaborador.');return;}
@@ -4910,6 +5045,56 @@ function renderNuevoContrato(){
     from('contratos').insert({operario_id:opBtn.dataset.id,tipo_contrato:tipo,fecha_inicio:fecha,url_documento:url,notas:notas,creado_por:usuario.id}).then(function(){
       showToast('✅ Contrato guardado');
       renderContratos();
+    }).catch(function(e){alert('Error: '+e.message);});
+  });
+}
+
+function renderDocumentosPersonales(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="loading">Cargando documentos...</div>';
+  from('documentos_personales').select('*,operario:usuarios!operario_id(nombre)').order('creado_en',{ascending:false}).get().then(function(rows){
+    var header='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📄 Documentos personales<button type="button" onclick="renderNuevoDocumentoPersonal()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo documento</button></div>';
+    if(!rows||!rows.length){body.innerHTML=header+'<div class="empty">Sin documentos registrados.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderEmpleadosMenu()">← Volver a Empleados</button>';return;}
+    var html=header+rows.map(function(d){
+      return '<div class="orden-card" style="border-left-color:var(--verde-mid);"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(d.operario?d.operario.nombre:'')+' — '+d.tipo+'</strong></div><div class="orden-meta">'+(d.notas?d.notas+'<br/>':'')+'<a href="'+d.url_documento+'" target="_blank" style="color:var(--verde-mid);font-weight:700;">📎 Ver documento</a> · <button type="button" class="dp-eliminar" data-id="'+d.id+'" style="border:none;background:none;color:var(--rojo);font-size:.75rem;cursor:pointer;padding:0;">🗑️ Eliminar</button></div></div>';
+    }).join('');
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderEmpleadosMenu()">← Volver a Empleados</button>';
+    body.querySelectorAll('.dp-eliminar').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        if(!confirm('¿Eliminar este documento?')) return;
+        from('documentos_personales').eq('id',this.dataset.id).delete().then(function(){renderDocumentosPersonales();});
+      });
+    });
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function renderNuevoDocumentoPersonal(){
+  var body=document.getElementById('enc-body');
+  var opO=cats.operarios.map(function(o){return '<button type="button" class="op-chip" data-id="'+o.id+'" onclick="seleccionUnica(this)">'+o.nombre+'</button>';}).join('');
+  body.innerHTML='<div class="seccion-titulo">+ Nuevo documento</div><div class="form-card"><div class="form-group"><label>Colaborador</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Tipo de documento</label><select id="dp-tipo"><option value="INE">INE</option><option value="CURP">CURP</option><option value="RFC/SAT">RFC / SAT</option><option value="Comprobante de domicilio">Comprobante de domicilio</option><option value="Acta de nacimiento">Acta de nacimiento</option><option value="Otro">Otro</option></select></div><div class="form-group"><label>Documento (foto o PDF)</label><button type="button" onclick="document.getElementById(\'dp-archivo\').click()" style="width:100%;padding:.75rem;border:1.5px dashed var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📎 Adjuntar archivo</button><div id="dp-archivo-status" style="margin-top:.5rem;"></div><input type="hidden" id="dp-url"><input type="file" id="dp-archivo" accept="image/*,.pdf" style="display:none"></div><div class="form-group"><label>Notas (opcional)</label><input type="text" id="dp-notas"></div><button class="btn-primary" id="dp-guardar">Guardar documento</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderDocumentosPersonales()">← Volver a Documentos</button>';
+  document.getElementById('dp-archivo').addEventListener('change',function(){
+    var f=this.files&&this.files[0];
+    if(!f) return;
+    var status=document.getElementById('dp-archivo-status');
+    status.innerHTML='<span class="hint">Subiendo...</span>';
+    var nombre='documento_'+Date.now()+'_'+Math.round(Math.random()*9999)+'_'+f.name.replace(/[^a-zA-Z0-9.]/g,'');
+    fetch(URL_SB+'/storage/v1/object/evidencias/'+nombre,{method:'POST',headers:{'apikey':KEY_SB,'Authorization':'Bearer '+KEY_SB,'Content-Type':f.type||'application/octet-stream','x-upsert':'true'},body:f}).then(function(r){
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      var url=URL_SB+'/storage/v1/object/public/evidencias/'+nombre;
+      document.getElementById('dp-url').value=url;
+      status.innerHTML='✅ Archivo listo: '+f.name;
+    }).catch(function(e){status.innerHTML='<span style="color:var(--rojo);">No se pudo subir: '+e.message+'</span>';});
+  });
+  document.getElementById('dp-guardar').addEventListener('click',function(){
+    var opBtn=document.querySelector('.op-chip.sel');
+    var url=document.getElementById('dp-url').value;
+    if(!opBtn){alert('Selecciona un colaborador.');return;}
+    if(!url){alert('Adjunta el archivo primero.');return;}
+    var tipo=document.getElementById('dp-tipo').value;
+    var notas=document.getElementById('dp-notas').value||null;
+    from('documentos_personales').insert({operario_id:opBtn.dataset.id,tipo:tipo,url_documento:url,notas:notas,creado_por:usuario.id}).then(function(){
+      showToast('✅ Documento guardado');
+      renderDocumentosPersonales();
     }).catch(function(e){alert('Error: '+e.message);});
   });
 }
