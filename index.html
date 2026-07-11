@@ -300,7 +300,7 @@ function from(table) {
 var pin='', usuario=null;
 var cats={plantaciones:[],tablas:[],tiposLabor:[],subtiposLabor:[],operarios:[],inventario:[],cosechadores:[]};
 var ordenEjecutando=null, pasoEjec=1;
-var capturaEjec={surcos:[],cantidad:0,foto:false,herramientaLimpia:false};
+var capturaEjec={surcos:[],cantidad:0,foto:false,herramientaLimpia:false,epp:{}};
 var formSurcos=[];
 var ROLES={admin:'Admin',encargado:'Encargado',operario:'Operario',ingeniero:'Ingeniero','dueño':'Dueño',inversionista:'Inversionista',cosechador:'Cosechador',galerista:'Galerista'};
 var ROLES_COLABORADOR={operario:'Colaborador',cosechador:'Colaborador de cosecha',galerista:'Colaborador de galera'};
@@ -3674,8 +3674,24 @@ function renderEjecAplicacion(planta,tabla){
   var body=document.getElementById('op-body');
   var o=ordenEjecutando;
   var f=o.formula||{};
-  var bar='<div class="steps-bar">'+[1,2].map(function(i){return '<div class="step-seg '+(i<pasoEjec?'done':i===pasoEjec?'active':'')+'"></div>';}).join('')+'</div>';
+  var bar='<div class="steps-bar">'+[1,2,3].map(function(i){return '<div class="step-seg '+(i<pasoEjec?'done':i===pasoEjec?'active':'')+'"></div>';}).join('')+'</div>';
+  var EPP_ITEMS=[['guantes','🧤 Guantes'],['cubrebocas','😷 Cubrebocas / mascarilla'],['lentes','🥽 Lentes de protección'],['mangalarga','👕 Ropa de manga larga']];
   if(pasoEjec===1){
+    if(!capturaEjec.epp) capturaEjec.epp={};
+    var filasEpp=EPP_ITEMS.map(function(it){
+      var checked=!!capturaEjec.epp[it[0]];
+      return '<label style="display:flex;align-items:center;gap:.6rem;padding:.75rem 0;border-bottom:1px solid var(--gris-1);cursor:pointer;"><input type="checkbox" data-epp="'+it[0]+'" '+(checked?'checked':'')+' style="width:24px;height:24px;flex-shrink:0;"><span style="font-size:.92rem;font-weight:600;">'+it[1]+'</span></label>';
+    }).join('');
+    var todoEpp=EPP_ITEMS.every(function(it){return capturaEjec.epp[it[0]];});
+    body.innerHTML=bar+'<div class="step-label">Paso 1 de 3</div><div class="step-title">🦺 Equipo de protección</div><p class="hint" style="margin-bottom:.75rem;">Antes de preparar la aplicación, confirma que traes puesto todo tu equipo de protección.</p><div class="form-card">'+filasEpp+'</div><div class="nav-row"><button class="btn-back" onclick="ordenEjecutando=null;cargarTareas()">← Cancelar</button><button class="btn-next" id="epp-siguiente" '+(todoEpp?'':'disabled')+' onclick="pasoEjec++;renderEjec()">Ya lo traigo puesto →</button></div>';
+    body.querySelectorAll('[data-epp]').forEach(function(chk){
+      chk.addEventListener('change',function(){
+        capturaEjec.epp[this.dataset.epp]=this.checked;
+        var todos=EPP_ITEMS.every(function(it){return capturaEjec.epp[it[0]];});
+        document.getElementById('epp-siguiente').disabled=!todos;
+      });
+    });
+  } else if(pasoEjec===2){
     if(!capturaEjec.insumosConfirmados) capturaEjec.insumosConfirmados=(o.insumos_confirmados||[]).slice();
     var estBadge={pendiente:['badge-pendiente','Pendiente'],en_proceso:['badge-en_proceso','En proceso'],completada:['badge-completada','Completada']}[o.estado]||['badge-pendiente',o.estado];
     var filas=(o.componentesFormula||[]).map(function(c){
@@ -3685,7 +3701,7 @@ function renderEjecAplicacion(planta,tabla){
       return '<label style="display:flex;align-items:center;gap:.6rem;padding:.6rem 0;border-bottom:1px solid var(--gris-1);cursor:pointer;">'+img+'<div style="flex:1;"><div style="font-size:.88rem;font-weight:600;">'+(c.item?c.item.nombre:'')+'</div><div style="font-size:.8rem;color:var(--gris-3);">'+fmtAmigable(c.cantidad_base*(o.factor_escala||1),c.item?c.item.unidad:'')+'</div></div><input type="checkbox" data-insumo="'+iid+'" '+(checked?'checked':'')+' style="width:24px;height:24px;flex-shrink:0;"></label>';
     }).join('');
     var confirmados=capturaEjec.insumosConfirmados.length, totalInsumos=(o.componentesFormula||[]).length;
-    body.innerHTML=bar+'<div class="step-label">Paso 1 de 2</div><div class="form-card" style="margin-bottom:.75rem;"><div style="display:flex;justify-content:space-between;align-items:center;"><div class="step-title" style="margin:0;">🧪 '+(f.nombre||'Aplicación')+'</div><span class="orden-badge '+estBadge[0]+'">'+estBadge[1]+'</span></div><div style="font-size:.85rem;color:var(--gris-3);margin-top:.5rem;line-height:1.6;">📍 <strong>'+(planta?planta.nombre:'')+' · '+tabla.nombre+'</strong><br/>📅 '+(o.fecha_asignacion?fechaLarga(o.fecha_asignacion):'')+'<br/>🛢️ '+(BOMBA_LABELS[o.bomba_usada]||o.bomba_usada)+' · '+numFmt(o.volumen_aplicado_litros)+' L</div></div><div class="seccion-titulo" style="margin-bottom:.25rem;">Productos a usar ('+confirmados+'/'+totalInsumos+' recogidos)</div><div class="form-card">'+filas+'</div>'+(o.notas_encargado?'<p class="hint" style="margin-top:.75rem;">📝 '+o.notas_encargado+'</p>':'')+'<div class="nav-row"><button class="btn-back" onclick="ordenEjecutando=null;cargarTareas()">← Cancelar</button><button class="btn-next" onclick="pasoEjec++;renderEjec()">Ya la preparé →</button></div>';
+    body.innerHTML=bar+'<div class="step-label">Paso 2 de 3</div><div class="form-card" style="margin-bottom:.75rem;"><div style="display:flex;justify-content:space-between;align-items:center;"><div class="step-title" style="margin:0;">🧪 '+(f.nombre||'Aplicación')+'</div><span class="orden-badge '+estBadge[0]+'">'+estBadge[1]+'</span></div><div style="font-size:.85rem;color:var(--gris-3);margin-top:.5rem;line-height:1.6;">📍 <strong>'+(planta?planta.nombre:'')+' · '+tabla.nombre+'</strong><br/>📅 '+(o.fecha_asignacion?fechaLarga(o.fecha_asignacion):'')+'<br/>🛢️ '+(BOMBA_LABELS[o.bomba_usada]||o.bomba_usada)+' · '+numFmt(o.volumen_aplicado_litros)+' L</div></div><div class="seccion-titulo" style="margin-bottom:.25rem;">Productos a usar ('+confirmados+'/'+totalInsumos+' recogidos)</div><div class="form-card">'+filas+'</div>'+(o.notas_encargado?'<p class="hint" style="margin-top:.75rem;">📝 '+o.notas_encargado+'</p>':'')+'<div class="nav-row"><button class="btn-back" onclick="pasoEjec--;renderEjec()">← Atrás</button><button class="btn-next" onclick="pasoEjec++;renderEjec()">Ya la preparé →</button></div>';
     body.querySelectorAll('[data-insumo]').forEach(function(chk){
       chk.addEventListener('change',function(){
         var iid=this.dataset.insumo;
@@ -3700,7 +3716,7 @@ function renderEjecAplicacion(planta,tabla){
   } else {
     var evid=capturaEjec.foto?'<div style="padding:.75rem;background:var(--verde-tenue);border-radius:var(--radio);color:var(--verde);font-size:.85rem;text-align:center;margin-bottom:1rem;">✅ Evidencia capturada</div>':'';
     var herrChkAplic='<label style="display:flex;align-items:center;gap:.6rem;padding:.75rem;background:var(--gris-1);border-radius:var(--radio);margin-top:.75rem;cursor:pointer;"><input type="checkbox" id="chk-herramienta" '+(capturaEjec.herramientaLimpia?'checked':'')+' style="width:22px;height:22px;flex-shrink:0;"><span style="font-size:.85rem;">🧹 Ya limpié y guardé mi equipo de aplicación (bomba/mochila) en su lugar</span></label>';
-    body.innerHTML=bar+'<div class="step-label">Paso 2 de 2</div><div class="step-title">Evidencia (obligatoria)</div><div style="display:flex;gap:8px;margin-bottom:1rem;"><button onclick="abrirCamaraApp()" style="flex:1;padding:1rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio);background:var(--verde-tenue);color:var(--verde);font-size:.9rem;font-weight:600;cursor:pointer;">📷 Cámara</button><button onclick="abrirGaleria()" style="flex:1;padding:1rem;border:1.5px solid var(--gris-2);border-radius:var(--radio);background:var(--gris-1);font-size:.9rem;cursor:pointer;">🖼️ Galería</button></div>'+evid+'<div class="resumen-card" style="margin-top:.5rem;"><div class="resumen-row"><span class="resumen-key">Fórmula</span><span class="resumen-val">'+(f.nombre||'')+'</span></div><div class="resumen-row"><span class="resumen-key">Área</span><span class="resumen-val">'+(planta?planta.nombre:'')+' · '+tabla.nombre+'</span></div></div>'+herrChkAplic+'<div class="nav-row"><button class="btn-back" onclick="pasoEjec--;renderEjec()">← Atrás</button><button class="btn-next" onclick="guardarEjec()" style="background:var(--tierra)">✅ Guardar</button></div>';
+    body.innerHTML=bar+'<div class="step-label">Paso 3 de 3</div><div class="step-title">Evidencia (obligatoria)</div><div style="display:flex;gap:8px;margin-bottom:1rem;"><button onclick="abrirCamaraApp()" style="flex:1;padding:1rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio);background:var(--verde-tenue);color:var(--verde);font-size:.9rem;font-weight:600;cursor:pointer;">📷 Cámara</button><button onclick="abrirGaleria()" style="flex:1;padding:1rem;border:1.5px solid var(--gris-2);border-radius:var(--radio);background:var(--gris-1);font-size:.9rem;cursor:pointer;">🖼️ Galería</button></div>'+evid+'<div class="resumen-card" style="margin-top:.5rem;"><div class="resumen-row"><span class="resumen-key">Fórmula</span><span class="resumen-val">'+(f.nombre||'')+'</span></div><div class="resumen-row"><span class="resumen-key">Área</span><span class="resumen-val">'+(planta?planta.nombre:'')+' · '+tabla.nombre+'</span></div></div>'+herrChkAplic+'<div class="nav-row"><button class="btn-back" onclick="pasoEjec--;renderEjec()">← Atrás</button><button class="btn-next" onclick="guardarEjec()" style="background:var(--tierra)">✅ Guardar</button></div>';
     var herrChkAplicEl=document.getElementById('chk-herramienta');
     if(herrChkAplicEl) herrChkAplicEl.addEventListener('change',function(){capturaEjec.herramientaLimpia=this.checked;});
   }
@@ -4785,7 +4801,7 @@ function sonarAlarmaRiego(){
 
 function iniciarEjecucion(oid){
   from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_cantidad_insumo,unidad_insumo,requiere_formula),subtipo:subtipos_labor(nombre),activo_rancho:activos_rancho(nombre,imagen_url,descripcion)').eq('id',oid).single().then(function(o){
-    ordenEjecutando=o; pasoEjec=1; capturaEjec={surcos:[],cantidad:0,foto:false,herramientaLimpia:false};
+    ordenEjecutando=o; pasoEjec=1; capturaEjec={surcos:[],cantidad:0,foto:false,herramientaLimpia:false,epp:{}};
     if(o.activo_rancho_id){renderEjecMantenimiento();return;}
     if(o.tipo_labor&&o.tipo_labor.requiere_formula&&o.formula_id){
       Promise.all([
