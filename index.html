@@ -3341,6 +3341,38 @@ function actualizarBadgeOperario(){
   actualizarBadgeAvisos();
 }
 
+function renderPagosHistorial(){
+  var body=document.getElementById('op-body');
+  body.innerHTML='<div class="seccion-titulo">📊 Historial de pagos</div><div class="loading">Cargando...</div>';
+  Promise.all([
+    from('pagos_semana_estado').select('*').eq('operario_id',usuario.id).eq('estado','pagado').order('semana_inicio',{ascending:false}).limit(25).get(),
+    from('pagos_extra_estado').select('*').eq('operario_id',usuario.id).eq('estado','pagado').order('semana_inicio',{ascending:false}).limit(25).get()
+  ]).then(function(r){
+    var normales=r[0]||[], extras=r[1]||[];
+    var porSemana={};
+    normales.forEach(function(p){
+      if(!porSemana[p.semana_inicio]) porSemana[p.semana_inicio]={semana_inicio:p.semana_inicio,semana_fin:p.semana_fin,sueldo:0,extra:0,pagado_en:p.pagado_en};
+      porSemana[p.semana_inicio].sueldo=parseFloat(p.monto_pagado)||0;
+      if(p.pagado_en>porSemana[p.semana_inicio].pagado_en) porSemana[p.semana_inicio].pagado_en=p.pagado_en;
+    });
+    extras.forEach(function(p){
+      if(!porSemana[p.semana_inicio]) porSemana[p.semana_inicio]={semana_inicio:p.semana_inicio,semana_fin:p.semana_fin,sueldo:0,extra:0,pagado_en:p.pagado_en};
+      porSemana[p.semana_inicio].extra=parseFloat(p.monto_pagado)||0;
+      if(p.pagado_en>porSemana[p.semana_inicio].pagado_en) porSemana[p.semana_inicio].pagado_en=p.pagado_en;
+    });
+    var semanas=Object.values(porSemana).sort(function(a,b){return b.semana_inicio.localeCompare(a.semana_inicio);});
+    if(!semanas.length){body.innerHTML='<div class="seccion-titulo">📊 Historial de pagos</div><div class="empty">Aún no tienes pagos registrados.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderPagosMenu()">← Volver a Pagos</button>';return;}
+    var totalHistorico=semanas.reduce(function(s,w){return s+w.sueldo+w.extra;},0);
+    var html='<div class="seccion-titulo">📊 Historial de pagos</div><p class="hint" style="margin-bottom:.75rem;">Total pagado (últimas '+semanas.length+' semanas): <strong>$'+totalHistorico.toFixed(2)+'</strong></p>';
+    html+=semanas.map(function(w){
+      var f=w.pagado_en?new Date(w.pagado_en).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}):'';
+      var total=w.sueldo+w.extra;
+      return '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem;">Semana del '+w.semana_inicio+' al '+w.semana_fin+'</strong><strong style="color:var(--verde-mid);">$'+total.toFixed(2)+'</strong></div><div class="orden-meta">'+(w.sueldo?'Sueldo: $'+w.sueldo.toFixed(2)+' ':'')+(w.extra?' · Hora extra: $'+w.extra.toFixed(2):'')+'<br/>Pagado el '+f+'</div></div>';
+    }).join('');
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderPagosMenu()">← Volver a Pagos</button>';
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
 function renderPagosMenu(){
   var body=document.getElementById('op-body');
   body.innerHTML='<div class="seccion-titulo">💳 Pagos</div><div class="labor-grid" style="grid-template-columns:repeat(3,1fr);">'+
@@ -3354,7 +3386,7 @@ function renderPagosMenu(){
   body.querySelector('[data-pago="extras"]').addEventListener('click',function(){renderPagoHorasExtras(new Date());});
   body.querySelector('[data-pago="debo"]').addEventListener('click',renderDebo);
   body.querySelector('[data-pago="cartera"]').addEventListener('click',function(){renderCartera(new Date());});
-  body.querySelector('[data-pago="historial"]').addEventListener('click',function(){body.innerHTML='<div class="empty">📊 Próximamente</div><button class="btn-back" style="margin-top:1rem;" onclick="renderPagosMenu()">← Volver a Pagos</button>';});
+  body.querySelector('[data-pago="historial"]').addEventListener('click',renderPagosHistorial);
 }
 
 function inicioDeSemana(fecha){
@@ -3562,13 +3594,18 @@ function renderCartera(fechaRef){
     var hayExtra=horasExtra>0;
     var pagadoExtra=estExtra&&estExtra.estado==='pagado';
 
-    var bonosQueCalifican=bonosActivos.filter(function(b){
-      if(b.periodo_fin<semanaInicio||b.periodo_inicio>semanaFin) return false;
-      return (b.tipo==='equipo'||!b.umbral_minimo);
-    });
-    var totalBonos=bonosQueCalifican.reduce(function(s,b){return s+(parseFloat(b.monto)||0);},0);
+    var bonosDeLaSemana=bonosActivos.filter(function(b){return !(b.periodo_fin<semanaInicio||b.periodo_inicio>semanaFin);});
+    var bonosSinUmbral=bonosDeLaSemana.filter(function(b){return b.tipo==='equipo'||!b.umbral_minimo;});
+    var bonosConUmbral=bonosDeLaSemana.filter(function(b){return b.tipo==='individual'&&b.umbral_minimo;});
 
-    from('prestamo_pagos').select('*').in('prestamo_id',prestamosActivos.map(function(p){return p.id;})||['00000000-0000-0000-0000-000000000000']).eq('semana_inicio',semanaInicio).get().then(function(deduccionesRows){
+    Promise.all(bonosConUmbral.map(function(b){
+      return calcularScoreOperario(usuario.id,b.periodo_inicio,b.periodo_fin).then(function(score){return {bono:b,score:score};});
+    })).then(function(resultadosUmbral){
+      var bonosUmbralCalifican=resultadosUmbral.filter(function(r){return r.score>=parseFloat(r.bono.umbral_minimo);}).map(function(r){return r.bono;});
+      var bonosQueCalifican=bonosSinUmbral.concat(bonosUmbralCalifican);
+      var totalBonos=bonosQueCalifican.reduce(function(s,b){return s+(parseFloat(b.monto)||0);},0);
+
+      return from('prestamo_pagos').select('*').in('prestamo_id',prestamosActivos.map(function(p){return p.id;})||['00000000-0000-0000-0000-000000000000']).eq('semana_inicio',semanaInicio).get().then(function(deduccionesRows){
       var deducciones=deduccionesRows||[];
       var totalDeducciones=deducciones.reduce(function(s,d){return s+parseFloat(d.monto);},0);
 
@@ -3595,7 +3632,7 @@ function renderCartera(fechaRef){
       html+='<div class="resumen-row"><span class="resumen-key">💵 Sueldo ('+resumen.trabajados+' días)</span><span class="resumen-val" style="color:var(--verde-mid);">+$'+totalSueldo.toFixed(2)+' '+(pagadoSueldo?'✅':'⏳')+'</span></div>';
       if(hayExtra) html+='<div class="resumen-row"><span class="resumen-key">⏰ Horas extra ('+horasExtra.toFixed(1)+'h)</span><span class="resumen-val" style="color:var(--verde-mid);">+$'+totalExtra.toFixed(2)+' '+(pagadoExtra?'✅':'⏳')+'</span></div>';
       bonosQueCalifican.forEach(function(b){
-        html+='<div class="resumen-row"><span class="resumen-key">🎁 '+b.descripcion+'</span><span class="resumen-val" style="color:var(--verde-mid);">+$'+parseFloat(b.monto||0).toFixed(2)+'</span></div>';
+        html+='<div class="resumen-row"><span class="resumen-key">🎁 '+b.descripcion+(b.umbral_minimo?' (cumpliste '+b.umbral_minimo+'/10)':'')+'</span><span class="resumen-val" style="color:var(--verde-mid);">+$'+parseFloat(b.monto||0).toFixed(2)+'</span></div>';
       });
       deducciones.forEach(function(d){
         var pr=prestamosActivos.find(function(p){return p.id===d.prestamo_id;});
@@ -3609,6 +3646,7 @@ function renderCartera(fechaRef){
       if(btnAnt) btnAnt.addEventListener('click',function(){var d=new Date(lunes);d.setDate(d.getDate()-7);renderCartera(d);});
       var btnSig=document.getElementById('cart-sig');
       if(btnSig) btnSig.addEventListener('click',function(){var d=new Date(lunes);d.setDate(d.getDate()+7);renderCartera(d);});
+    });
     });
   }).catch(function(e){body.innerHTML='<div class="empty">No se pudo calcular tu cartera.<br/><span style="font-size:.7rem;color:var(--gris-3);">('+e.message+')</span></div><button class="btn-back" style="margin-top:1rem;" onclick="renderPagosMenu()">← Volver a Pagos</button>';});
 }
@@ -4072,31 +4110,21 @@ function pintarTareas(todas,hoyOrdenes,esCache,completadas,evidenciaPorOrden){
   }
 }
 
-function renderRendimientoOperario(){
-  var body=document.getElementById('op-body');
-  if(!document.getElementById('tareas-contenido')){
-    body.innerHTML=barraSubtabsTareas()+'<div id="tareas-contenido"></div>';
-  }
-  var cont=document.getElementById('tareas-contenido');
-  cont.innerHTML='<div class="loading">Calculando rendimiento...</div>';
-  var hoyD=new Date();
-  var primerDiaMes=new Date(hoyD.getFullYear(),hoyD.getMonth(),1).toISOString().slice(0,10);
-  var hoy=hoyD.toISOString().slice(0,10);
-  var nombreMes=hoyD.toLocaleDateString('es-MX',{month:'long',year:'numeric'});
-  Promise.all([
-    from('asistencia_registros').select('*').eq('usuario_id',usuario.id).gte('fecha',primerDiaMes).get(),
-    from('ordenes_trabajo').select('fecha_asignacion,completado_en,estado').eq('operario_id',usuario.id).gte('fecha_asignacion',primerDiaMes).get(),
-    from('evaluaciones_comportamiento').select('*').eq('operario_id',usuario.id).gte('periodo_fin',primerDiaMes).get(),
-    from('bonos').select('*').eq('estado','activo').get()
+function calcularScoreOperario(operarioId,fechaInicio,fechaFin){
+  return Promise.all([
+    from('asistencia_registros').select('*').eq('usuario_id',operarioId).gte('fecha',fechaInicio).lte('fecha',fechaFin).get(),
+    from('ordenes_trabajo').select('fecha_asignacion,completado_en,estado').eq('operario_id',operarioId).gte('fecha_asignacion',fechaInicio).lte('fecha_asignacion',fechaFin).get(),
+    from('evaluaciones_comportamiento').select('*').eq('operario_id',operarioId).gte('periodo_fin',fechaInicio).lte('periodo_fin',fechaFin).get()
   ]).then(function(r){
-    var registrosAs=r[0]||[], ordenesMes=r[1]||[], evals=r[2]||[], bonos=r[3]||[];
-    var resumenAs=calcularResumenAsistencia(registrosAs,primerDiaMes);
+    var registrosAs=r[0]||[], ordenesMes=r[1]||[], evals=r[2]||[];
+    var resumenAs=calcularResumenAsistencia(registrosAs,fechaInicio);
     var scoreAsistencia=Math.max(0,10-resumenAs.faltas*1.5-resumenAs.retardos*0.5);
 
     var completadasMes=ordenesMes.filter(function(o){return o.estado==='completada'&&o.completado_en;});
     var aTiempo=completadasMes.filter(function(o){return o.completado_en.slice(0,10)<=o.fecha_asignacion;}).length;
     var scoreTareas = completadasMes.length ? (aTiempo/completadasMes.length)*10 : 7;
 
+    var hoy=new Date().toISOString().slice(0,10);
     var atrasadasAbiertas=ordenesMes.filter(function(o){return o.estado==='en_proceso'&&o.fecha_asignacion<hoy;}).length;
     var scoreAvance=Math.max(0,10-atrasadasAbiertas*2);
 
@@ -4114,7 +4142,26 @@ function renderRendimientoOperario(){
 
     var pesos={asistencia:.30,tareas:.25,avance:.15,extra:.10,comportamiento:.20};
     var scoreFinal = scoreAsistencia*pesos.asistencia + scoreTareas*pesos.tareas + scoreAvance*pesos.avance + scoreExtra*pesos.extra + scoreComportamiento*pesos.comportamiento;
-    scoreFinal = Math.max(0,Math.min(10,scoreFinal));
+    return Math.max(0,Math.min(10,scoreFinal));
+  });
+}
+
+function renderRendimientoOperario(){
+  var body=document.getElementById('op-body');
+  if(!document.getElementById('tareas-contenido')){
+    body.innerHTML=barraSubtabsTareas()+'<div id="tareas-contenido"></div>';
+  }
+  var cont=document.getElementById('tareas-contenido');
+  cont.innerHTML='<div class="loading">Calculando rendimiento...</div>';
+  var hoyD=new Date();
+  var primerDiaMes=new Date(hoyD.getFullYear(),hoyD.getMonth(),1).toISOString().slice(0,10);
+  var hoy=hoyD.toISOString().slice(0,10);
+  var nombreMes=hoyD.toLocaleDateString('es-MX',{month:'long',year:'numeric'});
+  Promise.all([
+    calcularScoreOperario(usuario.id,primerDiaMes,hoy),
+    from('bonos').select('*').eq('estado','activo').get()
+  ]).then(function(r){
+    var scoreFinal=r[0], bonos=r[1]||[];
 
     var color = scoreFinal>=8?'var(--verde-mid)':scoreFinal>=6?'var(--tierra)':'var(--rojo)';
     var pct=(scoreFinal/10)*100;
