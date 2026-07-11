@@ -205,7 +205,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="app-header">
     <div><h1>🌱 Mootsil | Labores</h1><div class="header-sub" id="op-nombre">Colaborador</div></div>
     <div style="display:flex;align-items:center;gap:8px;">
-      <button onclick="renderCambiarMiPin()" style="border:none;background:rgba(255,255,255,.12);color:#fff;font-size:.72rem;font-weight:600;cursor:pointer;padding:.4rem .7rem;border-radius:var(--radio-sm);">🔒 PIN</button>
       <button onclick="renderAlarmasMenu()" style="width:38px;height:38px;border-radius:50%;background:rgba(192,57,43,.25);border:none;color:#fff;font-size:1rem;cursor:pointer;">🚨</button>
       <button class="btn-salir" onclick="salir()">Salir</button>
     </div>
@@ -571,9 +570,17 @@ function renderTablero(){
     from('ordenes_trabajo').select('formula_id,estado').not('formula_id','is','null').get(),
     from('permisos').select('id').eq('estado','pendiente').get(),
     from('solicitudes_labor').select('id').eq('estado','pendiente').get(),
-    from('solicitudes_operario').select('id').eq('estado','pendiente').get()
+    from('solicitudes_operario').select('id').eq('estado','pendiente').get(),
+    from('activos_rancho').select('id,nombre,fecha_ultimo_mantenimiento,frecuencia_mantenimiento_dias').eq('activo',true).not('frecuencia_mantenimiento_dias','is','null').get()
   ]).then(function(r){
-    var todas=(r[0]||[]).concat(r[1]||[]), formulas=r[2]||[], ordenesConFormula=(r[3]||[]).filter(function(o){return o.estado!=='cancelada';}), permisosPendientes=r[4]||[], solicitudesPendientes=r[5]||[], solicitudesOpPendientes=r[6]||[];
+    var todas=(r[0]||[]).concat(r[1]||[]), formulas=r[2]||[], ordenesConFormula=(r[3]||[]).filter(function(o){return o.estado!=='cancelada';}), permisosPendientes=r[4]||[], solicitudesPendientes=r[5]||[], solicitudesOpPendientes=r[6]||[], activosParaMant=r[7]||[];
+    var hoyMant=new Date().toISOString().slice(0,10);
+    var activosVencidos=activosParaMant.filter(function(a){
+      if(!a.fecha_ultimo_mantenimiento) return true;
+      var venc=new Date(a.fecha_ultimo_mantenimiento+'T00:00:00');
+      venc.setDate(venc.getDate()+a.frecuencia_mantenimiento_dias);
+      return venc.toISOString().slice(0,10)<=hoyMant;
+    });
     var asignadas={};
     ordenesConFormula.forEach(function(o){asignadas[o.formula_id]=true;});
     var pendientesFormula=formulas.filter(function(f){return f.fecha_programada&&f.fecha_programada<=en7dias&&!asignadas[f.id];});
@@ -584,6 +591,9 @@ function renderTablero(){
     }
     if(solicitudesOpPendientes.length){
       avisoHtml+='<div style="background:var(--tierra-tenue);border:1.5px solid var(--tierra);border-radius:var(--radio-sm);padding:.85rem;margin-bottom:1rem;cursor:pointer;" id="aviso-solicitudes-operario"><strong style="color:var(--tierra);">📨 '+solicitudesOpPendientes.length+' solicitud(es) de colaboradores pendiente(s)</strong><div class="hint" style="margin-top:.25rem;">Préstamos y otros asuntos — toca para revisarlas</div></div>';
+    }
+    if(activosVencidos.length){
+      avisoHtml+='<div style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);border-radius:var(--radio-sm);padding:.85rem;margin-bottom:1rem;cursor:pointer;" id="aviso-mantenimiento"><strong style="color:var(--rojo);">🔧 '+activosVencidos.length+' herramienta(s)/equipo(s) requieren mantenimiento</strong><div class="hint" style="margin-top:.25rem;">'+activosVencidos.slice(0,3).map(function(a){return a.nombre;}).join(', ')+(activosVencidos.length>3?'...':'')+'</div></div>';
     }
     if(solicitudesPendientes.length){
       avisoHtml+='<div style="background:var(--tierra-tenue);border:1.5px solid var(--tierra);border-radius:var(--radio-sm);padding:.85rem;margin-bottom:1rem;cursor:pointer;" id="aviso-solicitudes-labor"><strong style="color:var(--tierra);">🔧 '+solicitudesPendientes.length+' labor(es) sugerida(s) por ingeniero</strong><div class="hint" style="margin-top:.25rem;">Toca para revisarlas y programarlas</div></div>';
@@ -629,6 +639,8 @@ function renderTablero(){
     if(avisoPermisosEl) avisoPermisosEl.addEventListener('click',renderPermisosRevision);
     var avisoSolicitudesOpEl=document.getElementById('aviso-solicitudes-operario');
     if(avisoSolicitudesOpEl) avisoSolicitudesOpEl.addEventListener('click',renderSolicitudesOperarioRevision);
+    var avisoMantEl=document.getElementById('aviso-mantenimiento');
+    if(avisoMantEl) avisoMantEl.addEventListener('click',renderActivosRancho);
     var avisoSolicitudesEl=document.getElementById('aviso-solicitudes-labor');
     if(avisoSolicitudesEl) avisoSolicitudesEl.addEventListener('click',renderSolicitudesLabor);
     var avisoEl=document.getElementById('aviso-aplic-pendientes');
@@ -1062,15 +1074,21 @@ function renderInventario(){
   var items=cats.inventario;
   var puedeEditar=usuario.rol!=='ingeniero';
   var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Inventario'+(puedeEditar?'<button type="button" onclick="renderInventarioNuevo()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Componente</button>':'')+'</div>';
+  html+='<div style="display:flex;gap:6px;margin-bottom:.75rem;"><button type="button" class="rep-view-btn active">📦 Insumos</button><button type="button" class="rep-view-btn" id="inv-ir-activos">🔧 Herramientas y Equipo</button></div>';
   if(!puedeEditar) html+='<p class="hint" style="margin-bottom:.75rem;">👁️ Modo de solo consulta.</p>';
   html+='<input type="text" id="inv-buscar" placeholder="🔍 Buscar producto..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;margin-bottom:.75rem;">';
-  if(!items.length){html+='<div class="empty">📦 Aún no hay componentes registrados.'+(puedeEditar?'<br/>Toca "+ Componente" para agregar el primero.':'')+'</div>';body.innerHTML=html;return;}
+  if(!items.length){html+='<div class="empty">📦 Aún no hay componentes registrados.'+(puedeEditar?'<br/>Toca "+ Componente" para agregar el primero.':'')+'</div>';body.innerHTML=html;document.getElementById('inv-ir-activos').addEventListener('click',renderActivosRancho);return;}
+  var categorias=['Todos'].concat(Array.from(new Set(items.map(function(it){return it.categoria||'Otros';}))).sort());
+  html+='<div style="display:flex;gap:6px;margin-bottom:.75rem;flex-wrap:wrap;" id="inv-cat-chips">'+categorias.map(function(c,i){return '<button type="button" class="rep-view-btn'+(i===0?' active':'')+'" data-cat="'+c+'">'+c+'</button>';}).join('')+'</div>';
   html+='<div id="inv-filas"></div>';
   body.innerHTML=html;
+  document.getElementById('inv-ir-activos').addEventListener('click',renderActivosRancho);
+  var catActiva='Todos';
   function pintarFilas(filtro){
-    var filtradas=filtro?items.filter(function(it){return it.nombre.toLowerCase().indexOf(filtro.toLowerCase())>-1;}):items;
+    var base=catActiva==='Todos'?items:items.filter(function(it){return (it.categoria||'Otros')===catActiva;});
+    var filtradas=filtro?base.filter(function(it){return it.nombre.toLowerCase().indexOf(filtro.toLowerCase())>-1;}):base;
     var cont=document.getElementById('inv-filas');
-    if(!filtradas.length){cont.innerHTML='<div class="empty">Sin resultados para "'+filtro+'".</div>';return;}
+    if(!filtradas.length){cont.innerHTML='<div class="empty">Sin resultados'+(filtro?' para "'+filtro+'"':'')+'.</div>';return;}
     cont.innerHTML=filtradas.map(function(it){
       var bajo=it.stock_actual<=it.stock_minimo;
       var color=bajo?'var(--rojo)':'var(--verde-mid)';
@@ -1088,6 +1106,14 @@ function renderInventario(){
       });
     });
   }
+  document.querySelectorAll('#inv-cat-chips [data-cat]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      catActiva=this.dataset.cat;
+      document.querySelectorAll('#inv-cat-chips [data-cat]').forEach(function(b){b.classList.remove('active');});
+      this.classList.add('active');
+      pintarFilas(document.getElementById('inv-buscar').value);
+    });
+  });
   pintarFilas('');
   document.getElementById('inv-buscar').addEventListener('input',function(){pintarFilas(this.value);});
 }
@@ -1100,10 +1126,126 @@ function fmtAmigable(cantidad,unidad){
   return numFmt(cantidad)+' '+unidad;
 }
 
+function renderActivosRancho(){
+  var body=document.getElementById('enc-body');
+  var puedeEditar=usuario.rol!=='ingeniero';
+  body.innerHTML='<div class="seccion-titulo">🔧 Herramientas y Equipo</div><div class="loading">Cargando...</div>';
+  Promise.all([
+    from('activos_rancho').select('*,operario:usuarios!asignado_a(nombre)').eq('activo',true).order('nombre').get()
+  ]).then(function(r){
+    var items=r[0]||[];
+    var hoy=new Date().toISOString().slice(0,10);
+    items.forEach(function(it){
+      it._requiereMant=false;
+      if(it.fecha_ultimo_mantenimiento&&it.frecuencia_mantenimiento_dias){
+        var venc=new Date(it.fecha_ultimo_mantenimiento+'T00:00:00');
+        venc.setDate(venc.getDate()+it.frecuencia_mantenimiento_dias);
+        it._requiereMant = venc.toISOString().slice(0,10) <= hoy;
+      }
+    });
+    var conMant=items.filter(function(it){return it._requiereMant;});
+    var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🔧 Herramientas y Equipo'+(puedeEditar?'<button type="button" onclick="renderActivoNuevo()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo</button>':'')+'</div>';
+    html+='<div style="display:flex;gap:6px;margin-bottom:.75rem;"><button type="button" class="rep-view-btn" id="inv-ir-insumos">📦 Insumos</button><button type="button" class="rep-view-btn active">🔧 Herramientas y Equipo</button></div>';
+    if(!items.length){body.innerHTML=html+'<div class="empty">Aún no hay herramientas o equipo registrado.'+(puedeEditar?'<br/>Toca "+ Nuevo" para agregar el primero.':'')+'</div>';document.getElementById('inv-ir-insumos').addEventListener('click',renderInventario);return;}
+    if(conMant.length) html+='<div style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);border-radius:var(--radio-sm);padding:.75rem;margin-bottom:1rem;font-size:.82rem;"><strong style="color:var(--rojo);">🔧 '+conMant.length+' requiere(n) mantenimiento</strong></div>';
+    var categorias=['Herramienta','Equipo','Vehículo','Otro'];
+    categorias.forEach(function(cat){
+      var deEstaCat=items.filter(function(it){return it.categoria===cat;});
+      if(!deEstaCat.length) return;
+      html+='<div class="seccion-titulo" style="margin-top:1rem;font-size:.85rem;">'+cat+'s</div>';
+      html+=deEstaCat.map(function(it){
+        var estColor={disponible:'var(--verde-mid)',asignado:'var(--tierra)',mantenimiento:'var(--rojo)',baja:'var(--gris-3)'}[it.estado]||'var(--gris-3)';
+        var estLbl={disponible:'✅ Disponible',asignado:'👷 Asignado a '+(it.operario?it.operario.nombre:'?'),mantenimiento:'🔧 En mantenimiento',baja:'⛔ De baja'}[it.estado]||it.estado;
+        var thumb=it.imagen_url?'<img src="'+it.imagen_url+'" style="width:38px;height:38px;object-fit:cover;border-radius:8px;border:1px solid var(--gris-2);margin-right:.5rem;flex-shrink:0;">':'<div style="width:38px;height:38px;border-radius:8px;background:var(--gris-1);display:flex;align-items:center;justify-content:center;font-size:1.1rem;margin-right:.5rem;flex-shrink:0;">🔧</div>';
+        return '<div class="orden-card" style="border-left-color:'+(it._requiereMant?'var(--rojo)':estColor)+';display:flex;align-items:center;cursor:pointer;" data-aid="'+it.id+'">'+thumb+'<div style="flex:1;min-width:0;"><strong style="font-size:.9rem;">'+it.nombre+'</strong><div class="orden-meta">'+estLbl+(it._requiereMant?' · <span style="color:var(--rojo);font-weight:700;">🔧 Requiere mantenimiento</span>':'')+'</div></div></div>';
+      }).join('');
+    });
+    body.innerHTML=html;
+    document.getElementById('inv-ir-insumos').addEventListener('click',renderInventario);
+    body.querySelectorAll('[data-aid]').forEach(function(el){el.addEventListener('click',function(){renderActivoDetalle(this.dataset.aid);});});
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function renderActivoNuevo(prefill){
+  prefill=prefill||{};
+  var body=document.getElementById('enc-body');
+  var opO=cats.operarios.concat(cats.cosechadores||[]).map(function(o){return '<option value="'+o.id+'"'+(prefill.asignado_a===o.id?' selected':'')+'>'+o.nombre+'</option>';}).join('');
+  body.innerHTML='<div class="seccion-titulo">+ Nueva herramienta/equipo</div><div class="form-card"><div class="form-group"><label>Nombre</label><input type="text" id="ar-nombre" placeholder="Ej. Tijera de poda larga"></div><div class="form-group"><label>Categoría</label><select id="ar-categoria"><option value="Herramienta">Herramienta</option><option value="Equipo">Equipo</option><option value="Vehículo">Vehículo</option><option value="Otro">Otro</option></select></div><div class="form-group"><label>Foto (opcional)</label><div style="display:flex;gap:8px;"><button type="button" onclick="document.getElementById(\'ar-imagen-cam\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📷 Cámara</button><button type="button" onclick="document.getElementById(\'ar-imagen-gal\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);background:var(--gris-1);cursor:pointer;">🖼️ Galería</button></div><div id="ar-imagen-status" style="margin-top:.5rem;"></div><input type="hidden" id="ar-imagen"><input type="file" id="ar-imagen-cam" accept="image/*" capture="environment" style="display:none"><input type="file" id="ar-imagen-gal" accept="image/*" style="display:none"></div><div class="form-group"><label>Descripción (opcional)</label><input type="text" id="ar-descripcion" placeholder="Marca, tamaño, características"></div><div class="form-group"><label>¿Asignada a alguien? (opcional)</label><select id="ar-asignado"><option value="">Sin asignar</option>'+opO+'</select></div><div class="form-group"><label>Fecha del último mantenimiento (opcional)</label><input type="date" id="ar-fecha-mant"></div><div class="form-group"><label>Frecuencia de mantenimiento (días, opcional)</label><input type="number" id="ar-frecuencia" min="1" placeholder="Ej. 90"><p class="hint">Ej. 90 = cada 3 meses te va a avisar que toca revisarla.</p></div><button class="btn-primary" id="ar-guardar">Guardar</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderActivosRancho()">← Volver</button>';
+  function subirImagenActivo(inputId){
+    var f=document.getElementById(inputId).files&&document.getElementById(inputId).files[0];
+    if(!f) return;
+    var status=document.getElementById('ar-imagen-status');
+    status.innerHTML='<span class="hint">Subiendo foto...</span>';
+    var nombre='activo_'+Date.now()+'_'+Math.round(Math.random()*9999)+'.jpg';
+    fetch(URL_SB+'/storage/v1/object/evidencias/'+nombre,{method:'POST',headers:{'apikey':KEY_SB,'Authorization':'Bearer '+KEY_SB,'Content-Type':f.type||'image/jpeg','x-upsert':'true'},body:f}).then(function(r){
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      var url=URL_SB+'/storage/v1/object/public/evidencias/'+nombre;
+      document.getElementById('ar-imagen').value=url;
+      status.innerHTML='<img src="'+url+'" style="max-width:100px;max-height:100px;border-radius:8px;border:1px solid var(--gris-2);">';
+    }).catch(function(e){status.innerHTML='<span class="hint" style="color:var(--rojo);">No se pudo subir: '+e.message+'</span>';});
+  }
+  document.getElementById('ar-imagen-cam').addEventListener('change',function(){subirImagenActivo('ar-imagen-cam');});
+  document.getElementById('ar-imagen-gal').addEventListener('change',function(){subirImagenActivo('ar-imagen-gal');});
+  document.getElementById('ar-guardar').addEventListener('click',function(){
+    var nombre=document.getElementById('ar-nombre').value.trim();
+    if(!nombre){alert('Escribe el nombre.');return;}
+    var categoria=document.getElementById('ar-categoria').value;
+    var imagenUrl=document.getElementById('ar-imagen').value||null;
+    var descripcion=document.getElementById('ar-descripcion').value.trim()||null;
+    var asignadoA=document.getElementById('ar-asignado').value||null;
+    var fechaMant=document.getElementById('ar-fecha-mant').value||null;
+    var frecuencia=parseInt(document.getElementById('ar-frecuencia').value)||null;
+    var btn=this; btn.disabled=true; btn.textContent='Guardando...';
+    from('activos_rancho').insert({nombre:nombre,categoria:categoria,imagen_url:imagenUrl,descripcion:descripcion,asignado_a:asignadoA,estado:asignadoA?'asignado':'disponible',fecha_ultimo_mantenimiento:fechaMant,frecuencia_mantenimiento_dias:frecuencia,activo:true}).then(function(){
+      showToast('✅ Guardado');
+      renderActivosRancho();
+    }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Guardar';});
+  });
+}
+
+function renderActivoDetalle(id){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="loading">Cargando...</div>';
+  from('activos_rancho').select('*,operario:usuarios!asignado_a(nombre)').eq('id',id).get().then(function(rows){
+    var it=rows&&rows[0];
+    if(!it){renderActivosRancho();return;}
+    var opO=cats.operarios.concat(cats.cosechadores||[]).map(function(o){return '<option value="'+o.id+'"'+(it.asignado_a===o.id?' selected':'')+'>'+o.nombre+'</option>';}).join('');
+    var imgHtml=it.imagen_url?'<img src="'+it.imagen_url+'" style="width:100%;max-width:220px;border-radius:12px;border:1px solid var(--gris-2);margin-bottom:.75rem;display:block;">':'';
+    body.innerHTML='<div class="seccion-titulo">'+it.nombre+'</div>'+imgHtml+'<div class="form-card"><div class="form-group"><label>Nombre</label><input type="text" id="ad-nombre" value="'+it.nombre.replace(/"/g,'&quot;')+'"></div><div class="form-group"><label>Categoría</label><select id="ad-categoria"><option value="Herramienta"'+(it.categoria==='Herramienta'?' selected':'')+'>Herramienta</option><option value="Equipo"'+(it.categoria==='Equipo'?' selected':'')+'>Equipo</option><option value="Vehículo"'+(it.categoria==='Vehículo'?' selected':'')+'>Vehículo</option><option value="Otro"'+(it.categoria==='Otro'?' selected':'')+'>Otro</option></select></div><div class="form-group"><label>Estado</label><select id="ad-estado"><option value="disponible"'+(it.estado==='disponible'?' selected':'')+'>✅ Disponible</option><option value="asignado"'+(it.estado==='asignado'?' selected':'')+'>👷 Asignado</option><option value="mantenimiento"'+(it.estado==='mantenimiento'?' selected':'')+'>🔧 En mantenimiento</option><option value="baja"'+(it.estado==='baja'?' selected':'')+'>⛔ De baja</option></select></div><div class="form-group"><label>Asignada a</label><select id="ad-asignado"><option value="">Sin asignar</option>'+opO+'</select></div><div class="form-group"><label>Descripción</label><input type="text" id="ad-descripcion" value="'+(it.descripcion||'').replace(/"/g,'&quot;')+'"></div><div class="form-group"><label>Último mantenimiento</label><input type="date" id="ad-fecha-mant" value="'+(it.fecha_ultimo_mantenimiento||'')+'"></div><div class="form-group"><label>Frecuencia de mantenimiento (días)</label><input type="number" id="ad-frecuencia" min="1" value="'+(it.frecuencia_mantenimiento_dias||'')+'"></div><button class="btn-primary" id="ad-guardar">Guardar cambios</button></div><div class="form-card"><button type="button" id="ad-mant-hecho" style="width:100%;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-weight:700;font-size:.85rem;cursor:pointer;margin-bottom:.6rem;">✅ Marcar mantenimiento realizado hoy</button><button type="button" id="ad-eliminar" style="width:100%;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.85rem;cursor:pointer;">🗑️ Eliminar</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderActivosRancho()">← Volver</button>';
+    document.getElementById('ad-guardar').addEventListener('click',function(){
+      var nombre=document.getElementById('ad-nombre').value.trim();
+      var categoria=document.getElementById('ad-categoria').value;
+      var estado=document.getElementById('ad-estado').value;
+      var asignado=document.getElementById('ad-asignado').value||null;
+      var descripcion=document.getElementById('ad-descripcion').value.trim()||null;
+      var fechaMant=document.getElementById('ad-fecha-mant').value||null;
+      var frecuencia=parseInt(document.getElementById('ad-frecuencia').value)||null;
+      from('activos_rancho').eq('id',id).update({nombre:nombre,categoria:categoria,estado:estado,asignado_a:asignado,descripcion:descripcion,fecha_ultimo_mantenimiento:fechaMant,frecuencia_mantenimiento_dias:frecuencia}).then(function(){
+        showToast('✅ Actualizado');
+        renderActivosRancho();
+      }).catch(function(e){alert('Error: '+e.message);});
+    });
+    document.getElementById('ad-mant-hecho').addEventListener('click',function(){
+      var hoy=new Date().toISOString().slice(0,10);
+      from('activos_rancho').eq('id',id).update({fecha_ultimo_mantenimiento:hoy,estado:it.asignado_a?'asignado':'disponible'}).then(function(){
+        showToast('✅ Mantenimiento registrado');
+        renderActivosRancho();
+      }).catch(function(e){alert('Error: '+e.message);});
+    });
+    document.getElementById('ad-eliminar').addEventListener('click',function(){
+      if(!confirm('¿Eliminar "'+it.nombre+'" del inventario de herramientas?')) return;
+      from('activos_rancho').eq('id',id).update({activo:false}).then(function(){
+        showToast('✅ Eliminado');
+        renderActivosRancho();
+      }).catch(function(e){alert('Error: '+e.message);});
+    });
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
 function renderInventarioNuevo(prefill){
   prefill=prefill||{};
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo">Nuevo componente</div>'+(prefill.origen?'<p class="hint" style="margin-bottom:.75rem;">📋 Copiando configuración de "'+prefill.origen+'" — solo ajusta el nombre y el stock.</p>':'')+'<div class="form-card"><div class="form-group"><label>Nombre</label><input type="text" id="inv-n-nombre" placeholder="Ej. Sulfato de amonio" value="'+(prefill.nombre||'')+'"></div><div class="form-group"><label>Foto del producto (opcional, pero muy recomendada)</label><div style="display:flex;gap:8px;"><button type="button" onclick="document.getElementById(\'inv-n-imagen-cam\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📷 Cámara</button><button type="button" onclick="document.getElementById(\'inv-n-imagen-gal\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);background:var(--gris-1);cursor:pointer;">🖼️ Galería</button></div><div id="inv-n-imagen-status" style="margin-top:.5rem;">'+(prefill.imagen_url?'<img src="'+prefill.imagen_url+'" style="max-width:100px;max-height:100px;border-radius:8px;border:1px solid var(--gris-2);">':'')+'</div><input type="hidden" id="inv-n-imagen" value="'+(prefill.imagen_url||'').replace(/"/g,'&quot;')+'"><input type="file" id="inv-n-imagen-cam" accept="image/*" capture="environment" style="display:none"><input type="file" id="inv-n-imagen-gal" accept="image/*" style="display:none"><p class="hint">Ayuda a que el operario no confunda productos parecidos.</p></div><div class="form-group"><label>Unidad de uso (la que usan las fórmulas)</label><select id="inv-n-unidad"><option value="litros"'+(prefill.unidad==='litros'?' selected':'')+'>Litros</option><option value="ml"'+(prefill.unidad==='ml'?' selected':'')+'>Mililitros</option><option value="kg"'+(prefill.unidad==='kg'?' selected':'')+'>Kilogramos</option><option value="gr"'+(prefill.unidad==='gr'?' selected':'')+'>Gramos</option><option value="pza"'+(prefill.unidad==='pza'?' selected':'')+'>Piezas</option></select></div><div class="form-group"><label>¿Se compra empacado? (opcional)</label><div style="display:flex;gap:8px;"><input type="text" id="inv-n-unidad-compra" placeholder="Ej. Saco, Bidón, Caja" value="'+(prefill.unidad_compra||'')+'" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><input type="number" id="inv-n-factor-compra" min="0" placeholder="Ej. 25" value="'+(prefill.factor_compra||'')+'" style="width:90px;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"></div><p class="hint">Nombre del paquete + cuánto trae cada uno. Ej. "Saco" + 25 = sacos de 25 kg. Llena esto primero si vas a usar la conversión de abajo.</p></div><div class="form-group"><label>Stock inicial</label><div style="display:flex;gap:8px;align-items:center;"><input type="number" id="inv-n-stock" min="0" value="0" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><span class="hint" id="inv-n-unidad-lbl1" style="margin:0;min-width:40px;">kg</span></div><div style="display:flex;gap:8px;align-items:center;margin-top:.4rem;"><span class="hint" style="margin:0;">o convertir desde</span><input type="number" id="inv-n-stock-paq" min="0" placeholder="0" style="width:70px;padding:.4rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.8rem;"><span class="hint" id="inv-n-stock-paq-lbl" style="margin:0;">sacos</span></div></div><div class="form-group"><label>Stock mínimo (para alerta)</label><div style="display:flex;gap:8px;align-items:center;"><input type="number" id="inv-n-min" min="0" value="'+(prefill.stock_minimo||0)+'" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><span class="hint" id="inv-n-unidad-lbl2" style="margin:0;min-width:40px;">kg</span></div><div style="display:flex;gap:8px;align-items:center;margin-top:.4rem;"><span class="hint" style="margin:0;">o convertir desde</span><input type="number" id="inv-n-min-paq" min="0" placeholder="0" style="width:70px;padding:.4rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.8rem;"><span class="hint" id="inv-n-min-paq-lbl" style="margin:0;">sacos</span></div></div><div class="form-group"><label>Fecha de caducidad (opcional)</label><input type="date" id="inv-n-caducidad" value="'+(prefill.fecha_caducidad||'')+'"></div><button class="btn-primary" id="inv-n-guardar">Guardar componente</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderInventario()">← Volver a inventario</button>';
+  body.innerHTML='<div class="seccion-titulo">Nuevo componente</div>'+(prefill.origen?'<p class="hint" style="margin-bottom:.75rem;">📋 Copiando configuración de "'+prefill.origen+'" — solo ajusta el nombre y el stock.</p>':'')+'<div class="form-card"><div class="form-group"><label>Nombre</label><input type="text" id="inv-n-nombre" placeholder="Ej. Sulfato de amonio" value="'+(prefill.nombre||'')+'"></div><div class="form-group"><label>Categoría</label><input type="text" id="inv-n-categoria" list="inv-cat-list" value="'+(prefill.categoria||'').replace(/"/g,'&quot;')+'" placeholder="Ej. Fertilizantes"><datalist id="inv-cat-list"><option value="Fertilizantes"><option value="Insecticidas"><option value="Fungicidas"><option value="Herbicidas"><option value="Adherentes"><option value="Estimuladores"><option value="Otros"></datalist></div><div class="form-group"><label>Foto del producto (opcional, pero muy recomendada)</label><div style="display:flex;gap:8px;"><button type="button" onclick="document.getElementById(\'inv-n-imagen-cam\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📷 Cámara</button><button type="button" onclick="document.getElementById(\'inv-n-imagen-gal\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);background:var(--gris-1);cursor:pointer;">🖼️ Galería</button></div><div id="inv-n-imagen-status" style="margin-top:.5rem;">'+(prefill.imagen_url?'<img src="'+prefill.imagen_url+'" style="max-width:100px;max-height:100px;border-radius:8px;border:1px solid var(--gris-2);">':'')+'</div><input type="hidden" id="inv-n-imagen" value="'+(prefill.imagen_url||'').replace(/"/g,'&quot;')+'"><input type="file" id="inv-n-imagen-cam" accept="image/*" capture="environment" style="display:none"><input type="file" id="inv-n-imagen-gal" accept="image/*" style="display:none"><p class="hint">Ayuda a que el operario no confunda productos parecidos.</p></div><div class="form-group"><label>Unidad de uso (la que usan las fórmulas)</label><select id="inv-n-unidad"><option value="litros"'+(prefill.unidad==='litros'?' selected':'')+'>Litros</option><option value="ml"'+(prefill.unidad==='ml'?' selected':'')+'>Mililitros</option><option value="kg"'+(prefill.unidad==='kg'?' selected':'')+'>Kilogramos</option><option value="gr"'+(prefill.unidad==='gr'?' selected':'')+'>Gramos</option><option value="pza"'+(prefill.unidad==='pza'?' selected':'')+'>Piezas</option></select></div><div class="form-group"><label>¿Se compra empacado? (opcional)</label><div style="display:flex;gap:8px;"><input type="text" id="inv-n-unidad-compra" placeholder="Ej. Saco, Bidón, Caja" value="'+(prefill.unidad_compra||'')+'" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><input type="number" id="inv-n-factor-compra" min="0" placeholder="Ej. 25" value="'+(prefill.factor_compra||'')+'" style="width:90px;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"></div><p class="hint">Nombre del paquete + cuánto trae cada uno. Ej. "Saco" + 25 = sacos de 25 kg. Llena esto primero si vas a usar la conversión de abajo.</p></div><div class="form-group"><label>Stock inicial</label><div style="display:flex;gap:8px;align-items:center;"><input type="number" id="inv-n-stock" min="0" value="0" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><span class="hint" id="inv-n-unidad-lbl1" style="margin:0;min-width:40px;">kg</span></div><div style="display:flex;gap:8px;align-items:center;margin-top:.4rem;"><span class="hint" style="margin:0;">o convertir desde</span><input type="number" id="inv-n-stock-paq" min="0" placeholder="0" style="width:70px;padding:.4rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.8rem;"><span class="hint" id="inv-n-stock-paq-lbl" style="margin:0;">sacos</span></div></div><div class="form-group"><label>Stock mínimo (para alerta)</label><div style="display:flex;gap:8px;align-items:center;"><input type="number" id="inv-n-min" min="0" value="'+(prefill.stock_minimo||0)+'" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><span class="hint" id="inv-n-unidad-lbl2" style="margin:0;min-width:40px;">kg</span></div><div style="display:flex;gap:8px;align-items:center;margin-top:.4rem;"><span class="hint" style="margin:0;">o convertir desde</span><input type="number" id="inv-n-min-paq" min="0" placeholder="0" style="width:70px;padding:.4rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.8rem;"><span class="hint" id="inv-n-min-paq-lbl" style="margin:0;">sacos</span></div></div><div class="form-group"><label>Fecha de caducidad (opcional)</label><input type="date" id="inv-n-caducidad" value="'+(prefill.fecha_caducidad||'')+'"></div><button class="btn-primary" id="inv-n-guardar">Guardar componente</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderInventario()">← Volver a inventario</button>';
   function refrescarEtiquetas(){
     var u=document.getElementById('inv-n-unidad').value;
     var uc=(document.getElementById('inv-n-unidad-compra').value||'paquetes').trim();
@@ -1148,7 +1290,8 @@ function renderInventarioNuevo(prefill){
     var factorCompra=parseFloat(document.getElementById('inv-n-factor-compra').value)||null;
     var imagenUrl=(document.getElementById('inv-n-imagen').value||'').trim()||null;
     var caducidad=document.getElementById('inv-n-caducidad').value||null;
-    from('inventario_items').insert({nombre:nombre,unidad:unidad,stock_actual:stock,stock_minimo:min,unidad_compra:unidadCompra,factor_compra:factorCompra,imagen_url:imagenUrl,fecha_caducidad:caducidad,activo:true}).then(function(){
+    var categoria=document.getElementById('inv-n-categoria').value.trim()||'Otros';
+    from('inventario_items').insert({nombre:nombre,categoria:categoria,unidad:unidad,stock_actual:stock,stock_minimo:min,unidad_compra:unidadCompra,factor_compra:factorCompra,imagen_url:imagenUrl,fecha_caducidad:caducidad,activo:true}).then(function(){
       return from('inventario_items').select('*').eq('activo',true).order('nombre').get();
     }).then(function(rows){
       cats.inventario=rows||[];
@@ -1271,7 +1414,7 @@ function renderInventarioEditar(itemId){
   var body=document.getElementById('enc-body');
   var it=cats.inventario.find(function(x){return x.id===itemId;});
   if(!it){renderInventario();return;}
-  body.innerHTML='<div class="seccion-titulo">Editar '+it.nombre+'</div><div class="form-card"><div class="form-group"><label>Nombre</label><input type="text" id="inv-e-nombre" value="'+it.nombre.replace(/"/g,'&quot;')+'"></div><div class="form-group"><label>Foto del producto</label><div style="display:flex;gap:8px;"><button type="button" onclick="document.getElementById(\'inv-e-imagen-cam\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📷 Cámara</button><button type="button" onclick="document.getElementById(\'inv-e-imagen-gal\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);background:var(--gris-1);cursor:pointer;">🖼️ Galería</button></div><div id="inv-e-imagen-status" style="margin-top:.5rem;">'+(it.imagen_url?'<img src="'+it.imagen_url+'" style="max-width:100px;max-height:100px;border-radius:8px;border:1px solid var(--gris-2);">':'')+'</div><input type="hidden" id="inv-e-imagen" value="'+(it.imagen_url||'').replace(/"/g,'&quot;')+'"><input type="file" id="inv-e-imagen-cam" accept="image/*" capture="environment" style="display:none"><input type="file" id="inv-e-imagen-gal" accept="image/*" style="display:none"></div><div class="form-group"><label>Unidad de uso</label><select id="inv-e-unidad"><option value="litros">Litros</option><option value="ml">Mililitros</option><option value="kg">Kilogramos</option><option value="gr">Gramos</option><option value="pza">Piezas</option></select></div><div class="form-group"><label>¿Se compra empacado? (opcional)</label><div style="display:flex;gap:8px;"><input type="text" id="inv-e-unidad-compra" placeholder="Ej. Saco, Bidón, Caja" value="'+(it.unidad_compra||'').replace(/"/g,'&quot;')+'" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><input type="number" id="inv-e-factor-compra" min="0" placeholder="Ej. 25" value="'+(it.factor_compra||'')+'" style="width:90px;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"></div><p class="hint">Nombre del paquete + cuánto trae cada uno.</p></div><div class="form-group"><label>Stock mínimo (para alerta)</label><div style="display:flex;gap:8px;align-items:center;"><input type="number" id="inv-e-min" min="0" value="'+it.stock_minimo+'" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><span class="hint" id="inv-e-unidad-lbl" style="margin:0;min-width:40px;">'+it.unidad+'</span></div><div style="display:flex;gap:8px;align-items:center;margin-top:.4rem;"><span class="hint" style="margin:0;">o convertir desde</span><input type="number" id="inv-e-min-paq" min="0" placeholder="'+(it.factor_compra?numFmt(it.stock_minimo/it.factor_compra):'0')+'" style="width:70px;padding:.4rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.8rem;"><span class="hint" id="inv-e-min-paq-lbl" style="margin:0;">'+(it.unidad_compra?it.unidad_compra.toLowerCase():'paquetes')+'</span></div></div><div class="form-group"><label>Fecha de caducidad (opcional)</label><input type="date" id="inv-e-caducidad" value="'+(it.fecha_caducidad||'')+'"></div><button class="btn-primary" id="inv-e-guardar">Guardar cambios</button></div><div class="form-card"><button type="button" id="inv-e-eliminar" style="width:100%;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.85rem;cursor:pointer;">🗑️ Eliminar componente</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderInventarioItem(\''+itemId+'\')">← Cancelar</button>';
+  body.innerHTML='<div class="seccion-titulo">Editar '+it.nombre+'</div><div class="form-card"><div class="form-group"><label>Nombre</label><input type="text" id="inv-e-nombre" value="'+it.nombre.replace(/"/g,'&quot;')+'"></div><div class="form-group"><label>Categoría</label><input type="text" id="inv-e-categoria" list="inv-cat-list" value="'+(it.categoria||'').replace(/"/g,'&quot;')+'" placeholder="Ej. Fertilizantes"><datalist id="inv-cat-list"><option value="Fertilizantes"><option value="Insecticidas"><option value="Fungicidas"><option value="Herbicidas"><option value="Adherentes"><option value="Estimuladores"><option value="Otros"></datalist></div><div class="form-group"><label>Foto del producto</label><div style="display:flex;gap:8px;"><button type="button" onclick="document.getElementById(\'inv-e-imagen-cam\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📷 Cámara</button><button type="button" onclick="document.getElementById(\'inv-e-imagen-gal\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);background:var(--gris-1);cursor:pointer;">🖼️ Galería</button></div><div id="inv-e-imagen-status" style="margin-top:.5rem;">'+(it.imagen_url?'<img src="'+it.imagen_url+'" style="max-width:100px;max-height:100px;border-radius:8px;border:1px solid var(--gris-2);">':'')+'</div><input type="hidden" id="inv-e-imagen" value="'+(it.imagen_url||'').replace(/"/g,'&quot;')+'"><input type="file" id="inv-e-imagen-cam" accept="image/*" capture="environment" style="display:none"><input type="file" id="inv-e-imagen-gal" accept="image/*" style="display:none"></div><div class="form-group"><label>Unidad de uso</label><select id="inv-e-unidad"><option value="litros">Litros</option><option value="ml">Mililitros</option><option value="kg">Kilogramos</option><option value="gr">Gramos</option><option value="pza">Piezas</option></select></div><div class="form-group"><label>¿Se compra empacado? (opcional)</label><div style="display:flex;gap:8px;"><input type="text" id="inv-e-unidad-compra" placeholder="Ej. Saco, Bidón, Caja" value="'+(it.unidad_compra||'').replace(/"/g,'&quot;')+'" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><input type="number" id="inv-e-factor-compra" min="0" placeholder="Ej. 25" value="'+(it.factor_compra||'')+'" style="width:90px;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"></div><p class="hint">Nombre del paquete + cuánto trae cada uno.</p></div><div class="form-group"><label>Stock mínimo (para alerta)</label><div style="display:flex;gap:8px;align-items:center;"><input type="number" id="inv-e-min" min="0" value="'+it.stock_minimo+'" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><span class="hint" id="inv-e-unidad-lbl" style="margin:0;min-width:40px;">'+it.unidad+'</span></div><div style="display:flex;gap:8px;align-items:center;margin-top:.4rem;"><span class="hint" style="margin:0;">o convertir desde</span><input type="number" id="inv-e-min-paq" min="0" placeholder="'+(it.factor_compra?numFmt(it.stock_minimo/it.factor_compra):'0')+'" style="width:70px;padding:.4rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.8rem;"><span class="hint" id="inv-e-min-paq-lbl" style="margin:0;">'+(it.unidad_compra?it.unidad_compra.toLowerCase():'paquetes')+'</span></div></div><div class="form-group"><label>Fecha de caducidad (opcional)</label><input type="date" id="inv-e-caducidad" value="'+(it.fecha_caducidad||'')+'"></div><button class="btn-primary" id="inv-e-guardar">Guardar cambios</button></div><div class="form-card"><button type="button" id="inv-e-eliminar" style="width:100%;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.85rem;cursor:pointer;">🗑️ Eliminar componente</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderInventarioItem(\''+itemId+'\')">← Cancelar</button>';
   document.getElementById('inv-e-unidad').value=it.unidad;
   function refrescarEtiquetasE(){
     var u=document.getElementById('inv-e-unidad').value;
@@ -1309,7 +1452,8 @@ function renderInventarioEditar(itemId){
     var factorCompra=parseFloat(document.getElementById('inv-e-factor-compra').value)||null;
     var imagenUrl=(document.getElementById('inv-e-imagen').value||'').trim()||null;
     var caducidad=document.getElementById('inv-e-caducidad').value||null;
-    from('inventario_items').eq('id',itemId).update({nombre:nombre,unidad:unidad,stock_minimo:min,unidad_compra:unidadCompra,factor_compra:factorCompra,imagen_url:imagenUrl,fecha_caducidad:caducidad}).then(function(){
+    var categoria=document.getElementById('inv-e-categoria').value.trim()||'Otros';
+    from('inventario_items').eq('id',itemId).update({nombre:nombre,categoria:categoria,unidad:unidad,stock_minimo:min,unidad_compra:unidadCompra,factor_compra:factorCompra,imagen_url:imagenUrl,fecha_caducidad:caducidad}).then(function(){
       return from('inventario_items').select('*').eq('activo',true).order('nombre').get();
     }).then(function(rows){
       cats.inventario=rows||[];
@@ -2945,14 +3089,30 @@ function renderPerfilOperario(){
   from('usuarios').select('*').eq('id',usuario.id).get().then(function(rows){
     var u=rows&&rows[0]||{};
     var asignacionLbl = u.certificado_ambas ? '🎖️ Certificado para Labores y Cosecha' : (usuario.rol==='cosechador'?'Asignado a: Cosecha':usuario.rol==='galerista'?'Asignado a: Galera':'Asignado a: Labores');
+    var tiposSangre=['','O+','O-','A+','A-','B+','B-','AB+','AB-'];
+    var antiguedadTxt='';
+    if(u.fecha_ingreso){
+      var dIngreso=new Date(u.fecha_ingreso+'T00:00:00');
+      var meses=(new Date().getFullYear()-dIngreso.getFullYear())*12+(new Date().getMonth()-dIngreso.getMonth());
+      var antTxt = meses<1?'menos de 1 mes':meses<12?(meses+' mes'+(meses>1?'es':'')):(Math.floor(meses/12)+' año'+(Math.floor(meses/12)>1?'s':'')+(meses%12?' y '+(meses%12)+' mes'+(meses%12>1?'es':''):''));
+      antiguedadTxt='<br/>📅 Con nosotros desde '+dIngreso.toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'})+' ('+antTxt+')';
+    }
     body.innerHTML='<div class="seccion-titulo">Perfil</div>'+
-    '<div class="tarea-card"><div class="tarea-title">👤 '+usuario.nombre+'</div><div class="tarea-meta">'+asignacionLbl+'</div></div>'+
-    '<div class="form-card" style="margin-top:.75rem;"><label style="display:block;font-size:.75rem;font-weight:600;color:var(--gris-3);margin-bottom:.4rem;text-transform:uppercase;">Mi teléfono</label><input type="tel" id="perf-tel" value="'+(u.telefono||'').replace(/"/g,'&quot;')+'" placeholder="10 dígitos" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;margin-bottom:.75rem;">'+
+    '<div class="tarea-card"><div class="tarea-title">👤 '+usuario.nombre+'</div><div class="tarea-meta">'+asignacionLbl+antiguedadTxt+'</div></div>'+
+    '<div class="tarea-card" style="cursor:pointer;margin-top:.6rem;" onclick="renderCambiarMiPin()"><div class="tarea-title">🔒 Cambiar mi PIN</div><div class="tarea-meta">Actualiza tu código de acceso</div></div>'+
+    '<div class="seccion-titulo" style="margin-top:1rem;font-size:.85rem;">📞 Contacto</div>'+
+    '<div class="form-card"><label style="display:block;font-size:.75rem;font-weight:600;color:var(--gris-3);margin-bottom:.4rem;text-transform:uppercase;">Mi teléfono</label><input type="tel" id="perf-tel" value="'+(u.telefono||'').replace(/"/g,'&quot;')+'" placeholder="10 dígitos" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;margin-bottom:.75rem;">'+
     '<label style="display:block;font-size:.75rem;font-weight:600;color:var(--gris-3);margin-bottom:.4rem;text-transform:uppercase;">Contacto de emergencia — nombre</label><input type="text" id="perf-ce-nombre" value="'+(u.contacto_emergencia_nombre||'').replace(/"/g,'&quot;')+'" placeholder="Nombre completo" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;margin-bottom:.75rem;">'+
     '<label style="display:block;font-size:.75rem;font-weight:600;color:var(--gris-3);margin-bottom:.4rem;text-transform:uppercase;">Contacto de emergencia — teléfono</label><input type="tel" id="perf-ce-tel" value="'+(u.contacto_emergencia_telefono||'').replace(/"/g,'&quot;')+'" placeholder="10 dígitos" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;margin-bottom:.9rem;">'+
     '<button class="btn-primary" id="perf-guardar">Guardar datos</button></div>'+
-    '<div style="display:flex;flex-direction:column;gap:.6rem;margin-top:1rem;">'+
-    '<div class="tarea-card" style="opacity:.6;"><div class="tarea-title">📄 Documentos</div><div class="tarea-meta">Próximamente</div></div>'+
+    '<div class="seccion-titulo" style="margin-top:1rem;font-size:.85rem;">🩺 Ficha médica de emergencia</div>'+
+    '<div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Solo se usa si hay una emergencia — ayuda a quien te atienda.</p><label style="display:block;font-size:.75rem;font-weight:600;color:var(--gris-3);margin-bottom:.4rem;text-transform:uppercase;">Tipo de sangre</label><select id="perf-sangre" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;margin-bottom:.75rem;">'+tiposSangre.map(function(t){return '<option value="'+t+'"'+(u.tipo_sangre===t?' selected':'')+'>'+(t||'Sin especificar')+'</option>';}).join('')+'</select>'+
+    '<label style="display:block;font-size:.75rem;font-weight:600;color:var(--gris-3);margin-bottom:.4rem;text-transform:uppercase;">Padecimientos (opcional)</label><input type="text" id="perf-padecimientos" value="'+(u.padecimientos||'').replace(/"/g,'&quot;')+'" placeholder="Ej. Diabetes, hipertensión, alergias" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;margin-bottom:.75rem;">'+
+    '<label style="display:block;font-size:.75rem;font-weight:600;color:var(--gris-3);margin-bottom:.4rem;text-transform:uppercase;">Medicamentos que tomas (opcional)</label><input type="text" id="perf-medicamentos" value="'+(u.medicamentos||'').replace(/"/g,'&quot;')+'" placeholder="Ej. Insulina, metformina" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;margin-bottom:.9rem;">'+
+    '<button class="btn-primary" id="perf-guardar-medico">Guardar ficha médica</button></div>'+
+    '<div class="seccion-titulo" style="margin-top:1rem;font-size:.85rem;">📁 Documentos</div>'+
+    '<div style="display:flex;flex-direction:column;gap:.6rem;">'+
+    '<div class="tarea-card" style="opacity:.6;"><div class="tarea-title">📄 Documentos personales (INE, SAT, etc.)</div><div class="tarea-meta">Próximamente</div></div>'+
     '<div class="tarea-card" style="opacity:.6;"><div class="tarea-title">📝 Contratos</div><div class="tarea-meta">Próximamente</div></div>'+
     '</div>';
     document.getElementById('perf-guardar').addEventListener('click',function(){
@@ -2961,6 +3121,14 @@ function renderPerfilOperario(){
       var ceTel=document.getElementById('perf-ce-tel').value||null;
       from('usuarios').eq('id',usuario.id).update({telefono:tel,contacto_emergencia_nombre:ceNombre,contacto_emergencia_telefono:ceTel}).then(function(){
         showToast('✅ Datos guardados');
+      }).catch(function(e){alert('Error: '+e.message);});
+    });
+    document.getElementById('perf-guardar-medico').addEventListener('click',function(){
+      var sangre=document.getElementById('perf-sangre').value||null;
+      var padecimientos=document.getElementById('perf-padecimientos').value||null;
+      var medicamentos=document.getElementById('perf-medicamentos').value||null;
+      from('usuarios').eq('id',usuario.id).update({tipo_sangre:sangre,padecimientos:padecimientos,medicamentos:medicamentos}).then(function(){
+        showToast('✅ Ficha médica guardada');
       }).catch(function(e){alert('Error: '+e.message);});
     });
   });
@@ -3405,7 +3573,10 @@ function renderEjecAplicacion(planta,tabla){
     });
   } else {
     var evid=capturaEjec.foto?'<div style="padding:.75rem;background:var(--verde-tenue);border-radius:var(--radio);color:var(--verde);font-size:.85rem;text-align:center;margin-bottom:1rem;">✅ Evidencia capturada</div>':'';
-    body.innerHTML=bar+'<div class="step-label">Paso 2 de 2</div><div class="step-title">Evidencia (obligatoria)</div><div style="display:flex;gap:8px;margin-bottom:1rem;"><button onclick="abrirCamaraApp()" style="flex:1;padding:1rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio);background:var(--verde-tenue);color:var(--verde);font-size:.9rem;font-weight:600;cursor:pointer;">📷 Cámara</button><button onclick="abrirGaleria()" style="flex:1;padding:1rem;border:1.5px solid var(--gris-2);border-radius:var(--radio);background:var(--gris-1);font-size:.9rem;cursor:pointer;">🖼️ Galería</button></div>'+evid+'<div class="resumen-card" style="margin-top:.5rem;"><div class="resumen-row"><span class="resumen-key">Fórmula</span><span class="resumen-val">'+(f.nombre||'')+'</span></div><div class="resumen-row"><span class="resumen-key">Área</span><span class="resumen-val">'+(planta?planta.nombre:'')+' · '+tabla.nombre+'</span></div></div><div class="nav-row"><button class="btn-back" onclick="pasoEjec--;renderEjec()">← Atrás</button><button class="btn-next" onclick="guardarEjec()" style="background:var(--tierra)">✅ Guardar</button></div>';
+    var herrChkAplic='<label style="display:flex;align-items:center;gap:.6rem;padding:.75rem;background:var(--gris-1);border-radius:var(--radio);margin-top:.75rem;cursor:pointer;"><input type="checkbox" id="chk-herramienta" '+(capturaEjec.herramientaLimpia?'checked':'')+' style="width:22px;height:22px;flex-shrink:0;"><span style="font-size:.85rem;">🧹 Limpié y guardé mi equipo de aplicación (bomba/mochila) antes de terminar</span></label>';
+    body.innerHTML=bar+'<div class="step-label">Paso 2 de 2</div><div class="step-title">Evidencia (obligatoria)</div><div style="display:flex;gap:8px;margin-bottom:1rem;"><button onclick="abrirCamaraApp()" style="flex:1;padding:1rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio);background:var(--verde-tenue);color:var(--verde);font-size:.9rem;font-weight:600;cursor:pointer;">📷 Cámara</button><button onclick="abrirGaleria()" style="flex:1;padding:1rem;border:1.5px solid var(--gris-2);border-radius:var(--radio);background:var(--gris-1);font-size:.9rem;cursor:pointer;">🖼️ Galería</button></div>'+evid+'<div class="resumen-card" style="margin-top:.5rem;"><div class="resumen-row"><span class="resumen-key">Fórmula</span><span class="resumen-val">'+(f.nombre||'')+'</span></div><div class="resumen-row"><span class="resumen-key">Área</span><span class="resumen-val">'+(planta?planta.nombre:'')+' · '+tabla.nombre+'</span></div></div>'+herrChkAplic+'<div class="nav-row"><button class="btn-back" onclick="pasoEjec--;renderEjec()">← Atrás</button><button class="btn-next" onclick="guardarEjec()" style="background:var(--tierra)">✅ Guardar</button></div>';
+    var herrChkAplicEl=document.getElementById('chk-herramienta');
+    if(herrChkAplicEl) herrChkAplicEl.addEventListener('change',function(){capturaEjec.herramientaLimpia=this.checked;});
   }
 }
 
@@ -4027,9 +4198,16 @@ function renderAsisHistorial(){
   body.innerHTML='<div class="seccion-titulo">📊 Historial</div><div class="loading">Cargando...</div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsistenciaMenu()">← Volver a Asistencia</button>';
   Promise.all([
     from('asistencia_registros').select('*').eq('usuario_id',usuario.id).order('registrado_en',{ascending:false}).get(),
-    from('permisos').select('*').eq('usuario_id',usuario.id).order('creado_en',{ascending:false}).get()
+    from('permisos').select('*').eq('usuario_id',usuario.id).order('creado_en',{ascending:false}).get(),
+    from('usuarios').select('fecha_ingreso').eq('id',usuario.id).get()
   ]).then(function(r){
     var registros=r[0]||[], permisos=r[1]||[];
+    var fechaIngreso=(r[2]&&r[2][0]&&r[2][0].fecha_ingreso)||null;
+    var ingresoHtml='';
+    if(fechaIngreso){
+      var dIng=new Date(fechaIngreso+'T00:00:00');
+      ingresoHtml='<p class="hint" style="margin-bottom:.75rem;">📅 Con nosotros desde '+dIng.toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'})+'</p>';
+    }
     var mesesSet={};
     registros.forEach(function(reg){mesesSet[reg.fecha.slice(0,7)]=true;});
     var hoyD=new Date();
@@ -4043,7 +4221,7 @@ function renderAsisHistorial(){
       return '<option value="'+m+'"'+(m===mesActual?' selected':'')+' style="text-transform:capitalize;">'+lbl+'</option>';
     }).join('')+'</select></div>';
     var body2=document.getElementById('op-body');
-    body2.innerHTML='<div class="seccion-titulo">📊 Historial</div>'+selectorHtml+'<div id="hist-contenido"></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsistenciaMenu()">← Volver a Asistencia</button>';
+    body2.innerHTML='<div class="seccion-titulo">📊 Historial</div>'+ingresoHtml+selectorHtml+'<div id="hist-contenido"></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsistenciaMenu()">← Volver a Asistencia</button>';
     document.getElementById('hist-mes-sel').addEventListener('change',function(){pintarHistorialMes(this.value);});
     pintarHistorialMes(mesActual);
   });
@@ -4595,7 +4773,7 @@ function ejecutarGuardadoFinal(o){
   var esAplic=o.tipo_labor&&o.tipo_labor.requiere_formula;
   var progreso = esAplic ? {completo:true,union:[],faltan:[]} : calcularProgresoSurcos(o);
   var nuevoEstado = progreso.completo ? 'completada' : 'en_proceso';
-  var updatePayload = esAplic ? {estado:nuevoEstado} : {estado:nuevoEstado, surcos_completados:progreso.union, herramienta_limpia:capturaEjec.herramientaLimpia||false};
+  var updatePayload = esAplic ? {estado:nuevoEstado, herramienta_limpia:capturaEjec.herramientaLimpia||false} : {estado:nuevoEstado, surcos_completados:progreso.union, herramienta_limpia:capturaEjec.herramientaLimpia||false};
   if(nuevoEstado==='completada') updatePayload.completado_en=new Date().toISOString();
   var reg={usuario_id:usuario.id,tabla_id:o.tabla_id,tipo_labor_id:o.tipo_labor_id,subtipo_labor_id:o.subtipo_labor_id||null,surcos_trabajados:esAplic?[]:capturaEjec.surcos,cantidad_insumo:esAplic?o.volumen_aplicado_litros:(capturaEjec.cantidad||null),foto_url:capturaEjec.fotoUrl||null,capturado_en:new Date().toISOString(),orden_id:o.id};
   var fotoQuedoLocal = capturaEjec.fotoUrl && capturaEjec.fotoUrl.indexOf('offline:')===0;
@@ -4738,15 +4916,16 @@ function renderNuevoContrato(){
 
 function renderNuevoUsuario(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="form-card"><h3>Nuevo usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="nu-n" placeholder="Nombre completo"/></div><div class="form-group"><label>Rol</label><select id="nu-r"><option value="operario">Operario</option><option value="encargado">Encargado</option><option value="ingeniero">Ingeniero</option><option value="cosechador">Cosechador</option><option value="galerista">Galerista</option><option value="dueño">Dueño</option><option value="inversionista">Inversionista</option><option value="admin">Admin</option></select></div><div class="form-group"><label>PIN (4 dígitos)</label><input type="number" id="nu-p" placeholder="1234" min="0" max="9999"/></div><div class="nav-row"><button class="btn-back" onclick="renderAltasBajas()">← Cancelar</button><button class="btn-next" onclick="guardarNuevoUsuario()">Guardar</button></div></div>';
+  body.innerHTML='<div class="form-card"><h3>Nuevo usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="nu-n" placeholder="Nombre completo"/></div><div class="form-group"><label>Rol</label><select id="nu-r"><option value="operario">Operario</option><option value="encargado">Encargado</option><option value="ingeniero">Ingeniero</option><option value="cosechador">Cosechador</option><option value="galerista">Galerista</option><option value="dueño">Dueño</option><option value="inversionista">Inversionista</option><option value="admin">Admin</option></select></div><div class="form-group"><label>Fecha de ingreso</label><input type="date" id="nu-fi" value="'+new Date().toISOString().slice(0,10)+'"></div><div class="form-group"><label>PIN (4 dígitos)</label><input type="number" id="nu-p" placeholder="1234" min="0" max="9999"/></div><div class="nav-row"><button class="btn-back" onclick="renderAltasBajas()">← Cancelar</button><button class="btn-next" onclick="guardarNuevoUsuario()">Guardar</button></div></div>';
 }
 
 function guardarNuevoUsuario(){
   var nombre=document.getElementById('nu-n').value.trim();
   var rol=document.getElementById('nu-r').value;
+  var fechaIngreso=document.getElementById('nu-fi').value||null;
   var pin=String(document.getElementById('nu-p').value).padStart(4,'0');
   if(!nombre||pin.length!==4){alert('Completa todos los campos.');return;}
-  from('usuarios').insert({nombre:nombre,rol:rol,activo:true}).then(function(data){
+  from('usuarios').insert({nombre:nombre,rol:rol,fecha_ingreso:fechaIngreso,activo:true}).then(function(data){
     var uid=Array.isArray(data)?data[0].id:data.id;
     api('/rest/v1/rpc/set_pin',{method:'POST',body:{p_usuario_id:uid,p_pin:pin}}).then(function(){
       cargarCatalogos().then(function(){renderAltasBajas();});
@@ -4757,10 +4936,11 @@ function guardarNuevoUsuario(){
 function renderEditarUsuario(id,nombre,rol,certAmbas){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="loading">Cargando...</div>';
-  from('usuarios').select('avatar_url,sueldo_base').eq('id',id).get().then(function(rows){
+  from('usuarios').select('avatar_url,sueldo_base,fecha_ingreso').eq('id',id).get().then(function(rows){
     var avatarUrl=(rows&&rows[0]&&rows[0].avatar_url)||'';
     var sueldoBase=(rows&&rows[0]&&rows[0].sueldo_base)||'';
-    body.innerHTML='<div class="form-card"><h3>Editar usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="eu-n" value="'+nombre+'"/></div><div class="form-group"><label>Rol</label><select id="eu-r"><option value="operario"'+(rol==='operario'?' selected':'')+'>Operario</option><option value="encargado"'+(rol==='encargado'?' selected':'')+'>Encargado</option><option value="ingeniero"'+(rol==='ingeniero'?' selected':'')+'>Ingeniero</option><option value="cosechador"'+(rol==='cosechador'?' selected':'')+'>Cosechador</option><option value="galerista"'+(rol==='galerista'?' selected':'')+'>Galerista</option><option value="dueño"'+(rol==='dueño'?' selected':'')+'>Dueño</option><option value="inversionista"'+(rol==='inversionista'?' selected':'')+'>Inversionista</option><option value="admin"'+(rol==='admin'?' selected':'')+'>Admin</option></select></div><div class="form-group"><label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:.85rem;"><input type="checkbox" id="eu-cert" '+(certAmbas?'checked':'')+' style="width:18px;height:18px;"> Certificado para Labores y Cosecha (ambas)</label></div><div class="form-group"><label>Sueldo base diario ($)</label><input type="number" id="eu-sueldo" min="0" step="1" value="'+sueldoBase+'" placeholder="Ej. 350"></div><div class="form-group"><label>URL de su Mootsilito personalizado (opcional)</label><input type="text" id="eu-avatar" value="'+avatarUrl.replace(/"/g,'&quot;')+'" placeholder="Ej. https://tusitio.pages.dev/avatares/lalo.png"><p class="hint">Sube la imagen a tu repo (junto a index.html) y pega aquí el link completo.</p></div><div class="nav-row"><button class="btn-back" onclick="renderAltasBajas()">← Cancelar</button><button class="btn-next" onclick="guardarEditarUsuario(\''+id+'\')">Guardar</button></div></div>';
+    var fechaIngreso=(rows&&rows[0]&&rows[0].fecha_ingreso)||'';
+    body.innerHTML='<div class="form-card"><h3>Editar usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="eu-n" value="'+nombre+'"/></div><div class="form-group"><label>Rol</label><select id="eu-r"><option value="operario"'+(rol==='operario'?' selected':'')+'>Operario</option><option value="encargado"'+(rol==='encargado'?' selected':'')+'>Encargado</option><option value="ingeniero"'+(rol==='ingeniero'?' selected':'')+'>Ingeniero</option><option value="cosechador"'+(rol==='cosechador'?' selected':'')+'>Cosechador</option><option value="galerista"'+(rol==='galerista'?' selected':'')+'>Galerista</option><option value="dueño"'+(rol==='dueño'?' selected':'')+'>Dueño</option><option value="inversionista"'+(rol==='inversionista'?' selected':'')+'>Inversionista</option><option value="admin"'+(rol==='admin'?' selected':'')+'>Admin</option></select></div><div class="form-group"><label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:.85rem;"><input type="checkbox" id="eu-cert" '+(certAmbas?'checked':'')+' style="width:18px;height:18px;"> Certificado para Labores y Cosecha (ambas)</label></div><div class="form-group"><label>Fecha de ingreso</label><input type="date" id="eu-fi" value="'+fechaIngreso+'"></div><div class="form-group"><label>Sueldo base diario ($)</label><input type="number" id="eu-sueldo" min="0" step="1" value="'+sueldoBase+'" placeholder="Ej. 350"></div><div class="form-group"><label>URL de su Mootsilito personalizado (opcional)</label><input type="text" id="eu-avatar" value="'+avatarUrl.replace(/"/g,'&quot;')+'" placeholder="Ej. https://tusitio.pages.dev/avatares/lalo.png"><p class="hint">Sube la imagen a tu repo (junto a index.html) y pega aquí el link completo.</p></div><div class="nav-row"><button class="btn-back" onclick="renderAltasBajas()">← Cancelar</button><button class="btn-next" onclick="guardarEditarUsuario(\''+id+'\')">Guardar</button></div></div>';
   });
 }
 
@@ -4769,8 +4949,9 @@ function guardarEditarUsuario(id){
   var certAmbas=document.getElementById('eu-cert').checked;
   var avatarUrl=document.getElementById('eu-avatar').value.trim()||null;
   var sueldoBase=parseFloat(document.getElementById('eu-sueldo').value)||null;
+  var fechaIngreso=document.getElementById('eu-fi').value||null;
   if(!nn){alert('El nombre es obligatorio.');return;}
-  from('usuarios').eq('id',id).update({nombre:nn,rol:nr,certificado_ambas:certAmbas,avatar_url:avatarUrl,sueldo_base:sueldoBase}).then(function(){cargarCatalogos().then(function(){renderAltasBajas();});});
+  from('usuarios').eq('id',id).update({nombre:nn,rol:nr,certificado_ambas:certAmbas,avatar_url:avatarUrl,sueldo_base:sueldoBase,fecha_ingreso:fechaIngreso}).then(function(){cargarCatalogos().then(function(){renderAltasBajas();});});
 }
 
 function renderCambiarPin(id,nombre){
