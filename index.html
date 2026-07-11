@@ -214,6 +214,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <button class="tab" id="tab-asistencia" onclick="tabOperario('asistencia')">Asistencia</button>
     <button class="tab active" id="tab-tareas" onclick="tabOperario('tareas')">Mis tareas</button>
     <button class="tab" id="tab-pagos" onclick="tabOperario('pagos')">Pagos</button>
+    <button class="tab" id="tab-solicitudes" onclick="tabOperario('solicitudes')">Solicitudes</button>
     <button class="tab" id="tab-op-notif" onclick="tabOperario('notif')">Avisos <span id="op-badge-alertas" style="display:none;background:var(--rojo);color:#fff;border-radius:50%;width:16px;height:16px;font-size:.6rem;font-weight:700;align-items:center;justify-content:center;margin-left:3px;vertical-align:middle;">0</span></button>
     <button class="tab" id="tab-perfil" onclick="tabOperario('perfil')">Perfil</button>
   </div>
@@ -569,9 +570,10 @@ function renderTablero(){
     from('formulas_aplicacion').select('id,nombre,fecha_programada,tabla_id').eq('activo',true).get(),
     from('ordenes_trabajo').select('formula_id,estado').not('formula_id','is','null').get(),
     from('permisos').select('id').eq('estado','pendiente').get(),
-    from('solicitudes_labor').select('id').eq('estado','pendiente').get()
+    from('solicitudes_labor').select('id').eq('estado','pendiente').get(),
+    from('solicitudes_operario').select('id').eq('estado','pendiente').get()
   ]).then(function(r){
-    var todas=(r[0]||[]).concat(r[1]||[]), formulas=r[2]||[], ordenesConFormula=(r[3]||[]).filter(function(o){return o.estado!=='cancelada';}), permisosPendientes=r[4]||[], solicitudesPendientes=r[5]||[];
+    var todas=(r[0]||[]).concat(r[1]||[]), formulas=r[2]||[], ordenesConFormula=(r[3]||[]).filter(function(o){return o.estado!=='cancelada';}), permisosPendientes=r[4]||[], solicitudesPendientes=r[5]||[], solicitudesOpPendientes=r[6]||[];
     var asignadas={};
     ordenesConFormula.forEach(function(o){asignadas[o.formula_id]=true;});
     var pendientesFormula=formulas.filter(function(f){return f.fecha_programada&&f.fecha_programada<=en7dias&&!asignadas[f.id];});
@@ -579,6 +581,9 @@ function renderTablero(){
     var avisoHtml='';
     if(permisosPendientes.length){
       avisoHtml+='<div style="background:var(--tierra-tenue);border:1.5px solid var(--tierra);border-radius:var(--radio-sm);padding:.85rem;margin-bottom:1rem;cursor:pointer;" id="aviso-permisos-pendientes"><strong style="color:var(--tierra);">📝 '+permisosPendientes.length+' solicitud(es) de permiso pendiente(s)</strong><div class="hint" style="margin-top:.25rem;">Toca para revisarlas y aprobar/rechazar</div></div>';
+    }
+    if(solicitudesOpPendientes.length){
+      avisoHtml+='<div style="background:var(--tierra-tenue);border:1.5px solid var(--tierra);border-radius:var(--radio-sm);padding:.85rem;margin-bottom:1rem;cursor:pointer;" id="aviso-solicitudes-operario"><strong style="color:var(--tierra);">📨 '+solicitudesOpPendientes.length+' solicitud(es) de colaboradores pendiente(s)</strong><div class="hint" style="margin-top:.25rem;">Préstamos y otros asuntos — toca para revisarlas</div></div>';
     }
     if(solicitudesPendientes.length){
       avisoHtml+='<div style="background:var(--tierra-tenue);border:1.5px solid var(--tierra);border-radius:var(--radio-sm);padding:.85rem;margin-bottom:1rem;cursor:pointer;" id="aviso-solicitudes-labor"><strong style="color:var(--tierra);">🔧 '+solicitudesPendientes.length+' labor(es) sugerida(s) por ingeniero</strong><div class="hint" style="margin-top:.25rem;">Toca para revisarlas y programarlas</div></div>';
@@ -622,6 +627,8 @@ function renderTablero(){
     if(quitarFiltroEl) quitarFiltroEl.addEventListener('click',function(e){e.preventDefault();TABLERO_FILTRO=null;renderTablero();});
     var avisoPermisosEl=document.getElementById('aviso-permisos-pendientes');
     if(avisoPermisosEl) avisoPermisosEl.addEventListener('click',renderPermisosRevision);
+    var avisoSolicitudesOpEl=document.getElementById('aviso-solicitudes-operario');
+    if(avisoSolicitudesOpEl) avisoSolicitudesOpEl.addEventListener('click',renderSolicitudesOperarioRevision);
     var avisoSolicitudesEl=document.getElementById('aviso-solicitudes-labor');
     if(avisoSolicitudesEl) avisoSolicitudesEl.addEventListener('click',renderSolicitudesLabor);
     var avisoEl=document.getElementById('aviso-aplic-pendientes');
@@ -2732,10 +2739,12 @@ function renderEmpleadosMenu(){
     '<div class="labor-tile" data-emp="altasbajas"><div class="labor-tile-ic">👤</div><div class="labor-tile-lbl">Altas y Bajas</div></div>'+
     '<div class="labor-tile" data-emp="contratos"><div class="labor-tile-ic">📄</div><div class="labor-tile-lbl">Contratos</div></div>'+
     '<div class="labor-tile" data-emp="permisos"><div class="labor-tile-ic">📋</div><div class="labor-tile-lbl">Permisos</div></div>'+
+    '<div class="labor-tile" data-emp="solicitudes"><div class="labor-tile-ic">📨</div><div class="labor-tile-lbl">Solicitudes</div></div>'+
   '</div>';
   body.querySelector('[data-emp="altasbajas"]').addEventListener('click',renderAltasBajas);
   body.querySelector('[data-emp="contratos"]').addEventListener('click',renderContratos);
   body.querySelector('[data-emp="permisos"]').addEventListener('click',renderPermisosRevision);
+  body.querySelector('[data-emp="solicitudes"]').addEventListener('click',renderSolicitudesOperarioRevision);
 }
 
 function renderNominasMenu(){
@@ -2750,6 +2759,49 @@ function renderNominasMenu(){
   body.querySelector('[data-nom="bonos"]').addEventListener('click',renderBonos);
   body.querySelector('[data-nom="prestamos"]').addEventListener('click',renderPrestamos);
   body.querySelector('[data-nom="historial"]').addEventListener('click',renderResumenNomina);
+}
+
+function renderSolicitudesOperarioRevision(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo">📨 Solicitudes de colaboradores</div><div class="loading">Cargando...</div>';
+  from('solicitudes_operario').select('*,operario:usuarios!operario_id(nombre)').order('creado_en',{ascending:false}).get().then(function(rows){
+    rows=rows||[];
+    var headerHtml='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📨 Solicitudes de colaboradores<button type="button" onclick="renderEmpleadosMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Empleados</button></div>';
+    if(!rows.length){body.innerHTML=headerHtml+'<div class="empty">Sin solicitudes por ahora.</div>';return;}
+    var pend=rows.filter(function(s){return s.estado==='pendiente';});
+    var resueltos=rows.filter(function(s){return s.estado!=='pendiente';});
+    var estLbl={pendiente:'⏳ Pendiente',atendida:'✅ Atendida',rechazada:'❌ Rechazada'};
+    var estColor={pendiente:'var(--tierra)',atendida:'var(--verde-mid)',rechazada:'var(--rojo)'};
+    function tarjeta(s){
+      var ac=s.estado==='pendiente'?'<div style="display:flex;gap:8px;margin-top:.6rem;flex-wrap:wrap;">'+(s.tipo==='prestamo'?'<button class="btn-sm btn-completar" data-aprob-prestamo="'+s.id+'" data-op="'+s.operario_id+'" data-monto="'+s.monto_solicitado+'" data-motivo="'+s.mensaje.replace(/"/g,'&quot;')+'">✅ Aprobar y registrar</button>':'<button class="btn-sm btn-completar" data-atender="'+s.id+'">✅ Marcar atendida</button>')+'<button class="btn-sm btn-cancelar" data-rechazar="'+s.id+'">❌ Rechazar</button></div>':'';
+      return '<div class="orden-card" style="border-left-color:'+estColor[s.estado]+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(s.tipo==='prestamo'?'💰 Préstamo':'💬 Otro')+' · '+(s.operario?s.operario.nombre:'')+'</strong><span style="font-size:.72rem;font-weight:700;color:'+estColor[s.estado]+';">'+estLbl[s.estado]+'</span></div><div class="orden-meta">'+(s.monto_solicitado?'$'+parseFloat(s.monto_solicitado).toFixed(2)+' · ':'')+s.mensaje+(s.respuesta?'<br/>📩 '+s.respuesta:'')+'</div>'+ac+'</div>';
+    }
+    var html=headerHtml+'<div class="seccion-titulo" style="margin-top:0;">'+(pend.length?'<span style="font-size:.75rem;color:var(--rojo);font-weight:700;">('+pend.length+' pendientes)</span>':'Solicitudes')+'</div>';
+    if(pend.length) html+=pend.map(tarjeta).join('');
+    if(resueltos.length) html+='<div class="seccion-titulo" style="margin-top:1rem;">Resueltas</div>'+resueltos.map(tarjeta).join('');
+    body.innerHTML=html;
+    body.querySelectorAll('[data-aprob-prestamo]').forEach(function(b){
+      b.addEventListener('click',function(){
+        renderNuevoPrestamo({operarioId:this.dataset.op,monto:this.dataset.monto,concepto:this.dataset.motivo,solicitudId:this.dataset.aprobPrestamo});
+      });
+    });
+    body.querySelectorAll('[data-atender]').forEach(function(b){b.addEventListener('click',function(){resolverSolicitudOperario(this.dataset.atender,'atendida');});});
+    body.querySelectorAll('[data-rechazar]').forEach(function(b){b.addEventListener('click',function(){resolverSolicitudOperario(this.dataset.rechazar,'rechazada');});});
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function resolverSolicitudOperario(id,estado){
+  var respuesta=prompt(estado==='atendida'?'¿Algún comentario para el colaborador? (opcional)':'¿Por qué se rechaza? (se le va a mostrar)');
+  if(respuesta===null) return;
+  from('solicitudes_operario').select('*').eq('id',id).get().then(function(rows){
+    var s=rows&&rows[0];
+    return from('solicitudes_operario').eq('id',id).update({estado:estado,respuesta:respuesta||null,atendido_por:usuario.id,atendido_en:new Date().toISOString()}).then(function(){
+      if(s) return from('notificaciones').insert({titulo:estado==='atendida'?'✅ Solicitud atendida':'❌ Solicitud rechazada',cuerpo:'Tu solicitud fue '+(estado==='atendida'?'atendida':'rechazada')+(respuesta?': '+respuesta:''),icono:estado==='atendida'?'✅':'❌',leida:false,para_rol:'operario',para_usuario:s.operario_id});
+    });
+  }).then(function(){
+    showToast(estado==='atendida'?'✅ Marcada como atendida':'❌ Rechazada');
+    renderSolicitudesOperarioRevision();
+  }).catch(function(e){alert('Error: '+e.message);});
 }
 
 function renderPermisosRevision(){
@@ -3095,10 +3147,11 @@ function renderPrestamos(){
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
-function renderNuevoPrestamo(){
+function renderNuevoPrestamo(prefill){
+  prefill=prefill||{};
   var body=document.getElementById('enc-body');
-  var opO=cats.operarios.map(function(o){return '<button type="button" class="op-chip" data-id="'+o.id+'" onclick="seleccionUnica(this)">'+o.nombre+'</button>';}).join('');
-  body.innerHTML='<div class="seccion-titulo">+ Nuevo préstamo</div><div class="form-card"><div class="form-group"><label>Colaborador</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Concepto</label><input type="text" id="pr-concepto" placeholder="Ej. Préstamo personal / Anticipo de nómina"></div><div class="form-group"><label>Monto total ($)</label><input type="number" id="pr-monto" min="0" step="1" placeholder="Ej. 600"></div><div class="form-group"><label>Número de pagos semanales</label><input type="number" id="pr-pagos" min="1" step="1" placeholder="Ej. 3"></div><div class="form-group"><label>Semana en que inicia el descuento</label><input type="date" id="pr-fecha" value="'+new Date().toISOString().slice(0,10)+'"></div><button class="btn-primary" id="pr-guardar">Registrar préstamo</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderPrestamos()">← Volver a Préstamos</button>';
+  var opO=cats.operarios.map(function(o){return '<button type="button" class="op-chip'+(prefill.operarioId===o.id?' sel':'')+'" data-id="'+o.id+'" onclick="seleccionUnica(this)">'+o.nombre+'</button>';}).join('');
+  body.innerHTML='<div class="seccion-titulo">+ Nuevo préstamo</div><div class="form-card">'+(prefill.solicitudId?'<p class="hint" style="margin-bottom:.75rem;">Completando la solicitud del colaborador — ajusta pagos y fecha antes de registrar.</p>':'')+'<div class="form-group"><label>Colaborador</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Concepto</label><input type="text" id="pr-concepto" value="'+(prefill.concepto||'').replace(/"/g,'&quot;')+'" placeholder="Ej. Préstamo personal / Anticipo de nómina"></div><div class="form-group"><label>Monto total ($)</label><input type="number" id="pr-monto" min="0" step="1" value="'+(prefill.monto||'')+'" placeholder="Ej. 600"></div><div class="form-group"><label>Número de pagos semanales</label><input type="number" id="pr-pagos" min="1" step="1" placeholder="Ej. 3"></div><div class="form-group"><label>Semana en que inicia el descuento</label><input type="date" id="pr-fecha" value="'+new Date().toISOString().slice(0,10)+'"></div><button class="btn-primary" id="pr-guardar">Registrar préstamo</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderPrestamos()">← Volver a Préstamos</button>';
   document.getElementById('pr-guardar').addEventListener('click',function(){
     var opBtn=document.querySelector('.op-chip.sel');
     var concepto=document.getElementById('pr-concepto').value.trim();
@@ -3111,7 +3164,10 @@ function renderNuevoPrestamo(){
     if(!numPagos||numPagos<1){alert('Captura el número de pagos.');return;}
     var btn=this; btn.disabled=true; btn.textContent='Guardando...';
     from('prestamos').insert({operario_id:opBtn.dataset.id,concepto:concepto,monto_total:monto,num_pagos:numPagos,fecha_inicio:fechaIni,estado:'activo',creado_por:usuario.id}).then(function(rows){
-      return from('prestamos').select('*').eq('operario_id',opBtn.dataset.id).order('creado_en',{ascending:false}).limit(1).get();
+      var promesaSolicitud = prefill.solicitudId ? from('solicitudes_operario').eq('id',prefill.solicitudId).update({estado:'atendida',respuesta:'Préstamo registrado y aprobado.',atendido_por:usuario.id,atendido_en:new Date().toISOString()}) : Promise.resolve();
+      return promesaSolicitud.then(function(){
+        return from('prestamos').select('*').eq('operario_id',opBtn.dataset.id).order('creado_en',{ascending:false}).limit(1).get();
+      });
     }).then(function(nuevoPrestamoRows){
       var prestamo=nuevoPrestamoRows[0];
       var montoPorPago=Math.round((monto/numPagos)*100)/100;
@@ -3354,11 +3410,12 @@ function renderEjecAplicacion(planta,tabla){
 }
 
 function tabOperario(tab){
-  ['asistencia','tareas','pagos','op-notif','perfil'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
+  ['asistencia','tareas','pagos','solicitudes','op-notif','perfil'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
   pararRiegoTimer();
   if(tab==='tareas'){document.getElementById('tab-tareas').classList.add('active');cargarTareas();}
   else if(tab==='asistencia'){document.getElementById('tab-asistencia').classList.add('active');renderAsistenciaMenu();}
   else if(tab==='pagos'){document.getElementById('tab-pagos').classList.add('active');renderPagosMenu();}
+  else if(tab==='solicitudes'){document.getElementById('tab-solicitudes').classList.add('active');renderSolicitudesMenu();}
   else if(tab==='perfil'){document.getElementById('tab-perfil').classList.add('active');renderPerfilOperario();}
   else{document.getElementById('tab-op-notif').classList.add('active');renderNotifs('op-body');}
 }
@@ -3374,7 +3431,7 @@ var FRASES_BIENVENIDA=[
 
 function irInicioOperario(){
   pararRiegoTimer();
-  ['asistencia','tareas','pagos','op-notif'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
+  ['asistencia','tareas','pagos','solicitudes','op-notif'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
   var body=document.getElementById('op-body');
   var frase=FRASES_BIENVENIDA[Math.floor(Math.random()*FRASES_BIENVENIDA.length)];
   var avatarHtml = usuario.avatarUrl
@@ -3699,7 +3756,7 @@ function renderCartera(fechaRef){
 
 function renderAsistenciaMenu(){
   var body=document.getElementById('op-body');
-  body.innerHTML='<div class="seccion-titulo">Asistencia</div><div style="display:flex;flex-direction:column;gap:.75rem;"><div class="tarea-card" style="cursor:pointer;" onclick="renderAsisEntrada()"><div class="tarea-title">📥 Entrada</div><div class="tarea-meta">Registra tu llegada al rancho</div></div><div class="tarea-card" style="cursor:pointer;" onclick="renderAsisSalida()"><div class="tarea-title">📤 Salida</div><div class="tarea-meta">Registra tu salida del rancho</div></div><div class="tarea-card" style="cursor:pointer;" onclick="renderAsisPermisos()"><div class="tarea-title">📝 Permisos</div><div class="tarea-meta">Solicita un permiso personal o médico</div></div><div class="tarea-card" style="cursor:pointer;" onclick="renderAsisHistorial()"><div class="tarea-title">📊 Historial</div><div class="tarea-meta">Tu registro de asistencias y permisos</div></div></div>';
+  body.innerHTML='<div class="seccion-titulo">Asistencia</div><div style="display:flex;flex-direction:column;gap:.75rem;"><div class="tarea-card" style="cursor:pointer;" onclick="renderAsisEntrada()"><div class="tarea-title">📥 Entrada</div><div class="tarea-meta">Registra tu llegada al rancho</div></div><div class="tarea-card" style="cursor:pointer;" onclick="renderAsisSalida()"><div class="tarea-title">📤 Salida</div><div class="tarea-meta">Registra tu salida del rancho</div></div><div class="tarea-card" style="cursor:pointer;" onclick="renderAsisHistorial()"><div class="tarea-title">📊 Historial</div><div class="tarea-meta">Tu registro de asistencias y permisos</div></div></div>';
 }
 
 function renderAsisEntrada(){
@@ -3797,9 +3854,68 @@ function marcarAsistencia(tipo,modalidad){
   }
 }
 
+function renderSolicitudesMenu(){
+  var body=document.getElementById('op-body');
+  body.innerHTML='<div class="seccion-titulo">📨 Solicitudes</div><div style="display:flex;flex-direction:column;gap:.75rem;"><div class="tarea-card" style="cursor:pointer;" onclick="renderAsisPermisos()"><div class="tarea-title">📝 Permisos</div><div class="tarea-meta">Solicita un permiso personal o médico</div></div><div class="tarea-card" style="cursor:pointer;" onclick="renderSolicitarPrestamo()"><div class="tarea-title">💰 Solicitar préstamo</div><div class="tarea-meta">Pide un adelanto o préstamo a administración</div></div><div class="tarea-card" style="cursor:pointer;" onclick="renderSolicitudOtro()"><div class="tarea-title">💬 Otro asunto</div><div class="tarea-meta">Cualquier tema directo con administración</div></div><div class="tarea-card" style="cursor:pointer;" onclick="renderMisSolicitudes()"><div class="tarea-title">📋 Mis solicitudes</div><div class="tarea-meta">Revisa el estatus de lo que has pedido</div></div></div>';
+}
+
+function renderSolicitarPrestamo(){
+  var body=document.getElementById('op-body');
+  body.innerHTML='<div class="seccion-titulo">💰 Solicitar préstamo</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Tu solicitud llega directo a administración para revisión — no es automático, te avisarán cuando la resuelvan.</p><div class="form-group"><label>¿Cuánto necesitas?</label><input type="number" id="sp-monto" min="0" step="any" placeholder="$0.00"></div><div class="form-group"><label>¿Para qué lo necesitas?</label><textarea id="sp-motivo" rows="4" placeholder="Cuéntanos brevemente el motivo..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="sp-enviar">Enviar solicitud</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderSolicitudesMenu()">← Volver a Solicitudes</button>';
+  document.getElementById('sp-enviar').addEventListener('click',function(){
+    var monto=parseFloat(document.getElementById('sp-monto').value)||0;
+    var motivo=(document.getElementById('sp-motivo').value||'').trim();
+    if(monto<=0){alert('Escribe cuánto necesitas.');return;}
+    if(!motivo){alert('Cuéntanos brevemente para qué es.');return;}
+    var btn=this; btn.disabled=true; btn.textContent='Enviando...';
+    from('solicitudes_operario').insert({operario_id:usuario.id,tipo:'prestamo',monto_solicitado:monto,mensaje:motivo,estado:'pendiente'}).then(function(){
+      return from('notificaciones').insert({titulo:'💰 Solicitud de préstamo',cuerpo:usuario.nombre+' solicita $'+monto.toFixed(2)+': '+motivo,icono:'💰',leida:false,para_rol:'encargado'});
+    }).then(function(){
+      showToast('✅ Solicitud enviada');
+      renderSolicitudesMenu();
+    }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Enviar solicitud';});
+  });
+}
+
+function renderSolicitudOtro(){
+  var body=document.getElementById('op-body');
+  body.innerHTML='<div class="seccion-titulo">💬 Otro asunto</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Para cualquier tema que no sea permiso ni préstamo — administración lo va a revisar directamente.</p><div class="form-group"><label>Cuéntanos qué necesitas</label><textarea id="so-mensaje" rows="5" placeholder="Escribe tu mensaje aquí..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="so-enviar">Enviar solicitud</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderSolicitudesMenu()">← Volver a Solicitudes</button>';
+  document.getElementById('so-enviar').addEventListener('click',function(){
+    var mensaje=(document.getElementById('so-mensaje').value||'').trim();
+    if(!mensaje){alert('Escribe tu mensaje.');return;}
+    var btn=this; btn.disabled=true; btn.textContent='Enviando...';
+    from('solicitudes_operario').insert({operario_id:usuario.id,tipo:'otro',mensaje:mensaje,estado:'pendiente'}).then(function(){
+      return from('notificaciones').insert({titulo:'💬 Nueva solicitud',cuerpo:usuario.nombre+': '+mensaje,icono:'💬',leida:false,para_rol:'encargado'});
+    }).then(function(){
+      showToast('✅ Solicitud enviada');
+      renderSolicitudesMenu();
+    }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Enviar solicitud';});
+  });
+}
+
+function renderMisSolicitudes(){
+  var body=document.getElementById('op-body');
+  body.innerHTML='<div class="seccion-titulo">📋 Mis solicitudes</div><div class="loading">Cargando...</div>';
+  Promise.all([
+    from('solicitudes_operario').select('*').eq('operario_id',usuario.id).order('creado_en',{ascending:false}).get(),
+    from('permisos').select('*').eq('usuario_id',usuario.id).order('creado_en',{ascending:false}).get()
+  ]).then(function(r){
+    var generales=(r[0]||[]).map(function(s){return {tipo:s.tipo,estado:s.estado,texto:(s.tipo==='prestamo'?'💰 Préstamo · $'+parseFloat(s.monto_solicitado||0).toFixed(2):'💬 '+s.mensaje.slice(0,60)),respuesta:s.respuesta,fecha:s.creado_en};}),
+        permisos=(r[1]||[]).map(function(p){return {tipo:'permiso',estado:p.estado,texto:(p.tipo==='medico'?'🩺 Permiso médico':'👤 Permiso personal')+' · '+p.fecha_inicio,respuesta:null,fecha:p.creado_en};});
+    var todas=generales.concat(permisos).sort(function(a,b){return new Date(b.fecha)-new Date(a.fecha);});
+    if(!todas.length){body.innerHTML='<div class="seccion-titulo">📋 Mis solicitudes</div><div class="empty">Aún no has enviado ninguna solicitud.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderSolicitudesMenu()">← Volver a Solicitudes</button>';return;}
+    var badges={pendiente:['⏳ Pendiente','var(--tierra)'],atendida:['✅ Atendida','var(--verde-mid)'],aprobado:['✅ Aprobada','var(--verde-mid)'],rechazado:['❌ Rechazada','var(--rojo)'],rechazada:['❌ Rechazada','var(--rojo)']};
+    var html='<div class="seccion-titulo">📋 Mis solicitudes</div>'+todas.map(function(s){
+      var b=badges[s.estado]||['⏳ '+s.estado,'var(--gris-3)'];
+      var f=new Date(s.fecha).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
+      return '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.87rem;">'+s.texto+'</strong><span style="font-size:.72rem;font-weight:700;color:'+b[1]+';">'+b[0]+'</span></div><div class="orden-meta">'+f+(s.respuesta?'<br/>📩 '+s.respuesta:'')+'</div></div>';
+    }).join('');
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderSolicitudesMenu()">← Volver a Solicitudes</button>';
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
 function renderAsisPermisos(){
   var body=document.getElementById('op-body');
-  body.innerHTML='<div class="seccion-titulo">📝 Permisos</div><div style="display:flex;gap:10px;margin-bottom:1rem;"><button type="button" class="labor-tile" style="flex:1;" onclick="renderFormPermiso(\'personal\')"><div class="labor-tile-ic">👤</div><div class="labor-tile-lbl">Personal</div></button><button type="button" class="labor-tile" style="flex:1;" onclick="renderFormPermiso(\'medico\')"><div class="labor-tile-ic">🩺</div><div class="labor-tile-lbl">Médico</div></button></div><div id="permisos-resumen"><div class="loading">Cargando...</div></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsistenciaMenu()">← Volver a Asistencia</button>';
+  body.innerHTML='<div class="seccion-titulo">📝 Permisos</div><div style="display:flex;gap:10px;margin-bottom:1rem;"><button type="button" class="labor-tile" style="flex:1;" onclick="renderFormPermiso(\'personal\')"><div class="labor-tile-ic">👤</div><div class="labor-tile-lbl">Personal</div></button><button type="button" class="labor-tile" style="flex:1;" onclick="renderFormPermiso(\'medico\')"><div class="labor-tile-ic">🩺</div><div class="labor-tile-lbl">Médico</div></button></div><div id="permisos-resumen"><div class="loading">Cargando...</div></div><button class="btn-back" style="margin-top:1rem;" onclick="renderSolicitudesMenu()">← Volver a Solicitudes</button>';
   from('permisos').select('tipo,estado').eq('usuario_id',usuario.id).eq('estado','pendiente').get().then(function(rows){
     var cont=document.getElementById('permisos-resumen');
     if(!cont) return;
