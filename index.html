@@ -1155,7 +1155,14 @@ function renderInventario(grupoInicial){
     if(puedeEditar) document.getElementById('inv-nuevo-btn').addEventListener('click',function(){renderInventarioNuevo({grupo:grupoInicial});});
     return;
   }
-  var categorias=['Todos'].concat(Array.from(new Set(items.map(function(it){return it.categoria||'Otros';}))).sort());
+  var categoriasConDatos=Array.from(new Set(items.map(function(it){return it.categoria||'Otros';})));
+  var categorias;
+  if(grupoInicial==='insumos'){
+    var extra=categoriasConDatos.filter(function(c){return INSUMO_SUBCATEGORIAS.indexOf(c)===-1;}).sort();
+    categorias=['Todos'].concat(INSUMO_SUBCATEGORIAS).concat(extra);
+  } else {
+    categorias=['Todos'].concat(categoriasConDatos.sort());
+  }
   html+='<div style="display:flex;gap:6px;margin-bottom:.75rem;flex-wrap:wrap;" id="inv-cat-chips">'+categorias.map(function(c,i){return '<button type="button" class="rep-view-btn'+(i===0?' active':'')+'" data-cat="'+c+'">'+c+'</button>';}).join('')+'</div>';
   html+='<div id="inv-filas"></div>';
   body.innerHTML=html;
