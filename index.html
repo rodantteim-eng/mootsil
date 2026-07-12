@@ -2850,8 +2850,13 @@ function renderControlAsistencias(fecha){
   var hoy=new Date().toISOString().slice(0,10);
   var operariosTodos=cats.operarios.concat(cats.cosechadores||[]);
   var idsUnicos={}; operariosTodos=operariosTodos.filter(function(o){if(idsUnicos[o.id])return false;idsUnicos[o.id]=true;return true;});
-  from('asistencia_registros').select('*').eq('fecha',fecha).eq('modalidad','labores').get().then(function(rows){
-    rows=rows||[];
+  Promise.all([
+    from('asistencia_registros').select('*').eq('fecha',fecha).eq('modalidad','labores').get(),
+    from('permisos').select('*').eq('estado','aprobado').lte('fecha_inicio',fecha).gte('fecha_fin',fecha).get()
+  ]).then(function(rr){
+    var rows=rr[0]||[];
+    var permisosDelDia=rr[1]||[];
+    var permisoPorOperario={}; permisosDelDia.forEach(function(p){permisoPorOperario[p.usuario_id]=p;});
     var porOperario={};
     rows.forEach(function(r){
       if(!porOperario[r.usuario_id]) porOperario[r.usuario_id]={entrada:null,salida:null,retardo:false};
@@ -2859,26 +2864,28 @@ function renderControlAsistencias(fecha){
       if(r.tipo==='salida'&&(!porOperario[r.usuario_id].salida||r.registrado_en>porOperario[r.usuario_id].salida)) porOperario[r.usuario_id].salida=r.registrado_en;
     });
     var esHoy=fecha===hoy, esFuturo=fecha>hoy;
-    var conPresente=0, conFalta=0, conRetardo=0;
+    var conPresente=0, conFalta=0, conRetardo=0, conPermiso=0;
     var filas=operariosTodos.map(function(op){
       var d=porOperario[op.id];
+      var permiso=permisoPorOperario[op.id];
       var horaE=d&&d.entrada?new Date(d.entrada).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}):null;
       var horaS=d&&d.salida?new Date(d.salida).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}):null;
       var estadoTxt, estadoColor;
       if(d&&d.entrada&&d.salida){estadoTxt='✅ Completo — '+horaE+' a '+horaS;estadoColor='var(--verde-mid)';conPresente++;}
       else if(d&&d.entrada){estadoTxt='🟡 En el rancho desde '+horaE;estadoColor='var(--tierra)';conPresente++;}
+      else if(permiso&&!esFuturo){estadoTxt='🩺 Permiso '+(permiso.tipo==='medico'?'médico':'personal')+' ('+(permiso.con_goce?'con goce':'sin goce')+')';estadoColor='#2980b9';conPermiso++;}
       else if(esFuturo){estadoTxt='—';estadoColor='var(--gris-3)';}
       else if(esHoy){estadoTxt='⏳ Aún no llega';estadoColor='var(--gris-3)';}
       else {estadoTxt='❌ Falta';estadoColor='var(--rojo)';conFalta++;}
       if(d&&d.retardo){estadoTxt+=' · 🕐 Retardo';conRetardo++;}
-      return {op:op,estadoTxt:estadoTxt,estadoColor:estadoColor,tieneFalta:(!d||!d.entrada)&&!esFuturo&&!esHoy};
+      return {op:op,estadoTxt:estadoTxt,estadoColor:estadoColor,tieneFalta:(!d||!d.entrada)&&!permiso&&!esFuturo&&!esHoy};
     });
     filas.sort(function(a,b){return (b.tieneFalta?1:0)-(a.tieneFalta?1:0);});
     var fechaLbl=new Date(fecha+'T00:00:00').toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
     var html='<div class="seccion-titulo">📋 Control de Asistencias</div>';
     html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:.75rem;flex-wrap:wrap;"><button type="button" id="ca-ant" style="border:none;background:var(--gris-1);border-radius:20px;padding:.4rem .9rem;font-size:.8rem;cursor:pointer;">← Día anterior</button><input type="date" id="ca-fecha" value="'+fecha+'" max="'+hoy+'" style="padding:.4rem .6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><button type="button" id="ca-sig" style="border:none;background:var(--gris-1);border-radius:20px;padding:.4rem .9rem;font-size:.8rem;cursor:pointer;" '+(esHoy?'disabled':'')+'>Día siguiente →</button></div>';
     html+='<p class="hint" style="margin-bottom:.75rem;text-transform:capitalize;">'+fechaLbl+'</p>';
-    if(!esFuturo) html+='<div class="stats-row"><div class="stat-card"><div class="stat-num stat-vd">'+conPresente+'</div><div class="stat-lbl">Presentes</div></div><div class="stat-card"><div class="stat-num" style="color:var(--rojo);">'+conFalta+'</div><div class="stat-lbl">Faltas</div></div><div class="stat-card"><div class="stat-num stat-am">'+conRetardo+'</div><div class="stat-lbl">Retardos</div></div></div>';
+    if(!esFuturo) html+='<div class="stats-row" style="grid-template-columns:repeat(4,1fr);"><div class="stat-card"><div class="stat-num stat-vd">'+conPresente+'</div><div class="stat-lbl">Presentes</div></div><div class="stat-card"><div class="stat-num" style="color:var(--rojo);">'+conFalta+'</div><div class="stat-lbl">Faltas</div></div><div class="stat-card"><div class="stat-num stat-am">'+conRetardo+'</div><div class="stat-lbl">Retardos</div></div><div class="stat-card"><div class="stat-num" style="color:#2980b9;">'+conPermiso+'</div><div class="stat-lbl">Permisos</div></div></div>';
     html+=filas.map(function(f){
       return '<div class="orden-card" style="border-left-color:'+f.estadoColor+';"><strong style="font-size:.9rem;">'+f.op.nombre+'</strong><div class="orden-meta" style="color:'+f.estadoColor+';font-weight:600;">'+f.estadoTxt+'</div></div>';
     }).join('');
@@ -2923,12 +2930,12 @@ function renderEmpleadosMenu(){
 function renderNominasMenu(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">💰 Nóminas<button type="button" onclick="renderAdministracionMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Administración</button></div><div class="labor-grid" style="grid-template-columns:repeat(2,1fr);">'+
-    '<div class="labor-tile" data-nom="sueldos"><div class="labor-tile-ic">💵</div><div class="labor-tile-lbl">Sueldos</div></div>'+
+    '<div class="labor-tile" data-nom="sueldos"><div class="labor-tile-ic">💰</div><div class="labor-tile-lbl">Generar Nómina</div></div>'+
     '<div class="labor-tile" data-nom="bonos"><div class="labor-tile-ic">🎁</div><div class="labor-tile-lbl">Bonos</div></div>'+
     '<div class="labor-tile" data-nom="prestamos"><div class="labor-tile-ic">📝</div><div class="labor-tile-lbl">Préstamos</div></div>'+
     '<div class="labor-tile" data-nom="historial"><div class="labor-tile-ic">📊</div><div class="labor-tile-lbl">Historial nómina</div></div>'+
   '</div>';
-  body.querySelector('[data-nom="sueldos"]').addEventListener('click',renderPagarSemanas);
+  body.querySelector('[data-nom="sueldos"]').addEventListener('click',function(){renderGenerarNomina(new Date());});
   body.querySelector('[data-nom="bonos"]').addEventListener('click',renderBonos);
   body.querySelector('[data-nom="prestamos"]').addEventListener('click',renderPrestamos);
   body.querySelector('[data-nom="historial"]').addEventListener('click',renderResumenNomina);
@@ -2994,23 +3001,28 @@ function renderPermisosRevision(){
     var estLbl={pendiente:'⏳ Pendiente',aprobado:'✅ Aprobado',rechazado:'❌ Rechazado'};
     var estColor={pendiente:'var(--tierra)',aprobado:'var(--verde-mid)',rechazado:'var(--rojo)'};
     function tarjeta(p){
-      var ac=p.estado==='pendiente'?'<div style="display:flex;gap:8px;margin-top:.6rem;"><button class="btn-sm btn-completar" data-aprob="'+p.id+'">✅ Aprobar</button><button class="btn-sm btn-cancelar" data-rech="'+p.id+'">❌ Rechazar</button></div>':'';
-      return '<div class="orden-card" style="border-left-color:'+estColor[p.estado]+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(p.tipo==='medico'?'🩺 Médico':'👤 Personal')+' · '+(p.operario?p.operario.nombre:'')+'</strong><span style="font-size:.72rem;font-weight:700;color:'+estColor[p.estado]+';">'+estLbl[p.estado]+'</span></div><div class="orden-meta">'+(p.folio?'🔖 '+p.folio+'<br>':'')+'📅 '+p.fecha_inicio+' a '+p.fecha_fin+(p.motivo?'<br>📝 '+p.motivo:'')+(p.evidencia_url?'<br><a href="'+p.evidencia_url+'" target="_blank" style="color:var(--verde-mid);font-weight:700;">📎 Ver comprobante</a>':'')+'</div>'+ac+'</div>';
+      var ac=p.estado==='pendiente'?'<div style="display:flex;gap:8px;margin-top:.6rem;flex-wrap:wrap;"><button class="btn-sm btn-completar" data-aprob-goce="'+p.id+'">✅ Aprobar con goce</button><button class="btn-sm" style="background:var(--gris-1);color:var(--negro);" data-aprob-sin="'+p.id+'">✅ Aprobar sin goce</button><button class="btn-sm btn-cancelar" data-rech="'+p.id+'">❌ Rechazar</button></div>':'';
+      var goceTxt=p.estado==='aprobado'?(p.con_goce?'<br>💰 Con goce de sueldo (se paga el día)':'<br>🚫 Sin goce de sueldo (no se paga, no cuenta como falta)'):'';
+      return '<div class="orden-card" style="border-left-color:'+estColor[p.estado]+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(p.tipo==='medico'?'🩺 Médico':'👤 Personal')+' · '+(p.operario?p.operario.nombre:'')+'</strong><span style="font-size:.72rem;font-weight:700;color:'+estColor[p.estado]+';">'+estLbl[p.estado]+'</span></div><div class="orden-meta">'+(p.folio?'🔖 '+p.folio+'<br>':'')+'📅 '+p.fecha_inicio+' a '+p.fecha_fin+(p.motivo?'<br>📝 '+p.motivo:'')+(p.evidencia_url?'<br><a href="'+p.evidencia_url+'" target="_blank" style="color:var(--verde-mid);font-weight:700;">📎 Ver comprobante</a>':'')+goceTxt+'</div>'+ac+'</div>';
     }
     var html=headerHtml+'<div class="seccion-titulo" style="margin-top:0;">'+(pend.length?'<span style="font-size:.75rem;color:var(--rojo);font-weight:700;">('+pend.length+' pendientes)</span>':'Solicitudes')+'</div>';
     if(pend.length) html+=pend.map(tarjeta).join('');
     if(resueltos.length) html+='<div class="seccion-titulo" style="margin-top:1rem;">Resueltos</div>'+resueltos.map(tarjeta).join('');
     body.innerHTML=html;
-    body.querySelectorAll('[data-aprob]').forEach(function(b){b.addEventListener('click',function(){resolverPermiso(this.dataset.aprob,'aprobado');});});
-    body.querySelectorAll('[data-rech]').forEach(function(b){b.addEventListener('click',function(){resolverPermiso(this.dataset.rech,'rechazado');});});
+    body.querySelectorAll('[data-aprob-goce]').forEach(function(b){b.addEventListener('click',function(){resolverPermiso(this.dataset.aprobGoce,'aprobado',true);});});
+    body.querySelectorAll('[data-aprob-sin]').forEach(function(b){b.addEventListener('click',function(){resolverPermiso(this.dataset.aprobSin,'aprobado',false);});});
+    body.querySelectorAll('[data-rech]').forEach(function(b){b.addEventListener('click',function(){resolverPermiso(this.dataset.rech,'rechazado',null);});});
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
-function resolverPermiso(id,estado){
+function resolverPermiso(id,estado,conGoce){
   from('permisos').select('*').eq('id',id).get().then(function(rows){
     var p=rows&&rows[0];
-    return from('permisos').eq('id',id).update({estado:estado,revisado_por:usuario.id,revisado_en:new Date().toISOString()}).then(function(){
-      if(p) return from('notificaciones').insert({titulo:estado==='aprobado'?'✅ Permiso aprobado':'❌ Permiso rechazado',cuerpo:'Tu solicitud de permiso '+p.tipo+' ('+p.fecha_inicio+' a '+p.fecha_fin+') fue '+(estado==='aprobado'?'aprobada':'rechazada')+'.',icono:estado==='aprobado'?'✅':'❌',leida:false,para_rol:'operario',para_usuario:p.usuario_id});
+    var payload={estado:estado,revisado_por:usuario.id,revisado_en:new Date().toISOString()};
+    if(estado==='aprobado') payload.con_goce=!!conGoce;
+    return from('permisos').eq('id',id).update(payload).then(function(){
+      var goceMsg=estado==='aprobado'?(conGoce?' (con goce de sueldo)':' (sin goce de sueldo)'):'';
+      if(p) return from('notificaciones').insert({titulo:estado==='aprobado'?'✅ Permiso aprobado':'❌ Permiso rechazado',cuerpo:'Tu solicitud de permiso '+p.tipo+' ('+p.fecha_inicio+' a '+p.fecha_fin+') fue '+(estado==='aprobado'?'aprobada'+goceMsg:'rechazada')+'.',icono:estado==='aprobado'?'✅':'❌',leida:false,para_rol:'operario',para_usuario:p.usuario_id});
     });
   }).then(function(){
     showToast(estado==='aprobado'?'✅ Permiso aprobado':'❌ Permiso rechazado');
@@ -3268,15 +3280,19 @@ function renderResumenNomina(){
   var nombreMes=hoyD.toLocaleDateString('es-MX',{month:'long',year:'numeric'});
   Promise.all([
     from('asistencia_registros').select('*').gte('fecha',primerDiaMes).get(),
+    from('permisos').select('*').eq('estado','aprobado').get()
   ]).then(function(r){
     var registros=r[0]||[];
+    var permisosAprobados=r[1]||[];
     var porOperario={};
-    cats.operarios.forEach(function(o){porOperario[o.id]=[];});
+    var permisosPorOperario={};
+    cats.operarios.forEach(function(o){porOperario[o.id]=[];permisosPorOperario[o.id]=[];});
     registros.forEach(function(reg){if(porOperario[reg.usuario_id]) porOperario[reg.usuario_id].push(reg);});
-    var html='<div class="seccion-titulo" style="text-transform:capitalize;">'+nombreMes+'</div>';
+    permisosAprobados.forEach(function(p){if(permisosPorOperario[p.usuario_id]) permisosPorOperario[p.usuario_id].push(p);});
+    var html='<div class="seccion-titulo" style="text-transform:capitalize;">'+nombreMes+'</div><p class="hint" style="margin-bottom:.75rem;">Para ver los montos $ pagados o pendientes por semana, entra a "Generar Nómina" y navega entre semanas.</p>';
     html+=cats.operarios.map(function(o){
       var regs=porOperario[o.id]||[];
-      var resumen=calcularResumenAsistencia(regs,primerDiaMes);
+      var resumen=calcularResumenAsistencia(regs,primerDiaMes,permisosPorOperario[o.id]);
       var horasExtra=0;
       var porDia={};
       regs.forEach(function(reg){
@@ -3286,7 +3302,8 @@ function renderResumenNomina(){
         if(reg.tipo==='salida'&&(!porDia[reg.fecha].salida||reg.registrado_en>porDia[reg.fecha].salida)) porDia[reg.fecha].salida=reg.registrado_en;
       });
       Object.keys(porDia).forEach(function(f){var d=porDia[f];if(d.entrada&&d.salida) horasExtra+=(new Date(d.salida)-new Date(d.entrada))/3600000;});
-      return '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+o.nombre+'</strong></div><div class="orden-meta" style="display:flex;gap:1rem;margin-top:.3rem;"><span>✅ '+resumen.trabajados+' trabajados</span><span style="color:var(--rojo);">❌ '+resumen.faltas+' faltas</span><span style="color:var(--tierra);">⏰ '+resumen.retardos+' retardos</span></div>'+(horasExtra>0?'<div class="orden-meta" style="margin-top:.2rem;">💰 '+horasExtra.toFixed(1)+' h extra</div>':'')+'</div>';
+      var permisoTxt=(resumen.diasPermisoConGoce||resumen.diasPermisoSinGoce)?('<span>🩺 '+(resumen.diasPermisoConGoce+resumen.diasPermisoSinGoce)+' permiso(s)</span>'):'';
+      return '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+o.nombre+'</strong></div><div class="orden-meta" style="display:flex;gap:1rem;margin-top:.3rem;flex-wrap:wrap;"><span>✅ '+resumen.trabajados+' trabajados</span><span style="color:var(--rojo);">❌ '+resumen.faltas+' faltas</span><span style="color:var(--tierra);">⏰ '+resumen.retardos+' retardos</span>'+permisoTxt+'</div>'+(horasExtra>0?'<div class="orden-meta" style="margin-top:.2rem;">💰 '+horasExtra.toFixed(1)+' h extra</div>':'')+'</div>';
     }).join('');
     body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderNominasMenu()">← Volver a Nóminas</button>';
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
@@ -3318,90 +3335,175 @@ function seleccionUnica(btn){
   btn.classList.add('sel');
 }
 
-function renderPagarSemanas(){
+function renderGenerarNomina(fechaRef){
+  fechaRef=fechaRef||new Date();
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo">💵 Sueldos</div><div class="loading">Calculando...</div>';
-  var lunes=inicioDeSemana(new Date());
+  body.innerHTML='<div class="seccion-titulo">💰 Generar Nómina</div><div class="loading">Calculando...</div>';
+  var lunes=inicioDeSemana(fechaRef);
   var domingo=new Date(lunes); domingo.setDate(lunes.getDate()+6);
   var semanaInicio=lunes.toISOString().slice(0,10), semanaFin=domingo.toISOString().slice(0,10);
   var numSemana=numeroSemanaISO(lunes);
+  var hoy=new Date().toISOString().slice(0,10);
+  var esSemanaActual = hoy>=semanaInicio && hoy<=semanaFin;
   Promise.all([
     from('usuarios').select('id,nombre,sueldo_base').eq('rol','operario').get(),
     from('asistencia_registros').select('*').gte('fecha',semanaInicio).lte('fecha',semanaFin).get(),
     from('pagos_semana_estado').select('*').eq('semana_inicio',semanaInicio).get(),
     from('pagos_extra_estado').select('*').eq('semana_inicio',semanaInicio).get(),
-    from('config_app').select('*').get()
+    from('config_app').select('*').get(),
+    from('permisos').select('*').eq('estado','aprobado').get(),
+    from('bonos').select('*').eq('estado','activo').get(),
+    from('bono_beneficiarios').select('*').get(),
+    from('prestamos').select('*').eq('estado','activo').get(),
+    from('prestamo_pagos').select('*').eq('semana_inicio',semanaInicio).get()
   ]).then(function(r){
     var operarios=r[0]||[], registros=r[1]||[], estados=r[2]||[], estadosExtra=r[3]||[];
     var cfg={}; (r[4]||[]).forEach(function(c){cfg[c.clave]=c.valor;});
     var tarifa=parseFloat(cfg.tarifa_hora_extra)||70;
+    var permisosAprobados=r[5]||[];
+    var bonosActivos=r[6]||[];
+    var bonoBeneficiarios=r[7]||[];
+    var prestamosActivos=r[8]||[];
+    var pagosSemanaPrestamos=r[9]||[];
     var estadoPorOp={}; estados.forEach(function(e){estadoPorOp[e.operario_id]=e;});
     var estadoExtraPorOp={}; estadosExtra.forEach(function(e){estadoExtraPorOp[e.operario_id]=e;});
-    var html='<div class="seccion-titulo">💵 Sueldos · Semana '+numSemana+'</div><p class="hint" style="margin-bottom:1rem;">'+semanaInicio+' a '+semanaFin+' · Tarifa hora extra: $'+tarifa+'</p>';
-    if(!operarios.length){html+='<div class="empty">No hay operarios registrados.</div>';}
-    html+=operarios.map(function(o){
-      var regsOp=registros.filter(function(r){return r.usuario_id===o.id;});
-      var resumen=calcularResumenAsistencia(regsOp,semanaInicio);
-      var sueldoBase=o.sueldo_base||0;
-      var total=resumen.trabajados*sueldoBase;
-      var est=estadoPorOp[o.id];
-      var pagado=est&&est.estado==='pagado';
+    var bonosDeLaSemana=bonosActivos.filter(function(b){return !(b.periodo_fin<semanaInicio||b.periodo_inicio>semanaFin);});
+    var bonosSinUmbral=bonosDeLaSemana.filter(function(b){return b.tipo==='equipo'||!b.umbral_minimo;});
+    var bonosConUmbral=bonosDeLaSemana.filter(function(b){return b.tipo==='individual'&&b.umbral_minimo;});
+    var bonosYaOtorgadosPorOp={};
+    bonoBeneficiarios.forEach(function(bb){
+      if(!bonosYaOtorgadosPorOp[bb.operario_id]) bonosYaOtorgadosPorOp[bb.operario_id]={};
+      bonosYaOtorgadosPorOp[bb.operario_id][bb.bono_id]=true;
+    });
 
-      var porDiaExtra={};
-      regsOp.filter(function(x){return x.modalidad==='extras';}).forEach(function(reg){
-        if(!porDiaExtra[reg.fecha]) porDiaExtra[reg.fecha]={entrada:null,salida:null};
-        if(reg.tipo==='entrada'&&(!porDiaExtra[reg.fecha].entrada||reg.registrado_en<porDiaExtra[reg.fecha].entrada)) porDiaExtra[reg.fecha].entrada=reg.registrado_en;
-        if(reg.tipo==='salida'&&(!porDiaExtra[reg.fecha].salida||reg.registrado_en>porDiaExtra[reg.fecha].salida)) porDiaExtra[reg.fecha].salida=reg.registrado_en;
-      });
-      var horasExtra=0;
-      Object.keys(porDiaExtra).forEach(function(f){var d=porDiaExtra[f];if(d.entrada&&d.salida) horasExtra+=(new Date(d.salida)-new Date(d.entrada))/3600000;});
-      var totalExtra=horasExtra*tarifa;
-      var estExtra=estadoExtraPorOp[o.id];
-      var pagadoExtra=estExtra&&estExtra.estado==='pagado';
+    Promise.all(operarios.map(function(o){
+      return Promise.all(bonosConUmbral.map(function(b){
+        return calcularScoreOperario(o.id,b.periodo_inicio,b.periodo_fin).then(function(score){return {bono:b,score:score.final};});
+      }));
+    })).then(function(scoresPorOp){
+      var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">💰 Generar Nómina<button type="button" onclick="renderNominasMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Nóminas</button></div>';
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:8px;"><button type="button" id="gn-ant" style="border:none;background:var(--gris-1);border-radius:20px;padding:.4rem .9rem;font-size:.8rem;cursor:pointer;">← Semana anterior</button><span class="hint" style="margin:0;">Semana '+numSemana+' · '+semanaInicio+' a '+semanaFin+' · Extra: $'+tarifa+'/h</span>'+(esSemanaActual?'':'<button type="button" id="gn-sig" style="border:none;background:var(--gris-1);border-radius:20px;padding:.4rem .9rem;font-size:.8rem;cursor:pointer;">Semana siguiente →</button>')+'</div>';
 
-      return '<div class="orden-card" style="border-left-color:'+(pagado?'var(--verde-mid)':'var(--tierra)')+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+o.nombre+'</strong><span style="font-weight:800;color:'+(pagado?'var(--verde-mid)':'var(--tierra)')+';">$'+total.toFixed(2)+'</span></div><div class="orden-meta">'+resumen.trabajados+' días · '+resumen.faltas+' faltas · '+resumen.retardos+' retardos'+(sueldoBase?'':' · ⚠️ sin sueldo base configurado')+'</div>'+(pagado?'<button class="btn-sm btn-cancelar" data-despagar="'+o.id+'" style="margin-top:.5rem;">Marcar como pendiente</button>':'<button class="btn-sm btn-completar" data-pagar="'+o.id+'" data-total="'+total+'" style="margin-top:.5rem;">✅ Marcar como pagado</button>')+
-      (horasExtra>0?'<div style="border-top:1px dashed var(--gris-2);margin-top:.6rem;padding-top:.6rem;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:.8rem;font-weight:700;color:var(--tierra);">⏰ Horas extra: '+horasExtra.toFixed(1)+'h</span><span style="font-weight:800;color:'+(pagadoExtra?'var(--verde-mid)':'var(--tierra)')+';">$'+totalExtra.toFixed(2)+'</span></div>'+(pagadoExtra?'<button class="btn-sm btn-cancelar" data-despagarextra="'+o.id+'" style="margin-top:.4rem;">Marcar extra como pendiente</button>':'<button class="btn-sm btn-completar" data-pagarextra="'+o.id+'" data-totalextra="'+totalExtra+'" data-horasextra="'+horasExtra+'" style="margin-top:.4rem;">✅ Marcar extra como pagado</button>')+'</div>':'')+
-      '</div>';
-    }).join('');
-    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderNominasMenu()">← Volver a Nóminas</button>';
-    body.querySelectorAll('[data-pagar]').forEach(function(btn){
-      btn.addEventListener('click',function(){
-        var opId=this.dataset.pagar, total=parseFloat(this.dataset.total);
-        var payload={operario_id:opId,semana_inicio:semanaInicio,semana_fin:semanaFin,estado:'pagado',monto_pagado:total,pagado_por:usuario.id,pagado_en:new Date().toISOString()};
-        var existente=estadoPorOp[opId];
-        var accion = existente ? from('pagos_semana_estado').eq('id',existente.id).update(payload) : from('pagos_semana_estado').insert(payload);
-        accion.then(function(){
-          return from('notificaciones').insert({titulo:'💳 Pago registrado',cuerpo:'Tu pago de la semana '+numSemana+' ($'+total.toFixed(2)+') fue marcado como pagado.',icono:'💳',leida:false,para_rol:'operario',para_usuario:opId});
-        }).then(function(){showToast('✅ Marcado como pagado');renderPagarSemanas();}).catch(function(e){alert('Error: '+e.message);});
+      if(!operarios.length) html+='<div class="empty">No hay operarios registrados.</div>';
+
+      var accionesPago={};
+
+      html+=operarios.map(function(o,idx){
+        var regsOp=registros.filter(function(x){return x.usuario_id===o.id;});
+        var permisosOp=permisosAprobados.filter(function(p){return p.usuario_id===o.id;});
+        var resumen=calcularResumenAsistencia(regsOp,semanaInicio,permisosOp);
+        var sueldoBase=o.sueldo_base||0;
+        var totalSueldo=resumen.diasPagados*sueldoBase;
+        var est=estadoPorOp[o.id];
+        var pagado=est&&est.estado==='pagado';
+
+        var porDiaExtra={};
+        regsOp.filter(function(x){return x.modalidad==='extras';}).forEach(function(reg){
+          if(!porDiaExtra[reg.fecha]) porDiaExtra[reg.fecha]={entrada:null,salida:null};
+          if(reg.tipo==='entrada'&&(!porDiaExtra[reg.fecha].entrada||reg.registrado_en<porDiaExtra[reg.fecha].entrada)) porDiaExtra[reg.fecha].entrada=reg.registrado_en;
+          if(reg.tipo==='salida'&&(!porDiaExtra[reg.fecha].salida||reg.registrado_en>porDiaExtra[reg.fecha].salida)) porDiaExtra[reg.fecha].salida=reg.registrado_en;
+        });
+        var horasExtra=0;
+        Object.keys(porDiaExtra).forEach(function(f){var d=porDiaExtra[f];if(d.entrada&&d.salida) horasExtra+=(new Date(d.salida)-new Date(d.entrada))/3600000;});
+        var totalExtra=horasExtra*tarifa;
+        var estExtra=estadoExtraPorOp[o.id];
+        var pagadoExtra=estExtra&&estExtra.estado==='pagado';
+
+        var yaOtorgados=bonosYaOtorgadosPorOp[o.id]||{};
+        var scoresOp=scoresPorOp[idx];
+        var bonosUmbralCalifican=scoresOp.filter(function(x){return x.score>=parseFloat(x.bono.umbral_minimo);}).map(function(x){return x.bono;});
+        var bonosQueCalifican=bonosSinUmbral.concat(bonosUmbralCalifican).filter(function(b){return !yaOtorgados[b.id];});
+        var totalBonos=bonosQueCalifican.reduce(function(s,b){return s+(parseFloat(b.monto)||0);},0);
+
+        var prestamosOp=prestamosActivos.filter(function(p){return p.operario_id===o.id;});
+        var prestamoIdsOp={}; prestamosOp.forEach(function(p){prestamoIdsOp[p.id]=p;});
+        var deduccionesOp=pagosSemanaPrestamos.filter(function(pp){return prestamoIdsOp[pp.prestamo_id]&&pp.estado==='pendiente';});
+        var totalDeducciones=deduccionesOp.reduce(function(s,d){return s+parseFloat(d.monto);},0);
+
+        var granTotal=totalSueldo+totalExtra+totalBonos-totalDeducciones;
+        var nominaCompleta = pagado && (!horasExtra||pagadoExtra);
+
+        var idAccion='gn-acc-'+o.id;
+        accionesPago[idAccion]={operarioId:o.id,nombre:o.nombre,totalSueldo:totalSueldo,horasExtra:horasExtra,totalExtra:totalExtra,deducciones:deduccionesOp,bonosQueCalifican:bonosQueCalifican,scoresOp:scoresOp,nominaCompleta:nominaCompleta,granTotal:granTotal};
+
+        var filas='<div class="resumen-row"><span class="resumen-key">💵 Sueldo ('+resumen.trabajados+' días'+(resumen.diasPermisoConGoce?' + '+resumen.diasPermisoConGoce+' permiso c/goce':'')+')</span><span class="resumen-val">+$'+totalSueldo.toFixed(2)+'</span></div>';
+        if(horasExtra>0) filas+='<div class="resumen-row"><span class="resumen-key">⏰ Horas extra ('+horasExtra.toFixed(1)+'h)</span><span class="resumen-val">+$'+totalExtra.toFixed(2)+'</span></div>';
+        bonosQueCalifican.forEach(function(b){
+          filas+='<div class="resumen-row"><span class="resumen-key">🎁 '+b.descripcion+'</span><span class="resumen-val">+$'+parseFloat(b.monto||0).toFixed(2)+'</span></div>';
+        });
+        deduccionesOp.forEach(function(d){
+          var pr=prestamoIdsOp[d.prestamo_id];
+          filas+='<div class="resumen-row"><span class="resumen-key">📝 '+(pr?pr.concepto:'Préstamo')+' (pago '+d.numero_pago+')</span><span class="resumen-val" style="color:var(--rojo);">-$'+parseFloat(d.monto).toFixed(2)+'</span></div>';
+        });
+
+        var metaExtra=[];
+        if(resumen.faltas) metaExtra.push('<span style="color:var(--rojo);">❌ '+resumen.faltas+' falta(s)</span>');
+        if(resumen.retardos) metaExtra.push('<span style="color:var(--tierra);">🕐 '+resumen.retardos+' retardo(s)</span>');
+        if(resumen.diasPermisoConGoce) metaExtra.push('🩺 '+resumen.diasPermisoConGoce+' permiso c/goce');
+        if(resumen.diasPermisoSinGoce) metaExtra.push('🩺 '+resumen.diasPermisoSinGoce+' permiso s/goce');
+        if(!sueldoBase) metaExtra.push('<span style="color:var(--rojo);">⚠️ sin sueldo base</span>');
+
+        return '<div class="orden-card" style="border-left-color:'+(nominaCompleta?'var(--verde-mid)':'var(--tierra)')+';">'+
+          '<div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.95rem">'+o.nombre+'</strong><span style="font-size:.72rem;font-weight:700;color:'+(nominaCompleta?'var(--verde-mid)':'var(--tierra)')+';">'+(nominaCompleta?'✅ Pagada':'⏳ Pendiente')+'</span></div>'+
+          (metaExtra.length?'<div class="orden-meta" style="margin-top:.15rem;">'+metaExtra.join(' · ')+'</div>':'')+
+          '<div style="margin-top:.6rem;padding-top:.5rem;border-top:1px dashed var(--gris-2);">'+filas+'</div>'+
+          '<div class="resumen-row" style="border-top:2px solid var(--gris-1);margin-top:.3rem;padding-top:.5rem;"><strong style="font-size:.85rem;">Total nómina</strong><strong style="font-size:1rem;color:'+(nominaCompleta?'var(--verde-mid)':'var(--tierra)')+';">$'+granTotal.toFixed(2)+'</strong></div>'+
+          (nominaCompleta?'<button class="btn-sm btn-cancelar" data-despagar="'+idAccion+'" style="margin-top:.6rem;">Marcar como pendiente</button>':'<button class="btn-sm btn-completar" data-pagar="'+idAccion+'" style="margin-top:.6rem;">✅ Marcar nómina completa como pagada</button>')+
+          '</div>';
+      }).join('');
+
+      body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderNominasMenu()">← Volver a Nóminas</button>';
+
+      var btnAnt=document.getElementById('gn-ant');
+      if(btnAnt) btnAnt.addEventListener('click',function(){var d=new Date(lunes);d.setDate(d.getDate()-7);renderGenerarNomina(d);});
+      var btnSig=document.getElementById('gn-sig');
+      if(btnSig) btnSig.addEventListener('click',function(){var d=new Date(lunes);d.setDate(d.getDate()+7);renderGenerarNomina(d);});
+
+      body.querySelectorAll('[data-pagar]').forEach(function(btn){
+        btn.addEventListener('click',function(){
+          var acc=accionesPago[this.dataset.pagar];
+          btn.disabled=true; btn.textContent='Guardando...';
+          var opId=acc.operarioId;
+          var existenteSueldo=estadoPorOp[opId];
+          var payloadSueldo={operario_id:opId,semana_inicio:semanaInicio,semana_fin:semanaFin,estado:'pagado',monto_pagado:acc.totalSueldo,pagado_por:usuario.id,pagado_en:new Date().toISOString()};
+          var pasos=[existenteSueldo?from('pagos_semana_estado').eq('id',existenteSueldo.id).update(payloadSueldo):from('pagos_semana_estado').insert(payloadSueldo)];
+          if(acc.horasExtra>0){
+            var existenteExtra=estadoExtraPorOp[opId];
+            var payloadExtra={operario_id:opId,semana_inicio:semanaInicio,semana_fin:semanaFin,estado:'pagado',horas:acc.horasExtra,monto_pagado:acc.totalExtra,pagado_por:usuario.id,pagado_en:new Date().toISOString()};
+            pasos.push(existenteExtra?from('pagos_extra_estado').eq('id',existenteExtra.id).update(payloadExtra):from('pagos_extra_estado').insert(payloadExtra));
+          }
+          acc.deducciones.forEach(function(d){
+            pasos.push(from('prestamo_pagos').eq('id',d.id).update({estado:'descontado',descontado_en:new Date().toISOString()}));
+          });
+          acc.bonosQueCalifican.forEach(function(b){
+            var scoreDe=acc.scoresOp.find(function(x){return x.bono.id===b.id;});
+            pasos.push(from('bono_beneficiarios').insert({bono_id:b.id,operario_id:opId,puntaje_obtenido:scoreDe?scoreDe.score:null}));
+          });
+          Promise.all(pasos).then(function(){
+            var prestamoIds=Object.keys(acc.deducciones.reduce(function(s,d){s[d.prestamo_id]=true;return s;},{}));
+            return Promise.all(prestamoIds.map(function(pid){
+              return from('prestamo_pagos').select('*').eq('prestamo_id',pid).get().then(function(todos){
+                if(todos&&todos.length&&todos.every(function(x){return x.estado==='descontado';})) return from('prestamos').eq('id',pid).update({estado:'liquidado'});
+              });
+            }));
+          }).then(function(){
+            return from('notificaciones').insert({titulo:'💳 Nómina pagada',cuerpo:'Tu nómina de la semana '+numSemana+' ($'+acc.granTotal.toFixed(2)+') fue marcada como pagada.',icono:'💳',leida:false,para_rol:'operario',para_usuario:opId});
+          }).then(function(){showToast('✅ Nómina de '+acc.nombre+' marcada como pagada');renderGenerarNomina(lunes);}).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='✅ Marcar nómina completa como pagada';});
+        });
       });
-    });
-    body.querySelectorAll('[data-despagar]').forEach(function(btn){
-      btn.addEventListener('click',function(){
-        var opId=this.dataset.despagar;
-        var existente=estadoPorOp[opId];
-        if(!existente) return;
-        from('pagos_semana_estado').eq('id',existente.id).update({estado:'pendiente'}).then(function(){showToast('Marcado como pendiente');renderPagarSemanas();}).catch(function(e){alert('Error: '+e.message);});
+      body.querySelectorAll('[data-despagar]').forEach(function(btn){
+        btn.addEventListener('click',function(){
+          var acc=accionesPago[this.dataset.despagar];
+          var opId=acc.operarioId;
+          var pasos=[];
+          var existenteSueldo=estadoPorOp[opId];
+          if(existenteSueldo) pasos.push(from('pagos_semana_estado').eq('id',existenteSueldo.id).update({estado:'pendiente'}));
+          var existenteExtra=estadoExtraPorOp[opId];
+          if(existenteExtra) pasos.push(from('pagos_extra_estado').eq('id',existenteExtra.id).update({estado:'pendiente'}));
+          Promise.all(pasos).then(function(){showToast('Marcado como pendiente');renderGenerarNomina(lunes);}).catch(function(e){alert('Error: '+e.message);});
+        });
       });
-    });
-    body.querySelectorAll('[data-pagarextra]').forEach(function(btn){
-      btn.addEventListener('click',function(){
-        var opId=this.dataset.pagarextra, total=parseFloat(this.dataset.totalextra), horas=parseFloat(this.dataset.horasextra);
-        var payload={operario_id:opId,semana_inicio:semanaInicio,semana_fin:semanaFin,estado:'pagado',horas:horas,monto_pagado:total,pagado_por:usuario.id,pagado_en:new Date().toISOString()};
-        var existente=estadoExtraPorOp[opId];
-        var accion = existente ? from('pagos_extra_estado').eq('id',existente.id).update(payload) : from('pagos_extra_estado').insert(payload);
-        accion.then(function(){
-          return from('notificaciones').insert({titulo:'⏰ Pago de horas extra registrado',cuerpo:'Tu pago de horas extra de la semana '+numSemana+' ($'+total.toFixed(2)+') fue marcado como pagado.',icono:'⏰',leida:false,para_rol:'operario',para_usuario:opId});
-        }).then(function(){showToast('✅ Extra marcado como pagado');renderPagarSemanas();}).catch(function(e){alert('Error: '+e.message);});
-      });
-    });
-    body.querySelectorAll('[data-despagarextra]').forEach(function(btn){
-      btn.addEventListener('click',function(){
-        var opId=this.dataset.despagarextra;
-        var existente=estadoExtraPorOp[opId];
-        if(!existente) return;
-        from('pagos_extra_estado').eq('id',existente.id).update({estado:'pendiente'}).then(function(){showToast('Marcado como pendiente');renderPagarSemanas();}).catch(function(e){alert('Error: '+e.message);});
-      });
-    });
+    }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
@@ -3822,13 +3924,15 @@ function renderPagoSemana(fechaRef){
   Promise.all([
     from('usuarios').select('sueldo_base').eq('id',usuario.id).get(),
     from('asistencia_registros').select('*').eq('usuario_id',usuario.id).gte('fecha',semanaInicio).lte('fecha',semanaFin).get(),
-    from('pagos_semana_estado').select('*').eq('operario_id',usuario.id).eq('semana_inicio',semanaInicio).get()
+    from('pagos_semana_estado').select('*').eq('operario_id',usuario.id).eq('semana_inicio',semanaInicio).get(),
+    from('permisos').select('*').eq('usuario_id',usuario.id).eq('estado','aprobado').get()
   ]).then(function(r){
     var sueldoBase=(r[0]&&r[0][0]&&r[0][0].sueldo_base)||0;
     var registros=r[1]||[];
     var estadoRow=r[2]&&r[2][0];
-    var resumen=calcularResumenAsistencia(registros,semanaInicio);
-    var total=resumen.trabajados*sueldoBase;
+    var permisosAprobados=r[3]||[];
+    var resumen=calcularResumenAsistencia(registros,semanaInicio,permisosAprobados);
+    var total=resumen.diasPagados*sueldoBase;
     var pagado=estadoRow&&estadoRow.estado==='pagado';
     var mesInicio=lunes.toLocaleDateString('es-MX',{month:'long'});
     var mesFin=domingo.toLocaleDateString('es-MX',{month:'long'});
@@ -3849,6 +3953,8 @@ function renderPagoSemana(fechaRef){
     html+='<div class="form-card" style="margin-top:.75rem;">';
     html+='<div class="resumen-row"><span class="resumen-key">Sueldo base diario</span><span class="resumen-val">$'+sueldoBase.toFixed(2)+'</span></div>';
     html+='<div class="resumen-row"><span class="resumen-key">Días laborados</span><span class="resumen-val" style="color:var(--verde-mid);">'+resumen.trabajados+'</span></div>';
+    if(resumen.diasPermisoConGoce) html+='<div class="resumen-row"><span class="resumen-key">🩺 Permiso con goce</span><span class="resumen-val" style="color:var(--verde-mid);">'+resumen.diasPermisoConGoce+'</span></div>';
+    if(resumen.diasPermisoSinGoce) html+='<div class="resumen-row"><span class="resumen-key">🩺 Permiso sin goce</span><span class="resumen-val" style="color:var(--gris-3);">'+resumen.diasPermisoSinGoce+' (no pagado)</span></div>';
     html+='<div class="resumen-row"><span class="resumen-key">Faltas</span><span class="resumen-val" style="color:var(--rojo);">'+resumen.faltas+'</span></div>';
     html+='<div class="resumen-row"><span class="resumen-key">Retardos</span><span class="resumen-val" style="color:var(--tierra);">'+resumen.retardos+'</span></div>';
     html+='</div>';
@@ -3983,7 +4089,9 @@ function renderCartera(fechaRef){
     from('pagos_extra_estado').select('*').eq('operario_id',usuario.id).eq('semana_inicio',semanaInicio).get(),
     from('config_app').select('*').get(),
     from('bonos').select('*').eq('estado','activo').get(),
-    from('prestamos').select('*').eq('operario_id',usuario.id).eq('estado','activo').get()
+    from('prestamos').select('*').eq('operario_id',usuario.id).eq('estado','activo').get(),
+    from('permisos').select('*').eq('usuario_id',usuario.id).eq('estado','aprobado').get(),
+    from('bono_beneficiarios').select('*').eq('operario_id',usuario.id).get()
   ]).then(function(r){
     var sueldoBase=(r[0]&&r[0][0]&&r[0][0].sueldo_base)||0;
     var registros=r[1]||[];
@@ -3993,9 +4101,11 @@ function renderCartera(fechaRef){
     var tarifa=parseFloat(cfg.tarifa_hora_extra)||70;
     var bonosActivos=r[5]||[];
     var prestamosActivos=r[6]||[];
+    var permisosAprobados=r[7]||[];
+    var bonosYaOtorgadosIds={}; (r[8]||[]).forEach(function(bb){bonosYaOtorgadosIds[bb.bono_id]=true;});
 
-    var resumen=calcularResumenAsistencia(registros,semanaInicio);
-    var totalSueldo=resumen.trabajados*sueldoBase;
+    var resumen=calcularResumenAsistencia(registros,semanaInicio,permisosAprobados);
+    var totalSueldo=resumen.diasPagados*sueldoBase;
     var pagadoSueldo=estSemana&&estSemana.estado==='pagado';
 
     var porDiaExtra={};
@@ -4010,14 +4120,14 @@ function renderCartera(fechaRef){
     var hayExtra=horasExtra>0;
     var pagadoExtra=estExtra&&estExtra.estado==='pagado';
 
-    var bonosDeLaSemana=bonosActivos.filter(function(b){return !(b.periodo_fin<semanaInicio||b.periodo_inicio>semanaFin);});
+    var bonosDeLaSemana=bonosActivos.filter(function(b){return !bonosYaOtorgadosIds[b.id]&&!(b.periodo_fin<semanaInicio||b.periodo_inicio>semanaFin);});
     var bonosSinUmbral=bonosDeLaSemana.filter(function(b){return b.tipo==='equipo'||!b.umbral_minimo;});
     var bonosConUmbral=bonosDeLaSemana.filter(function(b){return b.tipo==='individual'&&b.umbral_minimo;});
 
     Promise.all(bonosConUmbral.map(function(b){
       return calcularScoreOperario(usuario.id,b.periodo_inicio,b.periodo_fin).then(function(score){return {bono:b,score:score};});
     })).then(function(resultadosUmbral){
-      var bonosUmbralCalifican=resultadosUmbral.filter(function(r){return r.score>=parseFloat(r.bono.umbral_minimo);}).map(function(r){return r.bono;});
+      var bonosUmbralCalifican=resultadosUmbral.filter(function(r){return r.score.final>=parseFloat(r.bono.umbral_minimo);}).map(function(r){return r.bono;});
       var bonosQueCalifican=bonosSinUmbral.concat(bonosUmbralCalifican);
       var totalBonos=bonosQueCalifican.reduce(function(s,b){return s+(parseFloat(b.monto)||0);},0);
 
@@ -4045,7 +4155,8 @@ function renderCartera(fechaRef){
       html+='</div>';
 
       html+='<div class="form-card" style="margin-top:.75rem;">';
-      html+='<div class="resumen-row"><span class="resumen-key">💵 Sueldo ('+resumen.trabajados+' días)</span><span class="resumen-val" style="color:var(--verde-mid);">+$'+totalSueldo.toFixed(2)+' '+(pagadoSueldo?'✅':'⏳')+'</span></div>';
+      html+='<div class="resumen-row"><span class="resumen-key">💵 Sueldo ('+resumen.trabajados+' días'+(resumen.diasPermisoConGoce?' + '+resumen.diasPermisoConGoce+' permiso c/goce':'')+')</span><span class="resumen-val" style="color:var(--verde-mid);">+$'+totalSueldo.toFixed(2)+' '+(pagadoSueldo?'✅':'⏳')+'</span></div>';
+      if(resumen.diasPermisoSinGoce) html+='<div class="resumen-row"><span class="resumen-key">🩺 Permiso sin goce</span><span class="resumen-val" style="color:var(--gris-3);">'+resumen.diasPermisoSinGoce+' día(s) no pagado(s)</span></div>';
       if(hayExtra) html+='<div class="resumen-row"><span class="resumen-key">⏰ Horas extra ('+horasExtra.toFixed(1)+'h)</span><span class="resumen-val" style="color:var(--verde-mid);">+$'+totalExtra.toFixed(2)+' '+(pagadoExtra?'✅':'⏳')+'</span></div>';
       bonosQueCalifican.forEach(function(b){
         html+='<div class="resumen-row"><span class="resumen-key">🎁 '+b.descripcion+(b.umbral_minimo?' (cumpliste '+b.umbral_minimo+'/10)':'')+'</span><span class="resumen-val" style="color:var(--verde-mid);">+$'+parseFloat(b.monto||0).toFixed(2)+'</span></div>';
@@ -4297,7 +4408,17 @@ function subirComprobantePermiso(blob){
   });
 }
 
-function calcularResumenAsistencia(registros,primerDia){
+function permisoEnFecha(permisosAprobados,fechaStr){
+  if(!permisosAprobados) return null;
+  for(var i=0;i<permisosAprobados.length;i++){
+    var p=permisosAprobados[i];
+    if(p.fecha_inicio<=fechaStr&&fechaStr<=p.fecha_fin) return p;
+  }
+  return null;
+}
+
+function calcularResumenAsistencia(registros,primerDia,permisosAprobados){
+  permisosAprobados=permisosAprobados||[];
   var hoy=new Date(); hoy.setHours(0,0,0,0);
   var trabajadosSet={};
   var retardosFechas=[];
@@ -4308,16 +4429,25 @@ function calcularResumenAsistencia(registros,primerDia){
     }
   });
   var faltasFechas=[];
+  var permisoConGoceFechas=[], permisoSinGoceFechas=[];
   var d=new Date(primerDia+'T00:00:00');
   while(d<hoy){
     if(d.getDay()!==0){
       var fStr=d.toISOString().slice(0,10);
-      if(!trabajadosSet[fStr]) faltasFechas.push(fStr);
+      if(!trabajadosSet[fStr]){
+        var perm=permisoEnFecha(permisosAprobados,fStr);
+        if(perm){
+          if(perm.con_goce) permisoConGoceFechas.push(fStr);
+          else permisoSinGoceFechas.push(fStr);
+        } else {
+          faltasFechas.push(fStr);
+        }
+      }
     }
     d.setDate(d.getDate()+1);
   }
   var trabajadosFechas=Object.keys(trabajadosSet).sort().reverse();
-  return {trabajados:trabajadosFechas.length,retardos:retardosFechas.length,faltas:faltasFechas.length,trabajadosFechas:trabajadosFechas,retardosFechas:retardosFechas.sort(function(a,b){return b.fecha.localeCompare(a.fecha);}),faltasFechas:faltasFechas.sort().reverse(),trabajadosHoras:trabajadosSet};
+  return {trabajados:trabajadosFechas.length,retardos:retardosFechas.length,faltas:faltasFechas.length,diasPermisoConGoce:permisoConGoceFechas.length,diasPermisoSinGoce:permisoSinGoceFechas.length,diasPagados:trabajadosFechas.length+permisoConGoceFechas.length,trabajadosFechas:trabajadosFechas,retardosFechas:retardosFechas.sort(function(a,b){return b.fecha.localeCompare(a.fecha);}),faltasFechas:faltasFechas.sort().reverse(),permisoConGoceFechas:permisoConGoceFechas.sort().reverse(),permisoSinGoceFechas:permisoSinGoceFechas.sort().reverse(),trabajadosHoras:trabajadosSet};
 }
 
 function fechaLarga(fechaStr){
@@ -4375,7 +4505,8 @@ function pintarHistorialMes(mesStr){
   var registros=window._histRegistros||[], permisos=window._histPermisos||[];
   var primerDiaMes=mesStr+'-01';
   var registrosMes=registros.filter(function(reg){return reg.fecha.slice(0,7)===mesStr;});
-  var resumen=calcularResumenAsistencia(registrosMes,primerDiaMes);
+  var permisosAprobados=permisos.filter(function(p){return p.estado==='aprobado';});
+  var resumen=calcularResumenAsistencia(registrosMes,primerDiaMes,permisosAprobados);
   var porDia={};
   registrosMes.forEach(function(reg){
     var key=reg.fecha+'|'+reg.modalidad;
@@ -4432,7 +4563,8 @@ function pintarHistorialMes(mesStr){
     var estLbl={pendiente:'⏳ Pendiente',aprobado:'✅ Aprobado',rechazado:'❌ Rechazado'};
     var estColor={pendiente:'var(--tierra)',aprobado:'var(--verde-mid)',rechazado:'var(--rojo)'};
     html+='<div class="seccion-titulo" style="margin-top:1rem;">Permisos</div>'+permisos.map(function(p){
-        return '<div style="background:var(--blanco);border-radius:12px;padding:.75rem;font-size:.8rem;margin-bottom:.4rem;"><div style="display:flex;justify-content:space-between;"><span>'+(p.tipo==='medico'?'🩺 Médico':'👤 Personal')+' · '+p.fecha_inicio+' a '+p.fecha_fin+'</span><span style="color:'+estColor[p.estado]+';font-weight:700;">'+estLbl[p.estado]+'</span></div>'+(p.folio?'<div class="hint" style="margin-top:.2rem;">🔖 '+p.folio+'</div>':'')+(p.motivo?'<div class="hint" style="margin-top:.1rem;">'+p.motivo+'</div>':'')+(p.evidencia_url?'<div style="margin-top:.2rem;"><a href="'+p.evidencia_url+'" target="_blank" style="color:var(--verde-mid);font-weight:700;font-size:.78rem;">📎 Ver comprobante</a></div>':'')+'</div>';
+        var goceTxt=p.estado==='aprobado'?('<div class="hint" style="margin-top:.1rem;">'+(p.con_goce?'💰 Con goce de sueldo':'🚫 Sin goce de sueldo')+'</div>'):'';
+        return '<div style="background:var(--blanco);border-radius:12px;padding:.75rem;font-size:.8rem;margin-bottom:.4rem;"><div style="display:flex;justify-content:space-between;"><span>'+(p.tipo==='medico'?'🩺 Médico':'👤 Personal')+' · '+p.fecha_inicio+' a '+p.fecha_fin+'</span><span style="color:'+estColor[p.estado]+';font-weight:700;">'+estLbl[p.estado]+'</span></div>'+(p.folio?'<div class="hint" style="margin-top:.2rem;">🔖 '+p.folio+'</div>':'')+(p.motivo?'<div class="hint" style="margin-top:.1rem;">'+p.motivo+'</div>':'')+goceTxt+(p.evidencia_url?'<div style="margin-top:.2rem;"><a href="'+p.evidencia_url+'" target="_blank" style="color:var(--verde-mid);font-weight:700;font-size:.78rem;">📎 Ver comprobante</a></div>':'')+'</div>';
       }).join('');
     }
     cont.innerHTML=html;
@@ -4601,10 +4733,11 @@ function calcularScoreOperario(operarioId,fechaInicio,fechaFin){
   return Promise.all([
     from('asistencia_registros').select('*').eq('usuario_id',operarioId).gte('fecha',fechaInicio).lte('fecha',fechaFin).get(),
     from('ordenes_trabajo').select('fecha_asignacion,completado_en,estado').eq('operario_id',operarioId).gte('fecha_asignacion',fechaInicio).lte('fecha_asignacion',fechaFin).get(),
-    from('evaluaciones_comportamiento').select('*').eq('operario_id',operarioId).gte('periodo_fin',fechaInicio).lte('periodo_fin',fechaFin).get()
+    from('evaluaciones_comportamiento').select('*').eq('operario_id',operarioId).gte('periodo_fin',fechaInicio).lte('periodo_fin',fechaFin).get(),
+    from('permisos').select('*').eq('usuario_id',operarioId).eq('estado','aprobado').get()
   ]).then(function(r){
-    var registrosAs=r[0]||[], ordenesMes=r[1]||[], evals=r[2]||[];
-    var resumenAs=calcularResumenAsistencia(registrosAs,fechaInicio);
+    var registrosAs=r[0]||[], ordenesMes=r[1]||[], evals=r[2]||[], permisosAprobados=r[3]||[];
+    var resumenAs=calcularResumenAsistencia(registrosAs,fechaInicio,permisosAprobados);
     var scoreAsistencia=Math.max(0,10-resumenAs.faltas*1.5-resumenAs.retardos*0.5);
 
     var completadasMes=ordenesMes.filter(function(o){return o.estado==='completada'&&o.completado_en;});
@@ -4629,7 +4762,8 @@ function calcularScoreOperario(operarioId,fechaInicio,fechaFin){
 
     var pesos={asistencia:.30,tareas:.25,avance:.15,extra:.10,comportamiento:.20};
     var scoreFinal = scoreAsistencia*pesos.asistencia + scoreTareas*pesos.tareas + scoreAvance*pesos.avance + scoreExtra*pesos.extra + scoreComportamiento*pesos.comportamiento;
-    return Math.max(0,Math.min(10,scoreFinal));
+    scoreFinal=Math.max(0,Math.min(10,scoreFinal));
+    return {final:scoreFinal,asistencia:scoreAsistencia,tareas:scoreTareas,avance:scoreAvance,extra:scoreExtra,comportamiento:scoreComportamiento,resumenAs:resumenAs,completadasMes:completadasMes,aTiempo:aTiempo,atrasadasAbiertas:atrasadasAbiertas,horasExtraMes:horasExtraMes,evals:evals};
   });
 }
 
@@ -4648,7 +4782,9 @@ function renderRendimientoOperario(){
     calcularScoreOperario(usuario.id,primerDiaMes,hoy),
     from('bonos').select('*').eq('estado','activo').get()
   ]).then(function(r){
-    var scoreFinal=r[0], bonos=r[1]||[];
+    var s=r[0], bonos=r[1]||[];
+    var scoreFinal=s.final, scoreAsistencia=s.asistencia, scoreTareas=s.tareas, scoreAvance=s.avance, scoreExtra=s.extra, scoreComportamiento=s.comportamiento;
+    var resumenAs=s.resumenAs, completadasMes=s.completadasMes, aTiempo=s.aTiempo, atrasadasAbiertas=s.atrasadasAbiertas, horasExtraMes=s.horasExtraMes, evals=s.evals;
 
     var color = scoreFinal>=8?'var(--verde-mid)':scoreFinal>=6?'var(--tierra)':'var(--rojo)';
     var pct=(scoreFinal/10)*100;
