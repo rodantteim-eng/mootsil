@@ -329,7 +329,7 @@ function from(table) {
 }
 
 var pin='', usuario=null;
-var cats={plantaciones:[],tablas:[],tiposLabor:[],subtiposLabor:[],operarios:[],inventario:[],cosechadores:[],eventuales:[],equipoDeCampo:[]};
+var cats={plantaciones:[],tablas:[],tiposLabor:[],subtiposLabor:[],operarios:[],inventario:[],cosechadores:[],eventuales:[],equipoDeCampo:[],proveedores:[]};
 var ordenEjecutando=null, pasoEjec=1;
 var capturaEjec={surcos:[],cantidad:0,foto:false,herramientaLimpia:false,epp:{}};
 var formSurcos=[];
@@ -511,12 +511,14 @@ function cargarCatalogos(){
     from('usuarios').select('id,nombre,rol').eq('rol','operario').get(),
     from('inventario_items').select('*').eq('activo',true).order('nombre').get(),
     from('usuarios').select('id,nombre,rol').eq('rol','cosechador').get(),
-    from('usuarios').select('id,nombre,rol').eq('rol','labores_eventual').get()
+    from('usuarios').select('id,nombre,rol').eq('rol','labores_eventual').get(),
+    from('proveedores').select('*').eq('activo',true).order('nombre').get()
   ]).then(function(r){
     cats.plantaciones=r[0]; cats.tablas=r[1]; cats.tiposLabor=r[2];
     cats.subtiposLabor=r[3]; cats.operarios=r[4]; cats.inventario=r[5]||[]; cats.cosechadores=r[6]||[];
     cats.eventuales=r[7]||[];
     cats.equipoDeCampo=cats.operarios.concat(cats.eventuales);
+    cats.proveedores=r[8]||[];
   });
 }
 
@@ -2766,6 +2768,291 @@ function renderRecomendarAlarma(alertaId,tablaId){
   });
 }
 
+var GASTO_CATEGORIAS={
+  insumos:{ic:'📦',lbl:'Insumos'},
+  combustible:{ic:'⛽',lbl:'Combustible'},
+  mantenimiento:{ic:'🔧',lbl:'Mantenimiento'},
+  servicios:{ic:'💡',lbl:'Servicios'},
+  otros:{ic:'💵',lbl:'Otros'}
+};
+
+function renderComprasMenu(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🧾 Compras y Gastos<button type="button" onclick="renderAdministracionMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Administración</button></div><div class="labor-grid" style="grid-template-columns:repeat(2,1fr);">'+
+    '<div class="labor-tile" data-cm="nuevo"><div class="labor-tile-ic">📝</div><div class="labor-tile-lbl">Registrar gasto</div></div>'+
+    '<div class="labor-tile" data-cm="resumen"><div class="labor-tile-ic">📊</div><div class="labor-tile-lbl">Resumen del mes</div></div>'+
+    '<div class="labor-tile" data-cm="historial"><div class="labor-tile-ic">📜</div><div class="labor-tile-lbl">Historial de gastos</div></div>'+
+    '<div class="labor-tile" data-cm="proveedores"><div class="labor-tile-ic">🏢</div><div class="labor-tile-lbl">Proveedores</div></div>'+
+    '<div class="labor-tile" data-cm="orden"><div class="labor-tile-ic">🛒</div><div class="labor-tile-lbl">Orden de compra</div></div>'+
+  '</div>';
+  body.querySelector('[data-cm="nuevo"]').addEventListener('click',renderNuevoGasto);
+  body.querySelector('[data-cm="resumen"]').addEventListener('click',function(){renderResumenGastos(new Date().toISOString().slice(0,7));});
+  body.querySelector('[data-cm="historial"]').addEventListener('click',function(){renderHistorialGastos(new Date().toISOString().slice(0,7));});
+  body.querySelector('[data-cm="proveedores"]').addEventListener('click',renderProveedores);
+  body.querySelector('[data-cm="orden"]').addEventListener('click',renderOrdenCompra);
+}
+
+function subirComprobanteGasto(f){
+  var nombre='gasto_'+Date.now()+'_'+Math.round(Math.random()*9999)+'.'+((f.name&&f.name.split('.').pop())||'jpg');
+  return fetch(URL_SB+'/storage/v1/object/evidencias/'+nombre,{method:'POST',headers:{'apikey':KEY_SB,'Authorization':'Bearer '+KEY_SB,'Content-Type':f.type||'image/jpeg','x-upsert':'true'},body:f}).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return URL_SB+'/storage/v1/object/public/evidencias/'+nombre;
+  });
+}
+
+function renderNuevoGasto(){
+  var body=document.getElementById('enc-body');
+  var hoy=new Date().toISOString().slice(0,10);
+  var provOpts=cats.proveedores.map(function(p){return '<option value="'+p.id+'">'+p.nombre+(p.giro?' — '+p.giro:'')+'</option>';}).join('');
+  var itemOpts=cats.inventario.map(function(it){return '<option value="'+it.id+'">'+it.nombre+' (stock: '+numFmt(it.stock_actual)+' '+it.unidad+')</option>';}).join('');
+  var catChips=Object.keys(GASTO_CATEGORIAS).map(function(k,idx){
+    var c=GASTO_CATEGORIAS[k];
+    return '<button type="button" class="op-chip'+(idx===0?' sel':'')+'" data-cat="'+k+'" style="text-align:left;padding:.6rem .9rem;">'+(idx===0?'✓ ':'')+c.ic+' '+c.lbl+'</button>';
+  }).join('');
+  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📝 Registrar gasto<button type="button" onclick="renderComprasMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Compras y Gastos</button></div>'+
+    '<div class="form-card">'+
+    '<div class="form-group"><label>Categoría</label><div style="display:flex;flex-direction:column;gap:8px;" id="g-cat-grp">'+catChips+'</div></div>'+
+    '<div class="form-group" id="g-insumo-wrap"><label>Producto de inventario</label><select id="g-item"><option value="">Selecciona...</option>'+itemOpts+'</select><p class="hint">Se registrará también como entrada de stock.</p></div>'+
+    '<div class="form-group" id="g-cantidad-wrap"><label>Cantidad que entra a inventario</label><input type="number" id="g-cantidad" min="0" step="any" placeholder="0"></div>'+
+    '<div class="form-group"><label>Monto ($)</label><input type="number" id="g-monto" min="0" step="any" placeholder="0.00"></div>'+
+    '<div class="form-group"><label>Fecha</label><input type="date" id="g-fecha" value="'+hoy+'" max="'+hoy+'"></div>'+
+    '<div class="form-group"><label>Proveedor (opcional)</label><select id="g-proveedor"><option value="">Sin proveedor</option>'+provOpts+'<option value="_nuevo">+ Agregar nuevo proveedor...</option></select></div>'+
+    '<div id="g-prov-nuevo-wrap" style="display:none;"><div class="form-group"><label>Nombre del proveedor</label><input type="text" id="g-prov-nombre" placeholder="Ej. Agroquímicos del Valle"></div><div class="form-group"><label>¿A qué se dedica?</label><input type="text" id="g-prov-giro" placeholder="Ej. Fertilizantes y agroquímicos"></div><div class="form-group"><label>Teléfono (opcional)</label><input type="text" id="g-prov-tel" placeholder="Ej. 555-123-4567"></div></div>'+
+    '<div class="form-group"><label>Concepto / nota</label><input type="text" id="g-concepto" placeholder="Ej. Gasolina para la camioneta"></div>'+
+    '<div class="form-group"><label>Comprobante (opcional)</label><input type="file" id="g-comprobante" accept="image/*"><p class="hint" id="g-comprobante-status"></p></div>'+
+    '<button class="btn-primary" id="g-guardar">Registrar gasto</button>'+
+    '</div><button class="btn-back" style="margin-top:1rem;" onclick="renderComprasMenu()">← Volver</button>';
+
+  var categoriaSel=Object.keys(GASTO_CATEGORIAS)[0];
+  var comprobanteUrl=null;
+  function actualizarVisibilidadInsumo(){
+    var esInsumo=categoriaSel==='insumos';
+    document.getElementById('g-insumo-wrap').style.display=esInsumo?'':'none';
+    document.getElementById('g-cantidad-wrap').style.display=esInsumo?'':'none';
+  }
+  actualizarVisibilidadInsumo();
+  document.querySelectorAll('#g-cat-grp [data-cat]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      categoriaSel=this.dataset.cat;
+      document.querySelectorAll('#g-cat-grp [data-cat]').forEach(function(b){
+        b.classList.remove('sel');
+        var c=GASTO_CATEGORIAS[b.dataset.cat];
+        b.innerHTML=c.ic+' '+c.lbl;
+      });
+      this.classList.add('sel');
+      var c=GASTO_CATEGORIAS[this.dataset.cat];
+      this.innerHTML='✓ '+c.ic+' '+c.lbl;
+      actualizarVisibilidadInsumo();
+    });
+  });
+  document.getElementById('g-proveedor').addEventListener('change',function(){
+    document.getElementById('g-prov-nuevo-wrap').style.display=this.value==='_nuevo'?'':'none';
+  });
+  document.getElementById('g-comprobante').addEventListener('change',function(){
+    var f=this.files[0];
+    if(!f) return;
+    var status=document.getElementById('g-comprobante-status');
+    status.textContent='Subiendo...';
+    subirComprobanteGasto(f).then(function(url){
+      comprobanteUrl=url;
+      status.textContent='✅ Comprobante adjuntado';
+    }).catch(function(e){status.textContent='Error al subir: '+e.message;});
+  });
+
+  document.getElementById('g-guardar').addEventListener('click',function(){
+    var btn=this;
+    var monto=parseFloat(document.getElementById('g-monto').value);
+    if(!monto||monto<=0){alert('Captura un monto válido.');return;}
+    var fecha=document.getElementById('g-fecha').value||hoy;
+    var concepto=(document.getElementById('g-concepto').value||'').trim()||null;
+    var proveedorSel=document.getElementById('g-proveedor').value;
+    var esInsumo=categoriaSel==='insumos';
+    var itemId=esInsumo?document.getElementById('g-item').value:'';
+    var cantidad=esInsumo?(parseFloat(document.getElementById('g-cantidad').value)||0):0;
+    if(esInsumo&&itemId&&cantidad<=0){alert('Captura la cantidad que entra a inventario, o deja el producto sin seleccionar si este gasto no mueve stock.');return;}
+    btn.disabled=true; btn.textContent='Guardando...';
+
+    function resolverProveedor(){
+      if(proveedorSel==='_nuevo'){
+        var nombre=(document.getElementById('g-prov-nombre').value||'').trim();
+        if(!nombre) return Promise.resolve(null);
+        var giro=(document.getElementById('g-prov-giro').value||'').trim()||null;
+        var tel=(document.getElementById('g-prov-tel').value||'').trim()||null;
+        return from('proveedores').insert({nombre:nombre,giro:giro,telefono:tel,activo:true}).then(function(rows){
+          var nuevo=rows[0];
+          cats.proveedores.push(nuevo);
+          cats.proveedores.sort(function(a,b){return a.nombre.localeCompare(b.nombre);});
+          return nuevo.id;
+        });
+      }
+      return Promise.resolve(proveedorSel||null);
+    }
+
+    resolverProveedor().then(function(proveedorId){
+      var payload={categoria:categoriaSel,monto:monto,fecha:fecha,proveedor_id:proveedorId,concepto:concepto,inventario_item_id:(esInsumo&&itemId)?itemId:null,cantidad:(esInsumo&&itemId)?cantidad:null,comprobante_url:comprobanteUrl,registrado_por:usuario.id};
+      return from('gastos').insert(payload);
+    }).then(function(){
+      if(esInsumo&&itemId&&cantidad>0){
+        var it=cats.inventario.find(function(x){return x.id===itemId;});
+        if(it){
+          var stockAntes=it.stock_actual;
+          var nuevoStock=stockAntes+cantidad;
+          return from('movimientos_inventario').insert({item_id:it.id,tipo:'entrada',cantidad:cantidad,motivo:'Compra de gasto'+(concepto?' · '+concepto:''),usuario_id:usuario.id,stock_anterior:stockAntes,stock_posterior:nuevoStock}).then(function(){
+            return from('inventario_items').eq('id',it.id).update({stock_actual:nuevoStock});
+          }).then(function(){ it.stock_actual=nuevoStock; });
+        }
+      }
+    }).then(function(){
+      showToast('✅ Gasto registrado');
+      renderComprasMenu();
+    }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Registrar gasto';});
+  });
+}
+
+function renderProveedores(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo">🏢 Proveedores</div><div class="loading">Cargando...</div>';
+  from('proveedores').select('*').order('nombre').get().then(function(rows){
+    rows=(rows||[]).slice().sort(function(a,b){return (b.activo?1:0)-(a.activo?1:0)||a.nombre.localeCompare(b.nombre);});
+    var headerHtml='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🏢 Proveedores<button type="button" onclick="renderComprasMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Compras y Gastos</button></div>';
+    var html=headerHtml+'<button class="btn-primary" id="prov-nuevo-btn" style="margin-bottom:1rem;">+ Nuevo proveedor</button>';
+    if(!rows.length){
+      html+='<div class="empty">Aún no tienes proveedores registrados.</div>';
+    } else {
+      html+=rows.map(function(p){
+        return '<div class="orden-card"'+(p.activo?'':' style="opacity:.55;"')+'><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem;">'+p.nombre+(p.activo?'':' (inactivo)')+'</strong><button type="button" class="btn-sm" style="background:var(--gris-1);color:var(--negro);" data-editar-prov="'+p.id+'">✏️ Editar</button></div><div class="orden-meta">'+(p.giro?p.giro:'')+(p.telefono?' · 📞 '+p.telefono:'')+'</div></div>';
+      }).join('');
+    }
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderComprasMenu()">← Volver</button>';
+    document.getElementById('prov-nuevo-btn').addEventListener('click',function(){renderProveedorForm(null);});
+    body.querySelectorAll('[data-editar-prov]').forEach(function(btn){
+      btn.addEventListener('click',function(){renderProveedorForm(this.dataset.editarProv);});
+    });
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function renderProveedorForm(id){
+  var body=document.getElementById('enc-body');
+  var esNuevo=!id;
+  var p=esNuevo?null:cats.proveedores.find(function(x){return x.id===id;});
+  function pintar(pv){
+    body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">'+(esNuevo?'+ Nuevo proveedor':'✏️ Editar proveedor')+'<button type="button" onclick="renderProveedores()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Proveedores</button></div>'+
+      '<div class="form-card">'+
+      '<div class="form-group"><label>Nombre</label><input type="text" id="pf-nombre" value="'+(pv?pv.nombre:'')+'" placeholder="Ej. Agroquímicos del Valle"></div>'+
+      '<div class="form-group"><label>¿A qué se dedica?</label><input type="text" id="pf-giro" value="'+(pv&&pv.giro?pv.giro:'')+'" placeholder="Ej. Fertilizantes y agroquímicos"></div>'+
+      '<div class="form-group"><label>Teléfono (opcional)</label><input type="text" id="pf-tel" value="'+(pv&&pv.telefono?pv.telefono:'')+'" placeholder="Ej. 555-123-4567"></div>'+
+      '<div class="form-group"><label>Notas (opcional)</label><input type="text" id="pf-notas" value="'+(pv&&pv.notas?pv.notas:'')+'"></div>'+
+      (esNuevo?'':'<div class="form-group"><label>Estado</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip'+(pv&&pv.activo?' sel':'')+'" id="pf-activo-si">'+(pv&&pv.activo?'✓ ':'')+'Activo</button><button type="button" class="op-chip'+(pv&&!pv.activo?' sel':'')+'" id="pf-activo-no">'+(pv&&!pv.activo?'✓ ':'')+'Inactivo</button></div></div>')+
+      '<button class="btn-primary" id="pf-guardar">Guardar</button>'+
+      '</div><button class="btn-back" style="margin-top:1rem;" onclick="renderProveedores()">← Volver</button>';
+    var activo=esNuevo?true:(pv?pv.activo:true);
+    if(!esNuevo){
+      document.getElementById('pf-activo-si').addEventListener('click',function(){activo=true;this.classList.add('sel');this.textContent='✓ Activo';document.getElementById('pf-activo-no').classList.remove('sel');document.getElementById('pf-activo-no').textContent='Inactivo';});
+      document.getElementById('pf-activo-no').addEventListener('click',function(){activo=false;this.classList.add('sel');this.textContent='✓ Inactivo';document.getElementById('pf-activo-si').classList.remove('sel');document.getElementById('pf-activo-si').textContent='Activo';});
+    }
+    document.getElementById('pf-guardar').addEventListener('click',function(){
+      var btn=this;
+      var nombre=(document.getElementById('pf-nombre').value||'').trim();
+      if(!nombre){alert('Captura el nombre del proveedor.');return;}
+      var giro=(document.getElementById('pf-giro').value||'').trim()||null;
+      var tel=(document.getElementById('pf-tel').value||'').trim()||null;
+      var notas=(document.getElementById('pf-notas').value||'').trim()||null;
+      btn.disabled=true; btn.textContent='Guardando...';
+      var payload={nombre:nombre,giro:giro,telefono:tel,notas:notas,activo:activo};
+      var accion=esNuevo?from('proveedores').insert(payload):from('proveedores').eq('id',id).update(payload);
+      accion.then(function(){
+        return from('proveedores').select('*').eq('activo',true).order('nombre').get();
+      }).then(function(rows){
+        cats.proveedores=rows||[];
+        showToast('✅ Proveedor guardado');
+        renderProveedores();
+      }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Guardar';});
+    });
+  }
+  if(esNuevo||p) pintar(p);
+  else {
+    from('proveedores').select('*').eq('id',id).get().then(function(rows){pintar(rows&&rows[0]);}).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+  }
+}
+
+function renderHistorialGastos(mesStr){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo">📜 Historial de gastos</div><div class="loading">Cargando...</div>';
+  var inicio=mesStr+'-01';
+  var finD=new Date(inicio+'T00:00:00'); finD.setMonth(finD.getMonth()+1); finD.setDate(0);
+  var fin=finD.toISOString().slice(0,10);
+  from('gastos').select('*,proveedor:proveedores(nombre),item:inventario_items(nombre,unidad),registrador:usuarios!registrado_por(nombre)').gte('fecha',inicio).lte('fecha',fin).order('fecha',{ascending:false}).get().then(function(rows){
+    rows=rows||[];
+    var mesLbl=new Date(inicio+'T00:00:00').toLocaleDateString('es-MX',{month:'long',year:'numeric'});
+    var total=rows.reduce(function(s,g){return s+parseFloat(g.monto);},0);
+    var headerHtml='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📜 Historial de gastos<button type="button" onclick="renderComprasMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Compras y Gastos</button></div>';
+    var html=headerHtml+'<div class="form-group" style="margin-bottom:.75rem;"><label>Mes</label><input type="month" id="hg-mes" value="'+mesStr+'"></div>';
+    html+='<div class="form-card" style="text-align:center;margin-bottom:1rem;"><div style="font-size:.8rem;color:var(--gris-3);text-transform:capitalize;">Total gastado en '+mesLbl+'</div><div style="font-size:1.6rem;font-weight:800;color:var(--verde-mid);">$'+total.toFixed(2)+'</div></div>';
+    if(!rows.length){
+      html+='<div class="empty">Sin gastos registrados este mes.</div>';
+    } else {
+      html+=rows.map(function(g){
+        var cat=GASTO_CATEGORIAS[g.categoria]||{ic:'💵',lbl:g.categoria};
+        var meta=[];
+        if(g.proveedor) meta.push('🏢 '+g.proveedor.nombre);
+        if(g.item) meta.push('📦 '+numFmt(g.cantidad)+' '+g.item.unidad+' de '+g.item.nombre);
+        if(g.concepto) meta.push(g.concepto);
+        if(g.registrador) meta.push('👤 '+g.registrador.nombre);
+        return '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem;">'+cat.ic+' '+cat.lbl+'</strong><strong style="font-size:.95rem;color:var(--verde-mid);">$'+parseFloat(g.monto).toFixed(2)+'</strong></div><div class="orden-meta">📅 '+g.fecha+(meta.length?' · '+meta.join(' · '):'')+(g.comprobante_url?' · <a href="'+g.comprobante_url+'" target="_blank">🧾 Ver comprobante</a>':'')+'</div><button type="button" class="btn-sm btn-cancelar" style="margin-top:.4rem;" data-borrar-gasto="'+g.id+'">Eliminar</button></div>';
+      }).join('');
+    }
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderComprasMenu()">← Volver</button>';
+    document.getElementById('hg-mes').addEventListener('change',function(){renderHistorialGastos(this.value);});
+    body.querySelectorAll('[data-borrar-gasto]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        if(!confirm('¿Eliminar este gasto? Si generó una entrada de inventario, el stock no se revierte automáticamente.')) return;
+        from('gastos').eq('id',this.dataset.borrarGasto).delete().then(function(){showToast('🗑️ Gasto eliminado');renderHistorialGastos(mesStr);}).catch(function(e){alert('Error: '+e.message);});
+      });
+    });
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function renderResumenGastos(mesStr){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo">📊 Resumen del mes</div><div class="loading">Cargando...</div>';
+  var inicio=mesStr+'-01';
+  var finD=new Date(inicio+'T00:00:00'); finD.setMonth(finD.getMonth()+1); finD.setDate(0);
+  var fin=finD.toISOString().slice(0,10);
+  Promise.all([
+    from('gastos').select('*').gte('fecha',inicio).lte('fecha',fin).get(),
+    from('pagos_semana_estado').select('monto_pagado,semana_inicio').eq('estado','pagado').gte('semana_inicio',inicio).lte('semana_inicio',fin).get(),
+    from('pagos_extra_estado').select('monto_pagado,semana_inicio').eq('estado','pagado').gte('semana_inicio',inicio).lte('semana_inicio',fin).get(),
+    from('pagos_eventuales').select('monto,fecha').gte('fecha',inicio).lte('fecha',fin).get()
+  ]).then(function(r){
+    var gastos=r[0]||[], sueldos=r[1]||[], extras=r[2]||[], eventuales=r[3]||[];
+    var porCategoria={};
+    Object.keys(GASTO_CATEGORIAS).forEach(function(k){porCategoria[k]=0;});
+    gastos.forEach(function(g){porCategoria[g.categoria]=(porCategoria[g.categoria]||0)+parseFloat(g.monto);});
+    var totalGastos=gastos.reduce(function(s,g){return s+parseFloat(g.monto);},0);
+    var totalSueldos=sueldos.reduce(function(s,p){return s+parseFloat(p.monto_pagado||0);},0);
+    var totalExtras=extras.reduce(function(s,p){return s+parseFloat(p.monto_pagado||0);},0);
+    var totalEventuales=eventuales.reduce(function(s,p){return s+parseFloat(p.monto||0);},0);
+    var totalNomina=totalSueldos+totalExtras+totalEventuales;
+    var granTotal=totalGastos+totalNomina;
+    var mesLbl=new Date(inicio+'T00:00:00').toLocaleDateString('es-MX',{month:'long',year:'numeric'});
+    var headerHtml='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📊 Resumen del mes<button type="button" onclick="renderComprasMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Compras y Gastos</button></div>';
+    var html=headerHtml+'<div class="form-group" style="margin-bottom:.75rem;"><label>Mes</label><input type="month" id="rg-mes" value="'+mesStr+'"></div>';
+    html+='<div class="form-card" style="text-align:center;margin-bottom:1rem;"><div style="font-size:.8rem;color:var(--gris-3);text-transform:capitalize;">Total general en '+mesLbl+'</div><div style="font-size:1.8rem;font-weight:800;color:var(--verde-mid);">$'+granTotal.toFixed(2)+'</div></div>';
+    html+='<div class="seccion-titulo" style="margin-top:0;">🛒 Compras y gastos — $'+totalGastos.toFixed(2)+'</div>';
+    html+=Object.keys(GASTO_CATEGORIAS).map(function(k){
+      var c=GASTO_CATEGORIAS[k];
+      return '<div class="resumen-row"><span class="resumen-key">'+c.ic+' '+c.lbl+'</span><span class="resumen-val">$'+porCategoria[k].toFixed(2)+'</span></div>';
+    }).join('');
+    html+='<div class="seccion-titulo">👥 Nómina — $'+totalNomina.toFixed(2)+'</div>';
+    html+='<div class="resumen-row"><span class="resumen-key">💰 Sueldos (Labores)</span><span class="resumen-val">$'+totalSueldos.toFixed(2)+'</span></div>';
+    html+='<div class="resumen-row"><span class="resumen-key">⏰ Horas extra</span><span class="resumen-val">$'+totalExtras.toFixed(2)+'</span></div>';
+    html+='<div class="resumen-row"><span class="resumen-key">🧑‍🌾 Labores Eventual</span><span class="resumen-val">$'+totalEventuales.toFixed(2)+'</span></div>';
+    html+='<p class="hint" style="margin-top:.75rem;">La nómina se toma de lo ya marcado como pagado en Nóminas y de los pagos a eventuales; no incluye préstamos entregados ni nómina aún pendiente de pagar.</p>';
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderComprasMenu()">← Volver</button>';
+    document.getElementById('rg-mes').addEventListener('change',function(){renderResumenGastos(this.value);});
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
 function renderOrdenCompra(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo">🛒 Orden de compra</div><div class="loading">Calculando...</div>';
@@ -3003,20 +3290,268 @@ function renderPagosEventuales(fecha){
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
+var MOV_INVERSION_TIPOS={
+  rendimiento:{ic:'📈',lbl:'Rendimiento / Utilidad'},
+  devolucion_capital:{ic:'💰',lbl:'Devolución de capital'}
+};
+
+function subirComprobanteInversion(f){
+  var nombre='inversion_'+Date.now()+'_'+Math.round(Math.random()*9999)+'.'+((f.name&&f.name.split('.').pop())||'jpg');
+  return fetch(URL_SB+'/storage/v1/object/evidencias/'+nombre,{method:'POST',headers:{'apikey':KEY_SB,'Authorization':'Bearer '+KEY_SB,'Content-Type':f.type||'image/jpeg','x-upsert':'true'},body:f}).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return URL_SB+'/storage/v1/object/public/evidencias/'+nombre;
+  });
+}
+
+function sumarMesesFecha(fechaStr,meses){
+  var d=new Date(fechaStr+'T00:00:00');
+  d.setMonth(d.getMonth()+meses);
+  return d.toISOString().slice(0,10);
+}
+
+function renderInversionistasMenu(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo">💼 Inversionistas</div><div class="loading">Cargando...</div>';
+  Promise.all([
+    from('usuarios').select('id,nombre').eq('rol','inversionista').order('nombre').get(),
+    from('inversiones').select('*').get()
+  ]).then(function(r){
+    var inversionistas=r[0]||[], inversiones=r[1]||[];
+    var porInversionista={};
+    inversiones.forEach(function(inv){(porInversionista[inv.inversionista_id]=porInversionista[inv.inversionista_id]||[]).push(inv);});
+    var headerHtml='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">💼 Inversionistas<button type="button" onclick="renderAdministracionMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Administración</button></div>';
+    var html=headerHtml;
+    if(!inversionistas.length){
+      html+='<div class="empty">Aún no tienes usuarios con rol "Inversionista". Dalos de alta en Empleados → Altas y Bajas.</div>';
+    } else {
+      html+=inversionistas.map(function(iv){
+        var contratos=porInversionista[iv.id]||[];
+        var activos=contratos.filter(function(c){return c.estado==='activo';});
+        var totalActivo=activos.reduce(function(s,c){return s+parseFloat(c.monto_invertido);},0);
+        return '<div class="orden-card" data-ver-inversionista="'+iv.id+'" style="cursor:pointer;"><strong style="font-size:.92rem;">'+iv.nombre+'</strong><div class="orden-meta">'+(contratos.length?(activos.length+' contrato(s) activo(s) · $'+totalActivo.toFixed(2)+' invertido'):'Sin contratos registrados')+'</div></div>';
+      }).join('');
+    }
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderAdministracionMenu()">← Volver a Administración</button>';
+    body.querySelectorAll('[data-ver-inversionista]').forEach(function(card){
+      card.addEventListener('click',function(){renderInversionistaDetalle(this.dataset.verInversionista);});
+    });
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function renderInversionistaDetalle(usuarioId){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo">💼 Inversionista</div><div class="loading">Cargando...</div>';
+  Promise.all([
+    from('usuarios').select('id,nombre').eq('id',usuarioId).get(),
+    from('inversiones').select('*').eq('inversionista_id',usuarioId).order('fecha_inicio',{ascending:false}).get()
+  ]).then(function(r){
+    var iv=r[0]&&r[0][0];
+    var contratos=r[1]||[];
+    var headerHtml='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">💼 '+(iv?iv.nombre:'Inversionista')+'<button type="button" onclick="renderInversionistasMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Inversionistas</button></div>';
+    function pintar(movsPorInversion){
+      var html=headerHtml+'<button class="btn-primary" id="inv-nuevo-btn" style="margin-bottom:1rem;">+ Nuevo contrato de inversión</button>';
+      if(!contratos.length){
+        html+='<div class="empty">Aún no tiene contratos de inversión registrados.</div>';
+      } else {
+        html+=contratos.map(function(c){
+          var movs=movsPorInversion[c.id]||[];
+          var rendimiento=movs.filter(function(m){return m.tipo==='rendimiento';}).reduce(function(s,m){return s+parseFloat(m.monto);},0);
+          var capitalDevuelto=movs.filter(function(m){return m.tipo==='devolucion_capital';}).reduce(function(s,m){return s+parseFloat(m.monto);},0);
+          var estColor=c.estado==='activo'?'var(--verde-mid)':'var(--gris-3)';
+          var estLbl=c.estado==='activo'?'🟢 Activo':'🔒 Cerrado';
+          return '<div class="orden-card" data-ver-inversion="'+c.id+'" style="cursor:pointer;border-left-color:'+estColor+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem;">$'+parseFloat(c.monto_invertido).toFixed(2)+' invertido</strong><span style="font-size:.72rem;font-weight:700;color:'+estColor+';">'+estLbl+'</span></div><div class="orden-meta">📅 Desde '+c.fecha_inicio+(c.plazo_meses?(' · Plazo: '+c.plazo_meses+' meses'):'')+(c.fecha_fin_estimada?(' · Vence '+c.fecha_fin_estimada):'')+'<br/>📈 Rendimiento pagado: $'+rendimiento.toFixed(2)+' · 💰 Capital devuelto: $'+capitalDevuelto.toFixed(2)+'</div></div>';
+        }).join('');
+      }
+      body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderInversionistasMenu()">← Volver</button>';
+      document.getElementById('inv-nuevo-btn').addEventListener('click',function(){renderNuevaInversion(usuarioId);});
+      body.querySelectorAll('[data-ver-inversion]').forEach(function(card){
+        card.addEventListener('click',function(){renderInversionDetalle(this.dataset.verInversion);});
+      });
+    }
+    if(!contratos.length){ pintar({}); return; }
+    var ids=contratos.map(function(c){return c.id;});
+    from('inversion_movimientos').select('*').in('inversion_id',ids).get().then(function(movs){
+      var movsPorInversion={};
+      (movs||[]).forEach(function(m){(movsPorInversion[m.inversion_id]=movsPorInversion[m.inversion_id]||[]).push(m);});
+      pintar(movsPorInversion);
+    }).catch(function(){pintar({});});
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function renderNuevaInversion(usuarioId){
+  var body=document.getElementById('enc-body');
+  var hoy=new Date().toISOString().slice(0,10);
+  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">+ Nuevo contrato de inversión<button type="button" onclick="renderInversionistaDetalle(\''+usuarioId+'\')" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cancelar</button></div>'+
+    '<div class="form-card">'+
+    '<div class="form-group"><label>Monto invertido ($)</label><input type="number" id="ni-monto" min="0" step="any" placeholder="0.00"></div>'+
+    '<div class="form-group"><label>Fecha de inicio</label><input type="date" id="ni-fecha" value="'+hoy+'"></div>'+
+    '<div class="form-group"><label>Plazo (meses, opcional)</label><input type="number" id="ni-plazo" min="0" step="1" placeholder="Ej. 12"></div>'+
+    '<div class="form-group"><label>Condiciones / tasa acordada (opcional)</label><input type="text" id="ni-condiciones" placeholder="Ej. 2% mensual sobre el capital"></div>'+
+    '<div class="form-group"><label>Comprobante del depósito inicial (opcional)</label><input type="file" id="ni-comprobante" accept="image/*"><p class="hint" id="ni-comprobante-status"></p></div>'+
+    '<button class="btn-primary" id="ni-guardar">Guardar contrato</button>'+
+    '</div><button class="btn-back" style="margin-top:1rem;" onclick="renderInversionistaDetalle(\''+usuarioId+'\')">← Volver</button>';
+
+  var comprobanteUrl=null;
+  document.getElementById('ni-comprobante').addEventListener('change',function(){
+    var f=this.files[0];
+    if(!f) return;
+    var status=document.getElementById('ni-comprobante-status');
+    status.textContent='Subiendo...';
+    subirComprobanteInversion(f).then(function(url){comprobanteUrl=url;status.textContent='✅ Comprobante adjuntado';}).catch(function(e){status.textContent='Error al subir: '+e.message;});
+  });
+
+  document.getElementById('ni-guardar').addEventListener('click',function(){
+    var btn=this;
+    var monto=parseFloat(document.getElementById('ni-monto').value);
+    if(!monto||monto<=0){alert('Captura el monto invertido.');return;}
+    var fecha=document.getElementById('ni-fecha').value||hoy;
+    var plazo=parseInt(document.getElementById('ni-plazo').value)||null;
+    var condiciones=(document.getElementById('ni-condiciones').value||'').trim()||null;
+    var fechaFin=plazo?sumarMesesFecha(fecha,plazo):null;
+    btn.disabled=true; btn.textContent='Guardando...';
+    from('inversiones').insert({inversionista_id:usuarioId,monto_invertido:monto,fecha_inicio:fecha,plazo_meses:plazo,fecha_fin_estimada:fechaFin,condiciones:condiciones,comprobante_url:comprobanteUrl,estado:'activo',creado_por:usuario.id}).then(function(){
+      showToast('✅ Contrato de inversión registrado');
+      renderInversionistaDetalle(usuarioId);
+    }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Guardar contrato';});
+  });
+}
+
+function renderInversionDetalle(inversionId){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo">💼 Contrato de inversión</div><div class="loading">Cargando...</div>';
+  Promise.all([
+    from('inversiones').select('*,inversionista:usuarios!inversionista_id(id,nombre)').eq('id',inversionId).get(),
+    from('inversion_movimientos').select('*').eq('inversion_id',inversionId).order('fecha',{ascending:false}).get()
+  ]).then(function(r){
+    var c=r[0]&&r[0][0];
+    if(!c){body.innerHTML='<div class="empty">No se encontró el contrato.</div>';return;}
+    var movs=r[1]||[];
+    var rendimiento=movs.filter(function(m){return m.tipo==='rendimiento';}).reduce(function(s,m){return s+parseFloat(m.monto);},0);
+    var capitalDevuelto=movs.filter(function(m){return m.tipo==='devolucion_capital';}).reduce(function(s,m){return s+parseFloat(m.monto);},0);
+    var totalRetornado=rendimiento+capitalDevuelto;
+    var saldoCapital=parseFloat(c.monto_invertido)-capitalDevuelto;
+    var activo=c.estado==='activo';
+    var usuarioIdInversionista=c.inversionista?c.inversionista.id:c.inversionista_id;
+
+    var headerHtml='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">💼 '+(c.inversionista?c.inversionista.nombre:'')+'<button type="button" onclick="renderInversionistaDetalle(\''+usuarioIdInversionista+'\')" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Contratos</button></div>';
+
+    var html=headerHtml;
+    html+='<div class="form-card">'+
+      '<div class="resumen-row"><span class="resumen-key">Estado</span><span class="resumen-val" style="color:'+(activo?'var(--verde-mid)':'var(--gris-3)')+';">'+(activo?'🟢 Activo':'🔒 Cerrado')+'</span></div>'+
+      '<div class="resumen-row"><span class="resumen-key">Monto invertido</span><span class="resumen-val">$'+parseFloat(c.monto_invertido).toFixed(2)+'</span></div>'+
+      '<div class="resumen-row"><span class="resumen-key">Fecha de inicio</span><span class="resumen-val">'+c.fecha_inicio+'</span></div>'+
+      (c.plazo_meses?'<div class="resumen-row"><span class="resumen-key">Plazo</span><span class="resumen-val">'+c.plazo_meses+' meses</span></div>':'')+
+      (c.fecha_fin_estimada?'<div class="resumen-row"><span class="resumen-key">Vence</span><span class="resumen-val">'+c.fecha_fin_estimada+'</span></div>':'')+
+      (c.condiciones?'<div class="resumen-row"><span class="resumen-key">Condiciones</span><span class="resumen-val">'+c.condiciones+'</span></div>':'')+
+      (c.comprobante_url?'<div class="resumen-row"><span class="resumen-key">Depósito inicial</span><span class="resumen-val"><a href="'+c.comprobante_url+'" target="_blank">🧾 Ver comprobante</a></span></div>':'')+
+    '</div>';
+
+    html+='<div class="form-card">'+
+      '<div class="resumen-row"><span class="resumen-key">📈 Rendimiento pagado (utilidad)</span><span class="resumen-val">$'+rendimiento.toFixed(2)+'</span></div>'+
+      '<div class="resumen-row"><span class="resumen-key">💰 Capital devuelto</span><span class="resumen-val">$'+capitalDevuelto.toFixed(2)+'</span></div>'+
+      '<div class="resumen-row"><span class="resumen-key">Capital pendiente por devolver</span><span class="resumen-val">$'+saldoCapital.toFixed(2)+'</span></div>'+
+      '<div class="resumen-row" style="border-top:2px solid var(--gris-1);margin-top:.3rem;padding-top:.5rem;"><strong style="font-size:.85rem;">Total depositado al inversionista</strong><strong style="font-size:1rem;color:var(--verde-mid);">$'+totalRetornado.toFixed(2)+'</strong></div>'+
+    '</div>';
+
+    if(!activo){
+      html+='<div class="form-card"><div class="seccion-titulo" style="margin-top:0;">🔒 Contrato cerrado</div>'+(c.fecha_cierre?'<div class="resumen-row"><span class="resumen-key">Fecha de cierre</span><span class="resumen-val">'+c.fecha_cierre+'</span></div>':'')+(c.resumen_cierre?'<p class="hint">'+c.resumen_cierre+'</p>':'')+'</div>';
+    }
+
+    if(activo){
+      var tipoChips=Object.keys(MOV_INVERSION_TIPOS).map(function(k,idx){
+        var t=MOV_INVERSION_TIPOS[k];
+        return '<button type="button" class="op-chip'+(idx===0?' sel':'')+'" data-tipomov="'+k+'" style="text-align:left;padding:.6rem .9rem;">'+(idx===0?'✓ ':'')+t.ic+' '+t.lbl+'</button>';
+      }).join('');
+      html+='<div class="form-card"><div class="seccion-titulo" style="margin-top:0;">Registrar depósito al inversionista</div>'+
+        '<div class="form-group"><label>Tipo</label><div style="display:flex;flex-direction:column;gap:8px;" id="im-tipo-grp">'+tipoChips+'</div></div>'+
+        '<div class="form-group"><label>Monto ($)</label><input type="number" id="im-monto" min="0" step="any" placeholder="0.00"></div>'+
+        '<div class="form-group"><label>Fecha</label><input type="date" id="im-fecha" value="'+new Date().toISOString().slice(0,10)+'"></div>'+
+        '<div class="form-group"><label>Concepto (opcional)</label><input type="text" id="im-concepto" placeholder="Ej. Rendimiento de mayo"></div>'+
+        '<div class="form-group"><label>Comprobante (opcional)</label><input type="file" id="im-comprobante" accept="image/*"><p class="hint" id="im-comprobante-status"></p></div>'+
+        '<button class="btn-primary" id="im-guardar">Registrar depósito</button>'+
+      '</div>';
+      html+='<div class="form-card"><div class="seccion-titulo" style="margin-top:0;">🔒 Cerrar contrato</div><div class="form-group"><label>Fecha de cierre</label><input type="date" id="ic-fecha" value="'+new Date().toISOString().slice(0,10)+'"></div><div class="form-group"><label>Resumen de cierre (opcional)</label><input type="text" id="ic-resumen" placeholder="Ej. Capital y utilidad liquidados en su totalidad"></div><button class="btn-sm btn-cancelar" id="ic-cerrar">🔒 Cerrar contrato</button></div>';
+    }
+
+    html+='<div class="seccion-titulo">Historial de depósitos</div>';
+    if(!movs.length){
+      html+='<div class="empty">Aún no hay depósitos registrados para este contrato.</div>';
+    } else {
+      html+=movs.map(function(m){
+        var t=MOV_INVERSION_TIPOS[m.tipo]||{ic:'💵',lbl:m.tipo};
+        return '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem;">'+t.ic+' '+t.lbl+'</strong><strong style="font-size:.95rem;color:var(--verde-mid);">$'+parseFloat(m.monto).toFixed(2)+'</strong></div><div class="orden-meta">📅 '+m.fecha+(m.concepto?' · '+m.concepto:'')+(m.comprobante_url?' · <a href="'+m.comprobante_url+'" target="_blank">🧾 Ver comprobante</a>':'')+'</div><button type="button" class="btn-sm btn-cancelar" style="margin-top:.4rem;" data-borrar-mov="'+m.id+'">Eliminar</button></div>';
+      }).join('');
+    }
+
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderInversionistaDetalle(\''+usuarioIdInversionista+'\')">← Volver</button>';
+
+    if(activo){
+      var tipoSel=Object.keys(MOV_INVERSION_TIPOS)[0];
+      document.querySelectorAll('#im-tipo-grp [data-tipomov]').forEach(function(btn){
+        btn.addEventListener('click',function(){
+          tipoSel=this.dataset.tipomov;
+          document.querySelectorAll('#im-tipo-grp [data-tipomov]').forEach(function(b){b.classList.remove('sel');var t=MOV_INVERSION_TIPOS[b.dataset.tipomov];b.innerHTML=t.ic+' '+t.lbl;});
+          this.classList.add('sel');
+          var t=MOV_INVERSION_TIPOS[this.dataset.tipomov];
+          this.innerHTML='✓ '+t.ic+' '+t.lbl;
+        });
+      });
+      var comprobanteMovUrl=null;
+      document.getElementById('im-comprobante').addEventListener('change',function(){
+        var f=this.files[0];
+        if(!f) return;
+        var status=document.getElementById('im-comprobante-status');
+        status.textContent='Subiendo...';
+        subirComprobanteInversion(f).then(function(url){comprobanteMovUrl=url;status.textContent='✅ Comprobante adjuntado';}).catch(function(e){status.textContent='Error al subir: '+e.message;});
+      });
+      document.getElementById('im-guardar').addEventListener('click',function(){
+        var btn=this;
+        var monto=parseFloat(document.getElementById('im-monto').value);
+        if(!monto||monto<=0){alert('Captura un monto válido.');return;}
+        var fecha=document.getElementById('im-fecha').value||new Date().toISOString().slice(0,10);
+        var concepto=(document.getElementById('im-concepto').value||'').trim()||null;
+        btn.disabled=true; btn.textContent='Guardando...';
+        from('inversion_movimientos').insert({inversion_id:inversionId,tipo:tipoSel,monto:monto,fecha:fecha,concepto:concepto,comprobante_url:comprobanteMovUrl,registrado_por:usuario.id}).then(function(){
+          return from('notificaciones').insert({titulo:'💼 Depósito registrado',cuerpo:'Se registró un depósito de $'+monto.toFixed(2)+' ('+(MOV_INVERSION_TIPOS[tipoSel]||{}).lbl+') a tu inversión.',icono:'💼',leida:false,para_rol:'inversionista',para_usuario:usuarioIdInversionista});
+        }).then(function(){showToast('✅ Depósito registrado');renderInversionDetalle(inversionId);}).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Registrar depósito';});
+      });
+      document.getElementById('ic-cerrar').addEventListener('click',function(){
+        if(!confirm('¿Cerrar este contrato de inversión? Ya no podrás registrar más depósitos en él.')) return;
+        var btn=this;
+        var fechaCierre=document.getElementById('ic-fecha').value||new Date().toISOString().slice(0,10);
+        var resumen=(document.getElementById('ic-resumen').value||'').trim()||null;
+        btn.disabled=true;
+        from('inversiones').eq('id',inversionId).update({estado:'cerrado',fecha_cierre:fechaCierre,resumen_cierre:resumen}).then(function(){
+          showToast('🔒 Contrato cerrado');
+          renderInversionDetalle(inversionId);
+        }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;});
+      });
+    }
+    body.querySelectorAll('[data-borrar-mov]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        if(!confirm('¿Eliminar este depósito del historial?')) return;
+        from('inversion_movimientos').eq('id',this.dataset.borrarMov).delete().then(function(){showToast('🗑️ Depósito eliminado');renderInversionDetalle(inversionId);}).catch(function(e){alert('Error: '+e.message);});
+      });
+    });
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
 function renderAdministracionMenu(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo">🏛️ Administración</div><div class="labor-grid" style="grid-template-columns:repeat(2,1fr);">'+
     '<div class="labor-tile" data-admin="empleados"><div class="labor-tile-ic">👥</div><div class="labor-tile-lbl">Empleados</div></div>'+
     '<div class="labor-tile" data-admin="nominas"><div class="labor-tile-ic">💰</div><div class="labor-tile-lbl">Nóminas</div></div>'+
-    '<div class="labor-tile" data-admin="compras"><div class="labor-tile-ic">🛒</div><div class="labor-tile-lbl">Compras</div></div>'+
+    '<div class="labor-tile" data-admin="compras"><div class="labor-tile-ic">🧾</div><div class="labor-tile-lbl">Compras y Gastos</div></div>'+
     '<div class="labor-tile" data-admin="asistencias"><div class="labor-tile-ic">📋</div><div class="labor-tile-lbl">Control de Asistencias</div></div>'+
     '<div class="labor-tile" data-admin="eventuales"><div class="labor-tile-ic">🧑‍🌾</div><div class="labor-tile-lbl">Labores Eventual</div></div>'+
+    '<div class="labor-tile" data-admin="inversionistas"><div class="labor-tile-ic">💼</div><div class="labor-tile-lbl">Inversionistas</div></div>'+
   '</div>';
   body.querySelector('[data-admin="nominas"]').addEventListener('click',renderNominasMenu);
   body.querySelector('[data-admin="empleados"]').addEventListener('click',renderEmpleadosMenu);
-  body.querySelector('[data-admin="compras"]').addEventListener('click',renderOrdenCompra);
+  body.querySelector('[data-admin="compras"]').addEventListener('click',renderComprasMenu);
   body.querySelector('[data-admin="asistencias"]').addEventListener('click',function(){renderControlAsistencias(new Date().toISOString().slice(0,10));});
   body.querySelector('[data-admin="eventuales"]').addEventListener('click',function(){renderPagosEventuales(new Date().toISOString().slice(0,10));});
+  body.querySelector('[data-admin="inversionistas"]').addEventListener('click',renderInversionistasMenu);
 }
 
 function renderEmpleadosMenu(){
