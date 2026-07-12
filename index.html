@@ -3574,10 +3574,14 @@ function abrirRecibo(d){
 
   document.getElementById('recibo-contenido').innerHTML=html;
   document.getElementById('recibo-overlay').classList.add('active');
+  window._tituloOriginal = window._tituloOriginal || document.title;
+  var nombreArchivo=d.nombre.replace(/[^\p{L}0-9]+/gu,'_').replace(/^_+|_+$/g,'');
+  document.title='Recibo_'+nombreArchivo+'_Semana'+d.numSemana+'_'+d.semanaInicio;
 }
 
 function cerrarRecibo(){
   document.getElementById('recibo-overlay').classList.remove('active');
+  if(window._tituloOriginal) document.title=window._tituloOriginal;
 }
 
 function renderPrestamos(){
