@@ -329,13 +329,13 @@ function from(table) {
 }
 
 var pin='', usuario=null;
-var cats={plantaciones:[],tablas:[],tiposLabor:[],subtiposLabor:[],operarios:[],inventario:[],cosechadores:[]};
+var cats={plantaciones:[],tablas:[],tiposLabor:[],subtiposLabor:[],operarios:[],inventario:[],cosechadores:[],eventuales:[],equipoDeCampo:[]};
 var ordenEjecutando=null, pasoEjec=1;
 var capturaEjec={surcos:[],cantidad:0,foto:false,herramientaLimpia:false,epp:{}};
 var formSurcos=[];
-var ROLES={admin:'Admin',encargado:'Encargado',operario:'Labores',ingeniero:'Ingeniero','dueño':'Dueño',inversionista:'Inversionista',cosechador:'Cosechador',galerista:'Galerista'};
-var ROLES_COLABORADOR={operario:'Colaborador',cosechador:'Colaborador de cosecha',galerista:'Colaborador de galera'};
-var ROLE_COLORS={admin:'background:#c0392b;color:#fff',encargado:'background:#e6a817;color:#1a1a18',operario:'background:#4a9a6a;color:#fff',ingeniero:'background:#e67e22;color:#fff','dueño':'background:#2980b9;color:#fff',inversionista:'background:#6c3483;color:#fff',cosechador:'background:#1a3a2a;color:#fff',galerista:'background:#e91e8c;color:#fff'};
+var ROLES={admin:'Admin',encargado:'Encargado',operario:'Labores',ingeniero:'Ingeniero','dueño':'Dueño',inversionista:'Inversionista',cosechador:'Cosechador',galerista:'Galerista',labores_eventual:'Labores Eventual'};
+var ROLES_COLABORADOR={operario:'Colaborador',cosechador:'Colaborador de cosecha',galerista:'Colaborador de galera',labores_eventual:'Colaborador eventual'};
+var ROLE_COLORS={admin:'background:#c0392b;color:#fff',encargado:'background:#e6a817;color:#1a1a18',operario:'background:#4a9a6a;color:#fff',ingeniero:'background:#e67e22;color:#fff','dueño':'background:#2980b9;color:#fff',inversionista:'background:#6c3483;color:#fff',cosechador:'background:#1a3a2a;color:#fff',galerista:'background:#e91e8c;color:#fff',labores_eventual:'background:#7f8c8d;color:#fff'};
 var ICONOS={'Riego':'💧','Aplicaciones':'🧪','Poda':'✂️','Deshierbado':'🌱','Guiro':'🧵','Trineado':'🔪','Limpieza':'🧹','Sistema de riego':'🚿','Sistema de Tutoreo':'🪢','Macrotuneles':'⛺','Trampas':'🪤','Pozo':'🕳️','Equipos':'🛠️','Cuarto de Sucios':'🧺','Almacén':'📦','Galera':'🏚️','Otras':'➕','Via riego':'💧','Foliar':'🌿','Drench':'🧪','Enrejado':'🔲','Desbrozadora':'🔧','Infraestructura':'🏗️'};
 var riegoOrdenes=[], riegoTimer=null, riegoAlarmaActiva=false, riegoAudioCtx=null;
 var riegoColaOffline=JSON.parse(localStorage.getItem('mootsil_riego_cola')||'[]');
@@ -450,7 +450,7 @@ function verificarPin(){
 }
 
 function entrarSegunRol(){
-  if(usuario.rol==='operario'||usuario.rol==='cosechador'||usuario.rol==='galerista'){
+  if(usuario.rol==='operario'||usuario.rol==='cosechador'||usuario.rol==='galerista'||usuario.rol==='labores_eventual'){
     document.getElementById('op-nombre').textContent=usuario.nombre+' · '+(ROLES_COLABORADOR[usuario.rol]||'Colaborador');
     mostrar('screen-operario');
     from('usuarios').select('avatar_url').eq('id',usuario.id).get().then(function(rows){
@@ -510,10 +510,13 @@ function cargarCatalogos(){
     from('subtipos_labor').select('*').get(),
     from('usuarios').select('id,nombre,rol').eq('rol','operario').get(),
     from('inventario_items').select('*').eq('activo',true).order('nombre').get(),
-    from('usuarios').select('id,nombre,rol').eq('rol','cosechador').get()
+    from('usuarios').select('id,nombre,rol').eq('rol','cosechador').get(),
+    from('usuarios').select('id,nombre,rol').eq('rol','labores_eventual').get()
   ]).then(function(r){
     cats.plantaciones=r[0]; cats.tablas=r[1]; cats.tiposLabor=r[2];
     cats.subtiposLabor=r[3]; cats.operarios=r[4]; cats.inventario=r[5]||[]; cats.cosechadores=r[6]||[];
+    cats.eventuales=r[7]||[];
+    cats.equipoDeCampo=cats.operarios.concat(cats.eventuales);
   });
 }
 
@@ -801,7 +804,7 @@ function renderFormAsignar(){
 function renderFormAsignarPaso2(){
   var lb=asignarLaborSel;
   var body=document.getElementById('enc-body');
-  var opO=cats.operarios.map(function(o){return '<button type="button" class="op-chip" data-id="'+o.id+'" onclick="toggleChip(this)">'+o.nombre+'</button>';}).join('');
+  var opO=cats.equipoDeCampo.map(function(o){return '<button type="button" class="op-chip" data-id="'+o.id+'" onclick="toggleChip(this)">'+o.nombre+'</button>';}).join('');
   var pO=cats.plantaciones.map(function(p){return '<option value="'+p.id+'">'+p.nombre+'</option>';}).join('');
   var esTiempo=!!(lb&&lb.requiere_tiempo);
   body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Paso 2 de 2 · Detalles<button type="button" onclick="renderFormAsignar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cambiar labor</button></div>'+(modoAsignacionLabor==='extra'?'<div style="background:var(--tierra-tenue);border:1.5px solid var(--tierra);border-radius:var(--radio-sm);padding:.6rem .85rem;margin-bottom:.75rem;font-size:.8rem;font-weight:700;color:var(--tierra);">⏰ Se asignará como Hora Extra (autoriza también su registro de asistencia)</div>':'')+'<div class="form-card"><div class="labor-chosen">'+(ICONOS[lb.nombre]||'🔧')+' <strong>'+lb.nombre+'</strong></div><div class="form-group"><label>Operarios</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Plantación</label><select id="fpl"><option value="">Selecciona...</option>'+pO+'</select></div><div class="form-group" id="ftb-wrap" style="display:'+(esTiempo?'none':'')+'"><label>Tabla</label><select id="ftb"><option value="">Primero elige plantación</option></select></div><div class="form-group" id="fsg" style="display:none"><label>Detalle</label><select id="fsb"></select></div><div class="form-group" id="fcg" style="display:'+(lb.requiere_cantidad_insumo?'':'none')+'"><label>Cantidad esperada</label><input type="number" id="fca" placeholder="0" min="0"/></div><div class="form-group" id="frg" style="display:'+(esTiempo?'':'none')+'"><label>Duración de riego por tabla (minutos)</label><div id="frg-tablas"></div><p class="hint">Deja vacío la tabla que no quieras asignar hoy.</p></div><div class="form-group" id="fsurcos-wrap" style="display:'+(esTiempo?'none':'')+'"><label>Surcos a trabajar</label><div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;"><button type="button" onclick="selTodosF()" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">Tabla completa</button><button type="button" onclick="selNingunoF()" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.78rem;cursor:pointer;">Limpiar</button></div><div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;"><span style="font-size:.78rem;color:var(--gris-3)">Del surco</span><input type="number" id="f-ri" min="1" style="width:52px;padding:3px 6px;border:1.5px solid var(--gris-2);border-radius:6px;font-size:.85rem;" placeholder="1"><span style="font-size:.78rem;color:var(--gris-3)">al</span><input type="number" id="f-rf" min="1" style="width:52px;padding:3px 6px;border:1.5px solid var(--gris-2);border-radius:6px;font-size:.85rem;" placeholder="12"><button type="button" onclick="aplicarRangoF()" style="padding:4px 10px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.78rem;cursor:pointer;">Aplicar</button></div><div class="surcos-grid" id="fsc"></div><p class="hint">O toca surcos individuales</p></div><div class="form-group"><label>Duración</label><select id="fdu"><option value="dia">Solo hoy</option><option value="labor_completa">Labor completa</option></select></div><div class="form-group"><label>Fecha</label><input type="date" id="ffe" value="'+new Date().toISOString().slice(0,10)+'"/></div><div class="form-group"><label>Notas</label><input type="text" id="fno" placeholder="Opcional..."/></div><button class="btn-primary" onclick="guardarOrden()">'+(modoAsignacionLabor==='extra'?'Asignar como hora extra':'Asignar orden')+'</button></div>';
@@ -874,7 +877,7 @@ function renderAsigRiegoMinutos(tablaId,plantacionId){
 
 function renderAsigRiegoOperarios(){
   var body=document.getElementById('enc-body');
-  var opO=cats.operarios.map(function(o){return '<button type="button" class="op-chip'+(riegoAsigOperarios.indexOf(o.id)>-1?' sel':'')+'" data-id="'+o.id+'" onclick="toggleChip(this)">'+o.nombre+'</button>';}).join('');
+  var opO=cats.equipoDeCampo.map(function(o){return '<button type="button" class="op-chip'+(riegoAsigOperarios.indexOf(o.id)>-1?' sel':'')+'" data-id="'+o.id+'" onclick="toggleChip(this)">'+o.nombre+'</button>';}).join('');
   var resumen=Object.keys(riegoAsigMinutos).filter(function(k){return riegoAsigMinutos[k]>0;}).map(function(tid){var t=cats.tablas.find(function(x){return x.id===tid;});var p=t?cats.plantaciones.find(function(x){return x.id===t.plantacion_id;}):null;return t?(p?p.nombre+' · ':'')+t.nombre+' ('+riegoAsigMinutos[tid]+' min)':'';}).join(', ');
   body.innerHTML='<div class="seccion-titulo">💧 Riego · ¿Quién lo hace?</div><div class="form-card"><p class="hint" style="margin-bottom:.9rem;">Tablas: '+resumen+'</p><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1rem;">'+opO+'</div><button class="btn-primary" id="riego-op-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigRiegoPlantaciones()">← Volver a tablas</button>';
   document.getElementById('riego-op-continuar').addEventListener('click',function(){
@@ -897,7 +900,7 @@ function renderAsigRiegoFecha(){
 function renderAsigRiegoNotas(){
   var body=document.getElementById('enc-body');
   var resumen=Object.keys(riegoAsigMinutos).filter(function(k){return riegoAsigMinutos[k]>0;}).map(function(tid){var t=cats.tablas.find(function(x){return x.id===tid;});var p=t?cats.plantaciones.find(function(x){return x.id===t.plantacion_id;}):null;return t?(p?p.nombre+' · ':'')+t.nombre+' · '+riegoAsigMinutos[tid]+' min':'';}).join('<br>');
-  var opNombres=riegoAsigOperarios.map(function(id){var o=cats.operarios.find(function(x){return x.id===id;});return o?o.nombre:'';}).join(', ');
+  var opNombres=riegoAsigOperarios.map(function(id){var o=cats.equipoDeCampo.find(function(x){return x.id===id;});return o?o.nombre:'';}).join(', ');
   body.innerHTML='<div class="seccion-titulo">💧 Riego · Notas (opcional)</div><div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row"><span class="resumen-key">Tablas</span></div><div style="font-size:.82rem;padding:.35rem 0;">'+resumen+'</div><div class="resumen-row"><span class="resumen-key">Operarios</span><span class="resumen-val">'+opNombres+'</span></div><div class="resumen-row"><span class="resumen-key">Fecha</span><span class="resumen-val">'+riegoAsigFecha+'</span></div></div><div class="form-group"><input type="text" id="riego-notas-input" placeholder="Notas para el operario..."></div><button class="btn-primary" id="riego-finalizar">✅ Asignar riego</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigRiegoFecha()">← Volver a fecha</button>';
   document.getElementById('riego-finalizar').addEventListener('click',guardarRiegoAsignacion);
 }
@@ -962,7 +965,7 @@ function guardarOrden(){
       })) : Promise.resolve();
       return autorizarExtraRiego.then(function(){
         return Promise.all(opIds.map(function(oid){
-          return from('notificaciones').insert({titulo:esExtraRiego?'⏰ Riego (hora extra) asignado':'💧 Riego asignado',cuerpo:usuario.nombre+' asignó riego a '+(cats.operarios.find(function(o){return o.id===oid;})||{}).nombre+' en '+filas.length+' tabla(s)'+(esExtraRiego?' (hora extra)':''),icono:esExtraRiego?'⏰':'💧',leida:false,para_rol:'operario',para_usuario:oid});
+          return from('notificaciones').insert({titulo:esExtraRiego?'⏰ Riego (hora extra) asignado':'💧 Riego asignado',cuerpo:usuario.nombre+' asignó riego a '+(cats.equipoDeCampo.find(function(o){return o.id===oid;})||{}).nombre+' en '+filas.length+' tabla(s)'+(esExtraRiego?' (hora extra)':''),icono:esExtraRiego?'⏰':'💧',leida:false,para_rol:'operario',para_usuario:oid});
         }));
       });
     }).then(function(){showToast((esExtraRiego?'⏰ Riego asignado como hora extra. ':'💧 Riego asignado. ')+'Puedes asignar otra labor.');renderFormAsignar();}).catch(function(e){alert('Error: '+e.message);});
@@ -983,7 +986,7 @@ function guardarOrden(){
     })) : Promise.resolve();
     return autorizarExtra.then(function(){
       return Promise.all(opIds.map(function(oid){
-        return from('notificaciones').insert({titulo:esExtra?'⏰ Hora extra asignada':'📋 Nueva tarea asignada',cuerpo:usuario.nombre+' asignó a '+(cats.operarios.find(function(o){return o.id===oid;})||{}).nombre+': '+(lb?lb.nombre:'')+' en '+(tb?tb.nombre:'')+(esExtra?' (hora extra)':''),icono:esExtra?'⏰':'📋',leida:false,para_rol:'operario',para_usuario:oid});
+        return from('notificaciones').insert({titulo:esExtra?'⏰ Hora extra asignada':'📋 Nueva tarea asignada',cuerpo:usuario.nombre+' asignó a '+(cats.equipoDeCampo.find(function(o){return o.id===oid;})||{}).nombre+': '+(lb?lb.nombre:'')+' en '+(tb?tb.nombre:'')+(esExtra?' (hora extra)':''),icono:esExtra?'⏰':'📋',leida:false,para_rol:'operario',para_usuario:oid});
       }));
     });
   }).then(function(){showToast((esExtra?'⏰ Hora extra asignada: ':'📋 Labor asignada: ')+(lb?lb.nombre:'')+'. Puedes asignar otra.');renderFormAsignar();}).catch(function(e){alert('Error: '+e.message);});
@@ -1017,7 +1020,7 @@ function renderNotifs(bodyId){
 }
 
 function consultaNotifsPropias(soloNoLeidas){
-  var esOperario = usuario.rol==='operario'||usuario.rol==='cosechador'||usuario.rol==='galerista';
+  var esOperario = usuario.rol==='operario'||usuario.rol==='cosechador'||usuario.rol==='galerista'||usuario.rol==='labores_eventual';
   if(!esOperario){
     var q=from('notificaciones').select('*').eq('para_rol','encargado');
     if(soloNoLeidas) q=q.eq('leida',false);
@@ -2879,7 +2882,7 @@ function renderControlAsistencias(fecha){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo">📋 Control de Asistencias</div><div class="loading">Cargando...</div>';
   var hoy=new Date().toISOString().slice(0,10);
-  var operariosTodos=cats.operarios.concat(cats.cosechadores||[]);
+  var operariosTodos=cats.operarios.concat(cats.cosechadores||[]).concat(cats.eventuales||[]);
   var idsUnicos={}; operariosTodos=operariosTodos.filter(function(o){if(idsUnicos[o.id])return false;idsUnicos[o.id]=true;return true;});
   Promise.all([
     from('asistencia_registros').select('*').eq('fecha',fecha).eq('modalidad','labores').get(),
@@ -2928,6 +2931,78 @@ function renderControlAsistencias(fecha){
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
+function renderPagosEventuales(fecha){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo">🧑‍🌾 Labores Eventual</div><div class="loading">Cargando...</div>';
+  var hoy=new Date().toISOString().slice(0,10);
+  var esHoy=fecha===hoy;
+  Promise.all([
+    from('asistencia_registros').select('*').eq('fecha',fecha).eq('modalidad','labores').get(),
+    from('pagos_eventuales').select('*').eq('fecha',fecha).get()
+  ]).then(function(r){
+    var registros=r[0]||[];
+    var pagosDelDia=r[1]||[];
+    var pagoPorOperario={}; pagosDelDia.forEach(function(p){pagoPorOperario[p.operario_id]=p;});
+    var clockPorOperario={};
+    registros.forEach(function(reg){
+      if(!clockPorOperario[reg.usuario_id]) clockPorOperario[reg.usuario_id]={entrada:null};
+      if(reg.tipo==='entrada'&&(!clockPorOperario[reg.usuario_id].entrada||reg.registrado_en<clockPorOperario[reg.usuario_id].entrada)) clockPorOperario[reg.usuario_id].entrada=reg.registrado_en;
+    });
+    var eventuales=(cats.eventuales||[]).slice().sort(function(a,b){
+      var aClock=!!clockPorOperario[a.id], bClock=!!clockPorOperario[b.id];
+      if(aClock!==bClock) return aClock?-1:1;
+      return a.nombre.localeCompare(b.nombre);
+    });
+    var fechaLbl=new Date(fecha+'T00:00:00').toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    var totalDia=pagosDelDia.reduce(function(s,p){return s+parseFloat(p.monto);},0);
+
+    var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🧑‍🌾 Labores Eventual<button type="button" onclick="renderAdministracionMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Administración</button></div>';
+    html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:.75rem;flex-wrap:wrap;"><button type="button" id="pe-ant" style="border:none;background:var(--gris-1);border-radius:20px;padding:.4rem .9rem;font-size:.8rem;cursor:pointer;">← Día anterior</button><input type="date" id="pe-fecha" value="'+fecha+'" max="'+hoy+'" style="padding:.4rem .6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><button type="button" id="pe-sig" style="border:none;background:var(--gris-1);border-radius:20px;padding:.4rem .9rem;font-size:.8rem;cursor:pointer;" '+(esHoy?'disabled':'')+'>Día siguiente →</button></div>';
+    html+='<p class="hint" style="margin-bottom:.5rem;text-transform:capitalize;">'+fechaLbl+'</p>';
+    html+='<div class="form-card" style="text-align:center;margin-bottom:1rem;"><div style="font-size:.8rem;color:var(--gris-3);">Pagado este día</div><div style="font-size:1.6rem;font-weight:800;color:var(--verde-mid);">$'+totalDia.toFixed(2)+'</div></div>';
+
+    if(!eventuales.length){
+      html+='<div class="empty">Aún no tienes colaboradores con rol "Labores Eventual". Dalos de alta en Empleados → Altas y Bajas.</div>';
+    } else {
+      html+=eventuales.map(function(o){
+        var clockIn=clockPorOperario[o.id];
+        var pago=pagoPorOperario[o.id];
+        var horaE=clockIn&&clockIn.entrada?new Date(clockIn.entrada).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}):null;
+        var asistTxt=clockIn?('✅ Marcó asistencia · '+horaE):'— Sin registro de asistencia este día';
+        var accion=pago
+          ? '<div style="margin-top:.5rem;display:flex;justify-content:space-between;align-items:center;"><span style="font-weight:700;color:var(--verde-mid);">✅ Pagado: $'+parseFloat(pago.monto).toFixed(2)+(pago.concepto?' · '+pago.concepto:'')+'</span><button type="button" class="btn-sm btn-cancelar" data-quitar-pago="'+pago.id+'">Quitar</button></div>'
+          : '<div style="margin-top:.5rem;display:flex;gap:8px;align-items:center;"><input type="number" min="0" step="1" placeholder="Monto $" data-monto-input="'+o.id+'" style="flex:1;padding:.5rem .6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><button type="button" class="btn-sm btn-completar" data-registrar-pago="'+o.id+'">💵 Registrar pago</button></div>';
+        return '<div class="orden-card" style="border-left-color:'+(pago?'var(--verde-mid)':(clockIn?'var(--tierra)':'var(--gris-2)'))+';"><strong style="font-size:.9rem;">'+o.nombre+'</strong><div class="orden-meta">'+asistTxt+'</div>'+accion+'</div>';
+      }).join('');
+    }
+
+    body.innerHTML=html;
+    document.getElementById('pe-fecha').addEventListener('change',function(){renderPagosEventuales(this.value);});
+    document.getElementById('pe-ant').addEventListener('click',function(){var d=new Date(fecha+'T00:00:00');d.setDate(d.getDate()-1);renderPagosEventuales(d.toISOString().slice(0,10));});
+    var btnSig=document.getElementById('pe-sig');
+    if(!esHoy) btnSig.addEventListener('click',function(){var d=new Date(fecha+'T00:00:00');d.setDate(d.getDate()+1);renderPagosEventuales(d.toISOString().slice(0,10));});
+
+    body.querySelectorAll('[data-registrar-pago]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var opId=this.dataset.registrarPago;
+        var input=body.querySelector('[data-monto-input="'+opId+'"]');
+        var monto=parseFloat(input.value);
+        if(!monto||monto<=0){alert('Captura un monto válido.');return;}
+        btn.disabled=true; btn.textContent='Guardando...';
+        from('pagos_eventuales').insert({operario_id:opId,fecha:fecha,monto:monto,pagado_por:usuario.id}).then(function(){
+          return from('notificaciones').insert({titulo:'💳 Pago registrado',cuerpo:'Se te registró un pago de $'+monto.toFixed(2)+' por el día '+fecha+'.',icono:'💳',leida:false,para_rol:'operario',para_usuario:opId});
+        }).then(function(){showToast('✅ Pago registrado');renderPagosEventuales(fecha);}).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='💵 Registrar pago';});
+      });
+    });
+    body.querySelectorAll('[data-quitar-pago]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        if(!confirm('¿Quitar este pago registrado?')) return;
+        from('pagos_eventuales').eq('id',this.dataset.quitarPago).delete().then(function(){showToast('Pago eliminado');renderPagosEventuales(fecha);}).catch(function(e){alert('Error: '+e.message);});
+      });
+    });
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
 function renderAdministracionMenu(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo">🏛️ Administración</div><div class="labor-grid" style="grid-template-columns:repeat(2,1fr);">'+
@@ -2935,11 +3010,13 @@ function renderAdministracionMenu(){
     '<div class="labor-tile" data-admin="nominas"><div class="labor-tile-ic">💰</div><div class="labor-tile-lbl">Nóminas</div></div>'+
     '<div class="labor-tile" data-admin="compras"><div class="labor-tile-ic">🛒</div><div class="labor-tile-lbl">Compras</div></div>'+
     '<div class="labor-tile" data-admin="asistencias"><div class="labor-tile-ic">📋</div><div class="labor-tile-lbl">Control de Asistencias</div></div>'+
+    '<div class="labor-tile" data-admin="eventuales"><div class="labor-tile-ic">🧑‍🌾</div><div class="labor-tile-lbl">Labores Eventual</div></div>'+
   '</div>';
   body.querySelector('[data-admin="nominas"]').addEventListener('click',renderNominasMenu);
   body.querySelector('[data-admin="empleados"]').addEventListener('click',renderEmpleadosMenu);
   body.querySelector('[data-admin="compras"]').addEventListener('click',renderOrdenCompra);
   body.querySelector('[data-admin="asistencias"]').addEventListener('click',function(){renderControlAsistencias(new Date().toISOString().slice(0,10));});
+  body.querySelector('[data-admin="eventuales"]').addEventListener('click',function(){renderPagosEventuales(new Date().toISOString().slice(0,10));});
 }
 
 function renderEmpleadosMenu(){
@@ -3970,6 +4047,7 @@ function renderPagosHistorial(){
 
 function renderPagosMenu(){
   var body=document.getElementById('op-body');
+  if(usuario.rol==='labores_eventual'){renderMisPagosEventuales();return;}
   body.innerHTML='<div class="seccion-titulo">💳 Pagos</div><div class="labor-grid" style="grid-template-columns:repeat(3,1fr);">'+
     '<div class="labor-tile" data-pago="semana"><div class="labor-tile-ic">📅</div><div class="labor-tile-lbl">Semana</div></div>'+
     '<div class="labor-tile" data-pago="extras"><div class="labor-tile-ic">⏰</div><div class="labor-tile-lbl">Horas Extras</div></div>'+
@@ -3982,6 +4060,23 @@ function renderPagosMenu(){
   body.querySelector('[data-pago="debo"]').addEventListener('click',renderDebo);
   body.querySelector('[data-pago="cartera"]').addEventListener('click',function(){renderCartera(new Date());});
   body.querySelector('[data-pago="historial"]').addEventListener('click',renderPagosHistorial);
+}
+
+function renderMisPagosEventuales(){
+  var body=document.getElementById('op-body');
+  body.innerHTML='<div class="seccion-titulo">💳 Mis pagos</div><div class="loading">Cargando...</div>';
+  from('pagos_eventuales').select('*').eq('operario_id',usuario.id).order('fecha',{ascending:false}).get().then(function(rows){
+    rows=rows||[];
+    var total=rows.reduce(function(s,p){return s+parseFloat(p.monto);},0);
+    var html='<div class="seccion-titulo">💳 Mis pagos</div><p class="hint" style="margin-bottom:.75rem;">Como colaborador eventual, se te paga por día trabajado — aquí ves lo que se te ha registrado.</p>';
+    html+='<div class="form-card" style="text-align:center;"><div style="font-size:.8rem;color:var(--gris-3);">Total recibido</div><div style="font-size:1.8rem;font-weight:800;color:var(--verde-mid);">$'+total.toFixed(2)+'</div></div>';
+    if(!rows.length){html+='<div class="empty" style="margin-top:1rem;">Aún no tienes pagos registrados.</div>';}
+    else html+=rows.map(function(p){
+      var f=new Date(p.fecha+'T00:00:00').toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});
+      return '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.85rem;text-transform:capitalize;">'+f+'</strong><strong style="color:var(--verde-mid);">$'+parseFloat(p.monto).toFixed(2)+'</strong></div>'+(p.concepto?'<div class="orden-meta">'+p.concepto+'</div>':'')+'</div>';
+    }).join('');
+    body.innerHTML=html;
+  }).catch(function(e){body.innerHTML='<div class="empty">No se pudieron cargar tus pagos.<br/><span style="font-size:.7rem;color:var(--gris-3);">('+e.message+')</span></div>';});
 }
 
 function inicioDeSemana(fecha){
@@ -5376,7 +5471,7 @@ function renderNuevoDocumentoPersonal(){
 
 function renderNuevoUsuario(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="form-card"><h3>Nuevo usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="nu-n" placeholder="Nombre completo"/></div><div class="form-group"><label>Rol</label><select id="nu-r"><option value="operario">Labores</option><option value="encargado">Encargado</option><option value="ingeniero">Ingeniero</option><option value="cosechador">Cosechador</option><option value="galerista">Galerista</option><option value="dueño">Dueño</option><option value="inversionista">Inversionista</option><option value="admin">Admin</option></select></div><div class="form-group"><label>Fecha de ingreso</label><input type="date" id="nu-fi" value="'+new Date().toISOString().slice(0,10)+'"></div><div class="form-group"><label>PIN (4 dígitos)</label><input type="number" id="nu-p" placeholder="1234" min="0" max="9999"/></div><div class="nav-row"><button class="btn-back" onclick="renderAltasBajas()">← Cancelar</button><button class="btn-next" onclick="guardarNuevoUsuario()">Guardar</button></div></div>';
+  body.innerHTML='<div class="form-card"><h3>Nuevo usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="nu-n" placeholder="Nombre completo"/></div><div class="form-group"><label>Rol</label><select id="nu-r"><option value="operario">Labores</option><option value="labores_eventual">Labores Eventual</option><option value="encargado">Encargado</option><option value="ingeniero">Ingeniero</option><option value="cosechador">Cosechador</option><option value="galerista">Galerista</option><option value="dueño">Dueño</option><option value="inversionista">Inversionista</option><option value="admin">Admin</option></select></div><div class="form-group"><label>Fecha de ingreso</label><input type="date" id="nu-fi" value="'+new Date().toISOString().slice(0,10)+'"></div><div class="form-group"><label>PIN (4 dígitos)</label><input type="number" id="nu-p" placeholder="1234" min="0" max="9999"/></div><div class="nav-row"><button class="btn-back" onclick="renderAltasBajas()">← Cancelar</button><button class="btn-next" onclick="guardarNuevoUsuario()">Guardar</button></div></div>';
 }
 
 function guardarNuevoUsuario(){
@@ -5400,7 +5495,7 @@ function renderEditarUsuario(id,nombre,rol,certAmbas){
     var avatarUrl=(rows&&rows[0]&&rows[0].avatar_url)||'';
     var sueldoBase=(rows&&rows[0]&&rows[0].sueldo_base)||'';
     var fechaIngreso=(rows&&rows[0]&&rows[0].fecha_ingreso)||'';
-    body.innerHTML='<div class="form-card"><h3>Editar usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="eu-n" value="'+nombre+'"/></div><div class="form-group"><label>Rol</label><select id="eu-r"><option value="operario"'+(rol==='operario'?' selected':'')+'>Labores</option><option value="encargado"'+(rol==='encargado'?' selected':'')+'>Encargado</option><option value="ingeniero"'+(rol==='ingeniero'?' selected':'')+'>Ingeniero</option><option value="cosechador"'+(rol==='cosechador'?' selected':'')+'>Cosechador</option><option value="galerista"'+(rol==='galerista'?' selected':'')+'>Galerista</option><option value="dueño"'+(rol==='dueño'?' selected':'')+'>Dueño</option><option value="inversionista"'+(rol==='inversionista'?' selected':'')+'>Inversionista</option><option value="admin"'+(rol==='admin'?' selected':'')+'>Admin</option></select></div><div class="form-group"><label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:.85rem;"><input type="checkbox" id="eu-cert" '+(certAmbas?'checked':'')+' style="width:18px;height:18px;"> Certificado para Labores y Cosecha (ambas)</label></div><div class="form-group"><label>Fecha de ingreso</label><input type="date" id="eu-fi" value="'+fechaIngreso+'"></div><div class="form-group"><label>Sueldo base diario ($)</label><input type="number" id="eu-sueldo" min="0" step="1" value="'+sueldoBase+'" placeholder="Ej. 350"></div><div class="form-group"><label>URL de su Mootsilito personalizado (opcional)</label><input type="text" id="eu-avatar" value="'+avatarUrl.replace(/"/g,'&quot;')+'" placeholder="Ej. https://tusitio.pages.dev/avatares/lalo.png"><p class="hint">Sube la imagen a tu repo (junto a index.html) y pega aquí el link completo.</p></div><div class="nav-row"><button class="btn-back" onclick="renderAltasBajas()">← Cancelar</button><button class="btn-next" onclick="guardarEditarUsuario(\''+id+'\')">Guardar</button></div></div>';
+    body.innerHTML='<div class="form-card"><h3>Editar usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="eu-n" value="'+nombre+'"/></div><div class="form-group"><label>Rol</label><select id="eu-r"><option value="operario"'+(rol==='operario'?' selected':'')+'>Labores</option><option value="labores_eventual"'+(rol==='labores_eventual'?' selected':'')+'>Labores Eventual</option><option value="encargado"'+(rol==='encargado'?' selected':'')+'>Encargado</option><option value="ingeniero"'+(rol==='ingeniero'?' selected':'')+'>Ingeniero</option><option value="cosechador"'+(rol==='cosechador'?' selected':'')+'>Cosechador</option><option value="galerista"'+(rol==='galerista'?' selected':'')+'>Galerista</option><option value="dueño"'+(rol==='dueño'?' selected':'')+'>Dueño</option><option value="inversionista"'+(rol==='inversionista'?' selected':'')+'>Inversionista</option><option value="admin"'+(rol==='admin'?' selected':'')+'>Admin</option></select></div><div class="form-group"><label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:.85rem;"><input type="checkbox" id="eu-cert" '+(certAmbas?'checked':'')+' style="width:18px;height:18px;"> Certificado para Labores y Cosecha (ambas)</label></div><div class="form-group"><label>Fecha de ingreso</label><input type="date" id="eu-fi" value="'+fechaIngreso+'"></div><div class="form-group"><label>Sueldo base diario ($)</label><input type="number" id="eu-sueldo" min="0" step="1" value="'+sueldoBase+'" placeholder="Ej. 350"></div><div class="form-group"><label>URL de su Mootsilito personalizado (opcional)</label><input type="text" id="eu-avatar" value="'+avatarUrl.replace(/"/g,'&quot;')+'" placeholder="Ej. https://tusitio.pages.dev/avatares/lalo.png"><p class="hint">Sube la imagen a tu repo (junto a index.html) y pega aquí el link completo.</p></div><div class="nav-row"><button class="btn-back" onclick="renderAltasBajas()">← Cancelar</button><button class="btn-next" onclick="guardarEditarUsuario(\''+id+'\')">Guardar</button></div></div>';
   });
 }
 
@@ -5420,7 +5515,7 @@ function renderCambiarPin(id,nombre){
 }
 
 function renderCambiarMiPin(){
-  var esOperario = usuario.rol==='operario'||usuario.rol==='cosechador'||usuario.rol==='galerista';
+  var esOperario = usuario.rol==='operario'||usuario.rol==='cosechador'||usuario.rol==='galerista'||usuario.rol==='labores_eventual';
   var body=document.getElementById(esOperario?'op-body':'enc-body');
   var volver = esOperario?'cargarTareas()':'renderTablero()';
   body.innerHTML='<div class="seccion-titulo">🔒 Cambiar mi PIN</div><div class="form-card"><div class="form-group"><label>Tu PIN actual</label><input type="number" id="mp-actual" placeholder="0000" min="0" max="9999"></div><div class="form-group"><label>Nuevo PIN (4 dígitos)</label><input type="number" id="mp-nuevo" placeholder="0000" min="0" max="9999"></div><div class="form-group"><label>Repite el nuevo PIN</label><input type="number" id="mp-nuevo2" placeholder="0000" min="0" max="9999"></div><button class="btn-primary" id="mp-guardar">Guardar nuevo PIN</button></div><button class="btn-back" style="margin-top:1rem;" onclick="'+volver+'">← Cancelar</button>';
