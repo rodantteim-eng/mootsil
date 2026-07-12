@@ -146,6 +146,30 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .cam-bar{background:#000;padding:1.5rem;display:flex;justify-content:space-around;align-items:center;}
 .cam-capbtn{width:75px;height:75px;border-radius:50%;border:5px solid #fff;background:#fff;cursor:pointer;font-size:1.8rem;}
 .cam-auxbtn{color:#fff;font-size:.85rem;padding:.5rem 1.25rem;background:rgba(255,255,255,.15);border:none;border-radius:20px;cursor:pointer;}
+
+#recibo-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;z-index:9999;overflow-y:auto;flex-direction:column;}
+#recibo-overlay.active{display:flex;}
+.recibo-bar{display:flex;gap:10px;padding:.85rem 1rem;background:var(--verde);position:sticky;top:0;z-index:2;flex-shrink:0;}
+.recibo-bar button{flex:1;padding:.75rem;border:none;border-radius:var(--radio-sm);font-weight:700;font-size:.85rem;cursor:pointer;}
+.recibo-bar button.recibo-cerrar{background:rgba(255,255,255,.15);color:#fff;}
+.recibo-bar button.recibo-imprimir{background:#fff;color:var(--verde);}
+.recibo-doc{max-width:480px;width:100%;margin:0 auto;padding:1.5rem 1.25rem 3rem;color:#181818;}
+.recibo-doc .recibo-encabezado{text-align:center;border-bottom:2px solid #181818;padding-bottom:1rem;margin-bottom:1rem;}
+.recibo-doc .recibo-encabezado h2{font-size:1.25rem;margin-bottom:.15rem;}
+.recibo-doc .recibo-folio{font-size:.72rem;color:#666;margin-top:.35rem;}
+.recibo-doc .recibo-datos{font-size:.85rem;line-height:1.7;margin-bottom:1rem;}
+.recibo-doc .recibo-datos strong{font-weight:700;}
+.recibo-fila{display:flex;justify-content:space-between;gap:1rem;font-size:.85rem;padding:.4rem 0;border-bottom:1px solid #e5e5e0;}
+.recibo-fila.recibo-total{border-top:2px solid #181818;border-bottom:none;margin-top:.4rem;padding-top:.65rem;font-weight:800;font-size:1.05rem;}
+.recibo-firmas{margin-top:3rem;display:flex;justify-content:space-between;gap:1.5rem;}
+.recibo-firmas div{flex:1;text-align:center;border-top:1px solid #181818;padding-top:.4rem;font-size:.72rem;color:#444;}
+.recibo-nota{font-size:.7rem;color:#888;margin-top:2rem;text-align:center;}
+@media print{
+  body>*:not(#recibo-overlay){display:none!important;}
+  #recibo-overlay{position:static!important;overflow:visible!important;}
+  .recibo-no-print{display:none!important;}
+  .recibo-doc{max-width:100%;padding:0;}
+}
 </style>
 </head>
 <body>
@@ -229,6 +253,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 
 <div id="toast"></div>
+<div id="recibo-overlay">
+  <div class="recibo-bar recibo-no-print">
+    <button type="button" class="recibo-cerrar" onclick="cerrarRecibo()">← Cerrar</button>
+    <button type="button" class="recibo-imprimir" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+  </div>
+  <div id="recibo-contenido" class="recibo-doc"></div>
+</div>
 <div id="cam-overlay">
   <video id="cam-video" autoplay playsinline muted></video>
   <canvas id="cam-canvas"></canvas>
@@ -302,7 +333,7 @@ var cats={plantaciones:[],tablas:[],tiposLabor:[],subtiposLabor:[],operarios:[],
 var ordenEjecutando=null, pasoEjec=1;
 var capturaEjec={surcos:[],cantidad:0,foto:false,herramientaLimpia:false,epp:{}};
 var formSurcos=[];
-var ROLES={admin:'Admin',encargado:'Encargado',operario:'Operario',ingeniero:'Ingeniero','dueño':'Dueño',inversionista:'Inversionista',cosechador:'Cosechador',galerista:'Galerista'};
+var ROLES={admin:'Admin',encargado:'Encargado',operario:'Labores',ingeniero:'Ingeniero','dueño':'Dueño',inversionista:'Inversionista',cosechador:'Cosechador',galerista:'Galerista'};
 var ROLES_COLABORADOR={operario:'Colaborador',cosechador:'Colaborador de cosecha',galerista:'Colaborador de galera'};
 var ROLE_COLORS={admin:'background:#c0392b;color:#fff',encargado:'background:#e6a817;color:#1a1a18',operario:'background:#4a9a6a;color:#fff',ingeniero:'background:#e67e22;color:#fff','dueño':'background:#2980b9;color:#fff',inversionista:'background:#6c3483;color:#fff',cosechador:'background:#1a3a2a;color:#fff',galerista:'background:#e91e8c;color:#fff'};
 var ICONOS={'Riego':'💧','Aplicaciones':'🧪','Poda':'✂️','Deshierbado':'🌱','Guiro':'🧵','Trineado':'🔪','Limpieza':'🧹','Sistema de riego':'🚿','Sistema de Tutoreo':'🪢','Macrotuneles':'⛺','Trampas':'🪤','Pozo':'🕳️','Equipos':'🛠️','Cuarto de Sucios':'🧺','Almacén':'📦','Galera':'🏚️','Otras':'➕','Via riego':'💧','Foliar':'🌿','Drench':'🧪','Enrejado':'🔲','Desbrozadora':'🔧','Infraestructura':'🏗️'};
@@ -3424,7 +3455,8 @@ function renderGenerarNomina(fechaRef){
         var nominaCompleta = pagado && (!horasExtra||pagadoExtra);
 
         var idAccion='gn-acc-'+o.id;
-        accionesPago[idAccion]={operarioId:o.id,nombre:o.nombre,totalSueldo:totalSueldo,horasExtra:horasExtra,totalExtra:totalExtra,deducciones:deduccionesOp,bonosQueCalifican:bonosQueCalifican,scoresOp:scoresOp,nominaCompleta:nominaCompleta,granTotal:granTotal};
+        accionesPago[idAccion]={operarioId:o.id,nombre:o.nombre,totalSueldo:totalSueldo,horasExtra:horasExtra,totalExtra:totalExtra,deducciones:deduccionesOp,bonosQueCalifican:bonosQueCalifican,scoresOp:scoresOp,nominaCompleta:nominaCompleta,granTotal:granTotal,
+          recibo:{nombre:o.nombre,numSemana:numSemana,semanaInicio:semanaInicio,semanaFin:semanaFin,resumen:resumen,sueldoBase:sueldoBase,totalSueldo:totalSueldo,tarifa:tarifa,horasExtra:horasExtra,totalExtra:totalExtra,bonos:bonosQueCalifican.map(function(b){return {descripcion:b.descripcion,monto:parseFloat(b.monto||0)};}),deducciones:deduccionesOp.map(function(d){var pr=prestamoIdsOp[d.prestamo_id];return {concepto:pr?pr.concepto:'Préstamo',numero:d.numero_pago,monto:parseFloat(d.monto)};}),granTotal:granTotal,nominaCompleta:nominaCompleta}};
 
         var filas='<div class="resumen-row"><span class="resumen-key">💵 Sueldo ('+resumen.trabajados+' días'+(resumen.diasPermisoConGoce?' + '+resumen.diasPermisoConGoce+' permiso c/goce':'')+')</span><span class="resumen-val">+$'+totalSueldo.toFixed(2)+'</span></div>';
         if(horasExtra>0) filas+='<div class="resumen-row"><span class="resumen-key">⏰ Horas extra ('+horasExtra.toFixed(1)+'h)</span><span class="resumen-val">+$'+totalExtra.toFixed(2)+'</span></div>';
@@ -3448,7 +3480,10 @@ function renderGenerarNomina(fechaRef){
           (metaExtra.length?'<div class="orden-meta" style="margin-top:.15rem;">'+metaExtra.join(' · ')+'</div>':'')+
           '<div style="margin-top:.6rem;padding-top:.5rem;border-top:1px dashed var(--gris-2);">'+filas+'</div>'+
           '<div class="resumen-row" style="border-top:2px solid var(--gris-1);margin-top:.3rem;padding-top:.5rem;"><strong style="font-size:.85rem;">Total nómina</strong><strong style="font-size:1rem;color:'+(nominaCompleta?'var(--verde-mid)':'var(--tierra)')+';">$'+granTotal.toFixed(2)+'</strong></div>'+
-          (nominaCompleta?'<button class="btn-sm btn-cancelar" data-despagar="'+idAccion+'" style="margin-top:.6rem;">Marcar como pendiente</button>':'<button class="btn-sm btn-completar" data-pagar="'+idAccion+'" style="margin-top:.6rem;">✅ Marcar nómina completa como pagada</button>')+
+          '<div style="display:flex;gap:8px;margin-top:.6rem;flex-wrap:wrap;">'+
+          (nominaCompleta?'<button class="btn-sm btn-cancelar" data-despagar="'+idAccion+'">Marcar como pendiente</button>':'<button class="btn-sm btn-completar" data-pagar="'+idAccion+'">✅ Marcar nómina completa como pagada</button>')+
+          '<button type="button" class="btn-sm" style="background:var(--gris-1);color:var(--negro);" data-recibo="'+idAccion+'">🧾 Recibo</button>'+
+          '</div>'+
           '</div>';
       }).join('');
 
@@ -3503,8 +3538,46 @@ function renderGenerarNomina(fechaRef){
           Promise.all(pasos).then(function(){showToast('Marcado como pendiente');renderGenerarNomina(lunes);}).catch(function(e){alert('Error: '+e.message);});
         });
       });
+      body.querySelectorAll('[data-recibo]').forEach(function(btn){
+        btn.addEventListener('click',function(){
+          var acc=accionesPago[this.dataset.recibo];
+          abrirRecibo(acc.recibo);
+        });
+      });
     }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function abrirRecibo(d){
+  var folio='NOM-'+d.semanaInicio.replace(/-/g,'')+'-S'+d.numSemana;
+  var hoyD=new Date();
+  var fechaEmision=hoyD.toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'});
+  var r=d.resumen;
+  var filas='<div class="recibo-fila"><span>💵 Sueldo ('+r.trabajados+' día'+(r.trabajados===1?'':'s')+' × $'+d.sueldoBase.toFixed(2)+(r.diasPermisoConGoce?' + '+r.diasPermisoConGoce+' permiso c/goce':'')+')</span><span>$'+d.totalSueldo.toFixed(2)+'</span></div>';
+  if(r.diasPermisoSinGoce) filas+='<div class="recibo-fila"><span>🩺 Permiso sin goce (no pagado)</span><span>'+r.diasPermisoSinGoce+' día(s)</span></div>';
+  if(r.faltas) filas+='<div class="recibo-fila"><span>❌ Faltas</span><span>'+r.faltas+'</span></div>';
+  if(r.retardos) filas+='<div class="recibo-fila"><span>🕐 Retardos</span><span>'+r.retardos+'</span></div>';
+  if(d.horasExtra>0) filas+='<div class="recibo-fila"><span>⏰ Horas extra ('+d.horasExtra.toFixed(1)+'h × $'+d.tarifa.toFixed(2)+')</span><span>$'+d.totalExtra.toFixed(2)+'</span></div>';
+  d.bonos.forEach(function(b){
+    filas+='<div class="recibo-fila"><span>🎁 '+b.descripcion+'</span><span>+$'+b.monto.toFixed(2)+'</span></div>';
+  });
+  d.deducciones.forEach(function(x){
+    filas+='<div class="recibo-fila"><span>📝 '+x.concepto+' (pago '+x.numero+')</span><span>-$'+x.monto.toFixed(2)+'</span></div>';
+  });
+  filas+='<div class="recibo-fila recibo-total"><span>Total a pagar</span><span>$'+d.granTotal.toFixed(2)+'</span></div>';
+
+  var html='<div class="recibo-encabezado"><h2>🫐 Mootsil</h2><div style="font-size:.85rem;color:#444;">Recibo de Nómina</div><div class="recibo-folio">Folio '+folio+' · Emitido el '+fechaEmision+'</div></div>'+
+    '<div class="recibo-datos"><div><strong>Colaborador:</strong> '+d.nombre+'</div><div><strong>Periodo:</strong> Semana '+d.numSemana+' · '+d.semanaInicio+' a '+d.semanaFin+'</div><div><strong>Estatus:</strong> '+(d.nominaCompleta?'✅ Pagada':'⏳ Pendiente de pago')+'</div></div>'+
+    filas+
+    '<div class="recibo-firmas"><div>Entregó</div><div>Recibí conforme<br>'+d.nombre+'</div></div>'+
+    '<div class="recibo-nota">Generado por Mootsil · Administración · '+fechaEmision+'</div>';
+
+  document.getElementById('recibo-contenido').innerHTML=html;
+  document.getElementById('recibo-overlay').classList.add('active');
+}
+
+function cerrarRecibo(){
+  document.getElementById('recibo-overlay').classList.remove('active');
 }
 
 function renderPrestamos(){
@@ -5299,7 +5372,7 @@ function renderNuevoDocumentoPersonal(){
 
 function renderNuevoUsuario(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="form-card"><h3>Nuevo usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="nu-n" placeholder="Nombre completo"/></div><div class="form-group"><label>Rol</label><select id="nu-r"><option value="operario">Operario</option><option value="encargado">Encargado</option><option value="ingeniero">Ingeniero</option><option value="cosechador">Cosechador</option><option value="galerista">Galerista</option><option value="dueño">Dueño</option><option value="inversionista">Inversionista</option><option value="admin">Admin</option></select></div><div class="form-group"><label>Fecha de ingreso</label><input type="date" id="nu-fi" value="'+new Date().toISOString().slice(0,10)+'"></div><div class="form-group"><label>PIN (4 dígitos)</label><input type="number" id="nu-p" placeholder="1234" min="0" max="9999"/></div><div class="nav-row"><button class="btn-back" onclick="renderAltasBajas()">← Cancelar</button><button class="btn-next" onclick="guardarNuevoUsuario()">Guardar</button></div></div>';
+  body.innerHTML='<div class="form-card"><h3>Nuevo usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="nu-n" placeholder="Nombre completo"/></div><div class="form-group"><label>Rol</label><select id="nu-r"><option value="operario">Labores</option><option value="encargado">Encargado</option><option value="ingeniero">Ingeniero</option><option value="cosechador">Cosechador</option><option value="galerista">Galerista</option><option value="dueño">Dueño</option><option value="inversionista">Inversionista</option><option value="admin">Admin</option></select></div><div class="form-group"><label>Fecha de ingreso</label><input type="date" id="nu-fi" value="'+new Date().toISOString().slice(0,10)+'"></div><div class="form-group"><label>PIN (4 dígitos)</label><input type="number" id="nu-p" placeholder="1234" min="0" max="9999"/></div><div class="nav-row"><button class="btn-back" onclick="renderAltasBajas()">← Cancelar</button><button class="btn-next" onclick="guardarNuevoUsuario()">Guardar</button></div></div>';
 }
 
 function guardarNuevoUsuario(){
@@ -5323,7 +5396,7 @@ function renderEditarUsuario(id,nombre,rol,certAmbas){
     var avatarUrl=(rows&&rows[0]&&rows[0].avatar_url)||'';
     var sueldoBase=(rows&&rows[0]&&rows[0].sueldo_base)||'';
     var fechaIngreso=(rows&&rows[0]&&rows[0].fecha_ingreso)||'';
-    body.innerHTML='<div class="form-card"><h3>Editar usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="eu-n" value="'+nombre+'"/></div><div class="form-group"><label>Rol</label><select id="eu-r"><option value="operario"'+(rol==='operario'?' selected':'')+'>Operario</option><option value="encargado"'+(rol==='encargado'?' selected':'')+'>Encargado</option><option value="ingeniero"'+(rol==='ingeniero'?' selected':'')+'>Ingeniero</option><option value="cosechador"'+(rol==='cosechador'?' selected':'')+'>Cosechador</option><option value="galerista"'+(rol==='galerista'?' selected':'')+'>Galerista</option><option value="dueño"'+(rol==='dueño'?' selected':'')+'>Dueño</option><option value="inversionista"'+(rol==='inversionista'?' selected':'')+'>Inversionista</option><option value="admin"'+(rol==='admin'?' selected':'')+'>Admin</option></select></div><div class="form-group"><label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:.85rem;"><input type="checkbox" id="eu-cert" '+(certAmbas?'checked':'')+' style="width:18px;height:18px;"> Certificado para Labores y Cosecha (ambas)</label></div><div class="form-group"><label>Fecha de ingreso</label><input type="date" id="eu-fi" value="'+fechaIngreso+'"></div><div class="form-group"><label>Sueldo base diario ($)</label><input type="number" id="eu-sueldo" min="0" step="1" value="'+sueldoBase+'" placeholder="Ej. 350"></div><div class="form-group"><label>URL de su Mootsilito personalizado (opcional)</label><input type="text" id="eu-avatar" value="'+avatarUrl.replace(/"/g,'&quot;')+'" placeholder="Ej. https://tusitio.pages.dev/avatares/lalo.png"><p class="hint">Sube la imagen a tu repo (junto a index.html) y pega aquí el link completo.</p></div><div class="nav-row"><button class="btn-back" onclick="renderAltasBajas()">← Cancelar</button><button class="btn-next" onclick="guardarEditarUsuario(\''+id+'\')">Guardar</button></div></div>';
+    body.innerHTML='<div class="form-card"><h3>Editar usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="eu-n" value="'+nombre+'"/></div><div class="form-group"><label>Rol</label><select id="eu-r"><option value="operario"'+(rol==='operario'?' selected':'')+'>Labores</option><option value="encargado"'+(rol==='encargado'?' selected':'')+'>Encargado</option><option value="ingeniero"'+(rol==='ingeniero'?' selected':'')+'>Ingeniero</option><option value="cosechador"'+(rol==='cosechador'?' selected':'')+'>Cosechador</option><option value="galerista"'+(rol==='galerista'?' selected':'')+'>Galerista</option><option value="dueño"'+(rol==='dueño'?' selected':'')+'>Dueño</option><option value="inversionista"'+(rol==='inversionista'?' selected':'')+'>Inversionista</option><option value="admin"'+(rol==='admin'?' selected':'')+'>Admin</option></select></div><div class="form-group"><label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:.85rem;"><input type="checkbox" id="eu-cert" '+(certAmbas?'checked':'')+' style="width:18px;height:18px;"> Certificado para Labores y Cosecha (ambas)</label></div><div class="form-group"><label>Fecha de ingreso</label><input type="date" id="eu-fi" value="'+fechaIngreso+'"></div><div class="form-group"><label>Sueldo base diario ($)</label><input type="number" id="eu-sueldo" min="0" step="1" value="'+sueldoBase+'" placeholder="Ej. 350"></div><div class="form-group"><label>URL de su Mootsilito personalizado (opcional)</label><input type="text" id="eu-avatar" value="'+avatarUrl.replace(/"/g,'&quot;')+'" placeholder="Ej. https://tusitio.pages.dev/avatares/lalo.png"><p class="hint">Sube la imagen a tu repo (junto a index.html) y pega aquí el link completo.</p></div><div class="nav-row"><button class="btn-back" onclick="renderAltasBajas()">← Cancelar</button><button class="btn-next" onclick="guardarEditarUsuario(\''+id+'\')">Guardar</button></div></div>';
   });
 }
 
