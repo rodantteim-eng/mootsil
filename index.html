@@ -1138,17 +1138,21 @@ function cargarReporte(){
 var INSUMO_SUBCATEGORIAS=['Ácidos','Fungicidas','Herbicidas','Insecticidas','Abono','Adherentes','Arrancadores','Aminoácidos','Coadyuvante','Defoliante','Fertilizantes','Fertilizante Orgánico','Estructurador','Enraizador','Mejorador','Potencializador','Regulador de crecimiento'];
 var SEGURIDAD_SUBCATEGORIAS=['Guantes','Lentes de protección','Fajas','Cascos','Botas de seguridad','Cubrebocas','Chalecos reflejantes','Tapones auditivos','Overol / Ropa de protección','Otros'];
 var REFACCIONES_SUBCATEGORIAS=['Gasolina','Aceite 2 Tiempos','Aceite 4 Tiempos','Bujías','Hilo para poda','Filtros','Refacciones varias','Otros'];
+var GALERA_SUBCATEGORIAS=['Clamshell 6oz','Clamshell 9oz','Clamshell 12oz','Clamshell 18oz','Cajas de cartón','Charolas','Bolsas','Etiquetas / Stickers','Ligas','Cinta adhesiva','Otros'];
+var LIMPIEZA_SUBCATEGORIAS=['Cloro','Jabón / Detergente','Trapeadores','Escobas','Bolsas de basura','Guantes de limpieza','Desinfectante','Papel / Toallas','Otros'];
 var GRUPOS_INVENTARIO={
   insumos:{lbl:'📦 Insumos',categorias:INSUMO_SUBCATEGORIAS},
-  galera_limpieza:{lbl:'🧹 Galera y Limpieza',categorias:null},
+  galera:{lbl:'🏭 Galera',categorias:GALERA_SUBCATEGORIAS},
+  limpieza:{lbl:'🧹 Limpieza',categorias:LIMPIEZA_SUBCATEGORIAS},
   seguridad:{lbl:'🦺 Seguridad',categorias:SEGURIDAD_SUBCATEGORIAS},
   refacciones:{lbl:'🔧 Refacciones y Combustibles',categorias:REFACCIONES_SUBCATEGORIAS}
 };
-var ORDEN_GRUPOS_INVENTARIO=['insumos','galera_limpieza','seguridad','refacciones'];
-var GRUPO_NOMBRE_PLANO={insumos:'Insumos',galera_limpieza:'Galera y Limpieza',seguridad:'Seguridad',refacciones:'Refacciones y Combustibles'};
+var ORDEN_GRUPOS_INVENTARIO=['insumos','galera','limpieza','seguridad','refacciones'];
+var GRUPO_NOMBRE_PLANO={insumos:'Insumos',galera:'Galera',limpieza:'Limpieza',seguridad:'Seguridad',refacciones:'Refacciones y Combustibles'};
 var TABS_INVENTARIO=[
   {key:'insumos',lbl:'📦 Insumos',fn:"renderInventario('insumos')"},
-  {key:'galera_limpieza',lbl:'🧹 Galera y Limpieza',fn:"renderInventario('galera_limpieza')"},
+  {key:'galera',lbl:'🏭 Galera',fn:"renderInventario('galera')"},
+  {key:'limpieza',lbl:'🧹 Limpieza',fn:"renderInventario('limpieza')"},
   {key:'seguridad',lbl:'🦺 Seguridad',fn:"renderInventario('seguridad')"},
   {key:'refacciones',lbl:'🔧 Refacciones y Combustibles',fn:"renderInventario('refacciones')"},
   {key:'herramientas',lbl:'🧰 Herramientas',fn:"renderActivosRancho('Herramienta')"},
