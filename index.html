@@ -66,6 +66,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .surco-btn.sel{border-color:var(--verde-mid);background:var(--verde-tenue);color:var(--verde);}
 .op-chip{padding:6px 16px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.85rem;cursor:pointer;color:var(--negro);font-weight:600;}
 .op-chip.sel{background:var(--verde-tenue);border-color:var(--verde-mid);color:var(--verde);}
+.fcomp-item-opcion:hover,.fcomp-item-opcion:active{background:var(--gris-1);}
+.fcomp-item-buscar{width:100%;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;}
 .btn-primary{width:100%;padding:.9rem;border:none;border-radius:var(--radio);background:var(--verde-mid);color:var(--blanco);font-size:.95rem;font-weight:700;cursor:pointer;margin-top:.5rem;}
 .tarea-card{background:var(--blanco);border-radius:var(--radio);padding:1.1rem;margin-bottom:.75rem;border-left:4px solid var(--amarillo);}
 .tarea-title{font-weight:700;font-size:1rem;margin-bottom:.35rem;}
@@ -2248,7 +2250,6 @@ function convertirDesdeBase(valorBase,unidadEntrada,unidadBase){
 function pintarFormulaCompList(){
   var cont=document.getElementById('fm-comp-list');
   if(!cont) return;
-  var opts=cats.inventario.map(function(it){return '<option value="'+it.id+'">'+it.nombre+' ('+it.unidad+')</option>';}).join('');
   cont.innerHTML=formulaCompRows.map(function(r){
     var unidadEntrada=r.unidadEntrada||r.unidad;
     var alternas=unidadesAlternas(r.unidad);
@@ -2256,22 +2257,56 @@ function pintarFormulaCompList(){
       ? '<select class="fcomp-unidad-sel" data-row="'+r.row+'" style="min-width:70px;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.8rem;">'+alternas.map(function(u){return '<option value="'+u+'"'+(u===unidadEntrada?' selected':'')+'>'+u+'</option>';}).join('')+'</select>'
       : '<span style="font-size:.78rem;color:var(--gris-3);min-width:40px;" class="fcomp-unidad-lbl" data-row="'+r.row+'">'+(r.unidad||'')+'</span>';
     var valorMostrado = convertirDesdeBase(r.cantidad,unidadEntrada,r.unidad);
-    return '<div class="form-card" style="margin-bottom:.5rem;padding:.75rem;" data-row="'+r.row+'"><select class="fcomp-item" data-row="'+r.row+'"><option value="">Selecciona componente...</option>'+opts+'<option value="__nuevo__">+ Nuevo componente...</option></select><div class="fcomp-nuevo-box" data-row="'+r.row+'" style="display:none;margin-top:.5rem;gap:8px;"><input type="text" class="fcomp-nuevo-nombre" data-row="'+r.row+'" placeholder="Nombre del componente" style="width:100%;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;margin-bottom:.4rem;"><select class="fcomp-nuevo-unidad" data-row="'+r.row+'" style="width:100%;margin-bottom:.4rem;"><option value="litros">Litros</option><option value="ml">Mililitros</option><option value="kg">Kilogramos</option><option value="gr">Gramos</option><option value="pza">Piezas</option></select><div style="display:flex;gap:6px;margin-bottom:.4rem;"><input type="text" class="fcomp-nuevo-unidadcompra" data-row="'+r.row+'" placeholder="¿Se compra en? Ej. Saco (opcional)" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.8rem;"><input type="number" class="fcomp-nuevo-factorcompra" data-row="'+r.row+'" min="0" placeholder="Ej. 25" style="width:70px;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.8rem;"></div><button type="button" class="fcomp-crear" data-row="'+r.row+'" style="padding:6px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">Crear y usar</button></div><div style="display:flex;gap:8px;align-items:center;margin-top:.5rem;"><input type="number" class="fcomp-cant" data-row="'+r.row+'" min="0" placeholder="cantidad para 200L" value="'+(valorMostrado||'')+'" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;">'+unidadSelectHtml+'<button type="button" class="fcomp-quitar" data-row="'+r.row+'" style="border:none;background:none;color:var(--rojo);font-size:1.1rem;cursor:pointer;">✕</button></div><p class="hint" style="margin:.3rem 0 0;">La cantidad de arriba es lo que la fórmula usa, no el stock — el stock se registra aparte en Inventario.</p></div>';
+    return '<div class="form-card" style="margin-bottom:.5rem;padding:.75rem;" data-row="'+r.row+'"><div class="fcomp-item-wrap" data-row="'+r.row+'" style="position:relative;"><input type="text" class="fcomp-item-buscar" data-row="'+r.row+'" autocomplete="off" placeholder="🔍 Buscar componente..." value="'+(r.nombre?r.nombre.replace(/"/g,'&quot;'):'')+'"><div class="fcomp-item-resultados" data-row="'+r.row+'" style="display:none;position:absolute;left:0;right:0;top:100%;z-index:30;background:#fff;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);max-height:220px;overflow-y:auto;box-shadow:0 6px 16px rgba(0,0,0,.15);"></div></div><div class="fcomp-nuevo-box" data-row="'+r.row+'" style="display:none;margin-top:.5rem;gap:8px;"><input type="text" class="fcomp-nuevo-nombre" data-row="'+r.row+'" placeholder="Nombre del componente" style="width:100%;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;margin-bottom:.4rem;"><select class="fcomp-nuevo-unidad" data-row="'+r.row+'" style="width:100%;margin-bottom:.4rem;"><option value="litros">Litros</option><option value="ml">Mililitros</option><option value="kg">Kilogramos</option><option value="gr">Gramos</option><option value="pza">Piezas</option></select><div style="display:flex;gap:6px;margin-bottom:.4rem;"><input type="text" class="fcomp-nuevo-unidadcompra" data-row="'+r.row+'" placeholder="¿Se compra en? Ej. Saco (opcional)" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.8rem;"><input type="number" class="fcomp-nuevo-factorcompra" data-row="'+r.row+'" min="0" placeholder="Ej. 25" style="width:70px;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.8rem;"></div><button type="button" class="fcomp-crear" data-row="'+r.row+'" style="padding:6px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">Crear y usar</button></div><div style="display:flex;gap:8px;align-items:center;margin-top:.5rem;"><input type="number" class="fcomp-cant" data-row="'+r.row+'" min="0" placeholder="cantidad para 200L" value="'+(valorMostrado||'')+'" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;">'+unidadSelectHtml+'<button type="button" class="fcomp-quitar" data-row="'+r.row+'" style="border:none;background:none;color:var(--rojo);font-size:1.1rem;cursor:pointer;">✕</button></div><p class="hint" style="margin:.3rem 0 0;">La cantidad de arriba es lo que la fórmula usa, no el stock — el stock se registra aparte en Inventario.</p></div>';
   }).join('');
-  cont.querySelectorAll('.fcomp-item').forEach(function(sel){
-    var rid=parseInt(sel.dataset.row);
-    var row=formulaCompRows.find(function(x){return x.row===rid;});
-    if(row&&row.item_id) sel.value=row.item_id;
-    sel.addEventListener('change',function(){
-      var box=cont.querySelector('.fcomp-nuevo-box[data-row="'+rid+'"]');
-      if(this.value==='__nuevo__'){box.style.display='flex';box.style.flexDirection='column';row.item_id=null;}
-      else{
-        box.style.display='none';
-        var it=cats.inventario.find(function(x){return x.id===this.value;}.bind(this));
-        row.item_id=this.value||null; row.nombre=it?it.nombre:''; row.unidad=it?it.unidad:'';
-        row.unidadEntrada=row.unidad;
-        pintarFormulaCompList();
-      }
+  function filtrarInventarioFcomp(query){
+    query=(query||'').trim().toLowerCase();
+    if(!query) return cats.inventario.slice(0,40);
+    return cats.inventario.filter(function(it){return it.nombre.toLowerCase().indexOf(query)>-1;}).slice(0,40);
+  }
+  function pintarResultadosFcomp(rid,query){
+    var resWrap=cont.querySelector('.fcomp-item-resultados[data-row="'+rid+'"]');
+    if(!resWrap) return;
+    var matches=filtrarInventarioFcomp(query);
+    var html=matches.map(function(it){return '<div class="fcomp-item-opcion" data-row="'+rid+'" data-id="'+it.id+'" style="padding:.55rem .7rem;cursor:pointer;border-bottom:1px solid var(--gris-1);font-size:.85rem;">'+it.nombre+' <span style="color:var(--gris-3);font-size:.75rem;">('+it.unidad+')</span></div>';}).join('');
+    if(!matches.length) html='<div style="padding:.55rem .7rem;color:var(--gris-3);font-size:.8rem;">Sin resultados</div>';
+    html+='<div class="fcomp-item-opcion" data-row="'+rid+'" data-id="__nuevo__" style="padding:.55rem .7rem;cursor:pointer;color:var(--verde-mid);font-weight:600;font-size:.85rem;">+ Nuevo componente...</div>';
+    resWrap.innerHTML=html;
+    resWrap.style.display='block';
+    resWrap.querySelectorAll('.fcomp-item-opcion').forEach(function(opt){
+      opt.addEventListener('mousedown',function(e){
+        e.preventDefault();
+        var rid2=parseInt(this.dataset.row);
+        var row2=formulaCompRows.find(function(x){return x.row===rid2;});
+        var box=cont.querySelector('.fcomp-nuevo-box[data-row="'+rid2+'"]');
+        if(this.dataset.id==='__nuevo__'){
+          if(box){box.style.display='flex';box.style.flexDirection='column';}
+          row2.item_id=null;
+          var inputEl=cont.querySelector('.fcomp-item-buscar[data-row="'+rid2+'"]');
+          if(inputEl) inputEl.value='';
+          resWrap.style.display='none';
+        } else {
+          var itId=this.dataset.id;
+          var it=cats.inventario.find(function(x){return x.id===itId;});
+          row2.item_id=itId||null; row2.nombre=it?it.nombre:''; row2.unidad=it?it.unidad:'';
+          row2.unidadEntrada=row2.unidad;
+          pintarFormulaCompList();
+        }
+      });
+    });
+  }
+  cont.querySelectorAll('.fcomp-item-buscar').forEach(function(inp){
+    var rid=parseInt(inp.dataset.row);
+    inp.addEventListener('focus',function(){pintarResultadosFcomp(rid,this.value);});
+    inp.addEventListener('input',function(){pintarResultadosFcomp(rid,this.value);});
+    inp.addEventListener('blur',function(){
+      var self=this;
+      setTimeout(function(){
+        var resWrap=cont.querySelector('.fcomp-item-resultados[data-row="'+rid+'"]');
+        if(resWrap) resWrap.style.display='none';
+        var row=formulaCompRows.find(function(x){return x.row===rid;});
+        if(row) self.value=row.nombre||'';
+      },150);
     });
   });
   cont.querySelectorAll('.fcomp-crear').forEach(function(btn){
