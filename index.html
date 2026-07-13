@@ -213,8 +213,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
   <div class="tabs">
     <button class="tab" id="tab-tablero" onclick="tabEncargado('tablero')" style="display:none">Tablero</button>
-    <button class="tab" id="tab-asignar" onclick="tabEncargado('asignar')" style="display:none">+ Asignar</button>
+    <button class="tab" id="tab-asignar" onclick="tabEncargado('asignar')" style="display:none">🧰 Labores</button>
     <button class="tab" id="tab-aplicaciones" onclick="tabEncargado('aplicaciones')" style="display:none">🧪 Aplicaciones</button>
+    <button class="tab" id="tab-cosecha" onclick="tabEncargado('cosecha')" style="display:none">🧺 Cosecha</button>
     <button class="tab" id="tab-labores" onclick="tabEncargado('labores')" style="display:none">📋 Solicitudes</button>
     <button class="tab" id="tab-reporte" onclick="tabEncargado('reporte')">Reporte</button>
     <button class="tab" id="tab-notif" onclick="tabEncargado('notif')">Avisos <span id="badge-avisos" style="display:none;background:var(--tierra);color:#fff;border-radius:50%;width:16px;height:16px;font-size:.6rem;font-weight:700;align-items:center;justify-content:center;margin-left:3px;vertical-align:middle;">0</span></button>
@@ -464,6 +465,7 @@ function entrarSegunRol(){
     mostrar('screen-encargado');
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='dueño') document.getElementById('tab-tablero').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='dueño') document.getElementById('tab-asignar').style.display='';
+    if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='dueño') document.getElementById('tab-cosecha').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='dueño') document.getElementById('tab-config').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='dueño'||usuario.rol==='ingeniero') document.getElementById('tab-alarmas').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='dueño') document.getElementById('tab-admin').style.display='';
@@ -524,10 +526,10 @@ function cargarCatalogos(){
 }
 
 function tabEncargado(tab){
-  ['tablero','asignar','notif','permisos','alarmas','admin','reporte','inventario','aplicaciones','labores','validar','config'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
+  ['tablero','asignar','notif','permisos','alarmas','admin','reporte','inventario','aplicaciones','cosecha','labores','validar','config'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
   var el=document.getElementById('tab-'+tab); if(el) el.classList.add('active');
   if(tab==='tablero') renderTablero();
-  else if(tab==='asignar') renderAsignarMenu();
+  else if(tab==='asignar') renderFormAsignar();
   else if(tab==='notif') renderNotifs('enc-body');
   else if(tab==='permisos') renderPermisosRevision();
   else if(tab==='alarmas') renderAlarmasRevision();
@@ -535,6 +537,7 @@ function tabEncargado(tab){
   else if(tab==='reporte') renderReporte();
   else if(tab==='inventario') renderInventario();
   else if(tab==='aplicaciones') renderAplicacionesEstatus();
+  else if(tab==='cosecha'){cosechaReset();renderAsigCosechaPlantaciones();}
   else if(tab==='labores') renderLaboresEstatus();
   else if(tab==='validar') renderValidar();
   else if(tab==='config') renderConfig();
@@ -554,7 +557,7 @@ function renderSolicitudesLabor(){
       var estColor=s.estado==='pendiente'?'var(--tierra)':(s.estado==='programada'?'var(--verde-mid)':'var(--gris-3)');
       var estLbl=s.estado==='pendiente'?'⏳ Pendiente':(s.estado==='programada'?'🔶 Programada':'✅ Terminada');
       var acciones='';
-      if(s.estado==='pendiente') acciones='<div style="display:flex;gap:8px;margin-top:.6rem;flex-wrap:wrap;"><button class="btn-sm btn-completar" data-programar="'+s.id+'">✅ Marcar como programada</button><button class="btn-sm btn-iniciar" onclick="renderAsignarMenu()">🧰 Ir a Asignar</button><button class="btn-sm btn-cancelar" data-descartar="'+s.id+'">Descartar</button></div>';
+      if(s.estado==='pendiente') acciones='<div style="display:flex;gap:8px;margin-top:.6rem;flex-wrap:wrap;"><button class="btn-sm btn-completar" data-programar="'+s.id+'">✅ Marcar como programada</button><button class="btn-sm btn-iniciar" onclick="renderFormAsignar()">🧰 Ir a Labores</button><button class="btn-sm btn-cancelar" data-descartar="'+s.id+'">Descartar</button></div>';
       else if(s.estado==='programada') acciones='<div style="display:flex;gap:8px;margin-top:.6rem;"><button class="btn-sm btn-completar" data-terminar="'+s.id+'">✅ Marcar como terminada</button></div>';
       return '<div class="orden-card" style="border-left-color:'+estColor+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(ICONOS[s.tipo_labor?s.tipo_labor.nombre:'']||'🔧')+' '+(s.tipo_labor?s.tipo_labor.nombre:'')+'</strong><span style="font-size:.72rem;font-weight:700;color:'+estColor+';">'+estLbl+'</span></div><div class="orden-meta">📅 '+(s.fecha_sugerida?fechaLarga(s.fecha_sugerida):'Sin fecha sugerida')+'<br/>📍 '+(p?p.nombre:'')+' · '+(s.tabla?s.tabla.nombre:'')+'<br/>📝 '+s.descripcion+'<br/>👤 Sugerida por '+(s.creador?s.creador.nombre:'')+'</div>'+acciones+'</div>';
     }
@@ -673,7 +676,7 @@ function renderTablero(){
     var todasTipo=TABLERO_TIPO_FILTRO?todas.filter(function(o){return TABLERO_TIPO_FILTRO==='aplicaciones'?!!o.formula_id:!o.formula_id;}):todas;
     if(TABLERO_FILTRO) html+='<p class="hint" style="margin-bottom:.5rem;">Filtrando por: <strong>'+(TABLERO_FILTRO==='pendiente'?'Pendientes':TABLERO_FILTRO==='en_proceso'?'En proceso':'Completadas')+'</strong> · <a href="#" id="tablero-quitar-filtro" style="color:var(--verde-mid);">Quitar filtro</a></p>';
     var listado=TABLERO_FILTRO?todasTipo.filter(function(o){return o.estado===TABLERO_FILTRO;}):todasTipo;
-    if(!listado.length){html+='<div class="empty">'+(TABLERO_FILTRO||TABLERO_TIPO_FILTRO?'Sin órdenes con este filtro.':'Sin órdenes. Toca "+ Asignar" para crear una.')+'</div>';}
+    if(!listado.length){html+='<div class="empty">'+(TABLERO_FILTRO||TABLERO_TIPO_FILTRO?'Sin órdenes con este filtro.':'Sin órdenes. Toca "Labores" para crear una.')+'</div>';}
     else if(TABLERO_FILTRO){
       html+=listado.map(cardHtml).join('');
     } else {
@@ -708,8 +711,8 @@ function renderTablero(){
     if(avisoSolicitudesEl) avisoSolicitudesEl.addEventListener('click',renderSolicitudesLabor);
     var avisoEl=document.getElementById('aviso-aplic-pendientes');
     if(avisoEl) avisoEl.addEventListener('click',function(){
-      ['tablero','asignar','notif','reporte','inventario','validar','config'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
-      document.getElementById('tab-asignar').classList.add('active');
+      ['tablero','asignar','notif','reporte','inventario','validar','config','aplicaciones','cosecha'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
+      document.getElementById('tab-aplicaciones').classList.add('active');
       var lb=cats.tiposLabor.find(function(l){return l.requiere_formula;});
       asignarLaborSel=lb;
       aplicReset();
@@ -741,26 +744,16 @@ function cambiarEstado(id,estado){
 var asignarLaborSel=null;
 var riegoAsigMinutos={}, riegoAsigOperarios=[], riegoAsigFecha=null;
 
-function renderAsignarMenu(){
-  var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo">+ Asignar</div><div class="labor-grid" style="grid-template-columns:repeat(2,1fr);">'+
-    '<div class="labor-tile" data-menu="labores"><div class="labor-tile-ic">🧰</div><div class="labor-tile-lbl">Labores</div></div>'+
-    '<div class="labor-tile" data-menu="cosecha"><div class="labor-tile-ic">🧺</div><div class="labor-tile-lbl">Cosecha</div></div>'+
-  '</div>';
-  body.querySelector('[data-menu="labores"]').addEventListener('click',renderFormAsignar);
-  body.querySelector('[data-menu="cosecha"]').addEventListener('click',function(){cosechaReset();renderAsigCosechaPlantaciones();});
-}
-
 var modoAsignacionLabor='normal';
 
 function renderFormAsignar(){
   asignarLaborSel=null;
   modoAsignacionLabor='normal';
   var body=document.getElementById('enc-body');
-  var tiles=cats.tiposLabor.filter(function(l){return !l.es_cosecha;}).map(function(l){
+  var tiles=cats.tiposLabor.filter(function(l){return !l.es_cosecha&&!l.requiere_formula;}).map(function(l){
     return '<div class="labor-tile" data-id="'+l.id+'" data-nombre="'+l.nombre+'"><div class="labor-tile-ic">'+(ICONOS[l.nombre]||'🔧')+'</div><div class="labor-tile-lbl">'+l.nombre+'</div></div>';
   }).join('');
-  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Paso 1 de 2 · Selecciona la labor<button type="button" onclick="renderAsignarMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Menú</button></div><div style="display:flex;gap:8px;margin-bottom:1rem;"><button type="button" class="op-chip sel" id="modo-normal" data-modo="normal">🕐 Normal</button><button type="button" class="op-chip" id="modo-extra" data-modo="extra">⏰ Hora Extra</button></div><div class="labor-grid">'+tiles+'<div class="labor-tile labor-tile-otra" id="labor-otra-tile"><div class="labor-tile-ic">➕</div><div class="labor-tile-lbl">Otra</div></div></div><div id="labor-otra-box" style="display:none;margin-top:.75rem;" class="form-card"><label style="display:block;font-size:.75rem;font-weight:600;color:var(--gris-3);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">Nombre de la labor</label><input type="text" id="labor-otra-input" placeholder="Ej. Fertirriego" style="width:100%;padding:.65rem .75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;background:var(--gris-1);margin-bottom:.6rem;"><button class="btn-primary" id="labor-otra-btn">Usar esta labor</button></div>';
+  body.innerHTML='<div class="seccion-titulo">🧰 Labores · Selecciona la labor</div><div style="display:flex;gap:8px;margin-bottom:1rem;"><button type="button" class="op-chip sel" id="modo-normal" data-modo="normal">🕐 Normal</button><button type="button" class="op-chip" id="modo-extra" data-modo="extra">⏰ Hora Extra</button></div><div class="labor-grid">'+tiles+'<div class="labor-tile labor-tile-otra" id="labor-otra-tile"><div class="labor-tile-ic">➕</div><div class="labor-tile-lbl">Otra</div></div></div><div id="labor-otra-box" style="display:none;margin-top:.75rem;" class="form-card"><label style="display:block;font-size:.75rem;font-weight:600;color:var(--gris-3);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">Nombre de la labor</label><input type="text" id="labor-otra-input" placeholder="Ej. Fertirriego" style="width:100%;padding:.65rem .75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;background:var(--gris-1);margin-bottom:.6rem;"><button class="btn-primary" id="labor-otra-btn">Usar esta labor</button></div>';
   document.getElementById('modo-normal').addEventListener('click',function(){modoAsignacionLabor='normal';this.classList.add('sel');document.getElementById('modo-extra').classList.remove('sel');});
   document.getElementById('modo-extra').addEventListener('click',function(){modoAsignacionLabor='extra';this.classList.add('sel');document.getElementById('modo-normal').classList.remove('sel');});
   body.querySelectorAll('.labor-tile[data-id]').forEach(function(el){
@@ -2555,7 +2548,7 @@ function aplicReset(){
 
 function renderAsigAplicPorFecha(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🧪 Aplicaciones<button type="button" onclick="renderFormAsignar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cambiar labor</button></div><div class="loading">Buscando lo programado...</div>';
+  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🧪 Aplicaciones<button type="button" onclick="renderAplicacionesEstatus()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Aplicaciones</button></div><div class="loading">Buscando lo programado...</div>';
   var hoy=new Date().toISOString().slice(0,10);
   var en7dias=new Date(Date.now()+7*86400000).toISOString().slice(0,10);
   Promise.all([
@@ -2580,7 +2573,7 @@ function renderAsigAplicPorFecha(){
     if(masF.length) html+='<div class="seccion-titulo" style="margin-top:1rem">Más adelante</div>'+masF.map(tarjeta).join('');
     if(!formulas.length) html='<div class="empty">No hay fórmulas con fecha programada.<br/>Puedes buscar por plantación abajo.</div>';
     html+='<button class="btn-back" style="margin-top:1.25rem;width:100%;" onclick="renderAsigAplicPlantaciones()">🔍 Buscar por plantación / tabla</button>';
-    body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🧪 Aplicaciones<button type="button" onclick="renderFormAsignar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cambiar labor</button></div>'+html;
+    body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🧪 Aplicaciones<button type="button" onclick="renderAplicacionesEstatus()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Aplicaciones</button></div>'+html;
     body.querySelectorAll('[data-fid]').forEach(function(el){el.addEventListener('click',function(){
       if(this.dataset.aplicada==='1'){
         if(!confirm('⚠️ La fórmula "'+this.dataset.nombre+'" ya fue aplicada anteriormente.\n\n¿Seguro que quieres asignarla otra vez? Esto puede causar una aplicación duplicada.')) return;
@@ -2592,7 +2585,7 @@ function renderAsigAplicPorFecha(){
 
 function renderAsigAplicPlantaciones(){
   var body=document.getElementById('enc-body');
-  var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🧪 Aplicación · Plantación<button type="button" onclick="renderFormAsignar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cambiar labor</button></div><div class="riego-grid">';
+  var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🧪 Aplicación · Plantación<button type="button" onclick="renderAplicacionesEstatus()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Aplicaciones</button></div><div class="riego-grid">';
   cats.plantaciones.forEach(function(p){
     html+='<div class="riego-circle neutra" data-pid="'+p.id+'"><span>'+p.nombre+'</span></div>';
   });
@@ -4833,7 +4826,7 @@ function cosechaReset(){
 
 function renderAsigCosechaPlantaciones(){
   var body=document.getElementById('enc-body');
-  var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🧺 Cosecha · Plantación<button type="button" onclick="renderAsignarMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Menú</button></div><div class="riego-grid">';
+  var html='<div class="seccion-titulo">🧺 Cosecha · Plantación</div><div class="riego-grid">';
   cats.plantaciones.forEach(function(p){
     html+='<div class="riego-circle neutra" data-pid="'+p.id+'"><span>'+p.nombre+'</span></div>';
   });
@@ -4943,7 +4936,7 @@ function renderAsignarExtra(lb){
       }));
     }).then(function(){
       showToast('✅ Hora extra autorizada: '+lb.nombre);
-      renderAsignarMenu();
+      renderFormAsignar();
     }).catch(function(e){alert('Error: '+e.message);});
   });
 }
