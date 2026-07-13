@@ -2918,11 +2918,14 @@ var GASTO_CATEGORIAS={
   limpieza:{ic:'🧹',lbl:'Limpieza'},
   seguridad:{ic:'🦺',lbl:'Seguridad'},
   refacciones:{ic:'🔧',lbl:'Refacciones y Combustibles'},
+  herramientas:{ic:'🧰',lbl:'Herramientas'},
+  equipos:{ic:'⚙️',lbl:'Equipos'},
   mantenimiento:{ic:'🧑‍🔧',lbl:'Mantenimiento (servicio/mano de obra)'},
   servicios:{ic:'💡',lbl:'Servicios (luz, agua, profesionales)'},
   otros:{ic:'💵',lbl:'Otros'}
 };
 var CATEGORIA_GASTO_A_GRUPO={insumos:'insumos',galera:'galera',limpieza:'limpieza',seguridad:'seguridad',refacciones:'refacciones'};
+var CATEGORIA_GASTO_A_ACTIVO={herramientas:'Herramienta',equipos:'Equipo'};
 
 function renderComprasMenu(){
   var body=document.getElementById('enc-body');
@@ -3026,7 +3029,7 @@ function renderNuevaCompra(){
   var comprobanteUrl=null;
   var filaSeq=0;
   function nuevaFilaCompra(){
-    return {row:filaSeq++,categoria:Object.keys(GASTO_CATEGORIAS)[0],itemId:'',itemNombre:'',modoCaptura:'base',cantidad:'',monto:'',concepto:''};
+    return {row:filaSeq++,categoria:Object.keys(GASTO_CATEGORIAS)[0],itemId:'',itemNombre:'',modoCaptura:'base',cantidad:'',monto:'',concepto:'',activoNombre:''};
   }
   var filas=[nuevaFilaCompra()];
 
@@ -3094,10 +3097,13 @@ function renderNuevaCompra(){
     var cantLbl=(conPaquete&&f.modoCaptura==='paquete')?it.unidad_compra:(it?it.unidad:'');
     var cantEjemplo=(conPaquete&&f.modoCaptura==='paquete')?('Ej: si compraste 7 '+it.unidad_compra.toLowerCase()+'s, escribe 7.'):'';
     var equivTxt=(conPaquete&&f.modoCaptura==='paquete'&&parseFloat(f.cantidad)>0)?('= '+numFmt(parseFloat(f.cantidad)*parseFloat(it.factor_compra))+' '+it.unidad+' en total'):'';
+    var esActivo=!!CATEGORIA_GASTO_A_ACTIVO[f.categoria];
     var buscadorProductoHtml=grupoCat?('<div class="form-group" style="margin-bottom:.5rem;"><label>Producto de '+GRUPOS_INVENTARIO[grupoCat].lbl+' (opcional)</label><div class="fcomp-item-wrap" data-row="'+f.row+'" style="position:relative;"><input type="text" class="fcomp-item-buscar nc-item-buscar" data-row="'+f.row+'" autocomplete="off" placeholder="🔍 Buscar producto..." value="'+(f.itemNombre?f.itemNombre.replace(/"/g,'&quot;'):'')+'"><div class="fcomp-item-resultados nc-item-resultados" data-row="'+f.row+'" style="display:none;position:absolute;left:0;right:0;top:100%;z-index:30;background:#fff;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);max-height:220px;overflow-y:auto;box-shadow:0 6px 16px rgba(0,0,0,.15);"></div></div></div>'):'';
+    var activoHtml=esActivo?('<div class="form-group" style="margin-bottom:.5rem;"><label>Nombre de la '+(f.categoria==='herramientas'?'herramienta':'equipo')+' (opcional)</label><input type="text" class="nc-activo-nombre" data-row="'+f.row+'" value="'+(f.activoNombre?f.activoNombre.replace(/"/g,'&quot;'):'')+'" placeholder="Ej. Tijera de poda larga"><p class="hint" style="margin:.3rem 0 0;">Si la llenas, se agrega automáticamente a '+(f.categoria==='herramientas'?'🧰 Herramientas':'⚙️ Equipos')+' como disponible.</p></div>'):'';
     return '<div class="form-card" style="margin-bottom:.5rem;padding:.75rem;" data-row="'+f.row+'">'+
       '<div class="form-group" style="margin-bottom:.5rem;"><label>Categoría</label><select class="nc-cat" data-row="'+f.row+'">'+catOpts+'</select></div>'+
       buscadorProductoHtml+
+      activoHtml+
       (tieneItem?(modoTogglesHtml+'<div class="form-group" style="margin-bottom:.2rem;"><label>Cantidad que entra a inventario ('+cantLbl+')</label><input type="number" class="nc-cantidad" data-row="'+f.row+'" min="0" step="any" value="'+(f.cantidad||'')+'" placeholder="0">'+(cantEjemplo?'<p class="hint" style="margin:.3rem 0 0;">'+cantEjemplo+'</p>':'')+'</div><p class="hint nc-equiv" data-row="'+f.row+'" style="margin:0 0 .5rem;font-weight:700;color:var(--verde-mid);">'+equivTxt+'</p>'):'')+
       '<div class="form-group" style="margin-bottom:.5rem;"><label>Monto ($)</label><input type="number" class="nc-monto" data-row="'+f.row+'" min="0" step="any" value="'+(f.monto||'')+'" placeholder="0.00"></div>'+
       '<div class="form-group" style="margin-bottom:0;"><label>Concepto / descripción (opcional)</label><input type="text" class="nc-concepto" data-row="'+f.row+'" value="'+(f.concepto?f.concepto.replace(/"/g,'&quot;'):'')+'" placeholder="Ej. Sulfato de amonio 25kg"></div>'+
@@ -3159,6 +3165,13 @@ function renderNuevaCompra(){
         var rid=this.dataset.row, val=this.value;
         var f=filas.find(function(x){return x.row==rid;});
         if(f) f.concepto=val;
+      });
+    });
+    cont.querySelectorAll('.nc-activo-nombre').forEach(function(inp){
+      inp.addEventListener('input',function(){
+        var rid=this.dataset.row, val=this.value;
+        var f=filas.find(function(x){return x.row==rid;});
+        if(f) f.activoNombre=val;
       });
     });
     cont.querySelectorAll('.nc-quitar').forEach(function(btn){
@@ -3279,7 +3292,13 @@ function renderNuevaCompra(){
             return from('inventario_items').eq('id',it.id).update({stock_actual:nuevoStock});
           }).then(function(){ it.stock_actual=nuevoStock; });
         });
-      }, Promise.resolve());
+      }, Promise.resolve()).then(function(){
+        var conActivo=lineasGuardadas.filter(function(f){return CATEGORIA_GASTO_A_ACTIVO[f.categoria]&&(f.activoNombre||'').trim();});
+        if(!conActivo.length) return;
+        return Promise.all(conActivo.map(function(f){
+          return from('activos_rancho').insert({nombre:f.activoNombre.trim(),categoria:CATEGORIA_GASTO_A_ACTIVO[f.categoria],estado:'disponible',descripcion:f.concepto||null,activo:true});
+        }));
+      });
     }).then(function(){
       showToast('✅ Compra registrada');
       renderComprasMenu();
