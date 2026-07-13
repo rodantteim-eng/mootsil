@@ -2547,10 +2547,10 @@ function guardarFormula(){
 }
 
 var BOMBA_CAPACIDAD={'inyeccion':200,'motor':25,'manual':20};
-var aplic={plantacionId:null,tablaId:null,formula:null,componentes:[],bomba:null,numBombas:null,volumen:null,factor:1,operarios:[],fecha:null,notas:null,esExtra:false};
+var aplic={plantacionId:null,tablaId:null,formula:null,componentes:[],bomba:null,numBombas:null,volumen:null,factor:1,operarios:[],fecha:null,notas:null,esExtra:false,modoCantidad:'tambo'};
 
 function aplicReset(){
-  aplic={plantacionId:null,tablaId:null,formula:null,componentes:[],bomba:null,numBombas:null,volumen:200,factor:1,operarios:[],fecha:new Date().toISOString().slice(0,10),notas:null,esExtra:false};
+  aplic={plantacionId:null,tablaId:null,formula:null,componentes:[],bomba:null,numBombas:null,volumen:200,factor:1,operarios:[],fecha:new Date().toISOString().slice(0,10),notas:null,esExtra:false,modoCantidad:'tambo'};
 }
 
 function renderAsigAplicPorFecha(){
@@ -2644,7 +2644,7 @@ function renderEditarModoAsignacion(formulaId){
     rows=rows||[];
     if(!rows.length){body.innerHTML='<div class="seccion-titulo">✏️ Gestionar operarios asignados</div><div class="empty">No hay asignaciones activas para esta fórmula.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderAplicacionesEstatus()">← Volver a Aplicaciones</button>';return;}
     var html='<div class="seccion-titulo">✏️ Gestionar operarios asignados</div>'+(rows.length>1?'<p class="hint" style="margin-bottom:.75rem;">Hay '+rows.length+' operarios en esta aplicación.</p>':'')+rows.map(function(o){
-      return '<div class="orden-card"><strong style="font-size:.9rem;">'+(o.operario?o.operario.nombre:'')+'</strong><div class="orden-meta">Actualmente: '+(o.es_hora_extra?'⏰ Hora Extra':'🕐 Normal')+'</div><div style="display:flex;gap:8px;margin-top:.5rem;flex-wrap:wrap;"><button type="button" class="btn-sm btn-completar" data-toggle-modo="'+o.id+'" data-actual="'+(o.es_hora_extra?'1':'0')+'" data-op="'+o.operario_id+'" data-labor="'+o.tipo_labor_id+'" data-fecha="'+o.fecha_asignacion+'">Cambiar a '+(o.es_hora_extra?'🕐 Normal':'⏰ Hora Extra')+'</button>'+(rows.length>1?'<button type="button" class="btn-sm btn-cancelar" data-quitar="'+o.id+'" data-nombre="'+(o.operario?o.operario.nombre:'').replace(/"/g,'&quot;')+'">🗑️ Quitar de esta aplicación</button>':'')+'</div></div>';
+      return '<div class="orden-card"><strong style="font-size:.9rem;">'+(o.operario?o.operario.nombre:'')+'</strong><div class="orden-meta">Actualmente: '+(o.es_hora_extra?'⏰ Hora Extra':'🧑‍🌾 Labores')+'</div><div style="display:flex;gap:8px;margin-top:.5rem;flex-wrap:wrap;"><button type="button" class="btn-sm btn-completar" data-toggle-modo="'+o.id+'" data-actual="'+(o.es_hora_extra?'1':'0')+'" data-op="'+o.operario_id+'" data-labor="'+o.tipo_labor_id+'" data-fecha="'+o.fecha_asignacion+'">Cambiar a '+(o.es_hora_extra?'🧑‍🌾 Labores':'⏰ Hora Extra')+'</button>'+(rows.length>1?'<button type="button" class="btn-sm btn-cancelar" data-quitar="'+o.id+'" data-nombre="'+(o.operario?o.operario.nombre:'').replace(/"/g,'&quot;')+'">🗑️ Quitar de esta aplicación</button>':'')+'</div></div>';
     }).join('');
     body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderAplicacionesEstatus()">← Volver a Aplicaciones</button>';
     body.querySelectorAll('[data-toggle-modo]').forEach(function(btn){
@@ -2706,43 +2706,68 @@ function cargarFormulaParaAsignar(formulaId){
     var tb=cats.tablas.find(function(t){return t.id===aplic.tablaId;});
     aplic.plantacionId=tb?tb.plantacion_id:null;
     aplic.fecha=aplic.formula.fecha_programada||new Date().toISOString().slice(0,10);
-    renderAsigAplicBomba();
+    aplic.bomba=(aplic.formula.bombas_compatibles||[])[0]||'manual';
+    aplic.modoCantidad='tambo';
+    if(aplic.bomba==='inyeccion'){
+      aplic.numBombas=1; aplic.volumen=200; aplic.factor=1;
+      renderAsigAplicComponentes();
+    } else {
+      renderAsigAplicCantidad();
+    }
   });
 }
 
-function renderAsigAplicBomba(){
+function renderAsigAplicCantidad(){
   var body=document.getElementById('enc-body');
-  var sugerida=(aplic.formula.bombas_compatibles||[])[0];
-  var tiles=['inyeccion','motor','manual'].map(function(b){
-    var esSugerida=b===sugerida;
-    return '<div class="labor-tile'+(aplic.bomba===b?' labor-tile-otra':'')+'" data-bomba="'+b+'"><div class="labor-tile-ic">'+BOMBA_ICONOS[b]+'</div><div class="labor-tile-lbl">'+BOMBA_LABELS[b]+(esSugerida?' ⭐':'')+'</div></div>';
+  var cap=BOMBA_CAPACIDAD[aplic.bomba];
+  var bombasParaTambo=Math.round((200/cap)*10)/10;
+  var modo=aplic.modoCantidad||'tambo';
+  var tilesEquipo=['inyeccion','motor','manual'].map(function(b){
+    return '<div class="labor-tile'+(aplic.bomba===b?' labor-tile-otra':'')+'" data-bomba="'+b+'"><div class="labor-tile-ic">'+BOMBA_ICONOS[b]+'</div><div class="labor-tile-lbl">'+BOMBA_LABELS[b]+'</div></div>';
   }).join('');
-  body.innerHTML='<div class="seccion-titulo">🧪 '+aplic.formula.nombre+' · ¿Con qué equipo?</div><p class="hint">⭐ = lo que sugirió el ingeniero, pero puedes elegir el que tengas disponible hoy.</p><div class="labor-grid">'+tiles+'</div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigAplicFormulas()">← Volver a fórmula</button>';
-  body.querySelectorAll('[data-bomba]').forEach(function(el){el.addEventListener('click',function(){
+  body.innerHTML='<div class="seccion-titulo">🧪 '+aplic.formula.nombre+'</div><p class="hint" style="margin-bottom:.75rem;">Equipo: <strong>'+BOMBA_ICONOS[aplic.bomba]+' '+BOMBA_LABELS[aplic.bomba]+'</strong> (definido por la fórmula) · <a href="javascript:void(0)" id="aplic-cambiar-equipo" style="color:var(--verde-mid);font-weight:600;">cambiar</a></p><div id="aplic-equipo-box" style="display:none;margin-bottom:1rem;" class="labor-grid">'+tilesEquipo+'</div><div class="form-card"><div class="form-group"><label>¿Cuánto se va a aplicar?</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip'+(modo==='tambo'?' sel':'')+'" id="aplic-modo-tambo">🛢️ Tambo completo (200 L)</button><button type="button" class="op-chip'+(modo==='bombas'?' sel':'')+'" id="aplic-modo-bombas">🎒 Por bombas</button></div></div><div id="aplic-tambo-info" style="'+(modo==='tambo'?'':'display:none;')+'"><p class="hint">≈ '+bombasParaTambo+' '+BOMBA_LABELS[aplic.bomba].toLowerCase()+'s de '+cap+' L c/u para llenar el tambo.</p></div><div id="aplic-bombas-info" style="'+(modo==='bombas'?'':'display:none;')+'"><input type="number" id="aplic-numbombas" min="1" value="'+(aplic.numBombas||1)+'" style="width:100%;text-align:center;font-size:2.4rem;font-weight:800;color:var(--verde-mid);border:none;background:transparent;outline:none;"><p class="hint">bombas de '+cap+' L c/u</p><p class="hint" id="aplic-vol-preview" style="font-weight:700;"></p></div><button class="btn-primary" style="margin-top:1rem;" id="aplic-cant-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigAplicFormulas()">← Volver a fórmula</button>';
+  function actualizarPreview(){
+    var n=parseFloat(document.getElementById('aplic-numbombas').value)||0;
+    document.getElementById('aplic-vol-preview').textContent='= '+numFmt(n*cap)+' litros totales';
+  }
+  document.getElementById('aplic-cambiar-equipo').addEventListener('click',function(){
+    var box=document.getElementById('aplic-equipo-box');
+    box.style.display=box.style.display==='none'?'flex':'none';
+  });
+  document.getElementById('aplic-equipo-box').querySelectorAll('[data-bomba]').forEach(function(el){el.addEventListener('click',function(){
     aplic.bomba=this.dataset.bomba;
     if(aplic.bomba==='inyeccion'){
       aplic.numBombas=1; aplic.volumen=200; aplic.factor=1;
       renderAsigAplicComponentes();
     } else {
-      renderAsigAplicCantidadBombas();
+      renderAsigAplicCantidad();
     }
   });});
-}
-
-function renderAsigAplicCantidadBombas(){
-  var body=document.getElementById('enc-body');
-  var cap=BOMBA_CAPACIDAD[aplic.bomba];
-  body.innerHTML='<div class="seccion-titulo">🧪 ¿Cuántas '+BOMBA_LABELS[aplic.bomba].toLowerCase()+'s?</div><div class="riego-ejec-card"><input type="number" id="aplic-numbombas" min="1" value="'+(aplic.numBombas||1)+'" style="width:100%;text-align:center;font-size:2.4rem;font-weight:800;color:var(--verde-mid);border:none;background:transparent;outline:none;"><p class="hint">bombas de '+cap+' L c/u</p><p class="hint" id="aplic-vol-preview" style="font-weight:700;"></p><button class="btn-primary" id="aplic-bombas-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigAplicBomba()">← Volver a equipo</button>';
-  function actualizarPreview(){
-    var n=parseFloat(document.getElementById('aplic-numbombas').value)||0;
-    document.getElementById('aplic-vol-preview').textContent='= '+numFmt(n*cap)+' litros totales';
-  }
+  document.getElementById('aplic-modo-tambo').addEventListener('click',function(){
+    aplic.modoCantidad='tambo';
+    this.classList.add('sel');
+    document.getElementById('aplic-modo-bombas').classList.remove('sel');
+    document.getElementById('aplic-tambo-info').style.display='';
+    document.getElementById('aplic-bombas-info').style.display='none';
+  });
+  document.getElementById('aplic-modo-bombas').addEventListener('click',function(){
+    aplic.modoCantidad='bombas';
+    this.classList.add('sel');
+    document.getElementById('aplic-modo-tambo').classList.remove('sel');
+    document.getElementById('aplic-tambo-info').style.display='none';
+    document.getElementById('aplic-bombas-info').style.display='';
+    actualizarPreview();
+  });
   document.getElementById('aplic-numbombas').addEventListener('input',actualizarPreview);
   actualizarPreview();
-  document.getElementById('aplic-bombas-continuar').addEventListener('click',function(){
-    var n=parseFloat(document.getElementById('aplic-numbombas').value)||0;
-    if(n<=0){alert('Captura cuántas bombas se van a usar.');return;}
-    aplic.numBombas=n; aplic.volumen=n*cap; aplic.factor=aplic.volumen/200;
+  document.getElementById('aplic-cant-continuar').addEventListener('click',function(){
+    if(aplic.modoCantidad==='bombas'){
+      var n=parseFloat(document.getElementById('aplic-numbombas').value)||0;
+      if(n<=0){alert('Captura cuántas bombas se van a usar.');return;}
+      aplic.numBombas=n; aplic.volumen=n*cap; aplic.factor=aplic.volumen/200;
+    } else {
+      aplic.numBombas=bombasParaTambo; aplic.volumen=200; aplic.factor=1;
+    }
     renderAsigAplicComponentes();
   });
 }
@@ -2759,7 +2784,7 @@ function renderAsigAplicComponentes(){
     return '<div style="display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--gris-1);font-size:.85rem;"><span>'+(c.item?c.item.nombre:'')+'</span><strong>'+fmtAmigable(cantEscalada,unidadItem)+'</strong></div>';
   }).join('');
   var alertaHtml=faltantes.length?'<div style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);border-radius:var(--radio-sm);padding:.75rem;margin-bottom:1rem;font-size:.82rem;"><strong style="color:var(--rojo);">⚠️ No alcanza el inventario</strong><br>'+faltantes.map(function(f){return f.nombre+' (faltan '+fmtAmigable(f.falta,f.unidad)+')';}).join(', ')+'</div>':'';
-  body.innerHTML='<div class="seccion-titulo">🧪 Receta ajustada · '+numFmt(aplic.volumen)+' L ('+Math.round(aplic.factor*100)+'% de la base)</div>'+alertaHtml+'<div class="form-card">'+filas+'</div><button class="btn-primary" style="margin-top:1.25rem;" id="aplic-comp-continuar">Continuar →</button><button class="btn-back" style="margin-top:.75rem;" onclick="'+(aplic.bomba==='inyeccion'?'renderAsigAplicBomba()':'renderAsigAplicCantidadBombas()')+'">← Volver</button>';
+  body.innerHTML='<div class="seccion-titulo">🧪 Receta ajustada · '+numFmt(aplic.volumen)+' L ('+Math.round(aplic.factor*100)+'% de la base)</div>'+alertaHtml+'<div class="form-card">'+filas+'</div><button class="btn-primary" style="margin-top:1.25rem;" id="aplic-comp-continuar">Continuar →</button><button class="btn-back" style="margin-top:.75rem;" onclick="'+(aplic.bomba==='inyeccion'?'renderAsigAplicFormulas()':'renderAsigAplicCantidad()')+'">← Volver</button>';
   document.getElementById('aplic-comp-continuar').addEventListener('click',function(){
     if(faltantes.length&&!confirm('El inventario no alcanza para esta cantidad. ¿Asignar de todas formas? (tendrás que comprar antes de aplicar)')) return;
     renderAsigAplicOperarios();
@@ -2769,7 +2794,7 @@ function renderAsigAplicComponentes(){
 function renderAsigAplicOperarios(){
   var body=document.getElementById('enc-body');
   var opO=cats.operarios.map(function(o){return '<button type="button" class="op-chip'+(aplic.operarios.indexOf(o.id)>-1?' sel':'')+'" data-id="'+o.id+'" onclick="toggleChip(this)">'+o.nombre+'</button>';}).join('');
-  body.innerHTML='<div class="seccion-titulo">🧪 ¿Quién la aplica?</div><div class="form-card"><div class="form-group"><label>¿Cómo se asigna?</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip'+(aplic.esExtra?'':' sel')+'" id="aplic-modo-normal">🕐 Normal</button><button type="button" class="op-chip'+(aplic.esExtra?' sel':'')+'" id="aplic-modo-extra">⏰ Hora Extra</button></div></div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1rem;">'+opO+'</div><button class="btn-primary" id="aplic-op-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigAplicComponentes()">← Volver a receta</button>';
+  body.innerHTML='<div class="seccion-titulo">🧪 ¿Quién la aplica?</div><div class="form-card"><div class="form-group"><label>¿Cómo se asigna?</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip'+(aplic.esExtra?'':' sel')+'" id="aplic-modo-normal">🧑‍🌾 Labores</button><button type="button" class="op-chip'+(aplic.esExtra?' sel':'')+'" id="aplic-modo-extra">⏰ Hora Extra</button></div></div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1rem;">'+opO+'</div><button class="btn-primary" id="aplic-op-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigAplicComponentes()">← Volver a receta</button>';
   document.getElementById('aplic-modo-normal').addEventListener('click',function(){aplic.esExtra=false;this.classList.add('sel');document.getElementById('aplic-modo-extra').classList.remove('sel');});
   document.getElementById('aplic-modo-extra').addEventListener('click',function(){aplic.esExtra=true;this.classList.add('sel');document.getElementById('aplic-modo-normal').classList.remove('sel');});
   document.getElementById('aplic-op-continuar').addEventListener('click',function(){
@@ -2795,7 +2820,7 @@ function renderAsigAplicNotas(){
   var p=cats.plantaciones.find(function(x){return x.id===aplic.plantacionId;});
   var opNombres=aplic.operarios.map(function(id){var o=cats.operarios.find(function(x){return x.id===id;});return o?o.nombre:'';}).join(', ');
   var resumenComp=aplic.componentes.map(function(c){return (c.item?c.item.nombre:'')+' · '+fmtAmigable(c.cantidad_base*aplic.factor,c.item?c.item.unidad:'');}).join('<br>');
-  body.innerHTML='<div class="seccion-titulo">🧪 Confirmar aplicación</div><div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row"><span class="resumen-key">Fórmula</span><span class="resumen-val">'+aplic.formula.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Ubicación</span><span class="resumen-val">📍 '+(p?p.nombre:'')+' · '+(t?t.nombre:'')+'</span></div><div class="resumen-row"><span class="resumen-key">Equipo</span><span class="resumen-val">'+BOMBA_ICONOS[aplic.bomba]+' '+BOMBA_LABELS[aplic.bomba]+(aplic.bomba!=='inyeccion'?' × '+aplic.numBombas:'')+'</span></div><div class="resumen-row"><span class="resumen-key">Volumen</span><span class="resumen-val">'+numFmt(aplic.volumen)+' L</span></div><div class="resumen-row"><span class="resumen-key">Modo</span><span class="resumen-val">'+(aplic.esExtra?'⏰ Hora Extra':'🕐 Normal')+'</span></div><div class="resumen-row"><span class="resumen-key">Operarios</span><span class="resumen-val">'+opNombres+'</span></div><div class="resumen-row"><span class="resumen-key">Fecha</span><span class="resumen-val">'+aplic.fecha+'</span></div><div class="resumen-row"><span class="resumen-key">Componentes a usar</span></div><div style="font-size:.82rem;padding:.35rem 0;">'+resumenComp+'</div></div><p class="hint" style="margin-bottom:1rem;">⚠️ Al confirmar, esta cantidad se descuenta del inventario de inmediato. Queda pendiente de validación por un ingeniero.</p><div class="form-group"><label>Notas (opcional)</label><input type="text" id="aplic-notas-input" placeholder="Instrucciones para el operario..."></div><button class="btn-primary" id="aplic-finalizar">✅ Asignar aplicación</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigAplicFecha()">← Volver a fecha</button>';
+  body.innerHTML='<div class="seccion-titulo">🧪 Confirmar aplicación</div><div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row"><span class="resumen-key">Fórmula</span><span class="resumen-val">'+aplic.formula.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Ubicación</span><span class="resumen-val">📍 '+(p?p.nombre:'')+' · '+(t?t.nombre:'')+'</span></div><div class="resumen-row"><span class="resumen-key">Equipo</span><span class="resumen-val">'+BOMBA_ICONOS[aplic.bomba]+' '+BOMBA_LABELS[aplic.bomba]+(aplic.bomba!=='inyeccion'?' × '+aplic.numBombas:'')+'</span></div><div class="resumen-row"><span class="resumen-key">Volumen</span><span class="resumen-val">'+numFmt(aplic.volumen)+' L</span></div><div class="resumen-row"><span class="resumen-key">Modo</span><span class="resumen-val">'+(aplic.esExtra?'⏰ Hora Extra':'🧑‍🌾 Labores')+'</span></div><div class="resumen-row"><span class="resumen-key">Operarios</span><span class="resumen-val">'+opNombres+'</span></div><div class="resumen-row"><span class="resumen-key">Fecha</span><span class="resumen-val">'+aplic.fecha+'</span></div><div class="resumen-row"><span class="resumen-key">Componentes a usar</span></div><div style="font-size:.82rem;padding:.35rem 0;">'+resumenComp+'</div></div><p class="hint" style="margin-bottom:1rem;">⚠️ Al confirmar, esta cantidad se descuenta del inventario de inmediato. Queda pendiente de validación por un ingeniero.</p><div class="form-group"><label>Notas (opcional)</label><input type="text" id="aplic-notas-input" placeholder="Instrucciones para el operario..."></div><button class="btn-primary" id="aplic-finalizar">✅ Asignar aplicación</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigAplicFecha()">← Volver a fecha</button>';
   document.getElementById('aplic-finalizar').addEventListener('click',guardarAplicacion);
 }
 
@@ -5867,7 +5892,7 @@ function pintarTareas(todas,hoyOrdenes,esCache,completadas,evidenciaPorOrden){
       var ic=ICONOS[t.tipo_labor.nombre]||'🔧';
       var su=(t.surcos_asignados&&t.surcos_asignados.length)?t.surcos_asignados.join(', '):'Todos';
       var atrasada=t.fecha_asignacion<hoy;
-      var etiquetaTipo=t.es_hora_extra?' <span style="color:var(--tierra);font-size:.7rem;font-weight:700;background:var(--tierra-tenue);padding:2px 8px;border-radius:10px;">⏰ Hora Extra</span>':' <span style="color:var(--verde-mid);font-size:.7rem;font-weight:700;background:var(--verde-tenue);padding:2px 8px;border-radius:10px;">🕐 Normal</span>';
+      var etiquetaTipo=t.es_hora_extra?' <span style="color:var(--tierra);font-size:.7rem;font-weight:700;background:var(--tierra-tenue);padding:2px 8px;border-radius:10px;">⏰ Hora Extra</span>':' <span style="color:var(--verde-mid);font-size:.7rem;font-weight:700;background:var(--verde-tenue);padding:2px 8px;border-radius:10px;">🧑‍🌾 Labores</span>';
       var progresoTxt='', etiquetaEstado='';
       if(t.estado==='en_proceso'){
         var tieneAvance=t.surcos_completados&&t.surcos_completados.length>0;
