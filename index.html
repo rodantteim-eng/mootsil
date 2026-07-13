@@ -2920,14 +2920,14 @@ function renderComprasMenu(){
   var body=document.getElementById('enc-body');
   chequearVencimientosProveedores();
   body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🧾 Compras y Gastos<button type="button" onclick="renderAdministracionMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Administración</button></div><div class="labor-grid" style="grid-template-columns:repeat(2,1fr);">'+
-    '<div class="labor-tile" data-cm="nuevo"><div class="labor-tile-ic">📝</div><div class="labor-tile-lbl">Registrar gasto</div></div>'+
+    '<div class="labor-tile" data-cm="nuevo"><div class="labor-tile-ic">🧾</div><div class="labor-tile-lbl">Nueva compra</div></div>'+
     '<div class="labor-tile" data-cm="resumen"><div class="labor-tile-ic">📊</div><div class="labor-tile-lbl">Resumen del mes</div></div>'+
     '<div class="labor-tile" data-cm="historial"><div class="labor-tile-ic">📜</div><div class="labor-tile-lbl">Historial de gastos</div></div>'+
     '<div class="labor-tile" data-cm="proveedores"><div class="labor-tile-ic">🏢</div><div class="labor-tile-lbl">Proveedores</div></div>'+
     '<div class="labor-tile" data-cm="cuentaspagar"><div class="labor-tile-ic">📆</div><div class="labor-tile-lbl">Cuentas por pagar</div></div>'+
     '<div class="labor-tile" data-cm="orden"><div class="labor-tile-ic">🛒</div><div class="labor-tile-lbl">Orden de compra</div></div>'+
   '</div>';
-  body.querySelector('[data-cm="nuevo"]').addEventListener('click',renderNuevoGasto);
+  body.querySelector('[data-cm="nuevo"]').addEventListener('click',renderNuevaCompra);
   body.querySelector('[data-cm="resumen"]').addEventListener('click',function(){renderResumenGastos(new Date().toISOString().slice(0,7));});
   body.querySelector('[data-cm="historial"]').addEventListener('click',function(){renderHistorialGastos(new Date().toISOString().slice(0,7));});
   body.querySelector('[data-cm="proveedores"]').addEventListener('click',renderProveedores);
@@ -2947,13 +2947,13 @@ function chequearVencimientosProveedores(){
   var hoy=new Date().toISOString().slice(0,10);
   var limite=new Date(); limite.setDate(limite.getDate()+5);
   var limiteStr=limite.toISOString().slice(0,10);
-  from('gastos').select('*,proveedor:proveedores(nombre)').eq('forma_pago','credito').eq('estado_pago','pendiente').eq('notificado_vencimiento',false).lte('fecha_vencimiento',limiteStr).get().then(function(rows){
-    (rows||[]).forEach(function(g){
-      var vencido=g.fecha_vencimiento<hoy;
-      var provNombre=g.proveedor?g.proveedor.nombre:'un proveedor';
-      var msg=(vencido?'⚠️ Ya venció el pago a ':'⏳ Está por vencer el pago a ')+provNombre+': $'+parseFloat(g.monto).toFixed(2)+' — vence '+g.fecha_vencimiento+(g.concepto?' ('+g.concepto+')':'');
+  from('compras').select('*,proveedor:proveedores(nombre)').eq('forma_pago','credito').eq('estado_pago','pendiente').eq('notificado_vencimiento',false).lte('fecha_vencimiento',limiteStr).get().then(function(rows){
+    (rows||[]).forEach(function(c){
+      var vencido=c.fecha_vencimiento<hoy;
+      var provNombre=c.proveedor?c.proveedor.nombre:'un proveedor';
+      var msg=(vencido?'⚠️ Ya venció el pago a ':'⏳ Está por vencer el pago a ')+provNombre+': $'+parseFloat(c.total).toFixed(2)+' — vence '+c.fecha_vencimiento+(c.numero_factura?' (factura '+c.numero_factura+')':'');
       from('notificaciones').insert({titulo:vencido?'⚠️ Pago a proveedor vencido':'⏳ Pago a proveedor por vencer',cuerpo:msg,icono:'💳',leida:false,para_rol:'encargado'}).then(function(){
-        return from('gastos').eq('id',g.id).update({notificado_vencimiento:true});
+        return from('compras').eq('id',c.id).update({notificado_vencimiento:true});
       }).catch(function(){});
     });
   }).catch(function(){});
@@ -2965,102 +2965,198 @@ function renderCuentasPorPagar(){
   var hoy=new Date().toISOString().slice(0,10);
   var limite=new Date(); limite.setDate(limite.getDate()+5);
   var limiteStr=limite.toISOString().slice(0,10);
-  from('gastos').select('*,proveedor:proveedores(nombre)').eq('forma_pago','credito').eq('estado_pago','pendiente').order('fecha_vencimiento').get().then(function(rows){
+  from('compras').select('*,proveedor:proveedores(nombre)').eq('forma_pago','credito').eq('estado_pago','pendiente').order('fecha_vencimiento').get().then(function(rows){
     rows=rows||[];
-    var totalPendiente=rows.reduce(function(s,g){return s+parseFloat(g.monto);},0);
+    var totalPendiente=rows.reduce(function(s,c){return s+parseFloat(c.total);},0);
     var headerHtml='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📆 Cuentas por pagar<button type="button" onclick="renderComprasMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Compras y Gastos</button></div>';
     var html=headerHtml+'<div class="form-card" style="text-align:center;margin-bottom:1rem;"><div style="font-size:.8rem;color:var(--gris-3);">Total pendiente a crédito</div><div style="font-size:1.6rem;font-weight:800;color:var(--tierra);">$'+totalPendiente.toFixed(2)+'</div></div>';
     if(!rows.length){
       html+='<div class="empty">🎉 No tienes cuentas a crédito pendientes de pago.</div>';
     } else {
-      html+=rows.map(function(g){
-        var vencido=g.fecha_vencimiento&&g.fecha_vencimiento<hoy;
-        var porVencer=g.fecha_vencimiento&&!vencido&&g.fecha_vencimiento<=limiteStr;
+      html+=rows.map(function(c){
+        var vencido=c.fecha_vencimiento&&c.fecha_vencimiento<hoy;
+        var porVencer=c.fecha_vencimiento&&!vencido&&c.fecha_vencimiento<=limiteStr;
         var color=vencido?'var(--rojo)':(porVencer?'var(--tierra)':'var(--gris-2)');
         var estadoTxt=vencido?'⚠️ Vencido':(porVencer?'⏳ Por vencer':'📅 Programado');
-        var cat=GASTO_CATEGORIAS[g.categoria]||{ic:'💵',lbl:g.categoria};
-        return '<div class="orden-card" style="border-left-color:'+color+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem;">'+cat.ic+' '+(g.proveedor?g.proveedor.nombre:'Sin proveedor')+'</strong><strong style="font-size:.95rem;color:var(--verde-mid);">$'+parseFloat(g.monto).toFixed(2)+'</strong></div><div class="orden-meta" style="color:'+color+';font-weight:600;">'+estadoTxt+' · Vence '+g.fecha_vencimiento+'</div>'+(g.concepto?'<div class="orden-meta">'+g.concepto+'</div>':'')+'<button type="button" class="btn-sm btn-completar" style="margin-top:.4rem;" data-marcar-pagado="'+g.id+'">✅ Marcar como pagado</button></div>';
+        return '<div class="orden-card" style="border-left-color:'+color+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem;">🧾 '+(c.proveedor?c.proveedor.nombre:'Sin proveedor')+'</strong><strong style="font-size:.95rem;color:var(--verde-mid);">$'+parseFloat(c.total).toFixed(2)+'</strong></div><div class="orden-meta" style="color:'+color+';font-weight:600;">'+estadoTxt+' · Vence '+c.fecha_vencimiento+'</div>'+(c.numero_factura?'<div class="orden-meta">Factura #'+c.numero_factura+'</div>':'')+'<button type="button" class="btn-sm btn-completar" style="margin-top:.4rem;" data-marcar-pagado="'+c.id+'">✅ Marcar como pagado</button></div>';
       }).join('');
     }
     body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderComprasMenu()">← Volver</button>';
     body.querySelectorAll('[data-marcar-pagado]').forEach(function(btn){
       btn.addEventListener('click',function(){
-        from('gastos').eq('id',this.dataset.marcarPagado).update({estado_pago:'pagado'}).then(function(){showToast('✅ Marcado como pagado');renderCuentasPorPagar();}).catch(function(e){alert('Error: '+e.message);});
+        var compraId=this.dataset.marcarPagado;
+        from('compras').eq('id',compraId).update({estado_pago:'pagado'}).then(function(){
+          return from('gastos').eq('compra_id',compraId).update({estado_pago:'pagado'});
+        }).then(function(){showToast('✅ Marcado como pagado');renderCuentasPorPagar();}).catch(function(e){alert('Error: '+e.message);});
       });
     });
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
-function renderNuevoGasto(){
+function renderNuevaCompra(){
   var body=document.getElementById('enc-body');
   var hoy=new Date().toISOString().slice(0,10);
   var provOpts=cats.proveedores.map(function(p){return '<option value="'+p.id+'">'+p.nombre+(p.giro?' — '+p.giro:'')+'</option>';}).join('');
-  var itemOpts=cats.inventario.map(function(it){return '<option value="'+it.id+'">'+it.nombre+' (stock: '+numFmt(it.stock_actual)+' '+it.unidad+')</option>';}).join('');
-  var catChips=Object.keys(GASTO_CATEGORIAS).map(function(k,idx){
-    var c=GASTO_CATEGORIAS[k];
-    return '<button type="button" class="op-chip'+(idx===0?' sel':'')+'" data-cat="'+k+'" style="text-align:left;padding:.6rem .9rem;">'+(idx===0?'✓ ':'')+c.ic+' '+c.lbl+'</button>';
-  }).join('');
-  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📝 Registrar gasto<button type="button" onclick="renderComprasMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Compras y Gastos</button></div>'+
+  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🧾 Nueva compra<button type="button" onclick="renderComprasMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Compras y Gastos</button></div>'+
     '<div class="form-card">'+
-    '<div class="form-group"><label>Categoría</label><div style="display:flex;flex-direction:column;gap:8px;" id="g-cat-grp">'+catChips+'</div></div>'+
-    '<div class="form-group" id="g-insumo-wrap"><label>Producto de inventario</label><select id="g-item"><option value="">Selecciona...</option>'+itemOpts+'</select><p class="hint">Se registrará también como entrada de stock.</p></div>'+
-    '<div class="form-group" id="g-cantidad-wrap"><label>Cantidad que entra a inventario</label><input type="number" id="g-cantidad" min="0" step="any" placeholder="0"></div>'+
-    '<div class="form-group"><label>Monto ($)</label><input type="number" id="g-monto" min="0" step="any" placeholder="0.00"></div>'+
-    '<div class="form-group"><label>Fecha</label><input type="date" id="g-fecha" value="'+hoy+'" max="'+hoy+'"></div>'+
-    '<div class="form-group"><label>Proveedor (opcional)</label><select id="g-proveedor"><option value="">Sin proveedor</option>'+provOpts+'<option value="_nuevo">+ Agregar nuevo proveedor...</option></select></div>'+
-    '<div id="g-prov-nuevo-wrap" style="display:none;"><div class="form-group"><label>Nombre del proveedor</label><input type="text" id="g-prov-nombre" placeholder="Ej. Agroquímicos del Valle"></div><div class="form-group"><label>¿A qué se dedica?</label><input type="text" id="g-prov-giro" placeholder="Ej. Fertilizantes y agroquímicos"></div><div class="form-group"><label>Teléfono (opcional)</label><input type="text" id="g-prov-tel" placeholder="Ej. 555-123-4567"></div></div>'+
-    '<div class="form-group"><label>Forma de pago</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip sel" id="g-fp-contado">✓ Contado</button><button type="button" class="op-chip" id="g-fp-credito">Crédito</button></div></div>'+
-    '<div class="form-group" id="g-vencimiento-wrap" style="display:none;"><label>Fecha de vencimiento del pago</label><input type="date" id="g-vencimiento"><p class="hint">Te avisaremos 5 días antes de que venza.</p></div>'+
-    '<div class="form-group"><label>Concepto / nota</label><input type="text" id="g-concepto" placeholder="Ej. Gasolina para la camioneta"></div>'+
-    '<div class="form-group"><label>Comprobante (opcional)</label><input type="file" id="g-comprobante" accept="image/*"><p class="hint" id="g-comprobante-status"></p></div>'+
-    '<button class="btn-primary" id="g-guardar">Registrar gasto</button>'+
-    '</div><button class="btn-back" style="margin-top:1rem;" onclick="renderComprasMenu()">← Volver</button>';
+    '<div class="form-group"><label>Proveedor</label><select id="nc-proveedor"><option value="">Sin proveedor</option>'+provOpts+'<option value="_nuevo">+ Agregar nuevo proveedor...</option></select></div>'+
+    '<div id="nc-prov-nuevo-wrap" style="display:none;"><div class="form-group"><label>Nombre del proveedor</label><input type="text" id="nc-prov-nombre" placeholder="Ej. Agroquímicos del Valle"></div><div class="form-group"><label>¿A qué se dedica?</label><input type="text" id="nc-prov-giro" placeholder="Ej. Fertilizantes y agroquímicos"></div><div class="form-group"><label>Teléfono (opcional)</label><input type="text" id="nc-prov-tel" placeholder="Ej. 555-123-4567"></div></div>'+
+    '<div class="form-group"><label>Número de factura (opcional)</label><input type="text" id="nc-factura" placeholder="Ej. A-4521"></div>'+
+    '<div class="form-group"><label>Fecha</label><input type="date" id="nc-fecha" value="'+hoy+'" max="'+hoy+'"></div>'+
+    '<div class="form-group"><label>Forma de pago</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip sel" id="nc-fp-contado">✓ Contado</button><button type="button" class="op-chip" id="nc-fp-credito">Crédito</button></div></div>'+
+    '<div class="form-group" id="nc-vencimiento-wrap" style="display:none;"><label>Fecha de vencimiento del pago</label><input type="date" id="nc-vencimiento"><p class="hint">Te avisaremos 5 días antes de que venza.</p></div>'+
+    '<div class="form-group"><label>Comprobante / foto de la factura (opcional)</label><input type="file" id="nc-comprobante" accept="image/*"><p class="hint" id="nc-comprobante-status"></p></div>'+
+    '</div>'+
+    '<div class="seccion-titulo" style="margin-top:1rem;font-size:.9rem;">Productos de la factura</div>'+
+    '<div id="nc-items"></div>'+
+    '<button type="button" id="nc-agregar-btn" style="width:100%;padding:.6rem;border:1.5px dashed var(--verde-mid);border-radius:var(--radio-sm);background:none;color:var(--verde-mid);font-weight:600;font-size:.85rem;cursor:pointer;margin-bottom:1rem;">+ Agregar otro producto</button>'+
+    '<div class="form-card" style="text-align:center;"><div style="font-size:.8rem;color:var(--gris-3);">Total de la compra</div><div style="font-size:1.6rem;font-weight:800;color:var(--verde-mid);" id="nc-total-display">$0.00</div><button class="btn-primary" id="nc-guardar" style="margin-top:.75rem;">Registrar compra</button></div>'+
+    '<button class="btn-back" style="margin-top:1rem;" onclick="renderComprasMenu()">← Volver</button>';
 
-  var categoriaSel=Object.keys(GASTO_CATEGORIAS)[0];
   var comprobanteUrl=null;
-  function actualizarVisibilidadInsumo(){
-    var esInsumo=categoriaSel==='insumos';
-    document.getElementById('g-insumo-wrap').style.display=esInsumo?'':'none';
-    document.getElementById('g-cantidad-wrap').style.display=esInsumo?'':'none';
+  var filaSeq=0;
+  var filas=[{row:filaSeq++,categoria:Object.keys(GASTO_CATEGORIAS)[0],itemId:'',itemNombre:'',cantidad:'',monto:'',concepto:''}];
+
+  function calcularTotal(){
+    var t=filas.reduce(function(s,f){return s+(parseFloat(f.monto)||0);},0);
+    var disp=document.getElementById('nc-total-display');
+    if(disp) disp.textContent='$'+t.toFixed(2);
+    return t;
   }
-  actualizarVisibilidadInsumo();
-  document.querySelectorAll('#g-cat-grp [data-cat]').forEach(function(btn){
-    btn.addEventListener('click',function(){
-      categoriaSel=this.dataset.cat;
-      document.querySelectorAll('#g-cat-grp [data-cat]').forEach(function(b){
-        b.classList.remove('sel');
-        var c=GASTO_CATEGORIAS[b.dataset.cat];
-        b.innerHTML=c.ic+' '+c.lbl;
+
+  function filtrarInventarioNC(query){
+    var q=(query||'').toLowerCase().trim();
+    var base=cats.inventario;
+    if(!q) return base.slice(0,40);
+    return base.filter(function(it){return it.nombre.toLowerCase().indexOf(q)>-1;}).slice(0,40);
+  }
+
+  function pintarResultadosNC(rid,query){
+    var cont=document.getElementById('nc-items');
+    var resWrap=cont.querySelector('.nc-item-resultados[data-row="'+rid+'"]');
+    if(!resWrap) return;
+    var matches=filtrarInventarioNC(query);
+    var html=matches.map(function(it){return '<div class="fcomp-item-opcion" data-row="'+rid+'" data-id="'+it.id+'" style="padding:.55rem .7rem;cursor:pointer;border-bottom:1px solid var(--gris-1);font-size:.85rem;">'+it.nombre+' <span style="color:var(--gris-3);font-size:.75rem;">('+it.unidad+')</span></div>';}).join('');
+    html+='<div class="fcomp-item-opcion" data-row="'+rid+'" data-id="" style="padding:.55rem .7rem;cursor:pointer;color:var(--gris-3);font-size:.85rem;">✕ Sin producto de inventario (no mueve stock)</div>';
+    resWrap.innerHTML=html;
+    resWrap.style.display='block';
+    resWrap.querySelectorAll('.fcomp-item-opcion').forEach(function(opt){
+      opt.addEventListener('mousedown',function(e){
+        e.preventDefault();
+        var rid2=this.dataset.row, id=this.dataset.id;
+        var fila=filas.find(function(f){return f.row==rid2;});
+        if(!fila) return;
+        if(id){
+          var it=cats.inventario.find(function(x){return x.id===id;});
+          fila.itemId=id;
+          fila.itemNombre=it?it.nombre:'';
+        } else {
+          fila.itemId='';
+          fila.itemNombre='';
+        }
+        pintarItemsCompra();
       });
-      this.classList.add('sel');
-      var c=GASTO_CATEGORIAS[this.dataset.cat];
-      this.innerHTML='✓ '+c.ic+' '+c.lbl;
-      actualizarVisibilidadInsumo();
     });
+  }
+
+  function pintarFilaCompra(f){
+    var catOpts=Object.keys(GASTO_CATEGORIAS).map(function(k){var c=GASTO_CATEGORIAS[k];return '<option value="'+k+'"'+(f.categoria===k?' selected':'')+'>'+c.ic+' '+c.lbl+'</option>';}).join('');
+    var tieneItem=!!f.itemId;
+    var it=tieneItem?cats.inventario.find(function(x){return x.id===f.itemId;}):null;
+    return '<div class="form-card" style="margin-bottom:.5rem;padding:.75rem;" data-row="'+f.row+'">'+
+      '<div class="form-group" style="margin-bottom:.5rem;"><label>Categoría</label><select class="nc-cat" data-row="'+f.row+'">'+catOpts+'</select></div>'+
+      '<div class="form-group" style="margin-bottom:.5rem;"><label>Producto de inventario (opcional)</label><div class="fcomp-item-wrap" data-row="'+f.row+'" style="position:relative;"><input type="text" class="fcomp-item-buscar nc-item-buscar" data-row="'+f.row+'" autocomplete="off" placeholder="🔍 Buscar producto..." value="'+(f.itemNombre?f.itemNombre.replace(/"/g,'&quot;'):'')+'"><div class="fcomp-item-resultados nc-item-resultados" data-row="'+f.row+'" style="display:none;position:absolute;left:0;right:0;top:100%;z-index:30;background:#fff;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);max-height:220px;overflow-y:auto;box-shadow:0 6px 16px rgba(0,0,0,.15);"></div></div></div>'+
+      (tieneItem?'<div class="form-group" style="margin-bottom:.5rem;"><label>Cantidad que entra a inventario ('+(it?it.unidad:'')+')</label><input type="number" class="nc-cantidad" data-row="'+f.row+'" min="0" step="any" value="'+(f.cantidad||'')+'" placeholder="0"></div>':'')+
+      '<div class="form-group" style="margin-bottom:.5rem;"><label>Monto ($)</label><input type="number" class="nc-monto" data-row="'+f.row+'" min="0" step="any" value="'+(f.monto||'')+'" placeholder="0.00"></div>'+
+      '<div class="form-group" style="margin-bottom:0;"><label>Concepto / descripción (opcional)</label><input type="text" class="nc-concepto" data-row="'+f.row+'" value="'+(f.concepto?f.concepto.replace(/"/g,'&quot;'):'')+'" placeholder="Ej. Sulfato de amonio 25kg"></div>'+
+      (filas.length>1?'<button type="button" class="nc-quitar" data-row="'+f.row+'" style="border:none;background:none;color:var(--rojo);font-size:.78rem;font-weight:600;cursor:pointer;margin-top:.5rem;">🗑️ Quitar producto</button>':'')+
+      '</div>';
+  }
+
+  function pintarItemsCompra(){
+    var cont=document.getElementById('nc-items');
+    cont.innerHTML=filas.map(pintarFilaCompra).join('');
+    cont.querySelectorAll('.nc-cat').forEach(function(sel){
+      sel.addEventListener('change',function(){
+        var rid=this.dataset.row, val=this.value;
+        var f=filas.find(function(x){return x.row==rid;});
+        if(f) f.categoria=val;
+      });
+    });
+    cont.querySelectorAll('.nc-cantidad').forEach(function(inp){
+      inp.addEventListener('input',function(){
+        var rid=this.dataset.row, val=this.value;
+        var f=filas.find(function(x){return x.row==rid;});
+        if(f) f.cantidad=val;
+      });
+    });
+    cont.querySelectorAll('.nc-monto').forEach(function(inp){
+      inp.addEventListener('input',function(){
+        var rid=this.dataset.row, val=this.value;
+        var f=filas.find(function(x){return x.row==rid;});
+        if(f) f.monto=val;
+        calcularTotal();
+      });
+    });
+    cont.querySelectorAll('.nc-concepto').forEach(function(inp){
+      inp.addEventListener('input',function(){
+        var rid=this.dataset.row, val=this.value;
+        var f=filas.find(function(x){return x.row==rid;});
+        if(f) f.concepto=val;
+      });
+    });
+    cont.querySelectorAll('.nc-quitar').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var rid=this.dataset.row;
+        filas=filas.filter(function(f){return f.row!=rid;});
+        pintarItemsCompra();
+      });
+    });
+    cont.querySelectorAll('.nc-item-buscar').forEach(function(inp){
+      inp.addEventListener('focus',function(){pintarResultadosNC(this.dataset.row,this.value);});
+      inp.addEventListener('input',function(){pintarResultadosNC(this.dataset.row,this.value);});
+      inp.addEventListener('blur',function(){
+        var rid=this.dataset.row, inputEl=this;
+        setTimeout(function(){
+          var resWrap=cont.querySelector('.nc-item-resultados[data-row="'+rid+'"]');
+          if(resWrap) resWrap.style.display='none';
+          var fila=filas.find(function(f){return f.row==rid;});
+          inputEl.value=fila&&fila.itemNombre?fila.itemNombre:'';
+        },150);
+      });
+    });
+    calcularTotal();
+  }
+  pintarItemsCompra();
+
+  document.getElementById('nc-agregar-btn').addEventListener('click',function(){
+    filas.push({row:filaSeq++,categoria:Object.keys(GASTO_CATEGORIAS)[0],itemId:'',itemNombre:'',cantidad:'',monto:'',concepto:''});
+    pintarItemsCompra();
   });
+
   var formaPagoSel='contado';
   function actualizarVisibilidadVencimiento(){
-    document.getElementById('g-vencimiento-wrap').style.display=formaPagoSel==='credito'?'':'none';
+    document.getElementById('nc-vencimiento-wrap').style.display=formaPagoSel==='credito'?'':'none';
   }
-  document.getElementById('g-fp-contado').addEventListener('click',function(){formaPagoSel='contado';this.classList.add('sel');this.textContent='✓ Contado';document.getElementById('g-fp-credito').classList.remove('sel');document.getElementById('g-fp-credito').textContent='Crédito';actualizarVisibilidadVencimiento();});
-  document.getElementById('g-fp-credito').addEventListener('click',function(){formaPagoSel='credito';this.classList.add('sel');this.textContent='✓ Crédito';document.getElementById('g-fp-contado').classList.remove('sel');document.getElementById('g-fp-contado').textContent='Contado';actualizarVisibilidadVencimiento();});
-  document.getElementById('g-proveedor').addEventListener('change',function(){
+  document.getElementById('nc-fp-contado').addEventListener('click',function(){formaPagoSel='contado';this.classList.add('sel');this.textContent='✓ Contado';document.getElementById('nc-fp-credito').classList.remove('sel');document.getElementById('nc-fp-credito').textContent='Crédito';actualizarVisibilidadVencimiento();});
+  document.getElementById('nc-fp-credito').addEventListener('click',function(){formaPagoSel='credito';this.classList.add('sel');this.textContent='✓ Crédito';document.getElementById('nc-fp-contado').classList.remove('sel');document.getElementById('nc-fp-contado').textContent='Contado';actualizarVisibilidadVencimiento();});
+  document.getElementById('nc-proveedor').addEventListener('change',function(){
     var provId=this.value;
-    document.getElementById('g-prov-nuevo-wrap').style.display=provId==='_nuevo'?'':'none';
+    document.getElementById('nc-prov-nuevo-wrap').style.display=provId==='_nuevo'?'':'none';
     var prov=cats.proveedores.find(function(p){return p.id===provId;});
     if(prov&&prov.forma_pago_default==='credito'){
-      document.getElementById('g-fp-credito').click();
+      document.getElementById('nc-fp-credito').click();
       if(prov.plazo_dias_default){
-        var fechaBase=document.getElementById('g-fecha').value||hoy;
+        var fechaBase=document.getElementById('nc-fecha').value||hoy;
         var d=new Date(fechaBase+'T00:00:00'); d.setDate(d.getDate()+prov.plazo_dias_default);
-        document.getElementById('g-vencimiento').value=d.toISOString().slice(0,10);
+        document.getElementById('nc-vencimiento').value=d.toISOString().slice(0,10);
       }
     }
   });
-  document.getElementById('g-comprobante').addEventListener('change',function(){
+  document.getElementById('nc-comprobante').addEventListener('change',function(){
     var f=this.files[0];
     if(!f) return;
-    var status=document.getElementById('g-comprobante-status');
+    var status=document.getElementById('nc-comprobante-status');
     status.textContent='Subiendo...';
     subirComprobanteGasto(f).then(function(url){
       comprobanteUrl=url;
@@ -3068,28 +3164,31 @@ function renderNuevoGasto(){
     }).catch(function(e){status.textContent='Error al subir: '+e.message;});
   });
 
-  document.getElementById('g-guardar').addEventListener('click',function(){
+  document.getElementById('nc-guardar').addEventListener('click',function(){
     var btn=this;
-    var monto=parseFloat(document.getElementById('g-monto').value);
-    if(!monto||monto<=0){alert('Captura un monto válido.');return;}
-    var fecha=document.getElementById('g-fecha').value||hoy;
-    var concepto=(document.getElementById('g-concepto').value||'').trim()||null;
-    var proveedorSel=document.getElementById('g-proveedor').value;
-    var esInsumo=categoriaSel==='insumos';
-    var itemId=esInsumo?document.getElementById('g-item').value:'';
-    var cantidad=esInsumo?(parseFloat(document.getElementById('g-cantidad').value)||0):0;
-    if(esInsumo&&itemId&&cantidad<=0){alert('Captura la cantidad que entra a inventario, o deja el producto sin seleccionar si este gasto no mueve stock.');return;}
+    var fecha=document.getElementById('nc-fecha').value||hoy;
+    var numeroFactura=(document.getElementById('nc-factura').value||'').trim()||null;
+    var proveedorSel=document.getElementById('nc-proveedor').value;
     var esCredito=formaPagoSel==='credito';
-    var vencimiento=esCredito?(document.getElementById('g-vencimiento').value||null):null;
+    var vencimiento=esCredito?(document.getElementById('nc-vencimiento').value||null):null;
     if(esCredito&&!vencimiento){alert('Captura la fecha de vencimiento del pago a crédito.');return;}
+    var lineas=filas.filter(function(f){return (parseFloat(f.monto)||0)>0;});
+    if(!lineas.length){alert('Captura el monto de al menos un producto.');return;}
+    for(var i=0;i<lineas.length;i++){
+      if(lineas[i].itemId&&!(parseFloat(lineas[i].cantidad)>0)){
+        alert('Captura la cantidad que entra a inventario para "'+lineas[i].itemNombre+'", o quita el producto de inventario si no aplica.');
+        return;
+      }
+    }
+    var total=lineas.reduce(function(s,f){return s+(parseFloat(f.monto)||0);},0);
     btn.disabled=true; btn.textContent='Guardando...';
 
     function resolverProveedor(){
       if(proveedorSel==='_nuevo'){
-        var nombre=(document.getElementById('g-prov-nombre').value||'').trim();
+        var nombre=(document.getElementById('nc-prov-nombre').value||'').trim();
         if(!nombre) return Promise.resolve(null);
-        var giro=(document.getElementById('g-prov-giro').value||'').trim()||null;
-        var tel=(document.getElementById('g-prov-tel').value||'').trim()||null;
+        var giro=(document.getElementById('nc-prov-giro').value||'').trim()||null;
+        var tel=(document.getElementById('nc-prov-tel').value||'').trim()||null;
         return from('proveedores').insert({nombre:nombre,giro:giro,telefono:tel,activo:true}).then(function(rows){
           var nuevo=rows[0];
           cats.proveedores.push(nuevo);
@@ -3101,23 +3200,32 @@ function renderNuevoGasto(){
     }
 
     resolverProveedor().then(function(proveedorId){
-      var payload={categoria:categoriaSel,monto:monto,fecha:fecha,proveedor_id:proveedorId,concepto:concepto,inventario_item_id:(esInsumo&&itemId)?itemId:null,cantidad:(esInsumo&&itemId)?cantidad:null,comprobante_url:comprobanteUrl,registrado_por:usuario.id,forma_pago:formaPagoSel,fecha_vencimiento:vencimiento,estado_pago:esCredito?'pendiente':'pagado'};
-      return from('gastos').insert(payload);
-    }).then(function(){
-      if(esInsumo&&itemId&&cantidad>0){
-        var it=cats.inventario.find(function(x){return x.id===itemId;});
-        if(it){
+      var compraPayload={proveedor_id:proveedorId,numero_factura:numeroFactura,fecha:fecha,forma_pago:formaPagoSel,fecha_vencimiento:vencimiento,estado_pago:esCredito?'pendiente':'pagado',notificado_vencimiento:false,comprobante_url:comprobanteUrl,total:total,registrado_por:usuario.id};
+      return from('compras').insert(compraPayload).then(function(rows){
+        var compra=rows[0];
+        var gastoPayloads=lineas.map(function(f){
+          return {categoria:f.categoria,monto:parseFloat(f.monto),fecha:fecha,proveedor_id:proveedorId,concepto:f.concepto||null,inventario_item_id:f.itemId||null,cantidad:f.itemId?(parseFloat(f.cantidad)||0):null,comprobante_url:comprobanteUrl,registrado_por:usuario.id,forma_pago:formaPagoSel,fecha_vencimiento:vencimiento,estado_pago:esCredito?'pendiente':'pagado',notificado_vencimiento:false,compra_id:compra.id};
+        });
+        return from('gastos').insert(gastoPayloads).then(function(){ return lineas; });
+      });
+    }).then(function(lineasGuardadas){
+      var conStock=lineasGuardadas.filter(function(f){return f.itemId&&parseFloat(f.cantidad)>0;});
+      return conStock.reduce(function(p,f){
+        return p.then(function(){
+          var it=cats.inventario.find(function(x){return x.id===f.itemId;});
+          if(!it) return;
           var stockAntes=it.stock_actual;
-          var nuevoStock=stockAntes+cantidad;
-          return from('movimientos_inventario').insert({item_id:it.id,tipo:'entrada',cantidad:cantidad,motivo:'Compra de gasto'+(concepto?' · '+concepto:''),usuario_id:usuario.id,stock_anterior:stockAntes,stock_posterior:nuevoStock}).then(function(){
+          var cant=parseFloat(f.cantidad)||0;
+          var nuevoStock=stockAntes+cant;
+          return from('movimientos_inventario').insert({item_id:it.id,tipo:'entrada',cantidad:cant,motivo:'Compra'+(f.concepto?' · '+f.concepto:''),usuario_id:usuario.id,stock_anterior:stockAntes,stock_posterior:nuevoStock}).then(function(){
             return from('inventario_items').eq('id',it.id).update({stock_actual:nuevoStock});
           }).then(function(){ it.stock_actual=nuevoStock; });
-        }
-      }
+        });
+      }, Promise.resolve());
     }).then(function(){
-      showToast('✅ Gasto registrado');
+      showToast('✅ Compra registrada');
       renderComprasMenu();
-    }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Registrar gasto';});
+    }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Registrar compra';});
   });
 }
 
@@ -3200,7 +3308,7 @@ function renderHistorialGastos(mesStr){
   var inicio=mesStr+'-01';
   var finD=new Date(inicio+'T00:00:00'); finD.setMonth(finD.getMonth()+1); finD.setDate(0);
   var fin=finD.toISOString().slice(0,10);
-  from('gastos').select('*,proveedor:proveedores(nombre),item:inventario_items(nombre,unidad),registrador:usuarios!registrado_por(nombre)').gte('fecha',inicio).lte('fecha',fin).order('fecha',{ascending:false}).get().then(function(rows){
+  from('gastos').select('*,proveedor:proveedores(nombre),item:inventario_items(nombre,unidad),registrador:usuarios!registrado_por(nombre),compra:compras(numero_factura)').gte('fecha',inicio).lte('fecha',fin).order('fecha',{ascending:false}).get().then(function(rows){
     rows=rows||[];
     var mesLbl=new Date(inicio+'T00:00:00').toLocaleDateString('es-MX',{month:'long',year:'numeric'});
     var total=rows.reduce(function(s,g){return s+parseFloat(g.monto);},0);
@@ -3216,6 +3324,7 @@ function renderHistorialGastos(mesStr){
         if(g.proveedor) meta.push('🏢 '+g.proveedor.nombre);
         if(g.item) meta.push('📦 '+numFmt(g.cantidad)+' '+g.item.unidad+' de '+g.item.nombre);
         if(g.concepto) meta.push(g.concepto);
+        if(g.compra&&g.compra.numero_factura) meta.push('🧾 Factura #'+g.compra.numero_factura);
         if(g.registrador) meta.push('👤 '+g.registrador.nombre);
         var fpTxt=g.forma_pago==='credito'?('💳 Crédito · '+(g.estado_pago==='pagado'?'✅ Pagado':'⏳ Pendiente (vence '+g.fecha_vencimiento+')')):'💵 Contado';
         return '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem;">'+cat.ic+' '+cat.lbl+'</strong><strong style="font-size:.95rem;color:var(--verde-mid);">$'+parseFloat(g.monto).toFixed(2)+'</strong></div><div class="orden-meta">📅 '+g.fecha+' · '+fpTxt+(meta.length?' · '+meta.join(' · '):'')+(g.comprobante_url?' · <a href="'+g.comprobante_url+'" target="_blank">🧾 Ver comprobante</a>':'')+'</div><button type="button" class="btn-sm btn-cancelar" style="margin-top:.4rem;" data-borrar-gasto="'+g.id+'">Eliminar</button></div>';
