@@ -706,7 +706,7 @@ function renderTablero(){
     var avisoSolicitudesOpEl=document.getElementById('aviso-solicitudes-operario');
     if(avisoSolicitudesOpEl) avisoSolicitudesOpEl.addEventListener('click',renderSolicitudesOperarioRevision);
     var avisoMantEl=document.getElementById('aviso-mantenimiento');
-    if(avisoMantEl) avisoMantEl.addEventListener('click',renderActivosRancho);
+    if(avisoMantEl) avisoMantEl.addEventListener('click',function(){renderActivosRancho();});
     var avisoSolicitudesEl=document.getElementById('aviso-solicitudes-labor');
     if(avisoSolicitudesEl) avisoSolicitudesEl.addEventListener('click',renderSolicitudesLabor);
     var avisoEl=document.getElementById('aviso-aplic-pendientes');
@@ -1136,6 +1136,29 @@ function cargarReporte(){
 }
 
 var INSUMO_SUBCATEGORIAS=['Ácidos','Fungicidas','Herbicidas','Insecticidas','Abono','Adherentes','Arrancadores','Aminoácidos','Coadyuvante','Defoliante','Fertilizantes','Fertilizante Orgánico','Estructurador','Enraizador','Mejorador','Potencializador','Regulador de crecimiento'];
+var SEGURIDAD_SUBCATEGORIAS=['Guantes','Lentes de protección','Fajas','Cascos','Botas de seguridad','Cubrebocas','Chalecos reflejantes','Tapones auditivos','Overol / Ropa de protección','Otros'];
+var REFACCIONES_SUBCATEGORIAS=['Gasolina','Aceite 2 Tiempos','Aceite 4 Tiempos','Bujías','Hilo para poda','Filtros','Refacciones varias','Otros'];
+var GRUPOS_INVENTARIO={
+  insumos:{lbl:'📦 Insumos',categorias:INSUMO_SUBCATEGORIAS},
+  galera_limpieza:{lbl:'🧹 Galera y Limpieza',categorias:null},
+  seguridad:{lbl:'🦺 Seguridad',categorias:SEGURIDAD_SUBCATEGORIAS},
+  refacciones:{lbl:'🔧 Refacciones y Combustibles',categorias:REFACCIONES_SUBCATEGORIAS}
+};
+var ORDEN_GRUPOS_INVENTARIO=['insumos','galera_limpieza','seguridad','refacciones'];
+var GRUPO_NOMBRE_PLANO={insumos:'Insumos',galera_limpieza:'Galera y Limpieza',seguridad:'Seguridad',refacciones:'Refacciones y Combustibles'};
+var TABS_INVENTARIO=[
+  {key:'insumos',lbl:'📦 Insumos',fn:"renderInventario('insumos')"},
+  {key:'galera_limpieza',lbl:'🧹 Galera y Limpieza',fn:"renderInventario('galera_limpieza')"},
+  {key:'seguridad',lbl:'🦺 Seguridad',fn:"renderInventario('seguridad')"},
+  {key:'refacciones',lbl:'🔧 Refacciones y Combustibles',fn:"renderInventario('refacciones')"},
+  {key:'herramientas',lbl:'🧰 Herramientas',fn:"renderActivosRancho('Herramienta')"},
+  {key:'equipos',lbl:'⚙️ Equipos',fn:"renderActivosRancho('Equipo')"}
+];
+function pintarTabsInventario(activeKey){
+  return '<div style="display:flex;gap:6px;margin-bottom:.75rem;flex-wrap:wrap;">'+TABS_INVENTARIO.map(function(t){
+    return '<button type="button" class="rep-view-btn'+(t.key===activeKey?' active':'')+'" onclick="'+t.fn+'">'+t.lbl+'</button>';
+  }).join('')+'</div>';
+}
 
 function renderInventario(grupoInicial){
   grupoInicial=grupoInicial||'insumos';
@@ -1143,34 +1166,29 @@ function renderInventario(grupoInicial){
   var todos=cats.inventario;
   var items=todos.filter(function(it){return (it.grupo||'insumos')===grupoInicial;});
   var puedeEditar=usuario.rol!=='ingeniero';
-  var tituloGrupo=grupoInicial==='galera_limpieza'?'🧹 Galera y Limpieza':'📦 Insumos';
+  var cfgGrupo=GRUPOS_INVENTARIO[grupoInicial]||GRUPOS_INVENTARIO.insumos;
+  var tituloGrupo=cfgGrupo.lbl;
   var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">'+tituloGrupo+(puedeEditar?'<button type="button" id="inv-nuevo-btn" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Componente</button>':'')+'</div>';
-  html+='<div style="display:flex;gap:6px;margin-bottom:.75rem;flex-wrap:wrap;"><button type="button" class="rep-view-btn'+(grupoInicial==='insumos'?' active':'')+'" id="inv-ir-insumos">📦 Insumos</button><button type="button" class="rep-view-btn'+(grupoInicial==='galera_limpieza'?' active':'')+'" id="inv-ir-galera">🧹 Galera y Limpieza</button><button type="button" class="rep-view-btn" id="inv-ir-activos">🔧 Herramientas y Equipo</button></div>';
+  html+=pintarTabsInventario(grupoInicial);
   if(!puedeEditar) html+='<p class="hint" style="margin-bottom:.75rem;">👁️ Modo de solo consulta.</p>';
   html+='<input type="text" id="inv-buscar" placeholder="🔍 Buscar producto..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;margin-bottom:.75rem;">';
   if(!items.length){
     html+='<div class="empty">'+tituloGrupo+': aún no hay componentes registrados.'+(puedeEditar?'<br/>Toca "+ Componente" para agregar el primero.':'')+'</div>';
     body.innerHTML=html;
-    document.getElementById('inv-ir-activos').addEventListener('click',renderActivosRancho);
-    document.getElementById('inv-ir-insumos').addEventListener('click',function(){renderInventario('insumos');});
-    document.getElementById('inv-ir-galera').addEventListener('click',function(){renderInventario('galera_limpieza');});
     if(puedeEditar) document.getElementById('inv-nuevo-btn').addEventListener('click',function(){renderInventarioNuevo({grupo:grupoInicial});});
     return;
   }
   var categoriasConDatos=Array.from(new Set(items.map(function(it){return it.categoria||'Otros';})));
   var categorias;
-  if(grupoInicial==='insumos'){
-    var extra=categoriasConDatos.filter(function(c){return INSUMO_SUBCATEGORIAS.indexOf(c)===-1;}).sort();
-    categorias=['Todos'].concat(INSUMO_SUBCATEGORIAS).concat(extra);
+  if(cfgGrupo.categorias){
+    var extra=categoriasConDatos.filter(function(c){return cfgGrupo.categorias.indexOf(c)===-1;}).sort();
+    categorias=['Todos'].concat(cfgGrupo.categorias).concat(extra);
   } else {
     categorias=['Todos'].concat(categoriasConDatos.sort());
   }
   html+='<div style="display:flex;gap:6px;margin-bottom:.75rem;flex-wrap:wrap;" id="inv-cat-chips">'+categorias.map(function(c,i){return '<button type="button" class="rep-view-btn'+(i===0?' active':'')+'" data-cat="'+c+'">'+c+'</button>';}).join('')+'</div>';
   html+='<div id="inv-filas"></div>';
   body.innerHTML=html;
-  document.getElementById('inv-ir-activos').addEventListener('click',renderActivosRancho);
-  document.getElementById('inv-ir-insumos').addEventListener('click',function(){renderInventario('insumos');});
-  document.getElementById('inv-ir-galera').addEventListener('click',function(){renderInventario('galera_limpieza');});
   if(puedeEditar) document.getElementById('inv-nuevo-btn').addEventListener('click',function(){renderInventarioNuevo({grupo:grupoInicial});});
   var catActiva='Todos';
   function pintarFilas(filtro){
@@ -1215,16 +1233,21 @@ function fmtAmigable(cantidad,unidad){
   return numFmt(cantidad)+' '+unidad;
 }
 
-function renderActivosRancho(){
+function renderActivosRancho(tipoInicial){
+  tipoInicial=tipoInicial||'Herramienta';
+  var esHerramientas=tipoInicial==='Herramienta';
+  var categoriasTab=esHerramientas?['Herramienta']:['Equipo','Vehículo','Otro'];
+  var tabKey=esHerramientas?'herramientas':'equipos';
+  var tituloTab=esHerramientas?'🧰 Herramientas':'⚙️ Equipos';
   var body=document.getElementById('enc-body');
   var puedeEditar=usuario.rol!=='ingeniero';
-  body.innerHTML='<div class="seccion-titulo">🔧 Herramientas y Equipo</div><div class="loading">Cargando...</div>';
+  body.innerHTML='<div class="seccion-titulo">'+tituloTab+'</div><div class="loading">Cargando...</div>';
   Promise.all([
     from('activos_rancho').select('*,operario:usuarios!asignado_a(nombre)').eq('activo',true).order('nombre').get()
   ]).then(function(r){
-    var items=r[0]||[];
+    var todos=r[0]||[];
     var hoy=new Date().toISOString().slice(0,10);
-    items.forEach(function(it){
+    todos.forEach(function(it){
       it._requiereMant=false;
       if(it.fecha_ultimo_mantenimiento&&it.frecuencia_mantenimiento_dias){
         var venc=new Date(it.fecha_ultimo_mantenimiento+'T00:00:00');
@@ -1232,16 +1255,16 @@ function renderActivosRancho(){
         it._requiereMant = venc.toISOString().slice(0,10) <= hoy;
       }
     });
+    var items=todos.filter(function(it){return categoriasTab.indexOf(it.categoria)>-1;});
     var conMant=items.filter(function(it){return it._requiereMant;});
-    var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🔧 Herramientas y Equipo'+(puedeEditar?'<button type="button" onclick="renderActivoNuevo()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo</button>':'')+'</div>';
-    html+='<div style="display:flex;gap:6px;margin-bottom:.75rem;"><button type="button" class="rep-view-btn" id="inv-ir-insumos">📦 Insumos</button><button type="button" class="rep-view-btn active">🔧 Herramientas y Equipo</button></div>';
-    if(!items.length){body.innerHTML=html+'<div class="empty">Aún no hay herramientas o equipo registrado.'+(puedeEditar?'<br/>Toca "+ Nuevo" para agregar el primero.':'')+'</div>';document.getElementById('inv-ir-insumos').addEventListener('click',function(){renderInventario('insumos');});return;}
+    var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">'+tituloTab+(puedeEditar?'<button type="button" onclick="renderActivoNuevo({categoria:\''+tipoInicial+'\'})" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo</button>':'')+'</div>';
+    html+=pintarTabsInventario(tabKey);
+    if(!items.length){body.innerHTML=html+'<div class="empty">Aún no hay '+(esHerramientas?'herramientas':'equipo')+' registrado.'+(puedeEditar?'<br/>Toca "+ Nuevo" para agregar el primero.':'')+'</div>';return;}
     if(conMant.length) html+='<div style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);border-radius:var(--radio-sm);padding:.75rem;margin-bottom:1rem;font-size:.82rem;"><strong style="color:var(--rojo);">🔧 '+conMant.length+' requiere(n) mantenimiento</strong></div>';
-    var categorias=['Herramienta','Equipo','Vehículo','Otro'];
-    categorias.forEach(function(cat){
+    categoriasTab.forEach(function(cat){
       var deEstaCat=items.filter(function(it){return it.categoria===cat;});
       if(!deEstaCat.length) return;
-      html+='<div class="seccion-titulo" style="margin-top:1rem;font-size:.85rem;">'+cat+'s</div>';
+      if(categoriasTab.length>1) html+='<div class="seccion-titulo" style="margin-top:1rem;font-size:.85rem;">'+cat+'s</div>';
       html+=deEstaCat.map(function(it){
         var estColor={disponible:'var(--verde-mid)',asignado:'var(--tierra)',mantenimiento:'var(--rojo)',baja:'var(--gris-3)'}[it.estado]||'var(--gris-3)';
         var estLbl={disponible:'✅ Disponible',asignado:'👷 Asignado a '+(it.operario?it.operario.nombre:'?'),mantenimiento:'🔧 En mantenimiento',baja:'⛔ De baja'}[it.estado]||it.estado;
@@ -1250,7 +1273,6 @@ function renderActivosRancho(){
       }).join('');
     });
     body.innerHTML=html;
-    document.getElementById('inv-ir-insumos').addEventListener('click',function(){renderInventario('insumos');});
     body.querySelectorAll('[data-aid]').forEach(function(el){el.addEventListener('click',function(){renderActivoDetalle(this.dataset.aid);});});
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
@@ -1258,8 +1280,10 @@ function renderActivosRancho(){
 function renderActivoNuevo(prefill){
   prefill=prefill||{};
   var body=document.getElementById('enc-body');
+  var catDefault=prefill.categoria||'Herramienta';
+  var tabVolver=catDefault==='Herramienta'?'Herramienta':'Equipo';
   var opO=cats.operarios.concat(cats.cosechadores||[]).map(function(o){return '<option value="'+o.id+'"'+(prefill.asignado_a===o.id?' selected':'')+'>'+o.nombre+'</option>';}).join('');
-  body.innerHTML='<div class="seccion-titulo">+ Nueva herramienta/equipo</div><div class="form-card"><div class="form-group"><label>Nombre</label><input type="text" id="ar-nombre" placeholder="Ej. Tijera de poda larga"></div><div class="form-group"><label>Categoría</label><select id="ar-categoria"><option value="Herramienta">Herramienta</option><option value="Equipo">Equipo</option><option value="Vehículo">Vehículo</option><option value="Otro">Otro</option></select></div><div class="form-group"><label>Foto (opcional)</label><div style="display:flex;gap:8px;"><button type="button" onclick="document.getElementById(\'ar-imagen-cam\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📷 Cámara</button><button type="button" onclick="document.getElementById(\'ar-imagen-gal\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);background:var(--gris-1);cursor:pointer;">🖼️ Galería</button></div><div id="ar-imagen-status" style="margin-top:.5rem;"></div><input type="hidden" id="ar-imagen"><input type="file" id="ar-imagen-cam" accept="image/*" capture="environment" style="display:none"><input type="file" id="ar-imagen-gal" accept="image/*" style="display:none"></div><div class="form-group"><label>Descripción (opcional)</label><input type="text" id="ar-descripcion" placeholder="Marca, tamaño, características"></div><div class="form-group"><label>¿Asignada a alguien? (opcional)</label><select id="ar-asignado"><option value="">Sin asignar</option>'+opO+'</select></div><div class="form-group"><label>Fecha del último mantenimiento (opcional)</label><input type="date" id="ar-fecha-mant"></div><div class="form-group"><label>Frecuencia de mantenimiento (días, opcional)</label><input type="number" id="ar-frecuencia" min="1" placeholder="Ej. 90"><p class="hint">Ej. 90 = cada 3 meses te va a avisar que toca revisarla.</p></div><button class="btn-primary" id="ar-guardar">Guardar</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderActivosRancho()">← Volver</button>';
+  body.innerHTML='<div class="seccion-titulo">+ Nueva herramienta/equipo</div><div class="form-card"><div class="form-group"><label>Nombre</label><input type="text" id="ar-nombre" placeholder="Ej. Tijera de poda larga"></div><div class="form-group"><label>Categoría</label><select id="ar-categoria"><option value="Herramienta"'+(catDefault==='Herramienta'?' selected':'')+'>Herramienta</option><option value="Equipo"'+(catDefault==='Equipo'?' selected':'')+'>Equipo</option><option value="Vehículo"'+(catDefault==='Vehículo'?' selected':'')+'>Vehículo</option><option value="Otro"'+(catDefault==='Otro'?' selected':'')+'>Otro</option></select></div><div class="form-group"><label>Foto (opcional)</label><div style="display:flex;gap:8px;"><button type="button" onclick="document.getElementById(\'ar-imagen-cam\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📷 Cámara</button><button type="button" onclick="document.getElementById(\'ar-imagen-gal\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);background:var(--gris-1);cursor:pointer;">🖼️ Galería</button></div><div id="ar-imagen-status" style="margin-top:.5rem;"></div><input type="hidden" id="ar-imagen"><input type="file" id="ar-imagen-cam" accept="image/*" capture="environment" style="display:none"><input type="file" id="ar-imagen-gal" accept="image/*" style="display:none"></div><div class="form-group"><label>Descripción (opcional)</label><input type="text" id="ar-descripcion" placeholder="Marca, tamaño, características"></div><div class="form-group"><label>¿Asignada a alguien? (opcional)</label><select id="ar-asignado"><option value="">Sin asignar</option>'+opO+'</select></div><div class="form-group"><label>Fecha del último mantenimiento (opcional)</label><input type="date" id="ar-fecha-mant"></div><div class="form-group"><label>Frecuencia de mantenimiento (días, opcional)</label><input type="number" id="ar-frecuencia" min="1" placeholder="Ej. 90"><p class="hint">Ej. 90 = cada 3 meses te va a avisar que toca revisarla.</p></div><button class="btn-primary" id="ar-guardar">Guardar</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderActivosRancho(\''+tabVolver+'\')">← Volver</button>';
   function subirImagenActivo(inputId){
     var f=document.getElementById(inputId).files&&document.getElementById(inputId).files[0];
     if(!f) return;
@@ -1287,7 +1311,7 @@ function renderActivoNuevo(prefill){
     var btn=this; btn.disabled=true; btn.textContent='Guardando...';
     from('activos_rancho').insert({nombre:nombre,categoria:categoria,imagen_url:imagenUrl,descripcion:descripcion,asignado_a:asignadoA,estado:asignadoA?'asignado':'disponible',fecha_ultimo_mantenimiento:fechaMant,frecuencia_mantenimiento_dias:frecuencia,activo:true}).then(function(){
       showToast('✅ Guardado');
-      renderActivosRancho();
+      renderActivosRancho(categoria==='Herramienta'?'Herramienta':'Equipo');
     }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Guardar';});
   });
 }
@@ -1298,9 +1322,10 @@ function renderActivoDetalle(id){
   from('activos_rancho').select('*,operario:usuarios!asignado_a(nombre)').eq('id',id).get().then(function(rows){
     var it=rows&&rows[0];
     if(!it){renderActivosRancho();return;}
+    var tabOrigen=it.categoria==='Herramienta'?'Herramienta':'Equipo';
     var opO=cats.operarios.concat(cats.cosechadores||[]).map(function(o){return '<option value="'+o.id+'"'+(it.asignado_a===o.id?' selected':'')+'>'+o.nombre+'</option>';}).join('');
     var imgHtml=it.imagen_url?'<img src="'+it.imagen_url+'" style="width:100%;max-width:220px;border-radius:12px;border:1px solid var(--gris-2);margin-bottom:.75rem;display:block;">':'';
-    body.innerHTML='<div class="seccion-titulo">'+it.nombre+'</div>'+imgHtml+'<div class="form-card"><div class="form-group"><label>Nombre</label><input type="text" id="ad-nombre" value="'+it.nombre.replace(/"/g,'&quot;')+'"></div><div class="form-group"><label>Categoría</label><select id="ad-categoria"><option value="Herramienta"'+(it.categoria==='Herramienta'?' selected':'')+'>Herramienta</option><option value="Equipo"'+(it.categoria==='Equipo'?' selected':'')+'>Equipo</option><option value="Vehículo"'+(it.categoria==='Vehículo'?' selected':'')+'>Vehículo</option><option value="Otro"'+(it.categoria==='Otro'?' selected':'')+'>Otro</option></select></div><div class="form-group"><label>Estado</label><select id="ad-estado"><option value="disponible"'+(it.estado==='disponible'?' selected':'')+'>✅ Disponible</option><option value="asignado"'+(it.estado==='asignado'?' selected':'')+'>👷 Asignado</option><option value="mantenimiento"'+(it.estado==='mantenimiento'?' selected':'')+'>🔧 En mantenimiento</option><option value="baja"'+(it.estado==='baja'?' selected':'')+'>⛔ De baja</option></select></div><div class="form-group"><label>Asignada a</label><select id="ad-asignado"><option value="">Sin asignar</option>'+opO+'</select></div><div class="form-group"><label>Descripción</label><input type="text" id="ad-descripcion" value="'+(it.descripcion||'').replace(/"/g,'&quot;')+'"></div><div class="form-group"><label>Último mantenimiento</label><input type="date" id="ad-fecha-mant" value="'+(it.fecha_ultimo_mantenimiento||'')+'"></div><div class="form-group"><label>Frecuencia de mantenimiento (días)</label><input type="number" id="ad-frecuencia" min="1" value="'+(it.frecuencia_mantenimiento_dias||'')+'"></div><button class="btn-primary" id="ad-guardar">Guardar cambios</button></div><div class="form-card"><button type="button" id="ad-mant-hecho" style="width:100%;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-weight:700;font-size:.85rem;cursor:pointer;margin-bottom:.6rem;">✅ Marcar mantenimiento realizado hoy</button><button type="button" id="ad-eliminar" style="width:100%;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.85rem;cursor:pointer;">🗑️ Eliminar</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderActivosRancho()">← Volver</button>';
+    body.innerHTML='<div class="seccion-titulo">'+it.nombre+'</div>'+imgHtml+'<div class="form-card"><div class="form-group"><label>Nombre</label><input type="text" id="ad-nombre" value="'+it.nombre.replace(/"/g,'&quot;')+'"></div><div class="form-group"><label>Categoría</label><select id="ad-categoria"><option value="Herramienta"'+(it.categoria==='Herramienta'?' selected':'')+'>Herramienta</option><option value="Equipo"'+(it.categoria==='Equipo'?' selected':'')+'>Equipo</option><option value="Vehículo"'+(it.categoria==='Vehículo'?' selected':'')+'>Vehículo</option><option value="Otro"'+(it.categoria==='Otro'?' selected':'')+'>Otro</option></select></div><div class="form-group"><label>Estado</label><select id="ad-estado"><option value="disponible"'+(it.estado==='disponible'?' selected':'')+'>✅ Disponible</option><option value="asignado"'+(it.estado==='asignado'?' selected':'')+'>👷 Asignado</option><option value="mantenimiento"'+(it.estado==='mantenimiento'?' selected':'')+'>🔧 En mantenimiento</option><option value="baja"'+(it.estado==='baja'?' selected':'')+'>⛔ De baja</option></select></div><div class="form-group"><label>Asignada a</label><select id="ad-asignado"><option value="">Sin asignar</option>'+opO+'</select></div><div class="form-group"><label>Descripción</label><input type="text" id="ad-descripcion" value="'+(it.descripcion||'').replace(/"/g,'&quot;')+'"></div><div class="form-group"><label>Último mantenimiento</label><input type="date" id="ad-fecha-mant" value="'+(it.fecha_ultimo_mantenimiento||'')+'"></div><div class="form-group"><label>Frecuencia de mantenimiento (días)</label><input type="number" id="ad-frecuencia" min="1" value="'+(it.frecuencia_mantenimiento_dias||'')+'"></div><button class="btn-primary" id="ad-guardar">Guardar cambios</button></div><div class="form-card"><button type="button" id="ad-mant-hecho" style="width:100%;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-weight:700;font-size:.85rem;cursor:pointer;margin-bottom:.6rem;">✅ Marcar mantenimiento realizado hoy</button><button type="button" id="ad-eliminar" style="width:100%;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.85rem;cursor:pointer;">🗑️ Eliminar</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderActivosRancho(\''+tabOrigen+'\')">← Volver</button>';
     document.getElementById('ad-guardar').addEventListener('click',function(){
       var nombre=document.getElementById('ad-nombre').value.trim();
       var categoria=document.getElementById('ad-categoria').value;
@@ -1311,21 +1336,21 @@ function renderActivoDetalle(id){
       var frecuencia=parseInt(document.getElementById('ad-frecuencia').value)||null;
       from('activos_rancho').eq('id',id).update({nombre:nombre,categoria:categoria,estado:estado,asignado_a:asignado,descripcion:descripcion,fecha_ultimo_mantenimiento:fechaMant,frecuencia_mantenimiento_dias:frecuencia}).then(function(){
         showToast('✅ Actualizado');
-        renderActivosRancho();
+        renderActivosRancho(categoria==='Herramienta'?'Herramienta':'Equipo');
       }).catch(function(e){alert('Error: '+e.message);});
     });
     document.getElementById('ad-mant-hecho').addEventListener('click',function(){
       var hoy=new Date().toISOString().slice(0,10);
       from('activos_rancho').eq('id',id).update({fecha_ultimo_mantenimiento:hoy,estado:it.asignado_a?'asignado':'disponible'}).then(function(){
         showToast('✅ Mantenimiento registrado');
-        renderActivosRancho();
+        renderActivosRancho(tabOrigen);
       }).catch(function(e){alert('Error: '+e.message);});
     });
     document.getElementById('ad-eliminar').addEventListener('click',function(){
       if(!confirm('¿Eliminar "'+it.nombre+'" del inventario de herramientas?')) return;
       from('activos_rancho').eq('id',id).update({activo:false}).then(function(){
         showToast('✅ Eliminado');
-        renderActivosRancho();
+        renderActivosRancho(tabOrigen);
       }).catch(function(e){alert('Error: '+e.message);});
     });
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
@@ -1335,9 +1360,11 @@ function renderInventarioNuevo(prefill){
   prefill=prefill||{};
   var body=document.getElementById('enc-body');
   var grupoInicialForm=prefill.grupo||'insumos';
-  var catOptsN=INSUMO_SUBCATEGORIAS.map(function(c){return '<option value="'+c+'"'+(prefill.categoria===c?' selected':'')+'>'+c+'</option>';}).join('');
-  if(prefill.categoria&&INSUMO_SUBCATEGORIAS.indexOf(prefill.categoria)===-1&&grupoInicialForm==='insumos') catOptsN='<option value="'+prefill.categoria.replace(/"/g,'&quot;')+'" selected>'+prefill.categoria+'</option>'+catOptsN;
-  body.innerHTML='<div class="seccion-titulo">Nuevo componente</div>'+(prefill.origen?'<p class="hint" style="margin-bottom:.75rem;">📋 Copiando configuración de "'+prefill.origen+'" — solo ajusta el nombre y el stock.</p>':'')+'<div class="form-card"><div class="form-group"><label>Nombre</label><input type="text" id="inv-n-nombre" placeholder="Ej. Sulfato de amonio" value="'+(prefill.nombre||'')+'"></div><div class="form-group"><label>Grupo</label><div style="display:flex;gap:8px;" id="inv-n-grupo-grp"><button type="button" class="op-chip'+(grupoInicialForm==='insumos'?' sel':'')+'" data-grupo="insumos">'+(grupoInicialForm==='insumos'?'\u2713 ':'')+'\ud83d\udce6 Insumos</button><button type="button" class="op-chip'+(grupoInicialForm==='galera_limpieza'?' sel':'')+'" data-grupo="galera_limpieza">'+(grupoInicialForm==='galera_limpieza'?'\u2713 ':'')+'\ud83e\uddf9 Galera y Limpieza</button></div></div><div class="form-group" id="inv-n-categoria-wrap" style="display:'+(grupoInicialForm==='insumos'?'':'none')+';"><label>Categoría</label><select id="inv-n-categoria">'+catOptsN+'</select></div><div class="form-group"><label>Foto del producto (opcional, pero muy recomendada)</label><div style="display:flex;gap:8px;"><button type="button" onclick="document.getElementById(\'inv-n-imagen-cam\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📷 Cámara</button><button type="button" onclick="document.getElementById(\'inv-n-imagen-gal\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);background:var(--gris-1);cursor:pointer;">🖼️ Galería</button></div><div id="inv-n-imagen-status" style="margin-top:.5rem;">'+(prefill.imagen_url?'<img src="'+prefill.imagen_url+'" style="max-width:100px;max-height:100px;border-radius:8px;border:1px solid var(--gris-2);">':'')+'</div><input type="hidden" id="inv-n-imagen" value="'+(prefill.imagen_url||'').replace(/"/g,'&quot;')+'"><input type="file" id="inv-n-imagen-cam" accept="image/*" capture="environment" style="display:none"><input type="file" id="inv-n-imagen-gal" accept="image/*" style="display:none"><p class="hint">Ayuda a que el operario no confunda productos parecidos.</p></div><div class="form-group"><label>Unidad de uso (la que usan las fórmulas)</label><select id="inv-n-unidad"><option value="litros"'+(prefill.unidad==='litros'?' selected':'')+'>Litros</option><option value="ml"'+(prefill.unidad==='ml'?' selected':'')+'>Mililitros</option><option value="kg"'+(prefill.unidad==='kg'?' selected':'')+'>Kilogramos</option><option value="gr"'+(prefill.unidad==='gr'?' selected':'')+'>Gramos</option><option value="pza"'+(prefill.unidad==='pza'?' selected':'')+'>Piezas</option></select></div><div class="form-group"><label>¿Se compra empacado? (opcional)</label><div style="display:flex;gap:8px;"><input type="text" id="inv-n-unidad-compra" placeholder="Ej. Saco, Bidón, Caja" value="'+(prefill.unidad_compra||'')+'" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><input type="number" id="inv-n-factor-compra" min="0" placeholder="Ej. 25" value="'+(prefill.factor_compra||'')+'" style="width:90px;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"></div><p class="hint">Nombre del paquete + cuánto trae cada uno. Ej. "Saco" + 25 = sacos de 25 kg. Llena esto primero si vas a usar la conversión de abajo.</p></div><div class="form-group"><label>Stock inicial</label><div style="display:flex;gap:8px;align-items:center;"><input type="number" id="inv-n-stock" min="0" value="0" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><span class="hint" id="inv-n-unidad-lbl1" style="margin:0;min-width:40px;">kg</span></div><div style="display:flex;gap:8px;align-items:center;margin-top:.4rem;"><span class="hint" style="margin:0;">o convertir desde</span><input type="number" id="inv-n-stock-paq" min="0" placeholder="0" style="width:70px;padding:.4rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.8rem;"><span class="hint" id="inv-n-stock-paq-lbl" style="margin:0;">sacos</span></div></div><div class="form-group"><label>Stock mínimo (para alerta)</label><div style="display:flex;gap:8px;align-items:center;"><input type="number" id="inv-n-min" min="0" value="'+(prefill.stock_minimo||0)+'" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><span class="hint" id="inv-n-unidad-lbl2" style="margin:0;min-width:40px;">kg</span></div><div style="display:flex;gap:8px;align-items:center;margin-top:.4rem;"><span class="hint" style="margin:0;">o convertir desde</span><input type="number" id="inv-n-min-paq" min="0" placeholder="0" style="width:70px;padding:.4rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.8rem;"><span class="hint" id="inv-n-min-paq-lbl" style="margin:0;">sacos</span></div></div><div class="form-group"><label>Fecha de caducidad (opcional)</label><input type="date" id="inv-n-caducidad" value="'+(prefill.fecha_caducidad||'')+'"></div><button class="btn-primary" id="inv-n-guardar">Guardar componente</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderInventario()">← Volver a inventario</button>';
+  var cfgGrupoN=GRUPOS_INVENTARIO[grupoInicialForm]||GRUPOS_INVENTARIO.insumos;
+  var catOptsN=cfgGrupoN.categorias?cfgGrupoN.categorias.map(function(c){return '<option value="'+c+'"'+(prefill.categoria===c?' selected':'')+'>'+c+'</option>';}).join(''):'';
+  if(cfgGrupoN.categorias&&prefill.categoria&&cfgGrupoN.categorias.indexOf(prefill.categoria)===-1) catOptsN='<option value="'+prefill.categoria.replace(/"/g,'&quot;')+'" selected>'+prefill.categoria+'</option>'+catOptsN;
+  var chipsGrupoN=ORDEN_GRUPOS_INVENTARIO.map(function(k){var sel=k===grupoInicialForm;return '<button type="button" class="op-chip'+(sel?' sel':'')+'" data-grupo="'+k+'">'+(sel?'\u2713 ':'')+GRUPOS_INVENTARIO[k].lbl+'</button>';}).join('');
+  body.innerHTML='<div class="seccion-titulo">Nuevo componente</div>'+(prefill.origen?'<p class="hint" style="margin-bottom:.75rem;">📋 Copiando configuración de "'+prefill.origen+'" — solo ajusta el nombre y el stock.</p>':'')+'<div class="form-card"><div class="form-group"><label>Nombre</label><input type="text" id="inv-n-nombre" placeholder="Ej. Sulfato de amonio" value="'+(prefill.nombre||'')+'"></div><div class="form-group"><label>Grupo</label><div style="display:flex;gap:8px;flex-wrap:wrap;" id="inv-n-grupo-grp">'+chipsGrupoN+'</div></div><div class="form-group" id="inv-n-categoria-wrap" style="display:'+(cfgGrupoN.categorias?'':'none')+';"><label>Categoría</label><select id="inv-n-categoria">'+catOptsN+'</select></div><div class="form-group"><label>Foto del producto (opcional, pero muy recomendada)</label><div style="display:flex;gap:8px;"><button type="button" onclick="document.getElementById(\'inv-n-imagen-cam\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📷 Cámara</button><button type="button" onclick="document.getElementById(\'inv-n-imagen-gal\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);background:var(--gris-1);cursor:pointer;">🖼️ Galería</button></div><div id="inv-n-imagen-status" style="margin-top:.5rem;">'+(prefill.imagen_url?'<img src="'+prefill.imagen_url+'" style="max-width:100px;max-height:100px;border-radius:8px;border:1px solid var(--gris-2);">':'')+'</div><input type="hidden" id="inv-n-imagen" value="'+(prefill.imagen_url||'').replace(/"/g,'&quot;')+'"><input type="file" id="inv-n-imagen-cam" accept="image/*" capture="environment" style="display:none"><input type="file" id="inv-n-imagen-gal" accept="image/*" style="display:none"><p class="hint">Ayuda a que el operario no confunda productos parecidos.</p></div><div class="form-group"><label>Unidad de uso (la que usan las fórmulas)</label><select id="inv-n-unidad"><option value="litros"'+(prefill.unidad==='litros'?' selected':'')+'>Litros</option><option value="ml"'+(prefill.unidad==='ml'?' selected':'')+'>Mililitros</option><option value="kg"'+(prefill.unidad==='kg'?' selected':'')+'>Kilogramos</option><option value="gr"'+(prefill.unidad==='gr'?' selected':'')+'>Gramos</option><option value="pza"'+(prefill.unidad==='pza'?' selected':'')+'>Piezas</option></select></div><div class="form-group"><label>¿Se compra empacado? (opcional)</label><div style="display:flex;gap:8px;"><input type="text" id="inv-n-unidad-compra" placeholder="Ej. Saco, Bidón, Caja" value="'+(prefill.unidad_compra||'')+'" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><input type="number" id="inv-n-factor-compra" min="0" placeholder="Ej. 25" value="'+(prefill.factor_compra||'')+'" style="width:90px;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"></div><p class="hint">Nombre del paquete + cuánto trae cada uno. Ej. "Saco" + 25 = sacos de 25 kg. Llena esto primero si vas a usar la conversión de abajo.</p></div><div class="form-group"><label>Stock inicial</label><div style="display:flex;gap:8px;align-items:center;"><input type="number" id="inv-n-stock" min="0" value="0" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><span class="hint" id="inv-n-unidad-lbl1" style="margin:0;min-width:40px;">kg</span></div><div style="display:flex;gap:8px;align-items:center;margin-top:.4rem;"><span class="hint" style="margin:0;">o convertir desde</span><input type="number" id="inv-n-stock-paq" min="0" placeholder="0" style="width:70px;padding:.4rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.8rem;"><span class="hint" id="inv-n-stock-paq-lbl" style="margin:0;">sacos</span></div></div><div class="form-group"><label>Stock mínimo (para alerta)</label><div style="display:flex;gap:8px;align-items:center;"><input type="number" id="inv-n-min" min="0" value="'+(prefill.stock_minimo||0)+'" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><span class="hint" id="inv-n-unidad-lbl2" style="margin:0;min-width:40px;">kg</span></div><div style="display:flex;gap:8px;align-items:center;margin-top:.4rem;"><span class="hint" style="margin:0;">o convertir desde</span><input type="number" id="inv-n-min-paq" min="0" placeholder="0" style="width:70px;padding:.4rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.8rem;"><span class="hint" id="inv-n-min-paq-lbl" style="margin:0;">sacos</span></div></div><div class="form-group"><label>Fecha de caducidad (opcional)</label><input type="date" id="inv-n-caducidad" value="'+(prefill.fecha_caducidad||'')+'"></div><button class="btn-primary" id="inv-n-guardar">Guardar componente</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderInventario()">← Volver a inventario</button>';
   function refrescarEtiquetas(){
     var u=document.getElementById('inv-n-unidad').value;
     var uc=(document.getElementById('inv-n-unidad-compra').value||'paquetes').trim();
@@ -1358,16 +1385,26 @@ function renderInventarioNuevo(prefill){
   });
   refrescarEtiquetas();
   var grupoSelN=grupoInicialForm;
+  function refrescarCategoriaWrapN(){
+    var cfg=GRUPOS_INVENTARIO[grupoSelN];
+    var wrap=document.getElementById('inv-n-categoria-wrap');
+    if(cfg.categorias){
+      wrap.style.display='';
+      wrap.querySelector('select').innerHTML=cfg.categorias.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('');
+    } else {
+      wrap.style.display='none';
+    }
+  }
   document.querySelectorAll('#inv-n-grupo-grp [data-grupo]').forEach(function(btn){
     btn.addEventListener('click',function(){
       grupoSelN=this.dataset.grupo;
       document.querySelectorAll('#inv-n-grupo-grp [data-grupo]').forEach(function(b){
         b.classList.remove('sel');
-        b.textContent=(b.dataset.grupo==='insumos'?'📦 Insumos':'🧹 Galera y Limpieza');
+        b.textContent=GRUPOS_INVENTARIO[b.dataset.grupo].lbl;
       });
       this.classList.add('sel');
-      this.textContent='✓ '+(this.dataset.grupo==='insumos'?'📦 Insumos':'🧹 Galera y Limpieza');
-      document.getElementById('inv-n-categoria-wrap').style.display=grupoSelN==='insumos'?'':'none';
+      this.textContent='✓ '+GRUPOS_INVENTARIO[this.dataset.grupo].lbl;
+      refrescarCategoriaWrapN();
     });
   });
   function subirImagenProducto(inputId){
@@ -1395,7 +1432,7 @@ function renderInventarioNuevo(prefill){
     var factorCompra=parseFloat(document.getElementById('inv-n-factor-compra').value)||null;
     var imagenUrl=(document.getElementById('inv-n-imagen').value||'').trim()||null;
     var caducidad=document.getElementById('inv-n-caducidad').value||null;
-    var categoria=grupoSelN==='insumos'?document.getElementById('inv-n-categoria').value:'Galera y Limpieza';
+    var categoria=GRUPOS_INVENTARIO[grupoSelN].categorias?document.getElementById('inv-n-categoria').value:GRUPO_NOMBRE_PLANO[grupoSelN];
     from('inventario_items').insert({nombre:nombre,categoria:categoria,grupo:grupoSelN,unidad:unidad,stock_actual:stock,stock_minimo:min,unidad_compra:unidadCompra,factor_compra:factorCompra,imagen_url:imagenUrl,fecha_caducidad:caducidad,activo:true}).then(function(){
       return from('inventario_items').select('*').eq('activo',true).order('nombre').get();
     }).then(function(rows){
@@ -1520,21 +1557,33 @@ function renderInventarioEditar(itemId){
   var it=cats.inventario.find(function(x){return x.id===itemId;});
   if(!it){renderInventario();return;}
   var grupoActivoE=it.grupo||'insumos';
-  var catOptsE=INSUMO_SUBCATEGORIAS.map(function(c){return '<option value="'+c+'"'+(it.categoria===c?' selected':'')+'>'+c+'</option>';}).join('');
-  if(it.categoria&&INSUMO_SUBCATEGORIAS.indexOf(it.categoria)===-1&&grupoActivoE==='insumos') catOptsE='<option value="'+it.categoria.replace(/"/g,'&quot;')+'" selected>'+it.categoria+'</option>'+catOptsE;
-  body.innerHTML='<div class="seccion-titulo">Editar '+it.nombre+'</div><div class="form-card"><div class="form-group"><label>Nombre</label><input type="text" id="inv-e-nombre" value="'+it.nombre.replace(/"/g,'&quot;')+'"></div><div class="form-group"><label>Grupo</label><div style="display:flex;gap:8px;" id="inv-e-grupo-grp"><button type="button" class="op-chip'+(grupoActivoE==='insumos'?' sel':'')+'" data-grupo="insumos">'+(grupoActivoE==='insumos'?'\u2713 ':'')+'📦 Insumos</button><button type="button" class="op-chip'+(grupoActivoE==='galera_limpieza'?' sel':'')+'" data-grupo="galera_limpieza">'+(grupoActivoE==='galera_limpieza'?'\u2713 ':'')+'🧹 Galera y Limpieza</button></div></div><div class="form-group" id="inv-e-categoria-wrap" style="display:'+(grupoActivoE==='insumos'?'':'none')+';"><label>Categoría</label><select id="inv-e-categoria">'+catOptsE+'</select></div><div class="form-group"><label>Foto del producto</label><div style="display:flex;gap:8px;"><button type="button" onclick="document.getElementById(\'inv-e-imagen-cam\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📷 Cámara</button><button type="button" onclick="document.getElementById(\'inv-e-imagen-gal\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);background:var(--gris-1);cursor:pointer;">🖼️ Galería</button></div><div id="inv-e-imagen-status" style="margin-top:.5rem;">'+(it.imagen_url?'<img src="'+it.imagen_url+'" style="max-width:100px;max-height:100px;border-radius:8px;border:1px solid var(--gris-2);">':'')+'</div><input type="hidden" id="inv-e-imagen" value="'+(it.imagen_url||'').replace(/"/g,'&quot;')+'"><input type="file" id="inv-e-imagen-cam" accept="image/*" capture="environment" style="display:none"><input type="file" id="inv-e-imagen-gal" accept="image/*" style="display:none"></div><div class="form-group"><label>Unidad de uso</label><select id="inv-e-unidad"><option value="litros">Litros</option><option value="ml">Mililitros</option><option value="kg">Kilogramos</option><option value="gr">Gramos</option><option value="pza">Piezas</option></select></div><div class="form-group"><label>¿Se compra empacado? (opcional)</label><div style="display:flex;gap:8px;"><input type="text" id="inv-e-unidad-compra" placeholder="Ej. Saco, Bidón, Caja" value="'+(it.unidad_compra||'').replace(/"/g,'&quot;')+'" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><input type="number" id="inv-e-factor-compra" min="0" placeholder="Ej. 25" value="'+(it.factor_compra||'')+'" style="width:90px;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"></div><p class="hint">Nombre del paquete + cuánto trae cada uno.</p></div><div class="form-group"><label>Stock mínimo (para alerta)</label><div style="display:flex;gap:8px;align-items:center;"><input type="number" id="inv-e-min" min="0" value="'+it.stock_minimo+'" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><span class="hint" id="inv-e-unidad-lbl" style="margin:0;min-width:40px;">'+it.unidad+'</span></div><div style="display:flex;gap:8px;align-items:center;margin-top:.4rem;"><span class="hint" style="margin:0;">o convertir desde</span><input type="number" id="inv-e-min-paq" min="0" placeholder="'+(it.factor_compra?numFmt(it.stock_minimo/it.factor_compra):'0')+'" style="width:70px;padding:.4rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.8rem;"><span class="hint" id="inv-e-min-paq-lbl" style="margin:0;">'+(it.unidad_compra?it.unidad_compra.toLowerCase():'paquetes')+'</span></div></div><div class="form-group"><label>Fecha de caducidad (opcional)</label><input type="date" id="inv-e-caducidad" value="'+(it.fecha_caducidad||'')+'"></div><button class="btn-primary" id="inv-e-guardar">Guardar cambios</button></div><div class="form-card"><button type="button" id="inv-e-eliminar" style="width:100%;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.85rem;cursor:pointer;">🗑️ Eliminar componente</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderInventarioItem(\''+itemId+'\')">← Cancelar</button>';
+  var cfgGrupoE=GRUPOS_INVENTARIO[grupoActivoE]||GRUPOS_INVENTARIO.insumos;
+  var catOptsE=cfgGrupoE.categorias?cfgGrupoE.categorias.map(function(c){return '<option value="'+c+'"'+(it.categoria===c?' selected':'')+'>'+c+'</option>';}).join(''):'';
+  if(cfgGrupoE.categorias&&it.categoria&&cfgGrupoE.categorias.indexOf(it.categoria)===-1) catOptsE='<option value="'+it.categoria.replace(/"/g,'&quot;')+'" selected>'+it.categoria+'</option>'+catOptsE;
+  var chipsGrupoE=ORDEN_GRUPOS_INVENTARIO.map(function(k){var sel=k===grupoActivoE;return '<button type="button" class="op-chip'+(sel?' sel':'')+'" data-grupo="'+k+'">'+(sel?'\u2713 ':'')+GRUPOS_INVENTARIO[k].lbl+'</button>';}).join('');
+  body.innerHTML='<div class="seccion-titulo">Editar '+it.nombre+'</div><div class="form-card"><div class="form-group"><label>Nombre</label><input type="text" id="inv-e-nombre" value="'+it.nombre.replace(/"/g,'&quot;')+'"></div><div class="form-group"><label>Grupo</label><div style="display:flex;gap:8px;flex-wrap:wrap;" id="inv-e-grupo-grp">'+chipsGrupoE+'</div></div><div class="form-group" id="inv-e-categoria-wrap" style="display:'+(cfgGrupoE.categorias?'':'none')+';"><label>Categoría</label><select id="inv-e-categoria">'+catOptsE+'</select></div><div class="form-group"><label>Foto del producto</label><div style="display:flex;gap:8px;"><button type="button" onclick="document.getElementById(\'inv-e-imagen-cam\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📷 Cámara</button><button type="button" onclick="document.getElementById(\'inv-e-imagen-gal\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);background:var(--gris-1);cursor:pointer;">🖼️ Galería</button></div><div id="inv-e-imagen-status" style="margin-top:.5rem;">'+(it.imagen_url?'<img src="'+it.imagen_url+'" style="max-width:100px;max-height:100px;border-radius:8px;border:1px solid var(--gris-2);">':'')+'</div><input type="hidden" id="inv-e-imagen" value="'+(it.imagen_url||'').replace(/"/g,'&quot;')+'"><input type="file" id="inv-e-imagen-cam" accept="image/*" capture="environment" style="display:none"><input type="file" id="inv-e-imagen-gal" accept="image/*" style="display:none"></div><div class="form-group"><label>Unidad de uso</label><select id="inv-e-unidad"><option value="litros">Litros</option><option value="ml">Mililitros</option><option value="kg">Kilogramos</option><option value="gr">Gramos</option><option value="pza">Piezas</option></select></div><div class="form-group"><label>¿Se compra empacado? (opcional)</label><div style="display:flex;gap:8px;"><input type="text" id="inv-e-unidad-compra" placeholder="Ej. Saco, Bidón, Caja" value="'+(it.unidad_compra||'').replace(/"/g,'&quot;')+'" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><input type="number" id="inv-e-factor-compra" min="0" placeholder="Ej. 25" value="'+(it.factor_compra||'')+'" style="width:90px;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"></div><p class="hint">Nombre del paquete + cuánto trae cada uno.</p></div><div class="form-group"><label>Stock mínimo (para alerta)</label><div style="display:flex;gap:8px;align-items:center;"><input type="number" id="inv-e-min" min="0" value="'+it.stock_minimo+'" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><span class="hint" id="inv-e-unidad-lbl" style="margin:0;min-width:40px;">'+it.unidad+'</span></div><div style="display:flex;gap:8px;align-items:center;margin-top:.4rem;"><span class="hint" style="margin:0;">o convertir desde</span><input type="number" id="inv-e-min-paq" min="0" placeholder="'+(it.factor_compra?numFmt(it.stock_minimo/it.factor_compra):'0')+'" style="width:70px;padding:.4rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.8rem;"><span class="hint" id="inv-e-min-paq-lbl" style="margin:0;">'+(it.unidad_compra?it.unidad_compra.toLowerCase():'paquetes')+'</span></div></div><div class="form-group"><label>Fecha de caducidad (opcional)</label><input type="date" id="inv-e-caducidad" value="'+(it.fecha_caducidad||'')+'"></div><button class="btn-primary" id="inv-e-guardar">Guardar cambios</button></div><div class="form-card"><button type="button" id="inv-e-eliminar" style="width:100%;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.85rem;cursor:pointer;">🗑️ Eliminar componente</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderInventarioItem(\''+itemId+'\')">← Cancelar</button>';
   document.getElementById('inv-e-unidad').value=it.unidad;
   var grupoSelE=grupoActivoE;
+  function refrescarCategoriaWrapE(){
+    var cfg=GRUPOS_INVENTARIO[grupoSelE];
+    var wrap=document.getElementById('inv-e-categoria-wrap');
+    if(cfg.categorias){
+      wrap.style.display='';
+      wrap.querySelector('select').innerHTML=cfg.categorias.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('');
+    } else {
+      wrap.style.display='none';
+    }
+  }
   document.querySelectorAll('#inv-e-grupo-grp [data-grupo]').forEach(function(btn){
     btn.addEventListener('click',function(){
       grupoSelE=this.dataset.grupo;
       document.querySelectorAll('#inv-e-grupo-grp [data-grupo]').forEach(function(b){
         b.classList.remove('sel');
-        b.textContent=(b.dataset.grupo==='insumos'?'📦 Insumos':'🧹 Galera y Limpieza');
+        b.textContent=GRUPOS_INVENTARIO[b.dataset.grupo].lbl;
       });
       this.classList.add('sel');
-      this.textContent='✓ '+(this.dataset.grupo==='insumos'?'📦 Insumos':'🧹 Galera y Limpieza');
-      document.getElementById('inv-e-categoria-wrap').style.display=grupoSelE==='insumos'?'':'none';
+      this.textContent='✓ '+GRUPOS_INVENTARIO[this.dataset.grupo].lbl;
+      refrescarCategoriaWrapE();
     });
   });
   function refrescarEtiquetasE(){
@@ -1573,7 +1622,7 @@ function renderInventarioEditar(itemId){
     var factorCompra=parseFloat(document.getElementById('inv-e-factor-compra').value)||null;
     var imagenUrl=(document.getElementById('inv-e-imagen').value||'').trim()||null;
     var caducidad=document.getElementById('inv-e-caducidad').value||null;
-    var categoria=grupoSelE==='insumos'?document.getElementById('inv-e-categoria').value:'Galera y Limpieza';
+    var categoria=GRUPOS_INVENTARIO[grupoSelE].categorias?document.getElementById('inv-e-categoria').value:GRUPO_NOMBRE_PLANO[grupoSelE];
     from('inventario_items').eq('id',itemId).update({nombre:nombre,categoria:categoria,grupo:grupoSelE,unidad:unidad,stock_minimo:min,unidad_compra:unidadCompra,factor_compra:factorCompra,imagen_url:imagenUrl,fecha_caducidad:caducidad}).then(function(){
       return from('inventario_items').select('*').eq('activo',true).order('nombre').get();
     }).then(function(rows){
