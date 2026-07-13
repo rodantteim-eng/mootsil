@@ -216,7 +216,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <button class="tab" id="tab-asignar" onclick="tabEncargado('asignar')" style="display:none">+ Asignar</button>
     <button class="tab" id="tab-aplicaciones" onclick="tabEncargado('aplicaciones')" style="display:none">🧪 Aplicaciones</button>
     <button class="tab" id="tab-labores" onclick="tabEncargado('labores')" style="display:none">📋 Solicitudes</button>
-    <button class="tab" id="tab-formulas" onclick="tabEncargado('formulas')" style="display:none">📐 Fórmulas</button>
     <button class="tab" id="tab-reporte" onclick="tabEncargado('reporte')">Reporte</button>
     <button class="tab" id="tab-notif" onclick="tabEncargado('notif')">Avisos <span id="badge-avisos" style="display:none;background:var(--tierra);color:#fff;border-radius:50%;width:16px;height:16px;font-size:.6rem;font-weight:700;align-items:center;justify-content:center;margin-left:3px;vertical-align:middle;">0</span></button>
     <button class="tab" id="tab-alarmas" onclick="tabEncargado('alarmas')" style="display:none">🚨 Alarmas</button>
@@ -470,7 +469,6 @@ function entrarSegunRol(){
     if(usuario.rol==='admin'||usuario.rol==='dueño') document.getElementById('tab-admin').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='dueño') document.getElementById('tab-admin').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='ingeniero'||usuario.rol==='dueño') document.getElementById('tab-inventario').style.display='';
-    if(usuario.rol==='admin'||usuario.rol==='ingeniero'||usuario.rol==='dueño') document.getElementById('tab-formulas').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='ingeniero'||usuario.rol==='dueño') document.getElementById('tab-aplicaciones').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='ingeniero'||usuario.rol==='dueño') document.getElementById('tab-labores').style.display='';
 
@@ -526,7 +524,7 @@ function cargarCatalogos(){
 }
 
 function tabEncargado(tab){
-  ['tablero','asignar','notif','permisos','alarmas','admin','reporte','inventario','aplicaciones','labores','formulas','validar','config'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
+  ['tablero','asignar','notif','permisos','alarmas','admin','reporte','inventario','aplicaciones','labores','validar','config'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
   var el=document.getElementById('tab-'+tab); if(el) el.classList.add('active');
   if(tab==='tablero') renderTablero();
   else if(tab==='asignar') renderAsignarMenu();
@@ -538,7 +536,6 @@ function tabEncargado(tab){
   else if(tab==='inventario') renderInventario();
   else if(tab==='aplicaciones') renderAplicacionesEstatus();
   else if(tab==='labores') renderLaboresEstatus();
-  else if(tab==='formulas') renderFormulasMenu();
   else if(tab==='validar') renderValidar();
   else if(tab==='config') renderConfig();
 }
@@ -711,7 +708,7 @@ function renderTablero(){
     if(avisoSolicitudesEl) avisoSolicitudesEl.addEventListener('click',renderSolicitudesLabor);
     var avisoEl=document.getElementById('aviso-aplic-pendientes');
     if(avisoEl) avisoEl.addEventListener('click',function(){
-      ['tablero','asignar','notif','reporte','inventario','formulas','validar','config'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
+      ['tablero','asignar','notif','reporte','inventario','validar','config'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
       document.getElementById('tab-asignar').classList.add('active');
       var lb=cats.tiposLabor.find(function(l){return l.requiere_formula;});
       asignarLaborSel=lb;
@@ -1663,21 +1660,7 @@ var formulaPlantacionId=null, formulaTablaId=null;
 
 function headerAplicaciones(pendientesValidar){
   var badge=pendientesValidar?(' ('+pendientesValidar+')'):'';
-  return '<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4rem;">🧪 Aplicaciones<div><button type="button" onclick="renderValidar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">✅ Validar'+badge+'</button></div></div>';
-}
-
-function headerFormulasMenu(){
-  return '<div class="seccion-titulo">📐 Fórmulas</div>';
-}
-
-function renderFormulasMenu(){
-  var body=document.getElementById('enc-body');
-  body.innerHTML=headerFormulasMenu()+'<div class="labor-grid" style="grid-template-columns:repeat(2,1fr);margin-top:.5rem;">'+
-    '<div class="labor-tile" data-fm="nueva"><div class="labor-tile-ic">➕</div><div class="labor-tile-lbl">Nueva</div></div>'+
-    '<div class="labor-tile" data-fm="catalogo"><div class="labor-tile-ic">📚</div><div class="labor-tile-lbl">Catálogo</div></div>'+
-  '</div><p class="hint" style="margin-top:1rem;">"Nueva" crea una fórmula desde cero. "Catálogo" parte de una fórmula ya existente (Nutrición/Plaga/Estimulación/Combinada) como plantilla, para no volver a escribir todo.</p><p class="hint" style="margin-top:.5rem;">El seguimiento de estatus (Programadas / Aplicar Hoy / Aplicadas) vive en la pestaña 🧪 Aplicaciones.</p>';
-  body.querySelector('[data-fm="nueva"]').addEventListener('click',function(){renderFormulaForm();});
-  body.querySelector('[data-fm="catalogo"]').addEventListener('click',renderCatalogoFormulas);
+  return '<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4rem;">🧪 Aplicaciones<div style="display:flex;flex-wrap:wrap;gap:.6rem;"><button type="button" onclick="renderFormulaForm()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">➕ Nueva</button><button type="button" onclick="renderCatalogoFormulas()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">📚 Catálogo</button><button type="button" onclick="renderValidar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">✅ Validar'+badge+'</button></div></div>';
 }
 
 function headerLabores(){
@@ -2028,7 +2011,7 @@ var CATALOGO_TIPO_SEL=null;
 function renderCatalogoFormulas(){
   var body=document.getElementById('enc-body');
   var tipos=['Nutrición','Plaga','Estimulación','Herbicida'];
-  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📚 Catálogo · Paso 1 de 10<button type="button" onclick="renderFormulasMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Fórmulas</button></div><p class="hint" style="margin-bottom:.75rem;">Elige el tipo de fórmula que necesitas como base.</p><div class="labor-grid" id="cat-tipo-grid" style="grid-template-columns:repeat(3,1fr);"></div><div id="cat-lista" style="margin-top:1rem;"></div>';
+  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📚 Catálogo · Paso 1 de 10<button type="button" onclick="renderAplicacionesEstatus()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Aplicaciones</button></div><p class="hint" style="margin-bottom:.75rem;">Elige el tipo de fórmula que necesitas como base.</p><div class="labor-grid" id="cat-tipo-grid" style="grid-template-columns:repeat(3,1fr);"></div><div id="cat-lista" style="margin-top:1rem;"></div>';
   var tipoGrid=document.getElementById('cat-tipo-grid');
   tipoGrid.innerHTML=tipos.map(function(cat){
     return '<div class="labor-tile" data-cat="'+cat+'"><div class="labor-tile-ic">'+(CATEGORIA_ICONOS[cat]||'🧪')+'</div><div class="labor-tile-lbl">'+cat+'</div></div>';
@@ -2150,7 +2133,7 @@ function renderFormulaForm(formulaId){
   }
 }
 
-function formulaCancelarLink(){return '<button type="button" onclick="renderFormulasMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cancelar</button>';}
+function formulaCancelarLink(){return '<button type="button" onclick="renderAplicacionesEstatus()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cancelar</button>';}
 
 function renderFormulaPasoPlantacion(){
   var body=document.getElementById('enc-body');
