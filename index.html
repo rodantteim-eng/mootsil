@@ -529,7 +529,7 @@ function tabEncargado(tab){
   ['tablero','asignar','notif','permisos','alarmas','admin','reporte','inventario','aplicaciones','cosecha','labores','validar','config'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
   var el=document.getElementById('tab-'+tab); if(el) el.classList.add('active');
   if(tab==='tablero') renderTablero();
-  else if(tab==='asignar') renderFormAsignar();
+  else if(tab==='asignar') renderAsignarEstatus();
   else if(tab==='notif') renderNotifs('enc-body');
   else if(tab==='permisos') renderPermisosRevision();
   else if(tab==='alarmas') renderAlarmasRevision();
@@ -746,6 +746,71 @@ var riegoAsigMinutos={}, riegoAsigOperarios=[], riegoAsigFecha=null;
 
 var modoAsignacionLabor='normal';
 
+var ASIGNAR_SUBTAB='hoy';
+
+function headerAsignar(){
+  return '<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4rem;">🧰 Labores<div style="display:flex;flex-wrap:wrap;gap:.6rem;"><button type="button" onclick="renderFormAsignar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">➕ Nueva labor</button></div></div>';
+}
+
+function barraSubtabsAsignar(){
+  var tabs=[['programadas','🆕 Programadas'],['hoy','🔥 Realizar Hoy'],['terminadas','✅ Terminadas']];
+  return '<div style="display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap;">'+tabs.map(function(t){
+    return '<button type="button" class="rep-view-btn'+(ASIGNAR_SUBTAB===t[0]?' active':'')+'" onclick="ASIGNAR_SUBTAB=\''+t[0]+'\';renderAsignarEstatus();">'+t[1]+'</button>';
+  }).join('')+'</div>';
+}
+
+function renderAsignarEstatus(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML=headerAsignar()+barraSubtabsAsignar()+'<div class="loading">Cargando labores...</div>';
+  var hoy=new Date().toISOString().slice(0,10);
+  var hace30dias=new Date(Date.now()-30*86400000).toISOString().slice(0,10);
+  Promise.all([
+    from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo,requiere_formula,es_cosecha),subtipo:subtipos_labor(nombre)').in('estado',['pendiente','en_proceso']).order('fecha_asignacion',{ascending:true}).get(),
+    from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo,requiere_formula,es_cosecha),subtipo:subtipos_labor(nombre)').eq('estado','completada').gte('fecha_asignacion',hace30dias).order('fecha_asignacion',{ascending:false}).limit(150).get()
+  ]).then(function(r){
+    var activas=(r[0]||[]).filter(function(o){return o.tabla&&o.tipo_labor&&!o.tipo_labor.requiere_formula&&!o.tipo_labor.es_cosecha;});
+    var terminadas=(r[1]||[]).filter(function(o){return o.tabla&&o.tipo_labor&&!o.tipo_labor.requiere_formula&&!o.tipo_labor.es_cosecha;});
+    activas.forEach(function(o){o._ficha=(o.fecha_asignacion&&o.fecha_asignacion<=hoy)?'hoy':'programadas';});
+    terminadas.forEach(function(o){o._ficha='terminadas';});
+    var todas=activas.concat(terminadas);
+    var filtradas=todas.filter(function(o){return o._ficha===ASIGNAR_SUBTAB;});
+    var html=headerAsignar()+barraSubtabsAsignar();
+    if(!filtradas.length){
+      var vacioTxt=ASIGNAR_SUBTAB==='programadas'?'No hay labores programadas a futuro.':ASIGNAR_SUBTAB==='hoy'?'Nada por realizar hoy. 🎉':'Aún no hay labores terminadas.';
+      html+='<div class="empty">'+vacioTxt+'</div>';
+      body.innerHTML=html;
+      return;
+    }
+    html+=filtradas.map(tarjetaLaborAsignada).join('');
+    body.innerHTML=html;
+    body.querySelectorAll('[data-can]').forEach(function(b){b.addEventListener('click',function(){cambiarEstadoAsignar(this.dataset.can,'cancelada');});});
+    body.querySelectorAll('[data-com]').forEach(function(b){b.addEventListener('click',function(){cambiarEstadoAsignar(this.dataset.com,'completada');});});
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function tarjetaLaborAsignada(o){
+  var p=cats.plantaciones.find(function(x){return x.id===o.tabla.plantacion_id;});
+  var ic=ICONOS[o.tipo_labor.nombre]||'🔧';
+  var hoy=new Date().toISOString().slice(0,10);
+  var esTerminada=o._ficha==='terminadas';
+  var atrasada=!esTerminada&&o.fecha_asignacion<hoy;
+  var colorBorde=esTerminada?'var(--verde-mid)':(atrasada?'var(--rojo)':(o._ficha==='hoy'?'var(--rojo)':'var(--tierra)'));
+  var estadoBadges={pendiente:['🆕 Pendiente','var(--tierra)'],en_proceso:['🔶 En proceso','var(--tierra)'],completada:['✅ Completada','var(--verde-mid)'],cancelada:['✖️ Cancelada','var(--gris-3)']};
+  var eb=estadoBadges[o.estado]||['',''];
+  var etiquetaTipo=o.es_hora_extra?' <span style="color:var(--tierra);font-size:.68rem;font-weight:700;background:var(--tierra-tenue);padding:2px 8px;border-radius:10px;">⏰ Hora Extra</span>':'';
+  var acciones='';
+  if(o.estado==='pendiente') acciones='<button class="btn-sm btn-cancelar" data-can="'+o.id+'">Cancelar</button>';
+  if(o.estado==='en_proceso') acciones='<button class="btn-sm btn-completar" data-com="'+o.id+'">Marcar completa</button> <button class="btn-sm btn-cancelar" data-can="'+o.id+'">Cancelar</button>';
+  return '<div class="orden-card" style="border-left-color:'+colorBorde+';'+(esTerminada?'opacity:.8;':'')+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem">'+ic+' '+o.tipo_labor.nombre+(o.subtipo?' · '+o.subtipo.nombre:'')+'</strong><span style="font-size:.7rem;font-weight:700;color:'+eb[1]+';">'+eb[0]+'</span></div><div style="font-size:.85rem;font-weight:700;color:'+(atrasada?'var(--rojo)':'var(--gris-3)')+';margin-top:.2rem;">📅 '+fechaLarga(o.fecha_asignacion)+(atrasada?' ⚠️':'')+'</div><div class="orden-meta">👤 '+(o.operario?o.operario.nombre:'')+etiquetaTipo+'<br/>📍 '+(p?p.nombre:'')+' · '+o.tabla.nombre+'<br/>🔢 Surcos: '+((o.surcos_asignados&&o.surcos_asignados.length)?o.surcos_asignados.join(', '):'Todos')+(o.notas_encargado?'<br/>📝 '+o.notas_encargado:'')+'</div>'+(acciones?'<div class="orden-actions" style="margin-top:.5rem;">'+acciones+'</div>':'')+'</div>';
+}
+
+function cambiarEstadoAsignar(id,estado){
+  from('ordenes_trabajo').eq('id',id).update({estado:estado}).then(function(){
+    if(estado==='completada') from('notificaciones').insert({titulo:'✅ Labor completada',cuerpo:'Una orden fue marcada como completada.',icono:'✅',leida:false,para_rol:'encargado'}).then(function(){renderAsignarEstatus();});
+    else renderAsignarEstatus();
+  }).catch(function(e){alert('Error: '+e.message);});
+}
+
 function renderFormAsignar(){
   asignarLaborSel=null;
   modoAsignacionLabor='normal';
@@ -753,7 +818,7 @@ function renderFormAsignar(){
   var tiles=cats.tiposLabor.filter(function(l){return !l.es_cosecha&&!l.requiere_formula;}).map(function(l){
     return '<div class="labor-tile" data-id="'+l.id+'" data-nombre="'+l.nombre+'"><div class="labor-tile-ic">'+(ICONOS[l.nombre]||'🔧')+'</div><div class="labor-tile-lbl">'+l.nombre+'</div></div>';
   }).join('');
-  body.innerHTML='<div class="seccion-titulo">🧰 Labores · Selecciona la labor</div><div style="display:flex;gap:8px;margin-bottom:1rem;"><button type="button" class="op-chip sel" id="modo-normal" data-modo="normal">🕐 Normal</button><button type="button" class="op-chip" id="modo-extra" data-modo="extra">⏰ Hora Extra</button></div><div class="labor-grid">'+tiles+'<div class="labor-tile labor-tile-otra" id="labor-otra-tile"><div class="labor-tile-ic">➕</div><div class="labor-tile-lbl">Otra</div></div></div><div id="labor-otra-box" style="display:none;margin-top:.75rem;" class="form-card"><label style="display:block;font-size:.75rem;font-weight:600;color:var(--gris-3);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">Nombre de la labor</label><input type="text" id="labor-otra-input" placeholder="Ej. Fertirriego" style="width:100%;padding:.65rem .75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;background:var(--gris-1);margin-bottom:.6rem;"><button class="btn-primary" id="labor-otra-btn">Usar esta labor</button></div>';
+  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🧰 Selecciona la labor<button type="button" onclick="renderAsignarEstatus()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Labores</button></div><div style="display:flex;gap:8px;margin-bottom:1rem;"><button type="button" class="op-chip sel" id="modo-normal" data-modo="normal">🕐 Normal</button><button type="button" class="op-chip" id="modo-extra" data-modo="extra">⏰ Hora Extra</button></div><div class="labor-grid">'+tiles+'<div class="labor-tile labor-tile-otra" id="labor-otra-tile"><div class="labor-tile-ic">➕</div><div class="labor-tile-lbl">Otra</div></div></div><div id="labor-otra-box" style="display:none;margin-top:.75rem;" class="form-card"><label style="display:block;font-size:.75rem;font-weight:600;color:var(--gris-3);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">Nombre de la labor</label><input type="text" id="labor-otra-input" placeholder="Ej. Fertirriego" style="width:100%;padding:.65rem .75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;background:var(--gris-1);margin-bottom:.6rem;"><button class="btn-primary" id="labor-otra-btn">Usar esta labor</button></div>';
   document.getElementById('modo-normal').addEventListener('click',function(){modoAsignacionLabor='normal';this.classList.add('sel');document.getElementById('modo-extra').classList.remove('sel');});
   document.getElementById('modo-extra').addEventListener('click',function(){modoAsignacionLabor='extra';this.classList.add('sel');document.getElementById('modo-normal').classList.remove('sel');});
   body.querySelectorAll('.labor-tile[data-id]').forEach(function(el){
@@ -2847,7 +2912,7 @@ function guardarAplicacion(){
     }));
   }).then(function(){
     showToast('✅ Aplicación asignada'+(aplic.esExtra?' como hora extra':'')+'. Inventario descontado, pendiente de validar.');
-    renderFormAsignar();
+    renderAplicacionesEstatus();
   }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='✅ Asignar aplicación';});
 }
 
