@@ -1285,6 +1285,30 @@ function renderInventario(grupoInicial){
 }
 
 function numFmt(n){n=parseFloat(n)||0;return (Math.round(n*100)/100).toString();}
+function formatMonto(n){n=parseFloat(n)||0;return n.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function formatMontoInputValor(raw){
+  raw=(raw||'').replace(/[^\d.]/g,'');
+  var firstDot=raw.indexOf('.');
+  if(firstDot>-1) raw=raw.slice(0,firstDot+1)+raw.slice(firstDot+1).replace(/\./g,'');
+  var hasDot=raw.indexOf('.')>-1;
+  var parts=raw.split('.');
+  var intPart=(parts[0]||'').replace(/^0+(?=\d)/,'');
+  var withCommas=intPart.replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  if(hasDot) return withCommas+'.'+(parts[1]||'').slice(0,2);
+  return withCommas;
+}
+function wireMontoInput(id){
+  var el=document.getElementById(id);
+  if(!el) return;
+  el.setAttribute('type','text');
+  el.setAttribute('inputmode','decimal');
+  if(el.value) el.value=formatMontoInputValor(el.value);
+  el.addEventListener('input',function(){
+    this.value=formatMontoInputValor(this.value);
+    this.selectionStart=this.selectionEnd=this.value.length;
+  });
+}
+function parseMonto(str){return parseFloat((str||'').replace(/,/g,''))||0;}
 function fmtAmigable(cantidad,unidad){
   cantidad=parseFloat(cantidad)||0;
   if(unidad==='kg'&&cantidad<1) return numFmt(cantidad*1000)+' gr';
@@ -3896,7 +3920,7 @@ function renderInversionistasMenu(){
         var contratos=porInversionista[iv.id]||[];
         var activos=contratos.filter(function(c){return c.estado==='activo';});
         var totalActivo=activos.reduce(function(s,c){return s+parseFloat(c.monto_invertido);},0);
-        return '<div class="orden-card" data-ver-inversionista="'+iv.id+'" style="cursor:pointer;"><strong style="font-size:.92rem;">'+iv.nombre+'</strong><div class="orden-meta">'+(contratos.length?(activos.length+' contrato(s) activo(s) · $'+totalActivo.toFixed(2)+' invertido'):'Sin contratos registrados')+'</div></div>';
+        return '<div class="orden-card" data-ver-inversionista="'+iv.id+'" style="cursor:pointer;"><strong style="font-size:.92rem;">'+iv.nombre+'</strong><div class="orden-meta">'+(contratos.length?(activos.length+' contrato(s) activo(s) · $'+formatMonto(totalActivo)+' invertido'):'Sin contratos registrados')+'</div></div>';
       }).join('');
     }
     body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderAdministracionMenu()">← Volver a Administración</button>';
@@ -3927,7 +3951,7 @@ function renderInversionistaDetalle(usuarioId){
           var capitalDevuelto=movs.filter(function(m){return m.tipo==='devolucion_capital';}).reduce(function(s,m){return s+parseFloat(m.monto);},0);
           var estColor=c.estado==='activo'?'var(--verde-mid)':'var(--gris-3)';
           var estLbl=c.estado==='activo'?'🟢 Activo':'🔒 Cerrado';
-          return '<div class="orden-card" data-ver-inversion="'+c.id+'" style="cursor:pointer;border-left-color:'+estColor+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem;">$'+parseFloat(c.monto_invertido).toFixed(2)+' invertido</strong><span style="font-size:.72rem;font-weight:700;color:'+estColor+';">'+estLbl+'</span></div><div class="orden-meta">📅 Desde '+c.fecha_inicio+(c.plazo_meses?(' · Plazo: '+c.plazo_meses+' meses'):'')+(c.fecha_fin_estimada?(' · Vence '+c.fecha_fin_estimada):'')+'<br/>📈 Rendimiento pagado: $'+rendimiento.toFixed(2)+' · 💰 Capital devuelto: $'+capitalDevuelto.toFixed(2)+'</div></div>';
+          return '<div class="orden-card" data-ver-inversion="'+c.id+'" style="cursor:pointer;border-left-color:'+estColor+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem;">$'+formatMonto(c.monto_invertido)+' invertido</strong><span style="font-size:.72rem;font-weight:700;color:'+estColor+';">'+estLbl+'</span></div><div class="orden-meta">📅 Desde '+c.fecha_inicio+(c.plazo_meses?(' · Plazo: '+c.plazo_meses+' meses'):'')+(c.fecha_fin_estimada?(' · Vence '+c.fecha_fin_estimada):'')+'<br/>📈 Rendimiento pagado: $'+formatMonto(rendimiento)+' · 💰 Capital devuelto: $'+formatMonto(capitalDevuelto)+'</div></div>';
         }).join('');
       }
       body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderInversionistasMenu()">← Volver</button>';
@@ -3951,13 +3975,15 @@ function renderNuevaInversion(usuarioId){
   var hoy=new Date().toISOString().slice(0,10);
   body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">+ Nuevo contrato de inversión<button type="button" onclick="renderInversionistaDetalle(\''+usuarioId+'\')" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cancelar</button></div>'+
     '<div class="form-card">'+
-    '<div class="form-group"><label>Monto invertido ($)</label><input type="number" id="ni-monto" min="0" step="any" placeholder="0.00"></div>'+
+    '<div class="form-group"><label>Monto invertido ($)</label><input type="text" inputmode="decimal" id="ni-monto" placeholder="0.00"></div>'+
     '<div class="form-group"><label>Fecha de inicio</label><input type="date" id="ni-fecha" value="'+hoy+'"></div>'+
     '<div class="form-group"><label>Plazo (meses, opcional)</label><input type="number" id="ni-plazo" min="0" step="1" placeholder="Ej. 12"></div>'+
     '<div class="form-group"><label>Condiciones / tasa acordada (opcional)</label><input type="text" id="ni-condiciones" placeholder="Ej. 2% mensual sobre el capital"></div>'+
     '<div class="form-group"><label>Comprobante del depósito inicial (opcional)</label><input type="file" id="ni-comprobante" accept="image/*"><p class="hint" id="ni-comprobante-status"></p></div>'+
     '<button class="btn-primary" id="ni-guardar">Guardar contrato</button>'+
     '</div><button class="btn-back" style="margin-top:1rem;" onclick="renderInversionistaDetalle(\''+usuarioId+'\')">← Volver</button>';
+
+  wireMontoInput('ni-monto');
 
   var comprobanteUrl=null;
   document.getElementById('ni-comprobante').addEventListener('change',function(){
@@ -3970,7 +3996,7 @@ function renderNuevaInversion(usuarioId){
 
   document.getElementById('ni-guardar').addEventListener('click',function(){
     var btn=this;
-    var monto=parseFloat(document.getElementById('ni-monto').value);
+    var monto=parseMonto(document.getElementById('ni-monto').value);
     if(!monto||monto<=0){alert('Captura el monto invertido.');return;}
     var fecha=document.getElementById('ni-fecha').value||hoy;
     var plazo=parseInt(document.getElementById('ni-plazo').value)||null;
@@ -4001,12 +4027,12 @@ function renderInversionDetalle(inversionId){
     var activo=c.estado==='activo';
     var usuarioIdInversionista=c.inversionista?c.inversionista.id:c.inversionista_id;
 
-    var headerHtml='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">💼 '+(c.inversionista?c.inversionista.nombre:'')+'<button type="button" onclick="renderInversionistaDetalle(\''+usuarioIdInversionista+'\')" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Contratos</button></div>';
+    var headerHtml='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4rem;">💼 '+(c.inversionista?c.inversionista.nombre:'')+'<div style="display:flex;flex-wrap:wrap;gap:.6rem;"><button type="button" id="ic-editar-btn" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">✏️ Editar contrato</button><button type="button" onclick="renderInversionistaDetalle(\''+usuarioIdInversionista+'\')" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Contratos</button></div></div>';
 
     var html=headerHtml;
     html+='<div class="form-card">'+
       '<div class="resumen-row"><span class="resumen-key">Estado</span><span class="resumen-val" style="color:'+(activo?'var(--verde-mid)':'var(--gris-3)')+';">'+(activo?'🟢 Activo':'🔒 Cerrado')+'</span></div>'+
-      '<div class="resumen-row"><span class="resumen-key">Monto invertido</span><span class="resumen-val">$'+parseFloat(c.monto_invertido).toFixed(2)+'</span></div>'+
+      '<div class="resumen-row"><span class="resumen-key">Monto invertido</span><span class="resumen-val">$'+formatMonto(c.monto_invertido)+'</span></div>'+
       '<div class="resumen-row"><span class="resumen-key">Fecha de inicio</span><span class="resumen-val">'+c.fecha_inicio+'</span></div>'+
       (c.plazo_meses?'<div class="resumen-row"><span class="resumen-key">Plazo</span><span class="resumen-val">'+c.plazo_meses+' meses</span></div>':'')+
       (c.fecha_fin_estimada?'<div class="resumen-row"><span class="resumen-key">Vence</span><span class="resumen-val">'+c.fecha_fin_estimada+'</span></div>':'')+
@@ -4015,10 +4041,10 @@ function renderInversionDetalle(inversionId){
     '</div>';
 
     html+='<div class="form-card">'+
-      '<div class="resumen-row"><span class="resumen-key">📈 Rendimiento pagado (utilidad)</span><span class="resumen-val">$'+rendimiento.toFixed(2)+'</span></div>'+
-      '<div class="resumen-row"><span class="resumen-key">💰 Capital devuelto</span><span class="resumen-val">$'+capitalDevuelto.toFixed(2)+'</span></div>'+
-      '<div class="resumen-row"><span class="resumen-key">Capital pendiente por devolver</span><span class="resumen-val">$'+saldoCapital.toFixed(2)+'</span></div>'+
-      '<div class="resumen-row" style="border-top:2px solid var(--gris-1);margin-top:.3rem;padding-top:.5rem;"><strong style="font-size:.85rem;">Total depositado al inversionista</strong><strong style="font-size:1rem;color:var(--verde-mid);">$'+totalRetornado.toFixed(2)+'</strong></div>'+
+      '<div class="resumen-row"><span class="resumen-key">📈 Rendimiento pagado (utilidad)</span><span class="resumen-val">$'+formatMonto(rendimiento)+'</span></div>'+
+      '<div class="resumen-row"><span class="resumen-key">💰 Capital devuelto</span><span class="resumen-val">$'+formatMonto(capitalDevuelto)+'</span></div>'+
+      '<div class="resumen-row"><span class="resumen-key">Capital pendiente por devolver</span><span class="resumen-val">$'+formatMonto(saldoCapital)+'</span></div>'+
+      '<div class="resumen-row" style="border-top:2px solid var(--gris-1);margin-top:.3rem;padding-top:.5rem;"><strong style="font-size:.85rem;">Total depositado al inversionista</strong><strong style="font-size:1rem;color:var(--verde-mid);">$'+formatMonto(totalRetornado)+'</strong></div>'+
     '</div>';
 
     if(!activo){
@@ -4032,7 +4058,7 @@ function renderInversionDetalle(inversionId){
       }).join('');
       html+='<div class="form-card"><div class="seccion-titulo" style="margin-top:0;">Registrar depósito al inversionista</div>'+
         '<div class="form-group"><label>Tipo</label><div style="display:flex;flex-direction:column;gap:8px;" id="im-tipo-grp">'+tipoChips+'</div></div>'+
-        '<div class="form-group"><label>Monto ($)</label><input type="number" id="im-monto" min="0" step="any" placeholder="0.00"></div>'+
+        '<div class="form-group"><label>Monto ($)</label><input type="text" inputmode="decimal" id="im-monto" placeholder="0.00"></div>'+
         '<div class="form-group"><label>Fecha</label><input type="date" id="im-fecha" value="'+new Date().toISOString().slice(0,10)+'"></div>'+
         '<div class="form-group"><label>Concepto (opcional)</label><input type="text" id="im-concepto" placeholder="Ej. Rendimiento de mayo"></div>'+
         '<div class="form-group"><label>Comprobante (opcional)</label><input type="file" id="im-comprobante" accept="image/*"><p class="hint" id="im-comprobante-status"></p></div>'+
@@ -4047,13 +4073,16 @@ function renderInversionDetalle(inversionId){
     } else {
       html+=movs.map(function(m){
         var t=MOV_INVERSION_TIPOS[m.tipo]||{ic:'💵',lbl:m.tipo};
-        return '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem;">'+t.ic+' '+t.lbl+'</strong><strong style="font-size:.95rem;color:var(--verde-mid);">$'+parseFloat(m.monto).toFixed(2)+'</strong></div><div class="orden-meta">📅 '+m.fecha+(m.concepto?' · '+m.concepto:'')+(m.comprobante_url?' · <a href="'+m.comprobante_url+'" target="_blank">🧾 Ver comprobante</a>':'')+'</div><button type="button" class="btn-sm btn-cancelar" style="margin-top:.4rem;" data-borrar-mov="'+m.id+'">Eliminar</button></div>';
+        return '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem;">'+t.ic+' '+t.lbl+'</strong><strong style="font-size:.95rem;color:var(--verde-mid);">$'+formatMonto(m.monto)+'</strong></div><div class="orden-meta">📅 '+m.fecha+(m.concepto?' · '+m.concepto:'')+(m.comprobante_url?' · <a href="'+m.comprobante_url+'" target="_blank">🧾 Ver comprobante</a>':'')+'</div><button type="button" class="btn-sm btn-cancelar" style="margin-top:.4rem;" data-borrar-mov="'+m.id+'">Eliminar</button></div>';
       }).join('');
     }
 
     body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderInversionistaDetalle(\''+usuarioIdInversionista+'\')">← Volver</button>';
 
+    document.getElementById('ic-editar-btn').addEventListener('click',function(){renderEditarInversion(inversionId);});
+
     if(activo){
+      wireMontoInput('im-monto');
       var tipoSel=Object.keys(MOV_INVERSION_TIPOS)[0];
       document.querySelectorAll('#im-tipo-grp [data-tipomov]').forEach(function(btn){
         btn.addEventListener('click',function(){
@@ -4074,13 +4103,13 @@ function renderInversionDetalle(inversionId){
       });
       document.getElementById('im-guardar').addEventListener('click',function(){
         var btn=this;
-        var monto=parseFloat(document.getElementById('im-monto').value);
+        var monto=parseMonto(document.getElementById('im-monto').value);
         if(!monto||monto<=0){alert('Captura un monto válido.');return;}
         var fecha=document.getElementById('im-fecha').value||new Date().toISOString().slice(0,10);
         var concepto=(document.getElementById('im-concepto').value||'').trim()||null;
         btn.disabled=true; btn.textContent='Guardando...';
         from('inversion_movimientos').insert({inversion_id:inversionId,tipo:tipoSel,monto:monto,fecha:fecha,concepto:concepto,comprobante_url:comprobanteMovUrl,registrado_por:usuario.id}).then(function(){
-          return from('notificaciones').insert({titulo:'💼 Depósito registrado',cuerpo:'Se registró un depósito de $'+monto.toFixed(2)+' ('+(MOV_INVERSION_TIPOS[tipoSel]||{}).lbl+') a tu inversión.',icono:'💼',leida:false,para_rol:'inversionista',para_usuario:usuarioIdInversionista});
+          return from('notificaciones').insert({titulo:'💼 Depósito registrado',cuerpo:'Se registró un depósito de $'+formatMonto(monto)+' ('+(MOV_INVERSION_TIPOS[tipoSel]||{}).lbl+') a tu inversión.',icono:'💼',leida:false,para_rol:'inversionista',para_usuario:usuarioIdInversionista});
         }).then(function(){showToast('✅ Depósito registrado');renderInversionDetalle(inversionId);}).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Registrar depósito';});
       });
       document.getElementById('ic-cerrar').addEventListener('click',function(){
@@ -4100,6 +4129,50 @@ function renderInversionDetalle(inversionId){
         if(!confirm('¿Eliminar este depósito del historial?')) return;
         from('inversion_movimientos').eq('id',this.dataset.borrarMov).delete().then(function(){showToast('🗑️ Depósito eliminado');renderInversionDetalle(inversionId);}).catch(function(e){alert('Error: '+e.message);});
       });
+    });
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function renderEditarInversion(inversionId){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo">✏️ Editar contrato</div><div class="loading">Cargando...</div>';
+  from('inversiones').select('*').eq('id',inversionId).get().then(function(rows){
+    var c=rows&&rows[0];
+    if(!c){body.innerHTML='<div class="empty">No se encontró el contrato.</div>';return;}
+    body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">✏️ Editar contrato<button type="button" onclick="renderInversionDetalle(\''+inversionId+'\')" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cancelar</button></div>'+
+      '<div class="form-card">'+
+      '<div class="form-group"><label>Monto invertido ($)</label><input type="text" inputmode="decimal" id="ei-monto" value="'+formatMonto(c.monto_invertido)+'"></div>'+
+      '<div class="form-group"><label>Fecha de inicio</label><input type="date" id="ei-fecha" value="'+c.fecha_inicio+'"></div>'+
+      '<div class="form-group"><label>Plazo (meses, opcional)</label><input type="number" id="ei-plazo" min="0" step="1" value="'+(c.plazo_meses||'')+'" placeholder="Ej. 12"></div>'+
+      '<div class="form-group"><label>Condiciones / tasa acordada (opcional)</label><input type="text" id="ei-condiciones" value="'+(c.condiciones?c.condiciones.replace(/"/g,'&quot;'):'')+'" placeholder="Ej. 2% mensual sobre el capital"></div>'+
+      '<div class="form-group"><label>Comprobante del depósito inicial (opcional)</label>'+(c.comprobante_url?'<p class="hint">Actual: <a href="'+c.comprobante_url+'" target="_blank">🧾 Ver comprobante</a></p>':'')+'<input type="file" id="ei-comprobante" accept="image/*"><p class="hint" id="ei-comprobante-status"></p></div>'+
+      '<button class="btn-primary" id="ei-guardar">Guardar cambios</button>'+
+      '</div><button class="btn-back" style="margin-top:1rem;" onclick="renderInversionDetalle(\''+inversionId+'\')">← Volver</button>';
+
+    wireMontoInput('ei-monto');
+
+    var comprobanteUrl=c.comprobante_url||null;
+    document.getElementById('ei-comprobante').addEventListener('change',function(){
+      var f=this.files[0];
+      if(!f) return;
+      var status=document.getElementById('ei-comprobante-status');
+      status.textContent='Subiendo...';
+      subirComprobanteInversion(f).then(function(url){comprobanteUrl=url;status.textContent='✅ Comprobante adjuntado';}).catch(function(e){status.textContent='Error al subir: '+e.message;});
+    });
+
+    document.getElementById('ei-guardar').addEventListener('click',function(){
+      var btn=this;
+      var monto=parseMonto(document.getElementById('ei-monto').value);
+      if(!monto||monto<=0){alert('Captura el monto invertido.');return;}
+      var fecha=document.getElementById('ei-fecha').value||c.fecha_inicio;
+      var plazo=parseInt(document.getElementById('ei-plazo').value)||null;
+      var condiciones=(document.getElementById('ei-condiciones').value||'').trim()||null;
+      var fechaFin=plazo?sumarMesesFecha(fecha,plazo):null;
+      btn.disabled=true; btn.textContent='Guardando...';
+      from('inversiones').eq('id',inversionId).update({monto_invertido:monto,fecha_inicio:fecha,plazo_meses:plazo,fecha_fin_estimada:fechaFin,condiciones:condiciones,comprobante_url:comprobanteUrl}).then(function(){
+        showToast('✅ Contrato actualizado');
+        renderInversionDetalle(inversionId);
+      }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Guardar cambios';});
     });
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
