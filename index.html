@@ -597,7 +597,7 @@ function renderSolicitudesLabor(){
 var TABLERO_FILTRO=null;
 var TABLERO_TIPO_FILTRO=null;
 function generarTareasMantenimientoVencidas(){
-  var hoy=new Date().toISOString().slice(0,10);
+  var hoy=fechaHoyLocal();
   return Promise.all([
     from('activos_rancho').select('*').eq('activo',true).not('asignado_a','is','null').not('frecuencia_mantenimiento_dias','is','null').get(),
     from('tipos_labor').select('id').eq('nombre','Mantenimiento de herramienta').get(),
@@ -626,7 +626,7 @@ function renderTablero(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="loading">Cargando tablero...</div>';
   generarTareasMantenimientoVencidas();
-  var hoy=new Date().toISOString().slice(0,10);
+  var hoy=fechaHoyLocal();
   var en7dias=new Date(Date.now()+7*86400000).toISOString().slice(0,10);
   var hace30dias=new Date(Date.now()-30*86400000).toISOString().slice(0,10);
   Promise.all([
@@ -640,7 +640,7 @@ function renderTablero(){
     from('activos_rancho').select('id,nombre,fecha_ultimo_mantenimiento,frecuencia_mantenimiento_dias').eq('activo',true).not('frecuencia_mantenimiento_dias','is','null').get()
   ]).then(function(r){
     var todas=(r[0]||[]).concat(r[1]||[]), formulas=r[2]||[], ordenesConFormula=(r[3]||[]).filter(function(o){return o.estado!=='cancelada';}), permisosPendientes=r[4]||[], solicitudesPendientes=r[5]||[], solicitudesOpPendientes=r[6]||[], activosParaMant=r[7]||[];
-    var hoyMant=new Date().toISOString().slice(0,10);
+    var hoyMant=fechaHoyLocal();
     var activosVencidos=activosParaMant.filter(function(a){
       if(!a.fecha_ultimo_mantenimiento) return true;
       var venc=new Date(a.fecha_ultimo_mantenimiento+'T00:00:00');
@@ -762,7 +762,7 @@ function barraSubtabsAsignar(){
 function renderAsignarEstatus(){
   var body=document.getElementById('enc-body');
   body.innerHTML=headerAsignar()+barraSubtabsAsignar()+'<div class="loading">Cargando labores...</div>';
-  var hoy=new Date().toISOString().slice(0,10);
+  var hoy=fechaHoyLocal();
   var hace30dias=new Date(Date.now()-30*86400000).toISOString().slice(0,10);
   Promise.all([
     from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo,requiere_formula,es_cosecha),subtipo:subtipos_labor(nombre)').in('estado',['pendiente','en_proceso']).order('fecha_asignacion',{ascending:true}).get(),
@@ -791,7 +791,7 @@ function renderAsignarEstatus(){
 function tarjetaLaborAsignada(o){
   var p=cats.plantaciones.find(function(x){return x.id===o.tabla.plantacion_id;});
   var ic=ICONOS[o.tipo_labor.nombre]||'🔧';
-  var hoy=new Date().toISOString().slice(0,10);
+  var hoy=fechaHoyLocal();
   var esTerminada=o._ficha==='terminadas';
   var atrasada=!esTerminada&&o.fecha_asignacion<hoy;
   var colorBorde=esTerminada?'var(--verde-mid)':(atrasada?'var(--rojo)':(o._ficha==='hoy'?'var(--rojo)':'var(--tierra)'));
@@ -826,7 +826,7 @@ function renderFormAsignar(){
       var lb=cats.tiposLabor.find(function(l){return l.id===this.dataset.id;}.bind(this));
       asignarLaborSel=lb;
       if(lb&&lb.requiere_tiempo){
-        riegoAsigMinutos={};riegoAsigOperarios=[];riegoAsigFecha=new Date().toISOString().slice(0,10);
+        riegoAsigMinutos={};riegoAsigOperarios=[];riegoAsigFecha=fechaHoyLocal();
         renderAsigRiegoPlantaciones();
       } else if(lb&&lb.requiere_formula){
         aplicReset();
@@ -867,7 +867,7 @@ function renderFormAsignarPaso2(){
   var opO=cats.equipoDeCampo.map(function(o){return '<button type="button" class="op-chip" data-id="'+o.id+'" onclick="toggleChip(this)">'+o.nombre+'</button>';}).join('');
   var pO=cats.plantaciones.map(function(p){return '<option value="'+p.id+'">'+p.nombre+'</option>';}).join('');
   var esTiempo=!!(lb&&lb.requiere_tiempo);
-  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Paso 2 de 2 · Detalles<button type="button" onclick="renderFormAsignar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cambiar labor</button></div>'+(modoAsignacionLabor==='extra'?'<div style="background:var(--tierra-tenue);border:1.5px solid var(--tierra);border-radius:var(--radio-sm);padding:.6rem .85rem;margin-bottom:.75rem;font-size:.8rem;font-weight:700;color:var(--tierra);">⏰ Se asignará como Hora Extra (autoriza también su registro de asistencia)</div>':'')+'<div class="form-card"><div class="labor-chosen">'+(ICONOS[lb.nombre]||'🔧')+' <strong>'+lb.nombre+'</strong></div><div class="form-group"><label>Operarios</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Plantación</label><select id="fpl"><option value="">Selecciona...</option>'+pO+'</select></div><div class="form-group" id="ftb-wrap" style="display:'+(esTiempo?'none':'')+'"><label>Tabla</label><select id="ftb"><option value="">Primero elige plantación</option></select></div><div class="form-group" id="fsg" style="display:none"><label>Detalle</label><select id="fsb"></select></div><div class="form-group" id="fcg" style="display:'+(lb.requiere_cantidad_insumo?'':'none')+'"><label>Cantidad esperada</label><input type="number" id="fca" placeholder="0" min="0"/></div><div class="form-group" id="frg" style="display:'+(esTiempo?'':'none')+'"><label>Duración de riego por tabla (minutos)</label><div id="frg-tablas"></div><p class="hint">Deja vacío la tabla que no quieras asignar hoy.</p></div><div class="form-group" id="fsurcos-wrap" style="display:'+(esTiempo?'none':'')+'"><label>Surcos a trabajar</label><div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;"><button type="button" onclick="selTodosF()" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">Tabla completa</button><button type="button" onclick="selNingunoF()" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.78rem;cursor:pointer;">Limpiar</button></div><div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;"><span style="font-size:.78rem;color:var(--gris-3)">Del surco</span><input type="number" id="f-ri" min="1" style="width:52px;padding:3px 6px;border:1.5px solid var(--gris-2);border-radius:6px;font-size:.85rem;" placeholder="1"><span style="font-size:.78rem;color:var(--gris-3)">al</span><input type="number" id="f-rf" min="1" style="width:52px;padding:3px 6px;border:1.5px solid var(--gris-2);border-radius:6px;font-size:.85rem;" placeholder="12"><button type="button" onclick="aplicarRangoF()" style="padding:4px 10px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.78rem;cursor:pointer;">Aplicar</button></div><div class="surcos-grid" id="fsc"></div><p class="hint">O toca surcos individuales</p></div><div class="form-group"><label>Duración</label><select id="fdu"><option value="dia">Solo hoy</option><option value="labor_completa">Labor completa</option></select></div><div class="form-group"><label>Fecha</label><input type="date" id="ffe" value="'+new Date().toISOString().slice(0,10)+'"/></div><div class="form-group"><label>Notas</label><input type="text" id="fno" placeholder="Opcional..."/></div><button class="btn-primary" onclick="guardarOrden()">'+(modoAsignacionLabor==='extra'?'Asignar como hora extra':'Asignar orden')+'</button></div>';
+  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Paso 2 de 2 · Detalles<button type="button" onclick="renderFormAsignar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cambiar labor</button></div>'+(modoAsignacionLabor==='extra'?'<div style="background:var(--tierra-tenue);border:1.5px solid var(--tierra);border-radius:var(--radio-sm);padding:.6rem .85rem;margin-bottom:.75rem;font-size:.8rem;font-weight:700;color:var(--tierra);">⏰ Se asignará como Hora Extra (autoriza también su registro de asistencia)</div>':'')+'<div class="form-card"><div class="labor-chosen">'+(ICONOS[lb.nombre]||'🔧')+' <strong>'+lb.nombre+'</strong></div><div class="form-group"><label>Operarios</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Plantación</label><select id="fpl"><option value="">Selecciona...</option>'+pO+'</select></div><div class="form-group" id="ftb-wrap" style="display:'+(esTiempo?'none':'')+'"><label>Tabla</label><select id="ftb"><option value="">Primero elige plantación</option></select></div><div class="form-group" id="fsg" style="display:none"><label>Detalle</label><select id="fsb"></select></div><div class="form-group" id="fcg" style="display:'+(lb.requiere_cantidad_insumo?'':'none')+'"><label>Cantidad esperada</label><input type="number" id="fca" placeholder="0" min="0"/></div><div class="form-group" id="frg" style="display:'+(esTiempo?'':'none')+'"><label>Duración de riego por tabla (minutos)</label><div id="frg-tablas"></div><p class="hint">Deja vacío la tabla que no quieras asignar hoy.</p></div><div class="form-group" id="fsurcos-wrap" style="display:'+(esTiempo?'none':'')+'"><label>Surcos a trabajar</label><div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;"><button type="button" onclick="selTodosF()" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">Tabla completa</button><button type="button" onclick="selNingunoF()" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.78rem;cursor:pointer;">Limpiar</button></div><div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;"><span style="font-size:.78rem;color:var(--gris-3)">Del surco</span><input type="number" id="f-ri" min="1" style="width:52px;padding:3px 6px;border:1.5px solid var(--gris-2);border-radius:6px;font-size:.85rem;" placeholder="1"><span style="font-size:.78rem;color:var(--gris-3)">al</span><input type="number" id="f-rf" min="1" style="width:52px;padding:3px 6px;border:1.5px solid var(--gris-2);border-radius:6px;font-size:.85rem;" placeholder="12"><button type="button" onclick="aplicarRangoF()" style="padding:4px 10px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.78rem;cursor:pointer;">Aplicar</button></div><div class="surcos-grid" id="fsc"></div><p class="hint">O toca surcos individuales</p></div><div class="form-group"><label>Duración</label><select id="fdu"><option value="dia">Solo hoy</option><option value="labor_completa">Labor completa</option></select></div><div class="form-group"><label>Fecha</label><input type="date" id="ffe" value="'+fechaHoyLocal()+'"/></div><div class="form-group"><label>Notas</label><input type="text" id="fno" placeholder="Opcional..."/></div><button class="btn-primary" onclick="guardarOrden()">'+(modoAsignacionLabor==='extra'?'Asignar como hora extra':'Asignar orden')+'</button></div>';
   formSurcos=[];
   var sbs=cats.subtiposLabor.filter(function(s){return s.tipo_labor_id===lb.id;});
   if(sbs.length){document.getElementById('fsb').innerHTML='<option value="">Selecciona...</option>'+sbs.map(function(s){return '<option value="'+s.id+'">'+s.nombre+'</option>';}).join('');document.getElementById('fsg').style.display='';}
@@ -950,9 +950,9 @@ function renderAsigRiegoOperarios(){
 
 function renderAsigRiegoFecha(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo">💧 Riego · Fecha</div><div class="form-card"><div class="form-group"><label>Fecha de riego</label><input type="date" id="riego-fecha-input" value="'+(riegoAsigFecha||new Date().toISOString().slice(0,10))+'"></div><button class="btn-primary" id="riego-fecha-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigRiegoOperarios()">← Volver a operarios</button>';
+  body.innerHTML='<div class="seccion-titulo">💧 Riego · Fecha</div><div class="form-card"><div class="form-group"><label>Fecha de riego</label><input type="date" id="riego-fecha-input" value="'+(riegoAsigFecha||fechaHoyLocal())+'"></div><button class="btn-primary" id="riego-fecha-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigRiegoOperarios()">← Volver a operarios</button>';
   document.getElementById('riego-fecha-continuar').addEventListener('click',function(){
-    riegoAsigFecha=document.getElementById('riego-fecha-input').value||new Date().toISOString().slice(0,10);
+    riegoAsigFecha=document.getElementById('riego-fecha-input').value||fechaHoyLocal();
     renderAsigRiegoNotas();
   });
 }
@@ -1103,7 +1103,7 @@ function actualizarBadgeAvisos(){
     if(badge){badge.textContent=n;badge.style.display=n>0?'inline-flex':'none';}
   }).catch(function(){});
 }
-var repVista='tabla', repFecha=new Date().toISOString().slice(0,10);
+var repVista='tabla', repFecha=fechaHoyLocal();
 function setVista(v){
   repVista=v;
   document.querySelectorAll('.rep-view-btn').forEach(function(b){b.classList.toggle('active',b.dataset.v===v);});
@@ -1115,7 +1115,7 @@ function setVista_tabla(){setVista('tabla');}
 function setVista_tarea(){setVista('tarea');}
 function renderReporte(){
   var body=document.getElementById('enc-body');
-  var hoy=new Date().toISOString().slice(0,10);
+  var hoy=fechaHoyLocal();
   var vistaOpts=['trabajador','plantacion','tabla','tarea'];
   var vistaIcons=['👷','🌿','📋','🔧'];
   var vistaNombres=['Trabajador','Plantación','Tabla','Tarea'];
@@ -1284,6 +1284,7 @@ function renderInventario(grupoInicial){
   document.getElementById('inv-buscar').addEventListener('input',function(){pintarFilas(this.value);});
 }
 
+function fechaHoyLocal(){return new Date().toLocaleDateString('en-CA',{timeZone:'America/Mexico_City'});}
 function numFmt(n){n=parseFloat(n)||0;return (Math.round(n*100)/100).toString();}
 function formatMonto(n){n=parseFloat(n)||0;return n.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function formatMontoInputValor(raw){
@@ -1329,7 +1330,7 @@ function renderActivosRancho(tipoInicial){
     from('activos_rancho').select('*,operario:usuarios!asignado_a(nombre)').eq('activo',true).order('nombre').get()
   ]).then(function(r){
     var todos=r[0]||[];
-    var hoy=new Date().toISOString().slice(0,10);
+    var hoy=fechaHoyLocal();
     todos.forEach(function(it){
       it._requiereMant=false;
       if(it.fecha_ultimo_mantenimiento&&it.frecuencia_mantenimiento_dias){
@@ -1423,7 +1424,7 @@ function renderActivoDetalle(id){
       }).catch(function(e){alert('Error: '+e.message);});
     });
     document.getElementById('ad-mant-hecho').addEventListener('click',function(){
-      var hoy=new Date().toISOString().slice(0,10);
+      var hoy=fechaHoyLocal();
       from('activos_rancho').eq('id',id).update({fecha_ultimo_mantenimiento:hoy,estado:it.asignado_a?'asignado':'disponible'}).then(function(){
         showToast('✅ Mantenimiento registrado');
         renderActivosRancho(tabOrigen);
@@ -1761,7 +1762,7 @@ function barraSubtabsLabores(){
 function renderLaboresEstatus(){
   var body=document.getElementById('enc-body');
   body.innerHTML=headerLabores()+barraSubtabsLabores()+'<div class="loading">Cargando...</div>';
-  var hoy=new Date().toISOString().slice(0,10);
+  var hoy=fechaHoyLocal();
   from('solicitudes_labor').select('*,tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre)').eq('creado_por',usuario.id).neq('estado','descartada').order('fecha_sugerida',{ascending:true}).get().then(function(rows){
     rows=rows||[];
     rows.forEach(function(s){
@@ -1790,7 +1791,7 @@ function renderLaboresEstatus(){
 function renderSolicitarLabor(){
   var body=document.getElementById('enc-body');
   var pO=cats.plantaciones.map(function(p){return '<option value="'+p.id+'">'+p.nombre+'</option>';}).join('');
-  body.innerHTML='<div class="seccion-titulo">📋 Solicitar labor</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Esto no asigna la labor directamente — le avisa a encargado/admin/dueño para que la programen y la asignen a un operario.</p><div class="form-group"><label>Plantación</label><select id="sl-plantacion">'+pO+'</select></div><div class="form-group"><label>Tablas (puedes elegir varias)</label><div id="sl-tablas" style="display:flex;flex-wrap:wrap;gap:8px;"></div></div><div class="form-group"><label>Tipo de labor</label><div class="labor-grid" id="sl-labor-grid" style="grid-template-columns:repeat(3,1fr);"></div></div><div class="form-group"><label>Fecha sugerida</label><input type="date" id="sl-fecha" value="'+new Date().toISOString().slice(0,10)+'"></div><div class="form-group"><label>Descripción</label><textarea id="sl-desc" rows="3" placeholder="Ej. Poda selectiva urgente, se ven ramas secas en surcos 10-20" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="sl-guardar">Enviar solicitud</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderLaboresEstatus()">← Volver a labores</button>';
+  body.innerHTML='<div class="seccion-titulo">📋 Solicitar labor</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Esto no asigna la labor directamente — le avisa a encargado/admin/dueño para que la programen y la asignen a un operario.</p><div class="form-group"><label>Plantación</label><select id="sl-plantacion">'+pO+'</select></div><div class="form-group"><label>Tablas (puedes elegir varias)</label><div id="sl-tablas" style="display:flex;flex-wrap:wrap;gap:8px;"></div></div><div class="form-group"><label>Tipo de labor</label><div class="labor-grid" id="sl-labor-grid" style="grid-template-columns:repeat(3,1fr);"></div></div><div class="form-group"><label>Fecha sugerida</label><input type="date" id="sl-fecha" value="'+fechaHoyLocal()+'"></div><div class="form-group"><label>Descripción</label><textarea id="sl-desc" rows="3" placeholder="Ej. Poda selectiva urgente, se ven ramas secas en surcos 10-20" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="sl-guardar">Enviar solicitud</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderLaboresEstatus()">← Volver a labores</button>';
   var tipoSel=null;
   var laborGrid=document.getElementById('sl-labor-grid');
   laborGrid.innerHTML=cats.tiposLabor.filter(function(l){return !l.es_cosecha;}).map(function(l){
@@ -1843,7 +1844,7 @@ function barraSubtabsFormulas(){
 function renderAplicacionesEstatus(){
   var body=document.getElementById('enc-body');
   body.innerHTML=headerAplicaciones()+barraSubtabsFormulas()+'<div class="loading">Cargando fórmulas...</div>';
-  var hoy=new Date().toISOString().slice(0,10);
+  var hoy=fechaHoyLocal();
   Promise.all([
     from('formulas_aplicacion').select('*,tabla:tablas(nombre,plantacion_id),creador:usuarios!creado_por(nombre)').eq('activo',true).order('fecha_programada').get(),
     from('formula_componentes').select('*,item:inventario_items!item_id(nombre,unidad,stock_actual),autorizador:usuarios!autorizado_por(nombre)').get(),
@@ -1989,7 +1990,7 @@ function renderDuplicarFormula(formulaId){
     var f=r[0][0], comps=r[1]||[];
     var pOrigen=f.tabla?cats.plantaciones.find(function(x){return x.id===f.tabla.plantacion_id;}):null;
     var pO=cats.plantaciones.map(function(p){return '<option value="'+p.id+'"'+(pOrigen&&p.id===pOrigen.id?' selected':'')+'>'+p.nombre+'</option>';}).join('');
-    body.innerHTML='<div class="seccion-titulo">📋 Duplicar fórmula</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Copiando: <strong>'+f.nombre+'</strong> ('+comps.length+' componente'+(comps.length!==1?'s':'')+', '+f.via+' · '+f.categoria+')<br/>Se creará una copia idéntica para cada tabla que elijas abajo (la de origen, '+(f.tabla?f.tabla.nombre:'')+', no hace falta repetirla).</p><div class="form-group"><label>Plantación</label><select id="dup-plantacion">'+pO+'</select></div><div class="form-group"><label>Tablas destino</label><div id="dup-tablas" style="display:flex;flex-wrap:wrap;gap:8px;"></div></div><div class="form-group"><label>Fecha programada para las copias</label><input type="date" id="dup-fecha" value="'+(f.fecha_programada||new Date().toISOString().slice(0,10))+'"></div><button class="btn-primary" id="dup-guardar">Crear copias</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAplicacionesEstatus()">← Volver a fórmulas</button>';
+    body.innerHTML='<div class="seccion-titulo">📋 Duplicar fórmula</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Copiando: <strong>'+f.nombre+'</strong> ('+comps.length+' componente'+(comps.length!==1?'s':'')+', '+f.via+' · '+f.categoria+')<br/>Se creará una copia idéntica para cada tabla que elijas abajo (la de origen, '+(f.tabla?f.tabla.nombre:'')+', no hace falta repetirla).</p><div class="form-group"><label>Plantación</label><select id="dup-plantacion">'+pO+'</select></div><div class="form-group"><label>Tablas destino</label><div id="dup-tablas" style="display:flex;flex-wrap:wrap;gap:8px;"></div></div><div class="form-group"><label>Fecha programada para las copias</label><input type="date" id="dup-fecha" value="'+(f.fecha_programada||fechaHoyLocal())+'"></div><button class="btn-primary" id="dup-guardar">Crear copias</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAplicacionesEstatus()">← Volver a fórmulas</button>';
     function pintarTablasDestino(){
       var plId=document.getElementById('dup-plantacion').value;
       var tabs=cats.tablas.filter(function(t){return t.plantacion_id===plId&&t.id!==f.tabla_id;});
@@ -2168,7 +2169,7 @@ function cargarPlantillaCatalogo(formulaId){
     });
     window._formulaNombreExistente=f.nombre+' (copia)';
     window._formulaNotasExistente=f.notas;
-    window._formulaFechaExistente=new Date().toISOString().slice(0,10);
+    window._formulaFechaExistente=fechaHoyLocal();
     window._formulaCreadorExistente=null;
     window._formulaVolumenExistente=f.volumen_base_litros;
     showToast('📚 Plantilla cargada — ajusta lo que necesites');
@@ -2308,9 +2309,9 @@ function campoDuracionSurcos(bomba){
 
 function renderFormulaPasoFecha(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo">Paso 6 de 9 · Fecha de aplicación</div><div class="form-card"><div class="form-group"><label>¿Cuándo se tiene que aplicar?</label><input type="date" id="fm-fecha-input" value="'+(window._formulaFechaExistente||new Date().toISOString().slice(0,10))+'"></div><p class="hint">Con esta fecha revisamos si el inventario alcanza a tiempo para hacer el pedido.</p><button class="btn-primary" id="fm-fecha-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoBombas()">← Volver a bombas</button>';
+  body.innerHTML='<div class="seccion-titulo">Paso 6 de 9 · Fecha de aplicación</div><div class="form-card"><div class="form-group"><label>¿Cuándo se tiene que aplicar?</label><input type="date" id="fm-fecha-input" value="'+(window._formulaFechaExistente||fechaHoyLocal())+'"></div><p class="hint">Con esta fecha revisamos si el inventario alcanza a tiempo para hacer el pedido.</p><button class="btn-primary" id="fm-fecha-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoBombas()">← Volver a bombas</button>';
   document.getElementById('fm-fecha-continuar').addEventListener('click',function(){
-    window._formulaFechaExistente=document.getElementById('fm-fecha-input').value||new Date().toISOString().slice(0,10);
+    window._formulaFechaExistente=document.getElementById('fm-fecha-input').value||fechaHoyLocal();
     if(formulaVolverAResumen){formulaVolverAResumen=false;renderFormulaPasoNotas();}
     else if(formulaModoCatalogoDirecto){
       var p=cats.plantaciones.find(function(x){return x.id===formulaPlantacionId;});
@@ -2632,13 +2633,13 @@ var BOMBA_CAPACIDAD={'inyeccion':200,'motor':25,'manual':20};
 var aplic={plantacionId:null,tablaId:null,formula:null,componentes:[],bomba:null,numBombas:null,volumen:null,factor:1,operarios:[],fecha:null,notas:null,esExtra:false,modoCantidad:'tambo'};
 
 function aplicReset(){
-  aplic={plantacionId:null,tablaId:null,formula:null,componentes:[],bomba:null,numBombas:null,volumen:200,factor:1,operarios:[],fecha:new Date().toISOString().slice(0,10),notas:null,esExtra:false,modoCantidad:'tambo'};
+  aplic={plantacionId:null,tablaId:null,formula:null,componentes:[],bomba:null,numBombas:null,volumen:200,factor:1,operarios:[],fecha:fechaHoyLocal(),notas:null,esExtra:false,modoCantidad:'tambo'};
 }
 
 function renderAsigAplicPorFecha(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🧪 Aplicaciones<button type="button" onclick="renderAplicacionesEstatus()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Aplicaciones</button></div><div class="loading">Buscando lo programado...</div>';
-  var hoy=new Date().toISOString().slice(0,10);
+  var hoy=fechaHoyLocal();
   var en7dias=new Date(Date.now()+7*86400000).toISOString().slice(0,10);
   Promise.all([
     from('formulas_aplicacion').select('*,tabla:tablas(nombre,plantacion_id)').eq('activo',true).not('fecha_programada','is','null').order('fecha_programada').get(),
@@ -2787,7 +2788,7 @@ function cargarFormulaParaAsignar(formulaId){
     aplic.tablaId=aplic.formula.tabla_id;
     var tb=cats.tablas.find(function(t){return t.id===aplic.tablaId;});
     aplic.plantacionId=tb?tb.plantacion_id:null;
-    aplic.fecha=aplic.formula.fecha_programada||new Date().toISOString().slice(0,10);
+    aplic.fecha=aplic.formula.fecha_programada||fechaHoyLocal();
     aplic.bomba=(aplic.formula.bombas_compatibles||[])[0]||'manual';
     aplic.modoCantidad='tambo';
     if(aplic.bomba==='inyeccion'){
@@ -3047,7 +3048,7 @@ function subirComprobanteGasto(f){
 }
 
 function chequearVencimientosProveedores(){
-  var hoy=new Date().toISOString().slice(0,10);
+  var hoy=fechaHoyLocal();
   var limite=new Date(); limite.setDate(limite.getDate()+5);
   var limiteStr=limite.toISOString().slice(0,10);
   from('compras').select('*,proveedor:proveedores(nombre)').eq('forma_pago','credito').eq('estado_pago','pendiente').eq('notificado_vencimiento',false).lte('fecha_vencimiento',limiteStr).get().then(function(rows){
@@ -3065,7 +3066,7 @@ function chequearVencimientosProveedores(){
 function renderCuentasPorPagar(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo">📆 Cuentas por pagar</div><div class="loading">Cargando...</div>';
-  var hoy=new Date().toISOString().slice(0,10);
+  var hoy=fechaHoyLocal();
   var limite=new Date(); limite.setDate(limite.getDate()+5);
   var limiteStr=limite.toISOString().slice(0,10);
   from('compras').select('*,proveedor:proveedores(nombre)').eq('forma_pago','credito').eq('estado_pago','pendiente').order('fecha_vencimiento').get().then(function(rows){
@@ -3098,7 +3099,7 @@ function renderCuentasPorPagar(){
 
 function renderNuevaCompra(){
   var body=document.getElementById('enc-body');
-  var hoy=new Date().toISOString().slice(0,10);
+  var hoy=fechaHoyLocal();
   var provOpts=cats.proveedores.map(function(p){return '<option value="'+p.id+'">'+p.nombre+(p.giro?' — '+p.giro:'')+'</option>';}).join('');
   body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🧾 Nueva compra<button type="button" onclick="renderComprasMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Compras y Gastos</button></div>'+
     '<div class="form-card">'+
@@ -3495,7 +3496,7 @@ function agruparGastosPorCompra(rows){
 }
 
 function pintarGrupoCompraCard(grp){
-  var hoy=new Date().toISOString().slice(0,10);
+  var hoy=fechaHoyLocal();
   var vencido=grp.formaPago==='credito'&&grp.estadoPago==='pendiente'&&grp.fechaVencimiento&&grp.fechaVencimiento<hoy;
   var fpTxt=grp.formaPago==='credito'?('💳 Crédito · '+(grp.estadoPago==='pagado'?'✅ Pagado':('⏳ Pendiente'+(grp.fechaVencimiento?' (vence '+grp.fechaVencimiento+')':'')))):'💵 Contado';
   var itemsHtml=grp.items.map(function(g){
@@ -3648,7 +3649,7 @@ function renderResumenGastos(mesStr){
 function renderOrdenCompra(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo">🛒 Orden de compra</div><div class="loading">Calculando...</div>';
-  var hoy=new Date().toISOString().slice(0,10);
+  var hoy=fechaHoyLocal();
   var en30=new Date(); en30.setDate(en30.getDate()+30);
   var en30str=en30.toISOString().slice(0,10);
   Promise.all([
@@ -3749,7 +3750,7 @@ function generarPdfOrdenCompra(productos){
       y+=10;
       doc.setFontSize(9); doc.setTextColor(120);
       doc.text('Proveedor: _______________________________     Fecha de entrega esperada: ______________',14,y);
-      doc.save('orden_compra_'+new Date().toISOString().slice(0,10)+'.pdf');
+      doc.save('orden_compra_'+fechaHoyLocal()+'.pdf');
       if(status) status.textContent='✅ PDF descargado';
     }catch(e){
       if(status) status.textContent='Error al generar el PDF: '+e.message;
@@ -3760,7 +3761,7 @@ function generarPdfOrdenCompra(productos){
 function renderControlAsistencias(fecha){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo">📋 Control de Asistencias</div><div class="loading">Cargando...</div>';
-  var hoy=new Date().toISOString().slice(0,10);
+  var hoy=fechaHoyLocal();
   var operariosTodos=cats.operarios.concat(cats.cosechadores||[]).concat(cats.eventuales||[]);
   var idsUnicos={}; operariosTodos=operariosTodos.filter(function(o){if(idsUnicos[o.id])return false;idsUnicos[o.id]=true;return true;});
   Promise.all([
@@ -3813,7 +3814,7 @@ function renderControlAsistencias(fecha){
 function renderPagosEventuales(fecha){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo">🧑‍🌾 Labores Eventual</div><div class="loading">Cargando...</div>';
-  var hoy=new Date().toISOString().slice(0,10);
+  var hoy=fechaHoyLocal();
   var esHoy=fecha===hoy;
   Promise.all([
     from('asistencia_registros').select('*').eq('fecha',fecha).eq('modalidad','labores').get(),
@@ -3972,7 +3973,7 @@ function renderInversionistaDetalle(usuarioId){
 
 function renderNuevaInversion(usuarioId){
   var body=document.getElementById('enc-body');
-  var hoy=new Date().toISOString().slice(0,10);
+  var hoy=fechaHoyLocal();
   body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">+ Nuevo contrato de inversión<button type="button" onclick="renderInversionistaDetalle(\''+usuarioId+'\')" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cancelar</button></div>'+
     '<div class="form-card">'+
     '<div class="form-group"><label>Monto invertido ($)</label><input type="text" inputmode="decimal" id="ni-monto" placeholder="0.00"></div>'+
@@ -4059,12 +4060,12 @@ function renderInversionDetalle(inversionId){
       html+='<div class="form-card"><div class="seccion-titulo" style="margin-top:0;">Registrar depósito al inversionista</div>'+
         '<div class="form-group"><label>Tipo</label><div style="display:flex;flex-direction:column;gap:8px;" id="im-tipo-grp">'+tipoChips+'</div></div>'+
         '<div class="form-group"><label>Monto ($)</label><input type="text" inputmode="decimal" id="im-monto" placeholder="0.00"></div>'+
-        '<div class="form-group"><label>Fecha</label><input type="date" id="im-fecha" value="'+new Date().toISOString().slice(0,10)+'"></div>'+
+        '<div class="form-group"><label>Fecha</label><input type="date" id="im-fecha" value="'+fechaHoyLocal()+'"></div>'+
         '<div class="form-group"><label>Concepto (opcional)</label><input type="text" id="im-concepto" placeholder="Ej. Rendimiento de mayo"></div>'+
         '<div class="form-group"><label>Comprobante (opcional)</label><input type="file" id="im-comprobante" accept="image/*"><p class="hint" id="im-comprobante-status"></p></div>'+
         '<button class="btn-primary" id="im-guardar">Registrar depósito</button>'+
       '</div>';
-      html+='<div class="form-card"><div class="seccion-titulo" style="margin-top:0;">🔒 Cerrar contrato</div><div class="form-group"><label>Fecha de cierre</label><input type="date" id="ic-fecha" value="'+new Date().toISOString().slice(0,10)+'"></div><div class="form-group"><label>Resumen de cierre (opcional)</label><input type="text" id="ic-resumen" placeholder="Ej. Capital y utilidad liquidados en su totalidad"></div><button class="btn-sm btn-cancelar" id="ic-cerrar">🔒 Cerrar contrato</button></div>';
+      html+='<div class="form-card"><div class="seccion-titulo" style="margin-top:0;">🔒 Cerrar contrato</div><div class="form-group"><label>Fecha de cierre</label><input type="date" id="ic-fecha" value="'+fechaHoyLocal()+'"></div><div class="form-group"><label>Resumen de cierre (opcional)</label><input type="text" id="ic-resumen" placeholder="Ej. Capital y utilidad liquidados en su totalidad"></div><button class="btn-sm btn-cancelar" id="ic-cerrar">🔒 Cerrar contrato</button></div>';
     }
 
     html+='<div class="seccion-titulo">Historial de depósitos</div>';
@@ -4105,7 +4106,7 @@ function renderInversionDetalle(inversionId){
         var btn=this;
         var monto=parseMonto(document.getElementById('im-monto').value);
         if(!monto||monto<=0){alert('Captura un monto válido.');return;}
-        var fecha=document.getElementById('im-fecha').value||new Date().toISOString().slice(0,10);
+        var fecha=document.getElementById('im-fecha').value||fechaHoyLocal();
         var concepto=(document.getElementById('im-concepto').value||'').trim()||null;
         btn.disabled=true; btn.textContent='Guardando...';
         from('inversion_movimientos').insert({inversion_id:inversionId,tipo:tipoSel,monto:monto,fecha:fecha,concepto:concepto,comprobante_url:comprobanteMovUrl,registrado_por:usuario.id}).then(function(){
@@ -4115,7 +4116,7 @@ function renderInversionDetalle(inversionId){
       document.getElementById('ic-cerrar').addEventListener('click',function(){
         if(!confirm('¿Cerrar este contrato de inversión? Ya no podrás registrar más depósitos en él.')) return;
         var btn=this;
-        var fechaCierre=document.getElementById('ic-fecha').value||new Date().toISOString().slice(0,10);
+        var fechaCierre=document.getElementById('ic-fecha').value||fechaHoyLocal();
         var resumen=(document.getElementById('ic-resumen').value||'').trim()||null;
         btn.disabled=true;
         from('inversiones').eq('id',inversionId).update({estado:'cerrado',fecha_cierre:fechaCierre,resumen_cierre:resumen}).then(function(){
@@ -4190,8 +4191,8 @@ function renderAdministracionMenu(){
   body.querySelector('[data-admin="nominas"]').addEventListener('click',renderNominasMenu);
   body.querySelector('[data-admin="empleados"]').addEventListener('click',renderEmpleadosMenu);
   body.querySelector('[data-admin="compras"]').addEventListener('click',renderComprasMenu);
-  body.querySelector('[data-admin="asistencias"]').addEventListener('click',function(){renderControlAsistencias(new Date().toISOString().slice(0,10));});
-  body.querySelector('[data-admin="eventuales"]').addEventListener('click',function(){renderPagosEventuales(new Date().toISOString().slice(0,10));});
+  body.querySelector('[data-admin="asistencias"]').addEventListener('click',function(){renderControlAsistencias(fechaHoyLocal());});
+  body.querySelector('[data-admin="eventuales"]').addEventListener('click',function(){renderPagosEventuales(fechaHoyLocal());});
   body.querySelector('[data-admin="inversionistas"]').addEventListener('click',renderInversionistasMenu);
 }
 
@@ -4418,7 +4419,7 @@ function renderMisHerramientas(){
   from('activos_rancho').select('*').eq('asignado_a',usuario.id).eq('activo',true).get().then(function(rows){
     rows=rows||[];
     if(!rows.length){body.innerHTML='<div class="seccion-titulo">🔧 Mis herramientas y equipo</div><div class="empty">No tienes herramientas o equipo asignado.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderPerfilOperario()">← Volver a Perfil</button>';return;}
-    var hoy=new Date().toISOString().slice(0,10);
+    var hoy=fechaHoyLocal();
     var html='<div class="seccion-titulo">🔧 Mis herramientas y equipo</div><p class="hint" style="margin-bottom:.75rem;">Aquí solo consultas — el mantenimiento se hace desde tus tareas asignadas en "Mis tareas".</p>';
     html+=rows.map(function(it){
       var requiereMant=false;
@@ -4627,7 +4628,7 @@ function renderGenerarNomina(fechaRef){
   var domingo=new Date(lunes); domingo.setDate(lunes.getDate()+6);
   var semanaInicio=lunes.toISOString().slice(0,10), semanaFin=domingo.toISOString().slice(0,10);
   var numSemana=numeroSemanaISO(lunes);
-  var hoy=new Date().toISOString().slice(0,10);
+  var hoy=fechaHoyLocal();
   var esSemanaActual = hoy>=semanaInicio && hoy<=semanaFin;
   Promise.all([
     from('usuarios').select('id,nombre,sueldo_base').eq('rol','operario').get(),
@@ -4877,7 +4878,7 @@ function renderNuevoPrestamo(prefill){
   prefill=prefill||{};
   var body=document.getElementById('enc-body');
   var opO=cats.operarios.map(function(o){return '<button type="button" class="op-chip'+(prefill.operarioId===o.id?' sel':'')+'" data-id="'+o.id+'" onclick="seleccionUnica(this)">'+o.nombre+'</button>';}).join('');
-  body.innerHTML='<div class="seccion-titulo">+ Nuevo préstamo</div><div class="form-card">'+(prefill.solicitudId?'<p class="hint" style="margin-bottom:.75rem;">Completando la solicitud del colaborador — ajusta pagos y fecha antes de registrar.</p>':'')+'<div class="form-group"><label>Colaborador</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Concepto</label><input type="text" id="pr-concepto" value="'+(prefill.concepto||'').replace(/"/g,'&quot;')+'" placeholder="Ej. Préstamo personal / Anticipo de nómina"></div><div class="form-group"><label>Monto total ($)</label><input type="number" id="pr-monto" min="0" step="1" value="'+(prefill.monto||'')+'" placeholder="Ej. 600"></div><div class="form-group"><label>Número de pagos semanales</label><input type="number" id="pr-pagos" min="1" step="1" placeholder="Ej. 3"></div><div class="form-group"><label>Semana en que inicia el descuento</label><input type="date" id="pr-fecha" value="'+new Date().toISOString().slice(0,10)+'"></div><button class="btn-primary" id="pr-guardar">Registrar préstamo</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderPrestamos()">← Volver a Préstamos</button>';
+  body.innerHTML='<div class="seccion-titulo">+ Nuevo préstamo</div><div class="form-card">'+(prefill.solicitudId?'<p class="hint" style="margin-bottom:.75rem;">Completando la solicitud del colaborador — ajusta pagos y fecha antes de registrar.</p>':'')+'<div class="form-group"><label>Colaborador</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Concepto</label><input type="text" id="pr-concepto" value="'+(prefill.concepto||'').replace(/"/g,'&quot;')+'" placeholder="Ej. Préstamo personal / Anticipo de nómina"></div><div class="form-group"><label>Monto total ($)</label><input type="number" id="pr-monto" min="0" step="1" value="'+(prefill.monto||'')+'" placeholder="Ej. 600"></div><div class="form-group"><label>Número de pagos semanales</label><input type="number" id="pr-pagos" min="1" step="1" placeholder="Ej. 3"></div><div class="form-group"><label>Semana en que inicia el descuento</label><input type="date" id="pr-fecha" value="'+fechaHoyLocal()+'"></div><button class="btn-primary" id="pr-guardar">Registrar préstamo</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderPrestamos()">← Volver a Préstamos</button>';
   document.getElementById('pr-guardar').addEventListener('click',function(){
     var opBtn=document.querySelector('.op-chip.sel');
     var concepto=document.getElementById('pr-concepto').value.trim();
@@ -4959,7 +4960,7 @@ function renderNuevoBono(){
 var cosecha={plantacionId:null,tablaId:null,surcos:[],operarios:[],fecha:null,notas:null};
 
 function cosechaReset(){
-  cosecha={plantacionId:null,tablaId:null,surcos:[],operarios:[],fecha:new Date().toISOString().slice(0,10),notas:null};
+  cosecha={plantacionId:null,tablaId:null,surcos:[],operarios:[],fecha:fechaHoyLocal(),notas:null};
 }
 
 function renderAsigCosechaPlantaciones(){
@@ -5060,7 +5061,7 @@ function guardarCosecha(){
 function renderAsignarExtra(lb){
   var body=document.getElementById('enc-body');
   var opO=cats.operarios.map(function(o){return '<button type="button" class="op-chip" data-id="'+o.id+'" onclick="toggleChip(this)">'+o.nombre+'</button>';}).join('');
-  body.innerHTML='<div class="seccion-titulo">⏰ Hora extra</div><div class="form-card"><div class="labor-chosen">'+(ICONOS[lb.nombre]||'🔧')+' <strong>'+lb.nombre+'</strong></div><div class="form-group"><label>Operarios</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Fecha</label><input type="date" id="ext-fecha" value="'+new Date().toISOString().slice(0,10)+'"></div><div class="form-group"><label>Notas (opcional)</label><input type="text" id="ext-motivo" placeholder="Ej. Terminar aplicación pendiente"></div><button class="btn-primary" id="ext-guardar">Autorizar hora extra</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormAsignar()">← Cambiar labor</button>';
+  body.innerHTML='<div class="seccion-titulo">⏰ Hora extra</div><div class="form-card"><div class="labor-chosen">'+(ICONOS[lb.nombre]||'🔧')+' <strong>'+lb.nombre+'</strong></div><div class="form-group"><label>Operarios</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Fecha</label><input type="date" id="ext-fecha" value="'+fechaHoyLocal()+'"></div><div class="form-group"><label>Notas (opcional)</label><input type="text" id="ext-motivo" placeholder="Ej. Terminar aplicación pendiente"></div><button class="btn-primary" id="ext-guardar">Autorizar hora extra</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormAsignar()">← Cambiar labor</button>';
   document.getElementById('ext-guardar').addEventListener('click',function(){
     var opIds=Array.from(document.querySelectorAll('.op-chip.sel')).map(function(c){return c.dataset.id;});
     var fecha=document.getElementById('ext-fecha').value;
@@ -5285,7 +5286,7 @@ function renderPagoSemana(fechaRef){
     var mesInicio=lunes.toLocaleDateString('es-MX',{month:'long'});
     var mesFin=domingo.toLocaleDateString('es-MX',{month:'long'});
     var rango=(mesInicio===mesFin)?('del '+lunes.getDate()+' al '+domingo.getDate()+' de '+mesFin+' '+domingo.getFullYear()):('del '+lunes.getDate()+' '+mesInicio+' al '+domingo.getDate()+' '+mesFin+' '+domingo.getFullYear());
-    var hoy=new Date().toISOString().slice(0,10);
+    var hoy=fechaHoyLocal();
     var esSemanaActual = hoy>=semanaInicio && hoy<=semanaFin;
 
     var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📅 Pago de la semana<button type="button" onclick="renderPagosMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Pagos</button></div>';
@@ -5356,7 +5357,7 @@ function renderPagoHorasExtras(fechaRef){
     var mesInicio=lunes.toLocaleDateString('es-MX',{month:'long'});
     var mesFin=domingo.toLocaleDateString('es-MX',{month:'long'});
     var rango=(mesInicio===mesFin)?('del '+lunes.getDate()+' al '+domingo.getDate()+' de '+mesFin+' '+domingo.getFullYear()):('del '+lunes.getDate()+' '+mesInicio+' al '+domingo.getDate()+' '+mesFin+' '+domingo.getFullYear());
-    var hoy=new Date().toISOString().slice(0,10);
+    var hoy=fechaHoyLocal();
     var esSemanaActual = hoy>=semanaInicio && hoy<=semanaFin;
 
     var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">⏰ Pago de horas extra<button type="button" onclick="renderPagosMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Pagos</button></div>';
@@ -5489,7 +5490,7 @@ function renderCartera(fechaRef){
       var mesInicio=lunes.toLocaleDateString('es-MX',{month:'long'});
       var mesFin=domingo.toLocaleDateString('es-MX',{month:'long'});
       var rango=(mesInicio===mesFin)?('del '+lunes.getDate()+' al '+domingo.getDate()+' de '+mesFin+' '+domingo.getFullYear()):('del '+lunes.getDate()+' '+mesInicio+' al '+domingo.getDate()+' '+mesFin+' '+domingo.getFullYear());
-      var hoy=new Date().toISOString().slice(0,10);
+      var hoy=fechaHoyLocal();
       var esSemanaActual = hoy>=semanaInicio && hoy<=semanaFin;
 
       var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">👛 Cartera<button type="button" onclick="renderPagosMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Pagos</button></div>';
@@ -5534,7 +5535,7 @@ function renderAsistenciaMenu(){
 function renderAsisEntrada(){
   var body=document.getElementById('op-body');
   body.innerHTML='<div class="seccion-titulo">📥 Entrada</div><div class="loading">Verificando...</div>';
-  var hoy=new Date().toISOString().slice(0,10);
+  var hoy=fechaHoyLocal();
   from('horas_extra_asignadas').select('*,tipo_labor:tipos_labor(nombre)').eq('operario_id',usuario.id).eq('fecha',hoy).eq('estado','aprobada').get().then(function(rows){
     var extraHoy=rows&&rows[0];
     window._extraHoyId=extraHoy?extraHoy.id:null;
@@ -5548,7 +5549,7 @@ function renderAsisEntrada(){
 function renderAsisSalida(){
   var body=document.getElementById('op-body');
   body.innerHTML='<div class="seccion-titulo">📤 Salida</div><div class="loading">Verificando...</div>';
-  var hoy=new Date().toISOString().slice(0,10);
+  var hoy=fechaHoyLocal();
   from('horas_extra_asignadas').select('*').eq('operario_id',usuario.id).eq('fecha',hoy).eq('estado','aprobada').get().then(function(rows){
     var extraHoy=rows&&rows[0];
     window._extraHoyId=extraHoy?extraHoy.id:null;
@@ -5559,7 +5560,7 @@ function renderAsisSalida(){
 }
 
 function cargarUltimoRegistroHoy(tipo){
-  var hoy=new Date().toISOString().slice(0,10);
+  var hoy=fechaHoyLocal();
   from('asistencia_registros').select('*').eq('usuario_id',usuario.id).eq('tipo',tipo).eq('fecha',hoy).order('registrado_en',{ascending:false}).limit(1).get().then(function(rows){
     if(rows&&rows[0]) pintarMensajeAsistencia(tipo,rows[0].modalidad,rows[0].registrado_en,rows[0].retardo);
   });
@@ -5585,7 +5586,7 @@ function haversineMetros(lat1,lng1,lat2,lng2){
 }
 
 function marcarAsistencia(tipo,modalidad){
-  var hoy=new Date().toISOString().slice(0,10);
+  var hoy=fechaHoyLocal();
   var ahoraDate=new Date();
   var ahora=ahoraDate.toISOString();
   var retardo=false;
@@ -5716,7 +5717,7 @@ function capturarEvidenciaPermiso(e){
 
 function renderFormPermiso(tipo){
   var body=document.getElementById('op-body');
-  var hoy=new Date().toISOString().slice(0,10);
+  var hoy=fechaHoyLocal();
   permisoEvidenciaBlob=null;
   var adjuntoHtml=tipo==='medico'?'<div class="form-group"><label>Comprobante médico (foto, opcional pero recomendado)</label><button type="button" onclick="document.getElementById(\'perm-ev-input\').click()" style="width:100%;padding:.75rem;border:1.5px dashed var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📎 Adjuntar foto del comprobante</button><div id="perm-ev-status" class="hint" style="margin-top:.4rem;"></div></div>':'';
   body.innerHTML='<div class="seccion-titulo">'+(tipo==='medico'?'🩺 Permiso médico':'👤 Permiso personal')+'</div><div class="form-card"><div class="form-group"><label>Desde</label><input type="date" id="perm-fi" value="'+hoy+'"></div><div class="form-group"><label>Hasta</label><input type="date" id="perm-ff" value="'+hoy+'"></div><div class="form-group"><label>Motivo</label><input type="text" id="perm-motivo" placeholder="'+(tipo==='medico'?'Ej. Cita médica, incapacidad...':'Ej. Trámite personal, asunto familiar...')+'"></div>'+adjuntoHtml+'<button class="btn-primary" id="perm-enviar">Enviar solicitud</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsisPermisos()">← Cancelar</button>';
@@ -5961,7 +5962,7 @@ function cargarTareas(subtab){
   if(navigator.onLine) sincronizarEvidenciasPendientes().then(sincronizarColaGeneral);
   var body=document.getElementById('op-body');
   body.innerHTML=barraSubtabsTareas()+'<div id="tareas-contenido"><div class="loading">Cargando tus tareas...</div></div>';
-  var hoy=new Date().toISOString().slice(0,10);
+  var hoy=fechaHoyLocal();
   Promise.all([
     from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_cantidad_insumo,unidad_insumo,requiere_tiempo,requiere_formula),subtipo:subtipos_labor(nombre),activo_rancho:activos_rancho(nombre,imagen_url),formula:formulas_aplicacion(nombre,via,categoria)').eq('operario_id',usuario.id).in('estado',['pendiente','en_proceso']).order('fecha_asignacion',{ascending:true}).get(),
     from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo),activo_rancho:activos_rancho(nombre,imagen_url)').eq('operario_id',usuario.id).eq('fecha_asignacion',hoy).order('creado_en',{ascending:false}).get(),
@@ -6011,7 +6012,7 @@ function pintarTareas(todas,hoyOrdenes,esCache,completadas,evidenciaPorOrden,com
     return;
   }
   try{
-    var hoy=new Date().toISOString().slice(0,10);
+    var hoy=fechaHoyLocal();
     riegoOrdenes=hoyOrdenes.filter(function(o){return o.tipo_labor&&o.tipo_labor.requiere_tiempo;});
     var tareasTodas=todas.filter(function(t){return (t.tabla||t.activo_rancho_id)&&!(t.tipo_labor&&t.tipo_labor.requiere_tiempo);});
     var porHacer=tareasTodas.filter(function(t){return t.estado==='pendiente';});
@@ -6108,7 +6109,7 @@ function calcularScoreOperario(operarioId,fechaInicio,fechaFin){
     var aTiempo=completadasMes.filter(function(o){return o.completado_en.slice(0,10)<=o.fecha_asignacion;}).length;
     var scoreTareas = completadasMes.length ? (aTiempo/completadasMes.length)*10 : 7;
 
-    var hoy=new Date().toISOString().slice(0,10);
+    var hoy=fechaHoyLocal();
     var atrasadasAbiertas=ordenesMes.filter(function(o){return o.estado==='en_proceso'&&o.fecha_asignacion<hoy;}).length;
     var scoreAvance=Math.max(0,10-atrasadasAbiertas*2);
 
@@ -6440,7 +6441,7 @@ function ejecutarGuardadoFinal(o){
     colaOffline.push(reg);
     localStorage.setItem('mootsil_cola',JSON.stringify(colaOffline));
     from('ordenes_trabajo').eq('id',o.id).update(updatePayload).then(function(){
-      if(nuevoEstado==='completada'&&o.activo_rancho_id) from('activos_rancho').eq('id',o.activo_rancho_id).update({fecha_ultimo_mantenimiento:new Date().toISOString().slice(0,10)}).catch(function(){});
+      if(nuevoEstado==='completada'&&o.activo_rancho_id) from('activos_rancho').eq('id',o.activo_rancho_id).update({fecha_ultimo_mantenimiento:fechaHoyLocal()}).catch(function(){});
       if(!document.getElementById('exito-sub').textContent) document.getElementById('exito-sub').textContent='Sin señal. Guardado en tu dispositivo y se subirá cuando haya internet.';
       mostrar('screen-exito'); ordenEjecutando=null;
     }).catch(function(){
@@ -6451,7 +6452,7 @@ function ejecutarGuardadoFinal(o){
   }
   from('registros_labor').insert(reg).then(function(){
     from('ordenes_trabajo').eq('id',o.id).update(updatePayload).then(function(){
-      if(nuevoEstado==='completada'&&o.activo_rancho_id) from('activos_rancho').eq('id',o.activo_rancho_id).update({fecha_ultimo_mantenimiento:new Date().toISOString().slice(0,10)}).catch(function(){});
+      if(nuevoEstado==='completada'&&o.activo_rancho_id) from('activos_rancho').eq('id',o.activo_rancho_id).update({fecha_ultimo_mantenimiento:fechaHoyLocal()}).catch(function(){});
       var lb=cats.tiposLabor.find(function(l){return l.id===o.tipo_labor_id;}), tb=cats.tablas.find(function(t){return t.id===o.tabla_id;});
       var verbo = progreso.completo ? 'completó' : 'avanzó en';
       showToast('✅ '+usuario.nombre+' '+verbo+' '+(lb?lb.nombre:'')+' en '+(tb?tb.nombre:''));
@@ -6583,7 +6584,7 @@ function renderContratos(){
 function renderNuevoContrato(){
   var body=document.getElementById('enc-body');
   var opO=cats.operarios.map(function(o){return '<button type="button" class="op-chip" data-id="'+o.id+'" onclick="seleccionUnica(this)">'+o.nombre+'</button>';}).join('');
-  body.innerHTML='<div class="seccion-titulo">+ Nuevo contrato</div><div class="form-card"><div class="form-group"><label>Colaborador</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Tipo de contrato</label><input type="text" id="ct-tipo" placeholder="Ej. Tiempo completo / Por temporada"></div><div class="form-group"><label>Fecha de inicio</label><input type="date" id="ct-fecha" value="'+new Date().toISOString().slice(0,10)+'"></div><div class="form-group"><label>Documento (foto o PDF, opcional)</label><button type="button" onclick="document.getElementById(\'ct-archivo\').click()" style="width:100%;padding:.75rem;border:1.5px dashed var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📎 Adjuntar archivo</button><div id="ct-archivo-status" style="margin-top:.5rem;"></div><input type="hidden" id="ct-url"><input type="file" id="ct-archivo" accept="image/*,.pdf" style="display:none"></div><div class="form-group"><label>Notas</label><input type="text" id="ct-notas" placeholder="Opcional..."></div><button class="btn-primary" id="ct-guardar">Guardar contrato</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderContratos()">← Volver a Contratos</button>';
+  body.innerHTML='<div class="seccion-titulo">+ Nuevo contrato</div><div class="form-card"><div class="form-group"><label>Colaborador</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Tipo de contrato</label><input type="text" id="ct-tipo" placeholder="Ej. Tiempo completo / Por temporada"></div><div class="form-group"><label>Fecha de inicio</label><input type="date" id="ct-fecha" value="'+fechaHoyLocal()+'"></div><div class="form-group"><label>Documento (foto o PDF, opcional)</label><button type="button" onclick="document.getElementById(\'ct-archivo\').click()" style="width:100%;padding:.75rem;border:1.5px dashed var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📎 Adjuntar archivo</button><div id="ct-archivo-status" style="margin-top:.5rem;"></div><input type="hidden" id="ct-url"><input type="file" id="ct-archivo" accept="image/*,.pdf" style="display:none"></div><div class="form-group"><label>Notas</label><input type="text" id="ct-notas" placeholder="Opcional..."></div><button class="btn-primary" id="ct-guardar">Guardar contrato</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderContratos()">← Volver a Contratos</button>';
   document.getElementById('ct-archivo').addEventListener('change',function(){
     var f=this.files&&this.files[0];
     if(!f) return;
@@ -6663,7 +6664,7 @@ function renderNuevoDocumentoPersonal(){
 
 function renderNuevoUsuario(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="form-card"><h3>Nuevo usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="nu-n" placeholder="Nombre completo"/></div><div class="form-group"><label>Rol</label><select id="nu-r"><option value="operario">Labores</option><option value="labores_eventual">Labores Eventual</option><option value="encargado">Encargado</option><option value="ingeniero">Ingeniero</option><option value="cosechador">Cosechador</option><option value="galerista">Galerista</option><option value="dueño">Dueño</option><option value="inversionista">Inversionista</option><option value="admin">Admin</option></select></div><div class="form-group"><label>Fecha de ingreso</label><input type="date" id="nu-fi" value="'+new Date().toISOString().slice(0,10)+'"></div><div class="form-group"><label>PIN (4 dígitos)</label><input type="number" id="nu-p" placeholder="1234" min="0" max="9999"/></div><div class="nav-row"><button class="btn-back" onclick="renderAltasBajas()">← Cancelar</button><button class="btn-next" onclick="guardarNuevoUsuario()">Guardar</button></div></div>';
+  body.innerHTML='<div class="form-card"><h3>Nuevo usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="nu-n" placeholder="Nombre completo"/></div><div class="form-group"><label>Rol</label><select id="nu-r"><option value="operario">Labores</option><option value="labores_eventual">Labores Eventual</option><option value="encargado">Encargado</option><option value="ingeniero">Ingeniero</option><option value="cosechador">Cosechador</option><option value="galerista">Galerista</option><option value="dueño">Dueño</option><option value="inversionista">Inversionista</option><option value="admin">Admin</option></select></div><div class="form-group"><label>Fecha de ingreso</label><input type="date" id="nu-fi" value="'+fechaHoyLocal()+'"></div><div class="form-group"><label>PIN (4 dígitos)</label><input type="number" id="nu-p" placeholder="1234" min="0" max="9999"/></div><div class="nav-row"><button class="btn-back" onclick="renderAltasBajas()">← Cancelar</button><button class="btn-next" onclick="guardarNuevoUsuario()">Guardar</button></div></div>';
 }
 
 function guardarNuevoUsuario(){
