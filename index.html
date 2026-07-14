@@ -5338,12 +5338,14 @@ function renderPagoHorasExtras(fechaRef){
   Promise.all([
     from('config_app').select('*').get(),
     from('asistencia_registros').select('*').eq('usuario_id',usuario.id).eq('modalidad','extras').gte('fecha',semanaInicio).lte('fecha',semanaFin).get(),
-    from('pagos_extra_estado').select('*').eq('operario_id',usuario.id).eq('semana_inicio',semanaInicio).get()
+    from('pagos_extra_estado').select('*').eq('operario_id',usuario.id).eq('semana_inicio',semanaInicio).get(),
+    from('horas_extra_asignadas').select('fecha,horas_max').eq('operario_id',usuario.id).gte('fecha',semanaInicio).lte('fecha',semanaFin).get()
   ]).then(function(r){
     var cfg={}; (r[0]||[]).forEach(function(c){cfg[c.clave]=c.valor;});
     var tarifa=parseFloat(cfg.tarifa_hora_extra)||70;
     var registros=r[1]||[];
     var estadoRow=r[2]&&r[2][0];
+    var mapaMax=mapaHorasMaxPorFecha(r[3]||[]);
     var porDia={};
     registros.forEach(function(reg){
       if(!porDia[reg.fecha]) porDia[reg.fecha]={entrada:null,salida:null};
@@ -5355,10 +5357,13 @@ function renderPagoHorasExtras(fechaRef){
     var detalle=dias.map(function(f){
       var d=porDia[f];
       var horas=(d.entrada&&d.salida)?(new Date(d.salida)-new Date(d.entrada))/3600000:0;
-      totalHoras+=horas;
+      var max=mapaMax[f];
+      var capada=(max!=null&&horas>max)?max:horas;
+      totalHoras+=capada;
       var hE=d.entrada?new Date(d.entrada).toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',hour12:true}):'—';
       var hS=d.salida?new Date(d.salida).toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',hour12:true}):'—';
-      return {fecha:f,horas:horas,texto:f+' · '+hE+' → '+hS+' ('+horas.toFixed(1)+'h)'};
+      var nota=(max!=null&&horas>max)?' · autorizadas '+max.toFixed(1)+'h':'';
+      return {fecha:f,horas:capada,texto:f+' · '+hE+' → '+hS+' ('+capada.toFixed(1)+'h'+nota+')'};
     });
     var total=totalHoras*tarifa;
     var pagado=estadoRow&&estadoRow.estado==='pagado';
