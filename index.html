@@ -1966,9 +1966,19 @@ function renderAplicacionesEstatus(){
       btn.addEventListener('click',function(e){
         e.stopPropagation();
         var fid=this.dataset.borrar, nombre=this.dataset.nombre;
-        if(!confirm('¿Eliminar la fórmula "'+nombre+'"? Esta acción no se puede deshacer.')) return;
-        from('formulas_aplicacion').eq('id',fid).update({activo:false}).then(function(){
-          showToast('🗑️ Fórmula eliminada');
+        if(!confirm('¿Eliminar la fórmula "'+nombre+'"? Esta acción no se puede deshacer. Si algún operario ya la tiene asignada, esa tarea también se cancelará.')) return;
+        from('ordenes_trabajo').select('id,operario_id').eq('formula_id',fid).in('estado',['pendiente','en_proceso']).get().then(function(pendientes){
+          pendientes=pendientes||[];
+          return from('formulas_aplicacion').eq('id',fid).update({activo:false}).then(function(){
+            return Promise.all(pendientes.map(function(o){return from('ordenes_trabajo').eq('id',o.id).update({estado:'cancelada'});}));
+          }).then(function(){
+            return Promise.all(pendientes.map(function(o){
+              return from('notificaciones').insert({titulo:'🗑️ Aplicación cancelada',cuerpo:'La tarea "'+nombre+'" fue cancelada por el encargado (fórmula eliminada).',icono:'🗑️',leida:false,para_rol:'operario',para_usuario:o.operario_id});
+            }));
+          }).then(function(){
+            showToast('🗑️ Fórmula eliminada'+(pendientes.length?' y '+pendientes.length+' tarea(s) pendiente(s) cancelada(s)':''));
+          });
+        }).then(function(){
           renderAplicacionesEstatus();
         }).catch(function(e){alert('Error: '+e.message);});
       });
