@@ -782,11 +782,54 @@ function renderAsignarEstatus(){
       body.innerHTML=html;
       return;
     }
-    html+=filtradas.map(tarjetaLaborAsignada).join('');
+    var riegoItems=filtradas.filter(function(o){return o.tipo_labor&&o.tipo_labor.requiere_tiempo;});
+    var otrosItems=filtradas.filter(function(o){return !(o.tipo_labor&&o.tipo_labor.requiere_tiempo);});
+    var gruposRiego={};
+    var ordenGrupos=[];
+    riegoItems.forEach(function(o){
+      var k=o.operario_id+'|'+o.fecha_asignacion+'|'+o.tipo_labor_id+'|'+o._ficha;
+      if(!gruposRiego[k]){gruposRiego[k]={operario:o.operario,fecha_asignacion:o.fecha_asignacion,_ficha:o._ficha,ordenes:[]};ordenGrupos.push(k);}
+      gruposRiego[k].ordenes.push(o);
+    });
+    var tarjetas=otrosItems.map(function(o){return {fecha:o.fecha_asignacion,html:tarjetaLaborAsignada(o)};});
+    ordenGrupos.forEach(function(k){
+      var g=gruposRiego[k];
+      tarjetas.push({fecha:g.fecha_asignacion,html:tarjetaRiegoAgrupada(g)});
+    });
+    tarjetas.sort(function(a,b){return a.fecha<b.fecha?-1:(a.fecha>b.fecha?1:0);});
+    html+=tarjetas.map(function(x){return x.html;}).join('');
     body.innerHTML=html;
     body.querySelectorAll('[data-can]').forEach(function(b){b.addEventListener('click',function(){cambiarEstadoAsignar(this.dataset.can,'cancelada');});});
     body.querySelectorAll('[data-com]').forEach(function(b){b.addEventListener('click',function(){cambiarEstadoAsignar(this.dataset.com,'completada');});});
+    body.querySelectorAll('[data-toggle-riego-grupo]').forEach(function(el){
+      el.addEventListener('click',function(){
+        var g=document.getElementById(this.dataset.toggleRiegoGrupo);
+        if(!g) return;
+        var abierto=g.style.display!=='none';
+        g.style.display=abierto?'none':'block';
+        var fl=this.querySelector('.riego-grupo-flecha');
+        if(fl) fl.textContent=abierto?'▾':'▴';
+      });
+    });
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function tarjetaRiegoAgrupada(grupo){
+  var hoy=fechaHoyLocal();
+  var esTerminada=grupo._ficha==='terminadas';
+  var completas=grupo.ordenes.filter(function(o){return o.estado==='completada';}).length;
+  var atrasada=!esTerminada&&grupo.fecha_asignacion<hoy;
+  var colorBorde=esTerminada?'var(--verde-mid)':(atrasada?'var(--rojo)':(grupo._ficha==='hoy'?'var(--rojo)':'var(--tierra)'));
+  var gid='riego-grp-'+grupo.ordenes[0].id;
+  var filasTablas=grupo.ordenes.map(function(o){
+    var estadoBadges={pendiente:['🆕 Pendiente','var(--tierra)'],en_proceso:['🔶 En proceso','var(--tierra)'],completada:['✅ Completada','var(--verde-mid)'],cancelada:['✖️ Cancelada','var(--gris-3)']};
+    var eb=estadoBadges[o.estado]||['',''];
+    var acciones='';
+    if(o.estado==='pendiente') acciones='<button class="btn-sm btn-cancelar" data-can="'+o.id+'">Cancelar</button>';
+    if(o.estado==='en_proceso') acciones='<button class="btn-sm btn-completar" data-com="'+o.id+'">Marcar completa</button> <button class="btn-sm btn-cancelar" data-can="'+o.id+'">Cancelar</button>';
+    return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:.5rem 0;border-top:1px solid var(--gris-1);flex-wrap:wrap;"><span style="font-size:.82rem;">'+o.tabla.nombre+' · '+(o.duracion_minutos||0)+' min<br/><span style="font-size:.7rem;font-weight:700;color:'+eb[1]+';">'+eb[0]+'</span></span><span>'+acciones+'</span></div>';
+  }).join('');
+  return '<div class="orden-card" style="border-left-color:'+colorBorde+';'+(esTerminada?'opacity:.8;':'')+'"><div data-toggle-riego-grupo="'+gid+'" style="cursor:pointer;"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem">💧 Riego · '+grupo.ordenes.length+' tabla'+(grupo.ordenes.length===1?'':'s')+'</strong><span style="font-size:.7rem;font-weight:700;color:'+colorBorde+';">'+completas+'/'+grupo.ordenes.length+' completas <span class="riego-grupo-flecha">▾</span></span></div><div style="font-size:.85rem;font-weight:700;color:'+(atrasada?'var(--rojo)':'var(--gris-3)')+';margin-top:.2rem;">📅 '+fechaLarga(grupo.fecha_asignacion)+(atrasada?' ⚠️':'')+'</div><div class="orden-meta">👤 '+(grupo.operario?grupo.operario.nombre:'')+'</div></div><div id="'+gid+'" style="display:none;margin-top:.5rem;">'+filasTablas+'</div></div>';
 }
 
 function tarjetaLaborAsignada(o){
