@@ -766,7 +766,7 @@ function renderAsignarEstatus(){
   var hoy=fechaHoyLocal();
   var hace30dias=new Date(Date.now()-30*86400000).toISOString().slice(0,10);
   Promise.all([
-    from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo,requiere_formula,es_cosecha),subtipo:subtipos_labor(nombre)').in('estado',['pendiente','en_proceso']).order('fecha_asignacion',{ascending:true}).get(),
+    from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo,requiere_formula,es_cosecha),subtipo:subtipos_labor(nombre)').in('estado',['pendiente','en_proceso']).order('fecha_asignacion',{ascending:false}).get(),
     from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo,requiere_formula,es_cosecha),subtipo:subtipos_labor(nombre)').eq('estado','completada').gte('fecha_asignacion',hace30dias).order('fecha_asignacion',{ascending:false}).limit(150).get()
   ]).then(function(r){
     var activas=(r[0]||[]).filter(function(o){return o.tabla&&o.tipo_labor&&!o.tipo_labor.requiere_formula&&!o.tipo_labor.es_cosecha;});
@@ -796,7 +796,7 @@ function renderAsignarEstatus(){
       var g=gruposRiego[k];
       tarjetas.push({fecha:g.fecha_asignacion,html:tarjetaRiegoAgrupada(g)});
     });
-    tarjetas.sort(function(a,b){return a.fecha<b.fecha?-1:(a.fecha>b.fecha?1:0);});
+    tarjetas.sort(function(a,b){return a.fecha<b.fecha?1:(a.fecha>b.fecha?-1:0);});
     html+=tarjetas.map(function(x){return x.html;}).join('');
     body.innerHTML=html;
     body.querySelectorAll('[data-can]').forEach(function(b){b.addEventListener('click',function(){cambiarEstadoAsignar(this.dataset.can,'cancelada');});});
@@ -1892,7 +1892,7 @@ function renderAplicacionesEstatus(){
   body.innerHTML=headerAplicaciones()+barraSubtabsFormulas()+'<div class="loading">Cargando fórmulas...</div>';
   var hoy=fechaHoyLocal();
   Promise.all([
-    from('formulas_aplicacion').select('*,tabla:tablas(nombre,plantacion_id),creador:usuarios!creado_por(nombre)').eq('activo',true).order('fecha_programada').get(),
+    from('formulas_aplicacion').select('*,tabla:tablas(nombre,plantacion_id),creador:usuarios!creado_por(nombre)').eq('activo',true).order('fecha_programada',{ascending:false}).get(),
     from('formula_componentes').select('*,item:inventario_items!item_id(nombre,unidad,stock_actual),autorizador:usuarios!autorizado_por(nombre)').get(),
     from('ordenes_trabajo').select('id').eq('validado_ingeniero',false).not('formula_id','is','null').get(),
     from('ordenes_trabajo').select('id,formula_id,estado,completado_en,validado_ingeniero,operario:usuarios!operario_id(nombre)').not('formula_id','is','null').get()
