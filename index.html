@@ -2217,8 +2217,8 @@ function cargarCatalogoLista(categoria,soloPlantillas){
       var cont=document.getElementById('cat-filas');
       if(!filtradas.length){cont.innerHTML='<div class="empty">Sin resultados para "'+filtro+'".</div>';return;}
       cont.innerHTML=filtradas.map(function(f){
-        var p=f.tabla?cats.plantaciones.find(function(x){return x.id===f.tabla.plantacion_id;}):null;
-        return '<div class="orden-card" style="cursor:pointer;" data-tid="'+f.id+'"><strong style="font-size:.9rem">'+(VIA_ICONOS[f.via]||'')+' '+f.nombre+(f.es_plantilla?' 📌':'')+'</strong><div class="orden-meta">📍 '+(p?p.nombre:'')+' · '+(f.tabla?f.tabla.nombre:'')+' · '+f.via+'</div></div>';
+        var descTxt=f.notas?f.notas.slice(0,90)+(f.notas.length>90?'…':''):'Sin descripción — toca para ver la receta';
+        return '<div class="orden-card" style="cursor:pointer;" data-tid="'+f.id+'"><strong style="font-size:.9rem">'+(VIA_ICONOS[f.via]||'')+' '+f.nombre+(f.es_plantilla?' 📌':'')+'</strong><div class="orden-meta">'+(CATEGORIA_ICONOS[f.categoria]||'')+' '+f.categoria+' · '+f.via+'<br/>'+descTxt+'</div></div>';
       }).join('');
       cont.querySelectorAll('[data-tid]').forEach(function(el){el.addEventListener('click',function(){renderCatalogoDetalle(this.dataset.tid);});});
     }
