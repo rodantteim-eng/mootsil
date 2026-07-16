@@ -1930,7 +1930,7 @@ function renderAplicacionesEstatus(){
   body.innerHTML=headerAplicaciones()+barraSubtabsFormulas()+'<div class="loading">Cargando fórmulas...</div>';
   var hoy=fechaHoyLocal();
   Promise.all([
-    from('formulas_aplicacion').select('*,tabla:tablas(nombre,plantacion_id),creador:usuarios!creado_por(nombre)').eq('activo',true).order('fecha_programada',{ascending:false}).get(),
+    from('formulas_aplicacion').select('*,tabla:tablas(nombre,plantacion_id),creador:usuarios!creado_por(nombre)').eq('activo',true).not('tabla_id','is','null').order('fecha_programada',{ascending:false}).get(),
     from('formula_componentes').select('*,item:inventario_items!item_id(nombre,unidad,stock_actual),autorizador:usuarios!autorizado_por(nombre)').get(),
     from('ordenes_trabajo').select('id').eq('validado_ingeniero',false).not('formula_id','is','null').get(),
     from('ordenes_trabajo').select('id,formula_id,estado,completado_en,validado_ingeniero,operario:usuarios!operario_id(nombre)').not('formula_id','is','null').get()
