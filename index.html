@@ -2206,9 +2206,11 @@ function cargarCatalogoLista(categoria,soloPlantillas){
   q.order('nombre').get().then(function(rows){
     rows=rows||[];
     if(!rows.length&&soloPlantillas){
-      lista.innerHTML='<div class="empty">Aún no hay plantillas frecuentes de '+categoria+'.<br/><button type="button" id="cat-vertodas" style="border:none;background:none;color:var(--verde-mid);font-weight:600;cursor:pointer;margin-top:.5rem;">Ver todas las fórmulas de '+categoria+'</button></div>';
+      lista.innerHTML='<div class="empty">Aún no hay plantillas frecuentes de '+categoria+'.<br/><button type="button" id="cat-vertodas" style="border:none;background:none;color:var(--verde-mid);font-weight:600;cursor:pointer;margin-top:.5rem;">Ver todas las fórmulas de '+categoria+'</button><br/><button type="button" id="cat-nueva" style="border:none;background:none;color:var(--verde-mid);font-weight:700;cursor:pointer;margin-top:.5rem;">➕ Crear la primera fórmula de '+categoria+'</button></div>';
       var btnTodas=document.getElementById('cat-vertodas');
       if(btnTodas) btnTodas.addEventListener('click',function(){cargarCatalogoLista(categoria,false);});
+      var btnNueva=document.getElementById('cat-nueva');
+      if(btnNueva) btnNueva.addEventListener('click',function(){renderNuevaFormulaCatalogo(categoria);});
       return;
     }
     var tituloLista=soloPlantillas?'📌 Plantillas frecuentes':'Todas las fórmulas de '+categoria;
@@ -2222,9 +2224,10 @@ function cargarCatalogoLista(categoria,soloPlantillas){
       }).join('');
       cont.querySelectorAll('[data-tid]').forEach(function(el){el.addEventListener('click',function(){renderCatalogoDetalle(this.dataset.tid);});});
     }
-    lista.innerHTML='<div class="seccion-titulo" style="margin-top:0;">'+tituloLista+'</div><input type="text" id="cat-buscar" placeholder="🔍 Buscar por nombre..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;margin-bottom:.75rem;"><div id="cat-filas"></div>'+(soloPlantillas?'<button type="button" id="cat-vertodas" style="border:none;background:none;color:var(--verde-mid);font-weight:600;cursor:pointer;margin-top:.5rem;font-size:.8rem;">Ver todas las fórmulas de '+categoria+'</button>':'');
+    lista.innerHTML='<div class="seccion-titulo" style="margin-top:0;display:flex;justify-content:space-between;align-items:center;gap:.5rem;">'+tituloLista+'<button type="button" id="cat-nueva" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap;">➕ Nueva</button></div><input type="text" id="cat-buscar" placeholder="🔍 Buscar por nombre..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;margin-bottom:.75rem;"><div id="cat-filas"></div>'+(soloPlantillas?'<button type="button" id="cat-vertodas" style="border:none;background:none;color:var(--verde-mid);font-weight:600;cursor:pointer;margin-top:.5rem;font-size:.8rem;">Ver todas las fórmulas de '+categoria+'</button>':'');
     pintarFilas('');
     document.getElementById('cat-buscar').addEventListener('input',function(){pintarFilas(this.value);});
+    document.getElementById('cat-nueva').addEventListener('click',function(){renderNuevaFormulaCatalogo(categoria);});
     var btnTodas=document.getElementById('cat-vertodas');
     if(btnTodas) btnTodas.addEventListener('click',function(){cargarCatalogoLista(categoria,false);});
   }).catch(function(e){lista.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
@@ -2331,6 +2334,21 @@ function renderFormulaForm(formulaId,desdeCatalogo){
 
 function formulaCancelarLink(){return '<button type="button" onclick="'+formulaVolverDestino()+'" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cancelar</button>';}
 
+function renderNuevaFormulaCatalogo(categoriaPreset){
+  formulaEditId=null;
+  formulaVolverAResumen=false;
+  formulaVia=null; formulaCategoria=null; formulaCategoriasCombinadas=[]; formulaEsPlantilla=true; formulaBombas=[]; formulaCompRows=[]; formulaCompSeq=0;
+  formulaPlantacionId=null; formulaTablaId=null;
+  window._formulaCreadorExistente=null;
+  window._formulaDuracionSurcos=null;
+  formulaModoCatalogoDirecto=false;
+  formulaEditandoCatalogo=true;
+  window._formulaNombreExistente=''; window._formulaNotasExistente=''; window._formulaFechaExistente='';
+  window._formulaCategoriaCatalogoPreset=categoriaPreset||null;
+  if(categoriaPreset) CATALOGO_TIPO_SEL={categoria:categoriaPreset,soloPlantillas:true};
+  renderFormulaPasoVia();
+}
+
 function formulaVolverDestino(){
   return (formulaEditandoCatalogo&&CATALOGO_TIPO_SEL)?('cargarCatalogoLista(\''+CATALOGO_TIPO_SEL.categoria+'\','+(CATALOGO_TIPO_SEL.soloPlantillas?'true':'false')+')'):'renderAplicacionesEstatus()';
 }
@@ -2365,7 +2383,9 @@ function renderFormulaPasoVia(){
   var tiles=['Riego','Foliar','Drench'].map(function(v){
     return '<div class="labor-tile'+(formulaVia===v?' labor-tile-otra':'')+'" data-via="'+v+'"><div class="labor-tile-ic">'+VIA_ICONOS[v]+'</div><div class="labor-tile-lbl">'+v+'</div></div>';
   }).join('');
-  body.innerHTML='<div class="seccion-titulo">Paso 3 de 8 · Vía de aplicación</div><div class="labor-grid">'+tiles+'</div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoTabla()">← Volver a tabla</button>';
+  var pasoLbl=formulaEditandoCatalogo?'Paso 1 de 6':'Paso 3 de 8';
+  var backBtn=formulaEditandoCatalogo?('<button class="btn-back" style="margin-top:1rem;" onclick="'+formulaVolverDestino()+'">← Volver al catálogo</button>'):'<button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoTabla()">← Volver a tabla</button>';
+  body.innerHTML='<div class="seccion-titulo">'+pasoLbl+' · Vía de aplicación</div><div class="labor-grid">'+tiles+'</div>'+backBtn;
   body.querySelectorAll('[data-via]').forEach(function(el){el.addEventListener('click',function(){
     formulaVia=this.dataset.via;
     if(formulaVolverAResumen){formulaVolverAResumen=false;renderFormulaPasoNotas();}
@@ -2376,6 +2396,7 @@ function renderFormulaPasoVia(){
 
 function renderFormulaPasoCategoria(){
   var body=document.getElementById('enc-body');
+  if(!formulaCategoria&&window._formulaCategoriaCatalogoPreset) formulaCategoria=window._formulaCategoriaCatalogoPreset;
   var tipos=['Nutrición','Plaga','Estimulación','Herbicida','Combinada'];
   var tiles=tipos.map(function(c){
     return '<div class="labor-tile'+(formulaCategoria===c?' labor-tile-otra':'')+'" data-cat="'+c+'"><div class="labor-tile-ic">'+CATEGORIA_ICONOS[c]+'</div><div class="labor-tile-lbl">'+c+'</div></div>';
@@ -2383,7 +2404,8 @@ function renderFormulaPasoCategoria(){
   var combinadaBox='<div class="form-group" id="fc-combinada-box" style="display:'+(formulaCategoria==='Combinada'?'':'none')+';margin-top:1rem;"><label>¿Con cuáles se combina?</label><div style="display:flex;flex-wrap:wrap;gap:8px;" id="fc-combinada-chips">'+['Nutrición','Plaga','Estimulación','Herbicida'].map(function(c){
     return '<button type="button" class="op-chip'+(formulaCategoriasCombinadas.indexOf(c)>-1?' sel':'')+'" data-comb="'+c+'" onclick="toggleChip(this)">'+CATEGORIA_ICONOS[c]+' '+c+'</button>';
   }).join('')+'</div></div>';
-  body.innerHTML='<div class="seccion-titulo">Paso 4 de 9 · Tipo de fórmula</div><div class="labor-grid" style="grid-template-columns:repeat(3,1fr);">'+tiles+'</div>'+combinadaBox+'<button class="btn-primary" id="fc-continuar" style="margin-top:1.25rem;">Continuar →</button><button class="btn-back" style="margin-top:.75rem;" onclick="renderFormulaPasoVia()">← Volver a vía</button>';
+  var pasoLbl=formulaEditandoCatalogo?'Paso 2 de 6':'Paso 4 de 9';
+  body.innerHTML='<div class="seccion-titulo">'+pasoLbl+' · Tipo de fórmula</div><div class="labor-grid" style="grid-template-columns:repeat(3,1fr);">'+tiles+'</div>'+combinadaBox+'<button class="btn-primary" id="fc-continuar" style="margin-top:1.25rem;">Continuar →</button><button class="btn-back" style="margin-top:.75rem;" onclick="renderFormulaPasoVia()">← Volver a vía</button>';
   body.querySelectorAll('[data-cat]').forEach(function(el){el.addEventListener('click',function(){
     formulaCategoria=this.dataset.cat;
     body.querySelectorAll('[data-cat]').forEach(function(x){x.classList.remove('labor-tile-otra');});
@@ -2407,7 +2429,8 @@ function renderFormulaPasoBombas(){
   }).join('');
   var bombaActual=formulaBombas[0]||null;
   var campoExtra=bombaActual?campoDuracionSurcos(bombaActual):'';
-  body.innerHTML='<div class="seccion-titulo">Paso 5 de 9 · ¿Con qué se aplica?</div><p class="hint">Elige el equipo que se va a usar para esta aplicación.</p><div class="labor-grid">'+tiles+'</div><div id="fm-bomba-extra">'+campoExtra+'</div><button class="btn-primary" id="fm-bomba-continuar" style="margin-top:1.25rem;">Continuar →</button><button class="btn-back" style="margin-top:.75rem;" onclick="renderFormulaPasoCategoria()">← Volver a tipo</button>';
+  var pasoLbl=formulaEditandoCatalogo?'Paso 3 de 6':'Paso 5 de 9';
+  body.innerHTML='<div class="seccion-titulo">'+pasoLbl+' · ¿Con qué se aplica?</div><p class="hint">Elige el equipo que se va a usar para esta aplicación.</p><div class="labor-grid">'+tiles+'</div><div id="fm-bomba-extra">'+campoExtra+'</div><button class="btn-primary" id="fm-bomba-continuar" style="margin-top:1.25rem;">Continuar →</button><button class="btn-back" style="margin-top:.75rem;" onclick="renderFormulaPasoCategoria()">← Volver a tipo</button>';
   body.querySelectorAll('[data-bomba]').forEach(function(el){el.addEventListener('click',function(){
     formulaBombas=[this.dataset.bomba];
     body.querySelectorAll('[data-bomba]').forEach(function(x){x.classList.remove('labor-tile-otra');});
@@ -2418,7 +2441,9 @@ function renderFormulaPasoBombas(){
     if(!formulaBombas.length){alert('Selecciona con qué se va a aplicar.');return;}
     var inputExtra=document.getElementById('fm-duracion-surcos-input');
     window._formulaDuracionSurcos=inputExtra?(parseFloat(inputExtra.value)||null):null;
-    if(formulaVolverAResumen){formulaVolverAResumen=false;renderFormulaPasoNotas();}else renderFormulaPasoFecha();
+    if(formulaVolverAResumen){formulaVolverAResumen=false;renderFormulaPasoNotas();}
+    else if(formulaEditandoCatalogo){renderFormulaPasoNombre();}
+    else renderFormulaPasoFecha();
   });
 }
 
@@ -2448,7 +2473,9 @@ function renderFormulaPasoFecha(){
 function renderFormulaPasoNombre(){
   var body=document.getElementById('enc-body');
   var nombreActual=document.getElementById('fm-nombre-input')?document.getElementById('fm-nombre-input').value:(window._formulaNombreExistente||'');
-  body.innerHTML='<div class="seccion-titulo">Paso 7 de 9 · Nombra la fórmula</div><div class="form-card"><div class="form-group"><label>Nombre</label><input type="text" id="fm-nombre-input" placeholder="Ej. Aplicación contra trips, Sazonada de planta..." value="'+(nombreActual||'').replace(/"/g,'&quot;')+'"></div><div class="form-group"><label>Volumen base</label><div style="display:flex;align-items:center;gap:10px;background:var(--gris-1);border-radius:var(--radio-sm);padding:.65rem .9rem;"><span style="font-size:1.5rem;">🛢️</span><strong>200 litros</strong><span class="hint" style="margin:0;">(tambo de referencia del ingeniero)</span></div></div><button class="btn-primary" id="fm-nombre-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoFecha()">← Volver a fecha</button>';
+  var pasoLbl=formulaEditandoCatalogo?'Paso 4 de 6':'Paso 7 de 9';
+  var backBtn=formulaEditandoCatalogo?'<button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoBombas()">← Volver a bombas</button>':'<button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoFecha()">← Volver a fecha</button>';
+  body.innerHTML='<div class="seccion-titulo">'+pasoLbl+' · Nombra la fórmula</div><div class="form-card"><div class="form-group"><label>Nombre</label><input type="text" id="fm-nombre-input" placeholder="Ej. Aplicación contra trips, Sazonada de planta..." value="'+(nombreActual||'').replace(/"/g,'&quot;')+'"></div><div class="form-group"><label>Volumen base</label><div style="display:flex;align-items:center;gap:10px;background:var(--gris-1);border-radius:var(--radio-sm);padding:.65rem .9rem;"><span style="font-size:1.5rem;">🛢️</span><strong>200 litros</strong><span class="hint" style="margin:0;">(tambo de referencia del ingeniero)</span></div></div><button class="btn-primary" id="fm-nombre-continuar">Continuar →</button></div>'+backBtn;
   document.getElementById('fm-nombre-continuar').addEventListener('click',function(){
     var n=(document.getElementById('fm-nombre-input').value||'').trim();
     if(!n){alert('Escribe el nombre de la fórmula.');return;}
@@ -2459,7 +2486,8 @@ function renderFormulaPasoNombre(){
 
 function renderFormulaPasoComponentes(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo">Paso 8 de 9 · Componentes</div><div id="fm-comp-list"></div><button type="button" onclick="agregarFormulaComponenteRow()" style="padding:6px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">+ Agregar componente</button><button class="btn-primary" id="fm-comp-continuar" style="margin-top:1.25rem;">Continuar →</button><button class="btn-back" style="margin-top:.75rem;" onclick="renderFormulaPasoNombre()">← Volver a nombre</button>';
+  var pasoLbl=formulaEditandoCatalogo?'Paso 5 de 6':'Paso 8 de 9';
+  body.innerHTML='<div class="seccion-titulo">'+pasoLbl+' · Componentes</div><div id="fm-comp-list"></div><button type="button" onclick="agregarFormulaComponenteRow()" style="padding:6px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">+ Agregar componente</button><button class="btn-primary" id="fm-comp-continuar" style="margin-top:1.25rem;">Continuar →</button><button class="btn-back" style="margin-top:.75rem;" onclick="renderFormulaPasoNombre()">← Volver a nombre</button>';
   if(!formulaCompRows.length) agregarFormulaComponenteRow(); else pintarFormulaCompList();
   document.getElementById('fm-comp-continuar').addEventListener('click',function(){
     var comps=formulaCompRows.filter(function(r){return r.item_id&&r.cantidad>0;});
@@ -2661,7 +2689,7 @@ function pintarFormulaPasoNotas(persistidos){
     alertaHtml='<div style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);border-radius:var(--radio-sm);padding:.75rem;margin-bottom:1rem;font-size:.82rem;"><strong style="color:var(--rojo);">⚠️ No alcanza el inventario para el '+fechaTxt+'</strong><br>Hay que pedir antes de esa fecha: '+faltantes.map(function(f){return f.nombre+' ('+numFmt(f.falta)+' '+f.unidad+')';}).join(', ')+'</div>';
   }
   var filasUbicFecha=formulaEditandoCatalogo?'':('<div class="resumen-row" data-editar="ubicacion" style="cursor:pointer;"><span class="resumen-key">Ubicación ✏️</span><span class="resumen-val">📍 '+(p?p.nombre:'')+' · '+(t?t.nombre:'')+'</span></div><div class="resumen-row" data-editar="fecha" style="cursor:pointer;"><span class="resumen-key">Fecha de aplicación ✏️</span><span class="resumen-val">'+fechaTxt+'</span></div>');
-  body.innerHTML='<div class="seccion-titulo">Paso 9 de 9 · Notas y confirmar</div>'+alertaHtml+(window._formulaCreadorExistente?'<p class="hint" style="margin-bottom:.75rem;">👤 Formulada por: <strong>'+window._formulaCreadorExistente+'</strong></p>':'')+'<div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row" data-editar="nombre" style="cursor:pointer;"><span class="resumen-key">Nombre ✏️</span><span class="resumen-val">'+window._formulaNombreExistente+'</span></div>'+filasUbicFecha+'<div class="resumen-row" data-editar="via" style="cursor:pointer;"><span class="resumen-key">Vía ✏️</span><span class="resumen-val">'+VIA_ICONOS[formulaVia]+' '+formulaVia+'</span></div><div class="resumen-row" data-editar="tipo" style="cursor:pointer;"><span class="resumen-key">Tipo ✏️</span><span class="resumen-val">'+CATEGORIA_ICONOS[formulaCategoria]+' '+formulaCategoria+(formulaCategoria==='Combinada'&&formulaCategoriasCombinadas.length?' ('+formulaCategoriasCombinadas.join(' + ')+')':'')+'</span></div><div class="resumen-row" data-editar="bomba" style="cursor:pointer;"><span class="resumen-key">Bomba ✏️</span><span class="resumen-val">'+bombasTxt+'</span></div><div class="resumen-row" data-editar="componentes" style="cursor:pointer;"><span class="resumen-key">Componentes ✏️</span></div><div style="font-size:.82rem;padding:.35rem 0;">'+resumenComp+'</div></div><p class="hint" style="margin-bottom:1rem;">Toca cualquier renglón de arriba para editarlo directo. ℹ️ Guardar esta fórmula <strong>no descuenta inventario todavía</strong> — solo es la receta planeada. El descuento real se hará cuando la asignes a un operario, en el módulo de Aplicaciones.</p><div class="form-group"><label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:.85rem;"><input type="checkbox" id="fm-plantilla" '+(formulaEsPlantilla?'checked':'')+' style="width:18px;height:18px;"> 📌 Es una fórmula que se repite mucho (guardar como plantilla frecuente en el Catálogo)</label></div><div class="form-group" id="fm-catcatalogo-box" style="display:'+((formulaEsPlantilla&&formulaCategoria==='Combinada')?'':'none')+';"><label>¿En qué categoría del catálogo la guardamos?</label><div style="display:flex;flex-wrap:wrap;gap:8px;" id="fm-catcatalogo-chips">'+['Nutrición','Plaga','Estimulación','Herbicida'].map(function(c){return '<button type="button" class="op-chip'+(window._formulaCategoriaCatalogo===c?' sel':'')+'" data-catcat="'+c+'" onclick="seleccionUnica(this)">'+CATEGORIA_ICONOS[c]+' '+c+'</button>';}).join('')+'</div><p class="hint">Como "Combinada" varía mucho, no aparece como categoría del catálogo — elige bajo cuál de las 4 se debe encontrar esta plantilla.</p></div><div class="form-group"><label>Notas / Observaciones (opcional)</label><input type="text" id="fm-notas-input" value="'+(window._formulaNotasExistente?window._formulaNotasExistente.replace(/"/g,'&quot;'):'')+'" placeholder="Instrucciones adicionales..."></div><button class="btn-primary" id="fm-guardar">'+(formulaEditId?'Guardar cambios':'Crear fórmula')+'</button></div>'+(formulaEditId?'<div class="form-card"><button type="button" id="fm-eliminar" style="width:100%;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.85rem;cursor:pointer;">🗑️ Eliminar fórmula</button></div>':'')+'<button class="btn-back" style="margin-top:1rem;" onclick="'+formulaVolverDestino()+'">← Volver a '+(formulaEditandoCatalogo?'Catálogo':'fórmulas')+'</button>';
+  body.innerHTML='<div class="seccion-titulo">'+(formulaEditandoCatalogo?'Paso 6 de 6':'Paso 9 de 9')+' · Notas y confirmar</div>'+alertaHtml+(window._formulaCreadorExistente?'<p class="hint" style="margin-bottom:.75rem;">👤 Formulada por: <strong>'+window._formulaCreadorExistente+'</strong></p>':'')+'<div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row" data-editar="nombre" style="cursor:pointer;"><span class="resumen-key">Nombre ✏️</span><span class="resumen-val">'+window._formulaNombreExistente+'</span></div>'+filasUbicFecha+'<div class="resumen-row" data-editar="via" style="cursor:pointer;"><span class="resumen-key">Vía ✏️</span><span class="resumen-val">'+VIA_ICONOS[formulaVia]+' '+formulaVia+'</span></div><div class="resumen-row" data-editar="tipo" style="cursor:pointer;"><span class="resumen-key">Tipo ✏️</span><span class="resumen-val">'+CATEGORIA_ICONOS[formulaCategoria]+' '+formulaCategoria+(formulaCategoria==='Combinada'&&formulaCategoriasCombinadas.length?' ('+formulaCategoriasCombinadas.join(' + ')+')':'')+'</span></div><div class="resumen-row" data-editar="bomba" style="cursor:pointer;"><span class="resumen-key">Bomba ✏️</span><span class="resumen-val">'+bombasTxt+'</span></div><div class="resumen-row" data-editar="componentes" style="cursor:pointer;"><span class="resumen-key">Componentes ✏️</span></div><div style="font-size:.82rem;padding:.35rem 0;">'+resumenComp+'</div></div><p class="hint" style="margin-bottom:1rem;">Toca cualquier renglón de arriba para editarlo directo. ℹ️ Guardar esta fórmula <strong>no descuenta inventario todavía</strong> — solo es la receta planeada. El descuento real se hará cuando la asignes a un operario, en el módulo de Aplicaciones.</p><div class="form-group"><label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:.85rem;"><input type="checkbox" id="fm-plantilla" '+(formulaEsPlantilla?'checked':'')+' style="width:18px;height:18px;"> 📌 Es una fórmula que se repite mucho (guardar como plantilla frecuente en el Catálogo)</label></div><div class="form-group" id="fm-catcatalogo-box" style="display:'+((formulaEsPlantilla&&formulaCategoria==='Combinada')?'':'none')+';"><label>¿En qué categoría del catálogo la guardamos?</label><div style="display:flex;flex-wrap:wrap;gap:8px;" id="fm-catcatalogo-chips">'+['Nutrición','Plaga','Estimulación','Herbicida'].map(function(c){return '<button type="button" class="op-chip'+(window._formulaCategoriaCatalogo===c?' sel':'')+'" data-catcat="'+c+'" onclick="seleccionUnica(this)">'+CATEGORIA_ICONOS[c]+' '+c+'</button>';}).join('')+'</div><p class="hint">Como "Combinada" varía mucho, no aparece como categoría del catálogo — elige bajo cuál de las 4 se debe encontrar esta plantilla.</p></div><div class="form-group"><label>Notas / Observaciones (opcional)</label><input type="text" id="fm-notas-input" value="'+(window._formulaNotasExistente?window._formulaNotasExistente.replace(/"/g,'&quot;'):'')+'" placeholder="Instrucciones adicionales..."></div><button class="btn-primary" id="fm-guardar">'+(formulaEditId?'Guardar cambios':'Crear fórmula')+'</button></div>'+(formulaEditId?'<div class="form-card"><button type="button" id="fm-eliminar" style="width:100%;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.85rem;cursor:pointer;">🗑️ Eliminar fórmula</button></div>':'')+'<button class="btn-back" style="margin-top:1rem;" onclick="'+formulaVolverDestino()+'">← Volver a '+(formulaEditandoCatalogo?'Catálogo':'fórmulas')+'</button>';
   document.getElementById('fm-guardar').addEventListener('click',guardarFormula);
   var plantillaCheckbox=document.getElementById('fm-plantilla');
   plantillaCheckbox.addEventListener('change',function(){
