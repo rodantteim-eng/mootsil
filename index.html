@@ -1880,6 +1880,27 @@ function renderSolicitarLabor(){
 
 var FORMULA_SUBTAB='hoy';
 
+function revertirInventarioOrdenAplicacion(orden){
+  if(!orden||!orden.formula_id) return Promise.resolve();
+  var tambosDeducidos=Math.max(orden.tambos_planeados||1,orden.tambos_usados||0);
+  return from('formula_componentes').select('item_id,cantidad_base').eq('formula_id',orden.formula_id).get().then(function(comps){
+    comps=comps||[];
+    return comps.reduce(function(p,c){
+      return p.then(function(){
+        var cant=c.cantidad_base*(orden.factor_escala||1)*tambosDeducidos;
+        if(!cant) return;
+        var item=cats.inventario.find(function(x){return x.id===c.item_id;});
+        var stockActual=item?item.stock_actual:0;
+        var nuevoStock=stockActual+cant;
+        return from('movimientos_inventario').insert({item_id:c.item_id,tipo:'entrada',cantidad:cant,motivo:'Reversión por cancelación de aplicación',referencia_orden_id:orden.id,usuario_id:usuario.id,stock_anterior:stockActual,stock_posterior:nuevoStock}).then(function(){
+          if(item) item.stock_actual=nuevoStock;
+          return from('inventario_items').eq('id',c.item_id).update({stock_actual:nuevoStock});
+        });
+      });
+    },Promise.resolve());
+  }).catch(function(){});
+}
+
 function barraSubtabsFormulas(){
   var tabs=[['programadas','🆕 Programadas'],['hoy','🔥 Aplicar Hoy'],['aplicadas','✅ Aplicadas']];
   return '<div style="display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap;">'+tabs.map(function(t){
@@ -2010,16 +2031,18 @@ function renderAplicacionesEstatus(){
         e.stopPropagation();
         var fid=this.dataset.borrar, nombre=this.dataset.nombre;
         if(!confirm('¿Eliminar la fórmula "'+nombre+'"? Esta acción no se puede deshacer. Si algún operario ya la tiene asignada, esa tarea también se cancelará.')) return;
-        from('ordenes_trabajo').select('id,operario_id').eq('formula_id',fid).in('estado',['pendiente','en_proceso']).get().then(function(pendientes){
+        from('ordenes_trabajo').select('id,operario_id,factor_escala,tambos_planeados,tambos_usados').eq('formula_id',fid).in('estado',['pendiente','en_proceso']).get().then(function(pendientes){
           pendientes=pendientes||[];
           return from('formulas_aplicacion').eq('id',fid).update({activo:false}).then(function(){
             return Promise.all(pendientes.map(function(o){return from('ordenes_trabajo').eq('id',o.id).update({estado:'cancelada'});}));
           }).then(function(){
+            return pendientes.reduce(function(p,o){return p.then(function(){return revertirInventarioOrdenAplicacion({id:o.id,formula_id:fid,factor_escala:o.factor_escala,tambos_planeados:o.tambos_planeados,tambos_usados:o.tambos_usados});});},Promise.resolve());
+          }).then(function(){
             return Promise.all(pendientes.map(function(o){
-              return from('notificaciones').insert({titulo:'🗑️ Aplicación cancelada',cuerpo:'La tarea "'+nombre+'" fue cancelada por el encargado (fórmula eliminada).',icono:'🗑️',leida:false,para_rol:'operario',para_usuario:o.operario_id});
+              return from('notificaciones').insert({titulo:'🗑️ Aplicación cancelada',cuerpo:'La tarea "'+nombre+'" fue cancelada por el encargado (fórmula eliminada). El insumo asignado se devolvió al inventario.',icono:'🗑️',leida:false,para_rol:'operario',para_usuario:o.operario_id});
             }));
           }).then(function(){
-            showToast('🗑️ Fórmula eliminada'+(pendientes.length?' y '+pendientes.length+' tarea(s) pendiente(s) cancelada(s)':''));
+            showToast('🗑️ Fórmula eliminada'+(pendientes.length?' y '+pendientes.length+' tarea(s) pendiente(s) cancelada(s), inventario devuelto':''));
           });
         }).then(function(){
           renderAplicacionesEstatus();
@@ -2811,8 +2834,12 @@ function renderEditarModoAsignacion(formulaId){
     body.querySelectorAll('[data-quitar]').forEach(function(btn){
       btn.addEventListener('click',function(){
         var oid=this.dataset.quitar, nombre=this.dataset.nombre;
-        if(!confirm('¿Quitar a '+nombre+' de esta aplicación? Su tarea se cancela, los demás siguen igual.')) return;
-        from('ordenes_trabajo').eq('id',oid).update({estado:'cancelada'}).then(function(){
+        if(!confirm('¿Quitar a '+nombre+' de esta aplicación? Su tarea se cancela, los demás siguen igual, y el insumo asignado se devuelve al inventario.')) return;
+        from('ordenes_trabajo').eq('id',oid).select('factor_escala,tambos_planeados,tambos_usados').single().then(function(orden){
+          return from('ordenes_trabajo').eq('id',oid).update({estado:'cancelada'}).then(function(){
+            return revertirInventarioOrdenAplicacion({id:oid,formula_id:formulaId,factor_escala:orden?orden.factor_escala:1,tambos_planeados:orden?orden.tambos_planeados:1,tambos_usados:orden?orden.tambos_usados:0});
+          });
+        }).then(function(){
           showToast('✅ '+nombre+' fue quitado de esta aplicación');
           renderEditarModoAsignacion(formulaId);
         }).catch(function(e){alert('Error: '+e.message);});
@@ -2828,11 +2855,14 @@ function renderElegirTipoReasignacion(formulaId,nombre,asignadosTxt){
     cargarFormulaParaAsignar(formulaId);
   });
   document.getElementById('reasig-reemplazar').addEventListener('click',function(){
-    if(!confirm('Esto va a cancelar la(s) tarea(s) activa(s) de '+asignadosTxt+' para esta aplicación. ¿Seguro?')) return;
-    from('ordenes_trabajo').select('id').eq('formula_id',formulaId).not('estado','eq','completada').not('estado','eq','cancelada').get().then(function(rows){
-      return Promise.all((rows||[]).map(function(o){return from('ordenes_trabajo').eq('id',o.id).update({estado:'cancelada'});}));
+    if(!confirm('Esto va a cancelar la(s) tarea(s) activa(s) de '+asignadosTxt+' para esta aplicación y devolver su insumo al inventario. ¿Seguro?')) return;
+    from('ordenes_trabajo').select('id,factor_escala,tambos_planeados,tambos_usados').eq('formula_id',formulaId).not('estado','eq','completada').not('estado','eq','cancelada').get().then(function(rows){
+      rows=rows||[];
+      return Promise.all(rows.map(function(o){return from('ordenes_trabajo').eq('id',o.id).update({estado:'cancelada'});})).then(function(){
+        return rows.reduce(function(p,o){return p.then(function(){return revertirInventarioOrdenAplicacion({id:o.id,formula_id:formulaId,factor_escala:o.factor_escala,tambos_planeados:o.tambos_planeados,tambos_usados:o.tambos_usados});});},Promise.resolve());
+      });
     }).then(function(){
-      showToast('✅ Tarea(s) anterior(es) cancelada(s)');
+      showToast('✅ Tarea(s) anterior(es) cancelada(s), inventario devuelto');
       cargarFormulaParaAsignar(formulaId);
     }).catch(function(e){alert('Error: '+e.message);});
   });
