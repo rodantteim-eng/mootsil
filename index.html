@@ -3284,7 +3284,7 @@ function chequearVencimientosProveedores(){
     (rows||[]).forEach(function(c){
       var vencido=c.fecha_vencimiento<hoy;
       var provNombre=c.proveedor?c.proveedor.nombre:'un proveedor';
-      var msg=(vencido?'⚠️ Ya venció el pago a ':'⏳ Está por vencer el pago a ')+provNombre+': $'+parseFloat(c.total).toFixed(2)+' — vence '+c.fecha_vencimiento+(c.numero_factura?' (factura '+c.numero_factura+')':'');
+      var msg=(vencido?'⚠️ Ya venció el pago a ':'⏳ Está por vencer el pago a ')+provNombre+': $'+formatMonto(c.total)+' — vence '+c.fecha_vencimiento+(c.numero_factura?' (factura '+c.numero_factura+')':'');
       from('notificaciones').insert({titulo:vencido?'⚠️ Pago a proveedor vencido':'⏳ Pago a proveedor por vencer',cuerpo:msg,icono:'💳',leida:false,para_rol:'encargado'}).then(function(){
         return from('compras').eq('id',c.id).update({notificado_vencimiento:true});
       }).catch(function(){});
@@ -3302,7 +3302,7 @@ function renderCuentasPorPagar(){
     rows=rows||[];
     var totalPendiente=rows.reduce(function(s,c){return s+parseFloat(c.total);},0);
     var headerHtml='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📆 Cuentas por pagar<button type="button" onclick="renderComprasMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Compras y Gastos</button></div>';
-    var html=headerHtml+'<div class="form-card" style="text-align:center;margin-bottom:1rem;"><div style="font-size:.8rem;color:var(--gris-3);">Total pendiente a crédito</div><div style="font-size:1.6rem;font-weight:800;color:var(--tierra);">$'+totalPendiente.toFixed(2)+'</div></div>';
+    var html=headerHtml+'<div class="form-card" style="text-align:center;margin-bottom:1rem;"><div style="font-size:.8rem;color:var(--gris-3);">Total pendiente a crédito</div><div style="font-size:1.6rem;font-weight:800;color:var(--tierra);">$'+formatMonto(totalPendiente)+'</div></div>';
     if(!rows.length){
       html+='<div class="empty">🎉 No tienes cuentas a crédito pendientes de pago.</div>';
     } else {
@@ -3311,7 +3311,7 @@ function renderCuentasPorPagar(){
         var porVencer=c.fecha_vencimiento&&!vencido&&c.fecha_vencimiento<=limiteStr;
         var color=vencido?'var(--rojo)':(porVencer?'var(--tierra)':'var(--gris-2)');
         var estadoTxt=vencido?'⚠️ Vencido':(porVencer?'⏳ Por vencer':'📅 Programado');
-        return '<div class="orden-card" style="border-left-color:'+color+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem;">🧾 '+(c.proveedor?c.proveedor.nombre:'Sin proveedor')+'</strong><strong style="font-size:.95rem;color:var(--verde-mid);">$'+parseFloat(c.total).toFixed(2)+'</strong></div><div class="orden-meta" style="color:'+color+';font-weight:600;">'+estadoTxt+' · Vence '+c.fecha_vencimiento+'</div>'+(c.numero_factura?'<div class="orden-meta">Factura #'+c.numero_factura+'</div>':'')+'<button type="button" class="btn-sm btn-completar" style="margin-top:.4rem;" data-marcar-pagado="'+c.id+'">✅ Marcar como pagado</button></div>';
+        return '<div class="orden-card" style="border-left-color:'+color+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem;">🧾 '+(c.proveedor?c.proveedor.nombre:'Sin proveedor')+'</strong><strong style="font-size:.95rem;color:var(--verde-mid);">$'+formatMonto(c.total)+'</strong></div><div class="orden-meta" style="color:'+color+';font-weight:600;">'+estadoTxt+' · Vence '+c.fecha_vencimiento+'</div>'+(c.numero_factura?'<div class="orden-meta">Factura #'+c.numero_factura+'</div>':'')+'<button type="button" class="btn-sm btn-completar" style="margin-top:.4rem;" data-marcar-pagado="'+c.id+'">✅ Marcar como pagado</button></div>';
       }).join('');
     }
     body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderComprasMenu()">← Volver</button>';
@@ -3356,7 +3356,7 @@ function renderNuevaCompra(){
   function calcularTotal(){
     var t=filas.reduce(function(s,f){return s+(parseFloat(f.monto)||0);},0);
     var disp=document.getElementById('nc-total-display');
-    if(disp) disp.textContent='$'+t.toFixed(2);
+    if(disp) disp.textContent='$'+formatMonto(t);
     return t;
   }
 
@@ -3668,7 +3668,7 @@ function renderEditarCompra(compraId,volverFn){
       var t=existentes.filter(function(e){return !e.eliminar;}).reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0)
         + nuevas.reduce(function(s,f){return s+(parseFloat(f.monto)||0);},0);
       var disp=document.getElementById('ec-total-display');
-      if(disp) disp.textContent='$'+t.toFixed(2);
+      if(disp) disp.textContent='$'+formatMonto(t);
       return t;
     }
 
@@ -3954,14 +3954,14 @@ function pintarGrupoCompraCard(grp){
   var itemsHtml=grp.items.map(function(g){
     var cat=GASTO_CATEGORIAS[g.categoria]||{ic:'💵',lbl:g.categoria};
     var desc=g.item?(numFmt(g.cantidad)+' '+g.item.unidad+' de '+g.item.nombre):(g.concepto||cat.lbl);
-    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.35rem 0;border-bottom:1px solid var(--gris-1);font-size:.82rem;"><span>'+cat.ic+' '+desc+'</span><span style="display:flex;align-items:center;gap:6px;"><strong>$'+parseFloat(g.monto).toFixed(2)+'</strong><button type="button" class="btn-borrar-linea-gasto" data-id="'+g.id+'" style="border:none;background:none;color:var(--rojo);font-size:.85rem;cursor:pointer;">✕</button></span></div>';
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:.35rem 0;border-bottom:1px solid var(--gris-1);font-size:.82rem;"><span>'+cat.ic+' '+desc+'</span><span style="display:flex;align-items:center;gap:6px;"><strong>$'+formatMonto(g.monto)+'</strong><button type="button" class="btn-borrar-linea-gasto" data-id="'+g.id+'" style="border:none;background:none;color:var(--rojo);font-size:.85rem;cursor:pointer;">✕</button></span></div>';
   }).join('');
   var comprobanteId='cmp-'+(grp.compraId||grp.items[0].id);
   var comprobanteHtml=grp.comprobanteUrl
     ? '<div class="orden-meta"><a href="'+grp.comprobanteUrl+'" target="_blank">🧾 Ver comprobante</a></div>'
     : '<div class="orden-meta" style="margin-top:.3rem;"><label for="'+comprobanteId+'" style="color:var(--verde-mid);font-weight:600;cursor:pointer;">📎 Adjuntar comprobante</label><input type="file" id="'+comprobanteId+'" accept="image/*" class="btn-adjuntar-comprobante" data-compra-id="'+(grp.compraId||'')+'" data-gasto-id="'+grp.items[0].id+'" style="display:none;"><span class="hint" id="'+comprobanteId+'-status" style="margin-left:6px;"></span></div>';
   var editarHtml=grp.compraId?'<button type="button" class="btn-editar-compra" data-compra-id="'+grp.compraId+'" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap;">✏️ Editar</button>':'';
-  return '<div class="orden-card" style="border-left-color:'+(vencido?'var(--rojo)':'var(--verde-mid)')+';"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><strong style="font-size:.92rem;">🧾 '+grp.proveedorNombre+'</strong><span style="display:flex;align-items:center;gap:8px;"><strong style="font-size:1rem;color:var(--verde-mid);">$'+grp.total.toFixed(2)+'</strong>'+editarHtml+'</span></div><div class="orden-meta">📅 '+grp.fecha+' · '+fpTxt+(grp.numeroFactura?' · Factura #'+grp.numeroFactura:'')+'</div>'+comprobanteHtml+'<div style="margin-top:.5rem;">'+itemsHtml+'</div>'+(grp.compraId&&grp.formaPago==='credito'&&grp.estadoPago==='pendiente'?'<button type="button" class="btn-sm btn-completar" style="margin-top:.5rem;" data-marcar-pagado="'+grp.compraId+'">✅ Marcar como pagado</button>':'')+'</div>';
+  return '<div class="orden-card" style="border-left-color:'+(vencido?'var(--rojo)':'var(--verde-mid)')+';"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><strong style="font-size:.92rem;">🧾 '+grp.proveedorNombre+'</strong><span style="display:flex;align-items:center;gap:8px;"><strong style="font-size:1rem;color:var(--verde-mid);">$'+formatMonto(grp.total)+'</strong>'+editarHtml+'</span></div><div class="orden-meta">📅 '+grp.fecha+' · '+fpTxt+(grp.numeroFactura?' · Factura #'+grp.numeroFactura:'')+'</div>'+comprobanteHtml+'<div style="margin-top:.5rem;">'+itemsHtml+'</div>'+(grp.compraId&&grp.formaPago==='credito'&&grp.estadoPago==='pendiente'?'<button type="button" class="btn-sm btn-completar" style="margin-top:.5rem;" data-marcar-pagado="'+grp.compraId+'">✅ Marcar como pagado</button>':'')+'</div>';
 }
 
 function wireEventosGruposCompra(container,refrescarFn){
@@ -4018,7 +4018,7 @@ function renderHistorialGastos(mesStr){
     var total=rows.reduce(function(s,g){return s+parseFloat(g.monto);},0);
     var headerHtml='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📜 Historial de gastos<button type="button" onclick="renderComprasMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Compras y Gastos</button></div>';
     var html=headerHtml+'<div class="form-group" style="margin-bottom:.75rem;"><label>Mes</label><input type="month" id="hg-mes" value="'+mesStr+'"></div>';
-    html+='<div class="form-card" style="text-align:center;margin-bottom:1rem;"><div style="font-size:.8rem;color:var(--gris-3);text-transform:capitalize;">Total gastado en '+mesLbl+'</div><div style="font-size:1.6rem;font-weight:800;color:var(--verde-mid);">$'+total.toFixed(2)+'</div></div>';
+    html+='<div class="form-card" style="text-align:center;margin-bottom:1rem;"><div style="font-size:.8rem;color:var(--gris-3);text-transform:capitalize;">Total gastado en '+mesLbl+'</div><div style="font-size:1.6rem;font-weight:800;color:var(--verde-mid);">$'+formatMonto(total)+'</div></div>';
     if(!grupos.length){
       html+='<div class="empty">Sin gastos registrados este mes.</div>';
     } else {
@@ -4049,13 +4049,13 @@ function renderGastosPorProveedor(){
     var lista=orden.map(function(k){return porProv[k];}).sort(function(a,b){return b.totalPendiente-a.totalPendiente||b.totalHistorico-a.totalHistorico;});
     var totalPendienteGeneral=lista.reduce(function(s,p){return s+p.totalPendiente;},0);
     var headerHtml='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">💰 Saldo por proveedor<button type="button" onclick="renderComprasMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Compras y Gastos</button></div>';
-    var html=headerHtml+'<div class="form-card" style="text-align:center;margin-bottom:1rem;"><div style="font-size:.8rem;color:var(--gris-3);">Total pendiente a pagar (todos los proveedores)</div><div style="font-size:1.6rem;font-weight:800;color:var(--tierra);">$'+totalPendienteGeneral.toFixed(2)+'</div></div>';
+    var html=headerHtml+'<div class="form-card" style="text-align:center;margin-bottom:1rem;"><div style="font-size:.8rem;color:var(--gris-3);">Total pendiente a pagar (todos los proveedores)</div><div style="font-size:1.6rem;font-weight:800;color:var(--tierra);">$'+formatMonto(totalPendienteGeneral)+'</div></div>';
     if(!lista.length){
       html+='<div class="empty">Aún no tienes compras registradas.</div>';
     } else {
       html+=lista.map(function(p){
         var debe=p.totalPendiente>0;
-        return '<div class="orden-card" style="border-left-color:'+(debe?'var(--rojo)':'var(--verde-mid)')+';cursor:pointer;" data-prov-detalle="'+(p.proveedorId||'')+'" data-prov-nombre="'+p.nombre.replace(/"/g,'&quot;')+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem;">🏢 '+p.nombre+'</strong>'+(debe?'<strong style="font-size:.95rem;color:var(--rojo);">Debe $'+p.totalPendiente.toFixed(2)+'</strong>':'<span style="font-size:.8rem;color:var(--verde-mid);font-weight:600;">✅ Al corriente</span>')+'</div><div class="orden-meta">'+p.numCompras+' compra'+(p.numCompras!==1?'s':'')+' registrada'+(p.numCompras!==1?'s':'')+' · Total histórico $'+p.totalHistorico.toFixed(2)+'</div></div>';
+        return '<div class="orden-card" style="border-left-color:'+(debe?'var(--rojo)':'var(--verde-mid)')+';cursor:pointer;" data-prov-detalle="'+(p.proveedorId||'')+'" data-prov-nombre="'+p.nombre.replace(/"/g,'&quot;')+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem;">🏢 '+p.nombre+'</strong>'+(debe?'<strong style="font-size:.95rem;color:var(--rojo);">Debe $'+formatMonto(p.totalPendiente)+'</strong>':'<span style="font-size:.8rem;color:var(--verde-mid);font-weight:600;">✅ Al corriente</span>')+'</div><div class="orden-meta">'+p.numCompras+' compra'+(p.numCompras!==1?'s':'')+' registrada'+(p.numCompras!==1?'s':'')+' · Total histórico $'+formatMonto(p.totalHistorico)+'</div></div>';
       }).join('');
     }
     body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderComprasMenu()">← Volver</button>';
@@ -4075,7 +4075,7 @@ function renderGastosProveedorDetalle(proveedorId,proveedorNombre){
     var grupos=agruparGastosPorCompra(rows);
     var total=rows.reduce(function(s,g){return s+parseFloat(g.monto);},0);
     var headerHtml='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🏢 '+proveedorNombre+'<button type="button" onclick="renderGastosPorProveedor()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Saldo por proveedor</button></div>';
-    var html=headerHtml+'<div class="form-card" style="text-align:center;margin-bottom:1rem;"><div style="font-size:.8rem;color:var(--gris-3);">Total histórico comprado</div><div style="font-size:1.6rem;font-weight:800;color:var(--verde-mid);">$'+total.toFixed(2)+'</div></div>';
+    var html=headerHtml+'<div class="form-card" style="text-align:center;margin-bottom:1rem;"><div style="font-size:.8rem;color:var(--gris-3);">Total histórico comprado</div><div style="font-size:1.6rem;font-weight:800;color:var(--verde-mid);">$'+formatMonto(total)+'</div></div>';
     if(!grupos.length){
       html+='<div class="empty">Sin compras registradas con este proveedor.</div>';
     } else {
@@ -4111,16 +4111,16 @@ function renderResumenGastos(mesStr){
     var mesLbl=new Date(inicio+'T00:00:00').toLocaleDateString('es-MX',{month:'long',year:'numeric'});
     var headerHtml='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📊 Resumen del mes<button type="button" onclick="renderComprasMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Compras y Gastos</button></div>';
     var html=headerHtml+'<div class="form-group" style="margin-bottom:.75rem;"><label>Mes</label><input type="month" id="rg-mes" value="'+mesStr+'"></div>';
-    html+='<div class="form-card" style="text-align:center;margin-bottom:1rem;"><div style="font-size:.8rem;color:var(--gris-3);text-transform:capitalize;">Total general en '+mesLbl+'</div><div style="font-size:1.8rem;font-weight:800;color:var(--verde-mid);">$'+granTotal.toFixed(2)+'</div></div>';
-    html+='<div class="seccion-titulo" style="margin-top:0;">🛒 Compras y gastos — $'+totalGastos.toFixed(2)+'</div>';
+    html+='<div class="form-card" style="text-align:center;margin-bottom:1rem;"><div style="font-size:.8rem;color:var(--gris-3);text-transform:capitalize;">Total general en '+mesLbl+'</div><div style="font-size:1.8rem;font-weight:800;color:var(--verde-mid);">$'+formatMonto(granTotal)+'</div></div>';
+    html+='<div class="seccion-titulo" style="margin-top:0;">🛒 Compras y gastos — $'+formatMonto(totalGastos)+'</div>';
     html+=Object.keys(GASTO_CATEGORIAS).map(function(k){
       var c=GASTO_CATEGORIAS[k];
-      return '<div class="resumen-row"><span class="resumen-key">'+c.ic+' '+c.lbl+'</span><span class="resumen-val">$'+porCategoria[k].toFixed(2)+'</span></div>';
+      return '<div class="resumen-row"><span class="resumen-key">'+c.ic+' '+c.lbl+'</span><span class="resumen-val">$'+formatMonto(porCategoria[k])+'</span></div>';
     }).join('');
-    html+='<div class="seccion-titulo">👥 Nómina — $'+totalNomina.toFixed(2)+'</div>';
-    html+='<div class="resumen-row"><span class="resumen-key">💰 Sueldos (Labores)</span><span class="resumen-val">$'+totalSueldos.toFixed(2)+'</span></div>';
-    html+='<div class="resumen-row"><span class="resumen-key">⏰ Horas extra</span><span class="resumen-val">$'+totalExtras.toFixed(2)+'</span></div>';
-    html+='<div class="resumen-row"><span class="resumen-key">🧑‍🌾 Labores Eventual</span><span class="resumen-val">$'+totalEventuales.toFixed(2)+'</span></div>';
+    html+='<div class="seccion-titulo">👥 Nómina — $'+formatMonto(totalNomina)+'</div>';
+    html+='<div class="resumen-row"><span class="resumen-key">💰 Sueldos (Labores)</span><span class="resumen-val">$'+formatMonto(totalSueldos)+'</span></div>';
+    html+='<div class="resumen-row"><span class="resumen-key">⏰ Horas extra</span><span class="resumen-val">$'+formatMonto(totalExtras)+'</span></div>';
+    html+='<div class="resumen-row"><span class="resumen-key">🧑‍🌾 Labores Eventual</span><span class="resumen-val">$'+formatMonto(totalEventuales)+'</span></div>';
     html+='<p class="hint" style="margin-top:.75rem;">La nómina se toma de lo ya marcado como pagado en Nóminas y de los pagos a eventuales; no incluye préstamos entregados ni nómina aún pendiente de pagar.</p>';
     body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderComprasMenu()">← Volver</button>';
     document.getElementById('rg-mes').addEventListener('change',function(){renderResumenGastos(this.value);});
