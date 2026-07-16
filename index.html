@@ -2472,9 +2472,6 @@ function renderFormulaPasoFecha(){
     window._formulaFechaExistente=document.getElementById('fm-fecha-input').value||fechaHoyLocal();
     if(formulaVolverAResumen){formulaVolverAResumen=false;renderFormulaPasoNotas();}
     else if(formulaModoCatalogoDirecto){
-      var p=cats.plantaciones.find(function(x){return x.id===formulaPlantacionId;});
-      var t=cats.tablas.find(function(x){return x.id===formulaTablaId;});
-      window._formulaNombreExistente=(p?p.nombre:'')+' | '+(t?t.nombre:'')+' | '+formulaCategoria;
       renderFormulaPasoNotas();
     }
     else renderFormulaPasoNombre();
