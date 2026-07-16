@@ -2187,9 +2187,19 @@ function renderCatalogoFormulas(){
   });
 }
 
+function renderCatalogoConCategoria(categoria,soloPlantillas){
+  renderCatalogoFormulas();
+  var tipoGrid=document.getElementById('cat-tipo-grid');
+  if(tipoGrid){
+    tipoGrid.querySelectorAll('[data-cat]').forEach(function(x){x.classList.toggle('labor-tile-otra',x.dataset.cat===categoria);});
+  }
+  cargarCatalogoLista(categoria,soloPlantillas);
+}
+
 function cargarCatalogoLista(categoria,soloPlantillas){
   CATALOGO_TIPO_SEL={categoria:categoria,soloPlantillas:soloPlantillas};
   var lista=document.getElementById('cat-lista');
+  if(!lista){renderCatalogoConCategoria(categoria,soloPlantillas);return;}
   lista.innerHTML='<div class="loading">Cargando fórmulas de '+categoria+'...</div>';
   var q=from('formulas_aplicacion').select('*,tabla:tablas(nombre,plantacion_id)').eq('activo',true).eq('categoria_catalogo',categoria);
   if(soloPlantillas) q=q.eq('es_plantilla',true);
