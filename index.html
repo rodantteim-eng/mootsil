@@ -630,7 +630,7 @@ function renderTablero(){
   var en7dias=new Date(Date.now()+7*86400000).toISOString().slice(0,10);
   var hace30dias=new Date(Date.now()-30*86400000).toISOString().slice(0,10);
   Promise.all([
-    from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre),subtipo:subtipos_labor(nombre)').in('estado',['pendiente','en_proceso']).order('creado_en',{ascending:false}).get(),
+    from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre),subtipo:subtipos_labor(nombre)').in('estado',['pendiente','en_proceso']).order('creado_en',{ascending:false}).get(),
     from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre),subtipo:subtipos_labor(nombre)').in('estado',['completada','cancelada']).gte('fecha_asignacion',hace30dias).order('creado_en',{ascending:false}).limit(150).get(),
     from('formulas_aplicacion').select('id,nombre,fecha_programada,tabla_id').eq('activo',true).get(),
     from('ordenes_trabajo').select('formula_id,estado').not('formula_id','is','null').get(),
@@ -718,9 +718,24 @@ function renderTablero(){
       aplicReset();
       renderAsigAplicPorFecha();
     });
+    var ordenesPorIdTablero={}; todas.forEach(function(o){ordenesPorIdTablero[o.id]=o;});
     body.querySelectorAll('[data-can]').forEach(function(b){b.addEventListener('click',function(){cambiarEstado(this.dataset.can,'cancelada');});});
-    body.querySelectorAll('[data-com]').forEach(function(b){b.addEventListener('click',function(){cambiarEstado(this.dataset.com,'completada');});});
+    body.querySelectorAll('[data-com]').forEach(function(b){b.addEventListener('click',function(){
+      var o=ordenesPorIdTablero[this.dataset.com];
+      var progreso=o?progresoSurcosOrden(o):null;
+      if(progreso&&progreso.totalAsignados.length>0&&!progreso.completo){
+        if(!confirm('⚠️ Esta labor todavía tiene '+progreso.faltan.length+' surco(s) sin terminar ('+progreso.faltan.join(', ')+').\n\n¿Seguro que quieres marcarla completa de todas formas?')) return;
+      }
+      cambiarEstado(this.dataset.com,'completada');
+    });});
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function progresoSurcosOrden(o){
+  var totalAsignados = (o.surcos_asignados&&o.surcos_asignados.length) ? o.surcos_asignados.map(String) : (o.tabla&&o.tabla.cantidad_surcos ? Array.from({length:o.tabla.cantidad_surcos},function(_,i){return String(i+1);}) : []);
+  var completados = (o.surcos_completados||[]).map(String);
+  var faltan = totalAsignados.filter(function(s){return completados.indexOf(s)===-1;});
+  return {totalAsignados:totalAsignados, completados:completados, faltan:faltan, completo: totalAsignados.length>0 && faltan.length===0};
 }
 
 function cardHtml(o){
@@ -731,7 +746,9 @@ function cardHtml(o){
   var ac='';
   if(o.estado==='pendiente') ac='<button class="btn-sm btn-cancelar" data-can="'+o.id+'">Cancelar</button>';
   if(o.estado==='en_proceso') ac='<button class="btn-sm btn-completar" data-com="'+o.id+'">Marcar completa</button> <button class="btn-sm btn-cancelar" data-can="'+o.id+'">Cancelar</button>';
-  return '<div class="orden-card '+o.estado+'"><div class="orden-header"><div class="orden-labor">'+ic+' '+o.tipo_labor.nombre+(o.subtipo?' · '+o.subtipo.nombre:'')+'</div><span class="orden-badge '+bl[o.estado]+'">'+lb[o.estado]+'</span></div><div class="orden-meta"><strong>'+o.operario.nombre+'</strong> · '+(p?p.nombre:'')+' '+o.tabla.nombre+'<br/>Surcos: '+((o.surcos_asignados||[]).join(', ')||'todos')+'</div>'+(ac?'<div class="orden-actions">'+ac+'</div>':'')+'</div>';
+  var progreso=progresoSurcosOrden(o);
+  var avanceTxt=(o.estado==='en_proceso'&&progreso.totalAsignados.length>0)?('<br/>🔶 Avance: '+progreso.completados.length+'/'+progreso.totalAsignados.length+' surcos'+(progreso.faltan.length?' · Faltan: '+progreso.faltan.join(', '):'')):'';
+  return '<div class="orden-card '+o.estado+'"><div class="orden-header"><div class="orden-labor">'+ic+' '+o.tipo_labor.nombre+(o.subtipo?' · '+o.subtipo.nombre:'')+'</div><span class="orden-badge '+bl[o.estado]+'">'+lb[o.estado]+'</span></div><div class="orden-meta"><strong>'+o.operario.nombre+'</strong> · '+(p?p.nombre:'')+' '+o.tabla.nombre+'<br/>Surcos: '+((o.surcos_asignados||[]).join(', ')||'todos')+avanceTxt+'</div>'+(ac?'<div class="orden-actions">'+ac+'</div>':'')+'</div>';
 }
 
 function cambiarEstado(id,estado){
@@ -766,7 +783,7 @@ function renderAsignarEstatus(){
   var hoy=fechaHoyLocal();
   var hace30dias=new Date(Date.now()-30*86400000).toISOString().slice(0,10);
   Promise.all([
-    from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo,requiere_formula,es_cosecha),subtipo:subtipos_labor(nombre)').in('estado',['pendiente','en_proceso']).order('fecha_asignacion',{ascending:false}).get(),
+    from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_tiempo,requiere_formula,es_cosecha),subtipo:subtipos_labor(nombre)').in('estado',['pendiente','en_proceso']).order('fecha_asignacion',{ascending:false}).get(),
     from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo,requiere_formula,es_cosecha),subtipo:subtipos_labor(nombre)').eq('estado','completada').gte('fecha_asignacion',hace30dias).order('fecha_asignacion',{ascending:false}).limit(150).get()
   ]).then(function(r){
     var activas=(r[0]||[]).filter(function(o){return o.tabla&&o.tipo_labor&&!o.tipo_labor.requiere_formula&&!o.tipo_labor.es_cosecha;});
@@ -799,8 +816,17 @@ function renderAsignarEstatus(){
     tarjetas.sort(function(a,b){return a.fecha<b.fecha?1:(a.fecha>b.fecha?-1:0);});
     html+=tarjetas.map(function(x){return x.html;}).join('');
     body.innerHTML=html;
+    var ordenesPorIdAsignar={}; todas.forEach(function(o){ordenesPorIdAsignar[o.id]=o;});
     body.querySelectorAll('[data-can]').forEach(function(b){b.addEventListener('click',function(){cambiarEstadoAsignar(this.dataset.can,'cancelada');});});
-    body.querySelectorAll('[data-com]').forEach(function(b){b.addEventListener('click',function(){cambiarEstadoAsignar(this.dataset.com,'completada');});});
+    body.querySelectorAll('[data-com]').forEach(function(b){b.addEventListener('click',function(){
+      var o=ordenesPorIdAsignar[this.dataset.com];
+      var progreso=o?progresoSurcosOrden(o):null;
+      if(progreso&&progreso.totalAsignados.length>0&&!progreso.completo){
+        if(!confirm('⚠️ Esta labor todavía tiene '+progreso.faltan.length+' surco(s) sin terminar ('+progreso.faltan.join(', ')+').\n\n¿Seguro que quieres marcarla completa de todas formas?')) return;
+      }
+      cambiarEstadoAsignar(this.dataset.com,'completada');
+    });});
+    body.querySelectorAll('[data-gestionar]').forEach(function(b){b.addEventListener('click',function(){renderGestionarLabor(this.dataset.gestionar);});});
     body.querySelectorAll('[data-toggle-riego-grupo]').forEach(function(el){
       el.addEventListener('click',function(){
         var g=document.getElementById(this.dataset.toggleRiegoGrupo);
@@ -843,9 +869,11 @@ function tarjetaLaborAsignada(o){
   var eb=estadoBadges[o.estado]||['',''];
   var etiquetaTipo=o.es_hora_extra?' <span style="color:var(--tierra);font-size:.68rem;font-weight:700;background:var(--tierra-tenue);padding:2px 8px;border-radius:10px;">⏰ Hora Extra</span>':'';
   var acciones='';
-  if(o.estado==='pendiente') acciones='<button class="btn-sm btn-cancelar" data-can="'+o.id+'">Cancelar</button>';
-  if(o.estado==='en_proceso') acciones='<button class="btn-sm btn-completar" data-com="'+o.id+'">Marcar completa</button> <button class="btn-sm btn-cancelar" data-can="'+o.id+'">Cancelar</button>';
-  return '<div class="orden-card" style="border-left-color:'+colorBorde+';'+(esTerminada?'opacity:.8;':'')+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem">'+ic+' '+o.tipo_labor.nombre+(o.subtipo?' · '+o.subtipo.nombre:'')+'</strong><span style="font-size:.7rem;font-weight:700;color:'+eb[1]+';">'+eb[0]+'</span></div><div style="font-size:.85rem;font-weight:700;color:'+(atrasada?'var(--rojo)':'var(--gris-3)')+';margin-top:.2rem;">📅 '+fechaLarga(o.fecha_asignacion)+(atrasada?' ⚠️':'')+'</div><div class="orden-meta">👤 '+(o.operario?o.operario.nombre:'')+etiquetaTipo+'<br/>📍 '+(p?p.nombre:'')+' · '+o.tabla.nombre+'<br/>🔢 Surcos: '+((o.surcos_asignados&&o.surcos_asignados.length)?o.surcos_asignados.join(', '):'Todos')+(o.notas_encargado?'<br/>📝 '+o.notas_encargado:'')+'</div>'+(acciones?'<div class="orden-actions" style="margin-top:.5rem;">'+acciones+'</div>':'')+'</div>';
+  if(o.estado==='pendiente') acciones='<button class="btn-sm" style="background:var(--gris-1);color:var(--negro);" data-gestionar="'+o.id+'">✏️ Gestionar</button> <button class="btn-sm btn-cancelar" data-can="'+o.id+'">Cancelar</button>';
+  if(o.estado==='en_proceso') acciones='<button class="btn-sm btn-completar" data-com="'+o.id+'">Marcar completa</button> <button class="btn-sm" style="background:var(--gris-1);color:var(--negro);" data-gestionar="'+o.id+'">✏️ Gestionar</button> <button class="btn-sm btn-cancelar" data-can="'+o.id+'">Cancelar</button>';
+  var progreso=progresoSurcosOrden(o);
+  var avanceTxt=(o.estado==='en_proceso'&&progreso.totalAsignados.length>0)?('<br/>🔶 Avance: '+progreso.completados.length+'/'+progreso.totalAsignados.length+' surcos'+(progreso.faltan.length?' · Faltan: '+progreso.faltan.join(', '):'')):'';
+  return '<div class="orden-card" style="border-left-color:'+colorBorde+';'+(esTerminada?'opacity:.8;':'')+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.92rem">'+ic+' '+o.tipo_labor.nombre+(o.subtipo?' · '+o.subtipo.nombre:'')+'</strong><span style="font-size:.7rem;font-weight:700;color:'+eb[1]+';">'+eb[0]+'</span></div><div style="font-size:.85rem;font-weight:700;color:'+(atrasada?'var(--rojo)':'var(--gris-3)')+';margin-top:.2rem;">📅 '+fechaLarga(o.fecha_asignacion)+(atrasada?' ⚠️':'')+'</div><div class="orden-meta">👤 '+(o.operario?o.operario.nombre:'')+etiquetaTipo+'<br/>📍 '+(p?p.nombre:'')+' · '+o.tabla.nombre+'<br/>🔢 Surcos: '+((o.surcos_asignados&&o.surcos_asignados.length)?o.surcos_asignados.join(', '):'Todos')+avanceTxt+(o.notas_encargado?'<br/>📝 '+o.notas_encargado:'')+'</div>'+(acciones?'<div class="orden-actions" style="margin-top:.5rem;">'+acciones+'</div>':'')+'</div>';
 }
 
 function cambiarEstadoAsignar(id,estado){
@@ -853,6 +881,112 @@ function cambiarEstadoAsignar(id,estado){
     if(estado==='completada') from('notificaciones').insert({titulo:'✅ Labor completada',cuerpo:'Una orden fue marcada como completada.',icono:'✅',leida:false,para_rol:'encargado'}).then(function(){renderAsignarEstatus();});
     else renderAsignarEstatus();
   }).catch(function(e){alert('Error: '+e.message);});
+}
+
+var GESTION_LABOR_GRUPO=null;
+
+function renderGestionarLabor(ordenId){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo">✏️ Gestionar labor</div><div class="loading">Cargando...</div>';
+  from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre),subtipo:subtipos_labor(nombre)').eq('id',ordenId).get().then(function(rows){
+    var origen=rows&&rows[0];
+    if(!origen){renderAsignarEstatus();return;}
+    GESTION_LABOR_GRUPO={tablaId:origen.tabla_id,tipoLaborId:origen.tipo_labor_id,subtipoLaborId:origen.subtipo_labor_id||null,fecha:origen.fecha_asignacion,notasEncargado:origen.notas_encargado||null,duracion:origen.duracion||'dia',tablaNombre:origen.tabla?origen.tabla.nombre:'',tipoLaborNombre:origen.tipo_labor?origen.tipo_labor.nombre:'',subtipoNombre:origen.subtipo?origen.subtipo.nombre:''};
+    pintarGestionLabor();
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function pintarGestionLabor(){
+  var body=document.getElementById('enc-body');
+  var g=GESTION_LABOR_GRUPO;
+  if(!g){renderAsignarEstatus();return;}
+  var q=from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id,cantidad_surcos)').eq('tabla_id',g.tablaId).eq('tipo_labor_id',g.tipoLaborId).eq('fecha_asignacion',g.fecha).in('estado',['pendiente','en_proceso']);
+  q=g.subtipoLaborId?q.eq('subtipo_labor_id',g.subtipoLaborId):q.is('subtipo_labor_id',null);
+  q.get().then(function(rows){
+    rows=rows||[];
+    if(!rows.length){body.innerHTML='<div class="seccion-titulo">✏️ Gestionar labor</div><div class="empty">No hay asignaciones activas para esta labor.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsignarEstatus()">← Volver</button>';return;}
+    var titulo=(ICONOS[g.tipoLaborNombre]||'🔧')+' '+g.tipoLaborNombre+(g.subtipoNombre?' · '+g.subtipoNombre:'')+' — '+g.tablaNombre;
+    var html='<div class="seccion-titulo">✏️ Gestionar labor</div><p class="hint" style="margin-bottom:.75rem;">'+titulo+' · 📅 '+g.fecha+(rows.length>1?' · '+rows.length+' operario(s)':'')+'</p>';
+    html+=rows.map(function(o){
+      var progreso=progresoSurcosOrden(o);
+      var avanceTxt=progreso.totalAsignados.length>0?('Avance: '+progreso.completados.length+'/'+progreso.totalAsignados.length+' surcos'+(progreso.faltan.length?' · Faltan: '+progreso.faltan.join(', '):'')):'';
+      var estBadge=o.estado==='en_proceso'?'🔶 En proceso':'🆕 Pendiente';
+      return '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem;">'+(o.operario?o.operario.nombre:'')+'</strong><span style="font-size:.72rem;font-weight:700;">'+estBadge+'</span></div>'+(avanceTxt?'<div class="orden-meta">'+avanceTxt+'</div>':'')+'<div style="display:flex;gap:8px;margin-top:.5rem;flex-wrap:wrap;"><button type="button" class="btn-sm" style="background:var(--gris-1);color:var(--negro);" data-cambiar-op="'+o.id+'">🔄 Cambiar operario</button><button type="button" class="btn-sm btn-cancelar" data-cancelar-uno="'+o.id+'" data-nombre="'+(o.operario?o.operario.nombre:'').replace(/"/g,'&quot;')+'">✖️ Cancelar</button></div></div>';
+    }).join('');
+    html+='<button type="button" class="btn-primary" id="gl-agregar" style="margin-top:.5rem;width:100%;">➕ Agregar a otro operario</button>';
+    html+='<button type="button" id="gl-cancelar-todo" style="width:100%;margin-top:.75rem;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.85rem;cursor:pointer;">🚫 Cancelar toda esta labor</button>';
+    html+='<button class="btn-back" style="margin-top:1rem;" onclick="renderAsignarEstatus()">← Volver a Asignar</button>';
+    body.innerHTML=html;
+
+    body.querySelectorAll('[data-cambiar-op]').forEach(function(btn){
+      btn.addEventListener('click',function(){renderGestionarLaborElegirOperario('cambiar',this.dataset.cambiarOp);});
+    });
+    body.querySelectorAll('[data-cancelar-uno]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var oid=this.dataset.cancelarUno, nombre=this.dataset.nombre;
+        if(!confirm('¿Cancelar la labor de '+nombre+'?')) return;
+        from('ordenes_trabajo').eq('id',oid).update({estado:'cancelada'}).then(function(){
+          return from('notificaciones').insert({titulo:'✖️ Labor cancelada',cuerpo:'Tu tarea de '+g.tipoLaborNombre+' en '+g.tablaNombre+' fue cancelada por el encargado.',icono:'✖️',leida:false,para_rol:'operario',para_usuario:o.operario_id});
+        }).then(function(){
+          showToast('✅ Labor cancelada para '+nombre);
+          pintarGestionLabor();
+        }).catch(function(e){alert('Error: '+e.message);});
+      });
+    });
+    var btnAgregar=document.getElementById('gl-agregar');
+    if(btnAgregar) btnAgregar.addEventListener('click',function(){renderGestionarLaborElegirOperario('agregar',null);});
+    var btnCancTodo=document.getElementById('gl-cancelar-todo');
+    if(btnCancTodo) btnCancTodo.addEventListener('click',function(){
+      if(!confirm('¿Cancelar esta labor para TODOS los operarios asignados ('+rows.length+')? Esta acción no se puede deshacer.')) return;
+      Promise.all(rows.map(function(o){return from('ordenes_trabajo').eq('id',o.id).update({estado:'cancelada'});})).then(function(){
+        return Promise.all(rows.map(function(o){
+          return from('notificaciones').insert({titulo:'✖️ Labor cancelada',cuerpo:'Tu tarea de '+g.tipoLaborNombre+' en '+g.tablaNombre+' fue cancelada por el encargado.',icono:'✖️',leida:false,para_rol:'operario',para_usuario:o.operario_id});
+        }));
+      }).then(function(){
+        showToast('✅ Labor cancelada para todos');
+        renderAsignarEstatus();
+      }).catch(function(e){alert('Error: '+e.message);});
+    });
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function renderGestionarLaborElegirOperario(modo,ordenId){
+  var body=document.getElementById('enc-body');
+  var g=GESTION_LABOR_GRUPO;
+  if(!g){renderAsignarEstatus();return;}
+  var titulo=modo==='cambiar'?'🔄 Elige el nuevo operario':'➕ Elige a quién agregar';
+  var opO=cats.equipoDeCampo.map(function(o){return '<button type="button" class="op-chip" data-id="'+o.id+'">'+o.nombre+'</button>';}).join('');
+  body.innerHTML='<div class="seccion-titulo">'+titulo+'</div><div class="form-card"><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div><button class="btn-primary" id="gl-op-continuar" style="margin-top:1rem;">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="pintarGestionLabor()">← Cancelar</button>';
+  body.querySelectorAll('.op-chip').forEach(function(el){el.addEventListener('click',function(){seleccionUnica(this);});});
+  document.getElementById('gl-op-continuar').addEventListener('click',function(){
+    var sel=document.querySelector('.op-chip.sel');
+    if(!sel){alert('Selecciona un operario.');return;}
+    var opId=sel.dataset.id;
+    var opNombre=sel.textContent;
+    var btn=this; btn.disabled=true; btn.textContent='Guardando...';
+    if(modo==='cambiar'){
+      from('ordenes_trabajo').eq('id',ordenId).select('operario_id').single().then(function(actual){
+        var operarioAnteriorId=actual?actual.operario_id:null;
+        return from('ordenes_trabajo').eq('id',ordenId).update({operario_id:opId}).then(function(){
+          var notifs=[from('notificaciones').insert({titulo:'📋 Tarea reasignada',cuerpo:usuario.nombre+' te asignó: '+g.tipoLaborNombre+(g.subtipoNombre?' · '+g.subtipoNombre:'')+' en '+g.tablaNombre,icono:'📋',leida:false,para_rol:'operario',para_usuario:opId})];
+          if(operarioAnteriorId&&operarioAnteriorId!==opId){
+            notifs.push(from('notificaciones').insert({titulo:'↪️ Tarea reasignada',cuerpo:'Tu tarea de '+g.tipoLaborNombre+' en '+g.tablaNombre+' fue reasignada a otro compañero.',icono:'↪️',leida:false,para_rol:'operario',para_usuario:operarioAnteriorId}));
+          }
+          return Promise.all(notifs);
+        });
+      }).then(function(){
+        showToast('✅ Operario cambiado a '+opNombre);
+        pintarGestionLabor();
+      }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Continuar →';});
+    } else {
+      from('ordenes_trabajo').insert({asignado_por:usuario.id,operario_id:opId,tabla_id:g.tablaId,tipo_labor_id:g.tipoLaborId,subtipo_labor_id:g.subtipoLaborId,duracion:g.duracion,fecha_asignacion:g.fecha,notas_encargado:g.notasEncargado,estado:'pendiente',es_hora_extra:false}).then(function(){
+        return from('notificaciones').insert({titulo:'📋 Nueva tarea asignada',cuerpo:usuario.nombre+' asignó a '+opNombre+': '+g.tipoLaborNombre+(g.subtipoNombre?' · '+g.subtipoNombre:'')+' en '+g.tablaNombre,icono:'📋',leida:false,para_rol:'operario',para_usuario:opId});
+      }).then(function(){
+        showToast('✅ '+opNombre+' agregado a esta labor');
+        pintarGestionLabor();
+      }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Continuar →';});
+    }
+  });
 }
 
 function renderFormAsignar(){
@@ -5348,9 +5482,14 @@ function renderPrestamos(){
 function renderNuevoPrestamo(prefill){
   prefill=prefill||{};
   var body=document.getElementById('enc-body');
-  var opO=cats.operarios.map(function(o){return '<button type="button" class="op-chip'+(prefill.operarioId===o.id?' sel':'')+'" data-id="'+o.id+'" onclick="seleccionUnica(this)">'+o.nombre+'</button>';}).join('');
-  body.innerHTML='<div class="seccion-titulo">+ Nuevo préstamo</div><div class="form-card">'+(prefill.solicitudId?'<p class="hint" style="margin-bottom:.75rem;">Completando la solicitud del colaborador — ajusta pagos y fecha antes de registrar.</p>':'')+'<div class="form-group"><label>Colaborador</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Concepto</label><input type="text" id="pr-concepto" value="'+(prefill.concepto||'').replace(/"/g,'&quot;')+'" placeholder="Ej. Préstamo personal / Anticipo de nómina"></div><div class="form-group"><label>Monto total ($)</label><input type="number" id="pr-monto" min="0" step="1" value="'+(prefill.monto||'')+'" placeholder="Ej. 600"></div><div class="form-group"><label>Número de pagos semanales</label><input type="number" id="pr-pagos" min="1" step="1" placeholder="Ej. 3"></div><div class="form-group"><label>Semana en que inicia el descuento</label><input type="date" id="pr-fecha" value="'+fechaHoyLocal()+'"></div><button class="btn-primary" id="pr-guardar">Registrar préstamo</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderPrestamos()">← Volver a Préstamos</button>';
-  document.getElementById('pr-guardar').addEventListener('click',function(){
+  body.innerHTML='<div class="seccion-titulo">+ Nuevo préstamo</div><div class="loading">Cargando...</div>';
+  from('config_app').select('*').get().then(function(cfgRows){
+    var cfg={}; (cfgRows||[]).forEach(function(c){cfg[c.clave]=c.valor;});
+    var maxMes=parseInt(cfg.prestamo_max_activos_mes)||1;
+    var montoMax=(cfg.prestamo_monto_max!==undefined&&cfg.prestamo_monto_max!==null&&cfg.prestamo_monto_max!=='')?parseFloat(cfg.prestamo_monto_max):null;
+    var opO=cats.operarios.map(function(o){return '<button type="button" class="op-chip'+(prefill.operarioId===o.id?' sel':'')+'" data-id="'+o.id+'" onclick="seleccionUnica(this)">'+o.nombre+'</button>';}).join('');
+    body.innerHTML='<div class="seccion-titulo">+ Nuevo préstamo</div><div class="form-card">'+(prefill.solicitudId?'<p class="hint" style="margin-bottom:.75rem;">Completando la solicitud del colaborador — ajusta pagos y fecha antes de registrar.</p>':'')+(montoMax!=null?'<p class="hint" style="margin-bottom:.75rem;">Monto máximo autorizable por préstamo: $'+montoMax.toFixed(2)+' · Máximo '+maxMes+' préstamo(s) por colaborador al mes. <a href="javascript:void(0)" onclick="renderConfig()" style="color:var(--verde-mid);">cambiar</a></p>':'')+'<div class="form-group"><label>Colaborador</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Concepto</label><input type="text" id="pr-concepto" value="'+(prefill.concepto||'').replace(/"/g,'&quot;')+'" placeholder="Ej. Préstamo personal / Anticipo de nómina"></div><div class="form-group"><label>Monto total ($)</label><input type="number" id="pr-monto" min="0" step="1" value="'+(prefill.monto||'')+'" placeholder="Ej. 600"></div><div class="form-group"><label>Número de pagos semanales</label><input type="number" id="pr-pagos" min="1" step="1" placeholder="Ej. 3"></div><div class="form-group"><label>Semana en que inicia el descuento</label><input type="date" id="pr-fecha" value="'+fechaHoyLocal()+'"></div><button class="btn-primary" id="pr-guardar">Registrar préstamo</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderPrestamos()">← Volver a Préstamos</button>';
+    document.getElementById('pr-guardar').addEventListener('click',function(){
     var opBtn=document.querySelector('.op-chip.sel');
     var concepto=document.getElementById('pr-concepto').value.trim();
     var monto=parseFloat(document.getElementById('pr-monto').value);
@@ -5360,8 +5499,17 @@ function renderNuevoPrestamo(prefill){
     if(!concepto){alert('Describe el concepto.');return;}
     if(!monto||monto<=0){alert('Captura un monto válido.');return;}
     if(!numPagos||numPagos<1){alert('Captura el número de pagos.');return;}
-    var btn=this; btn.disabled=true; btn.textContent='Guardando...';
-    from('prestamos').insert({operario_id:opBtn.dataset.id,concepto:concepto,monto_total:monto,num_pagos:numPagos,fecha_inicio:fechaIni,estado:'activo',creado_por:usuario.id}).then(function(rows){
+    if(montoMax!=null&&monto>montoMax){alert('El monto máximo que se puede autorizar por préstamo es $'+montoMax.toFixed(2)+'. Puedes cambiar este límite en Configuración.');return;}
+    var btn=this; btn.disabled=true; btn.textContent='Verificando...';
+    contarPrestamosDelMes(opBtn.dataset.id).then(function(usadosDelMes){
+      if(usadosDelMes>=maxMes){
+        var okSeguir=confirm('⚠️ Este colaborador ya tiene '+usadosDelMes+' préstamo(s) este mes (máximo configurado: '+maxMes+'). ¿Autorizar de todas formas?');
+        if(!okSeguir){btn.disabled=false;btn.textContent='Registrar préstamo';return Promise.reject({_cancelado:true});}
+      }
+      btn.textContent='Guardando...';
+    }).then(function(){
+    return from('prestamos').insert({operario_id:opBtn.dataset.id,concepto:concepto,monto_total:monto,num_pagos:numPagos,fecha_inicio:fechaIni,estado:'activo',creado_por:usuario.id});
+    }).then(function(rows){
       var promesaSolicitud = prefill.solicitudId ? from('solicitudes_operario').eq('id',prefill.solicitudId).update({estado:'atendida',respuesta:'Préstamo registrado y aprobado.',atendido_por:usuario.id,atendido_en:new Date().toISOString()}) : Promise.resolve();
       return promesaSolicitud.then(function(){
         return from('prestamos').select('*').eq('operario_id',opBtn.dataset.id).order('creado_en',{ascending:false}).limit(1).get();
@@ -5383,8 +5531,13 @@ function renderNuevoPrestamo(prefill){
     }).then(function(){
       showToast('✅ Préstamo registrado');
       renderPrestamos();
-    }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Registrar préstamo';});
-  });
+    }).catch(function(e){
+      if(e&&e._cancelado) return;
+      alert('Error: '+(e&&e.message?e.message:e));
+      btn.disabled=false;btn.textContent='Registrar préstamo';
+    });
+    });
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
 function renderBonos(){
@@ -6140,22 +6293,54 @@ function renderSolicitudesMenu(){
   body.innerHTML='<div class="seccion-titulo">📨 Solicitudes</div><div style="display:flex;flex-direction:column;gap:.75rem;"><div class="tarea-card" style="cursor:pointer;" onclick="renderAsisPermisos()"><div class="tarea-title">📝 Permisos</div><div class="tarea-meta">Solicita un permiso personal o médico</div></div><div class="tarea-card" style="cursor:pointer;" onclick="renderSolicitarPrestamo()"><div class="tarea-title">💰 Solicitar préstamo</div><div class="tarea-meta">Pide un adelanto o préstamo a administración</div></div><div class="tarea-card" style="cursor:pointer;" onclick="renderSolicitudOtro()"><div class="tarea-title">💬 Otro asunto</div><div class="tarea-meta">Cualquier tema directo con administración</div></div><div class="tarea-card" style="cursor:pointer;" onclick="renderMisSolicitudes()"><div class="tarea-title">📋 Mis solicitudes</div><div class="tarea-meta">Revisa el estatus de lo que has pedido</div></div></div>';
 }
 
+function limitesMesActual(){
+  var hoy=fechaHoyLocal();
+  var inicio=hoy.slice(0,7)+'-01';
+  var finD=new Date(inicio+'T00:00:00'); finD.setMonth(finD.getMonth()+1); finD.setDate(0);
+  var fin=finD.toISOString().slice(0,10);
+  return {inicio:inicio,fin:fin};
+}
+
+function contarPrestamosDelMes(operarioId){
+  var m=limitesMesActual();
+  return from('prestamos').select('id').eq('operario_id',operarioId).gte('creado_en',m.inicio+'T00:00:00').lte('creado_en',m.fin+'T23:59:59.999').get().then(function(rows){return (rows||[]).length;});
+}
+
 function renderSolicitarPrestamo(){
   var body=document.getElementById('op-body');
-  body.innerHTML='<div class="seccion-titulo">💰 Solicitar préstamo</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Tu solicitud llega directo a administración para revisión — no es automático, te avisarán cuando la resuelvan.</p><div class="form-group"><label>¿Cuánto necesitas?</label><input type="number" id="sp-monto" min="0" step="any" placeholder="$0.00"></div><div class="form-group"><label>¿Para qué lo necesitas?</label><textarea id="sp-motivo" rows="4" placeholder="Cuéntanos brevemente el motivo..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="sp-enviar">Enviar solicitud</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderSolicitudesMenu()">← Volver a Solicitudes</button>';
-  document.getElementById('sp-enviar').addEventListener('click',function(){
-    var monto=parseFloat(document.getElementById('sp-monto').value)||0;
-    var motivo=(document.getElementById('sp-motivo').value||'').trim();
-    if(monto<=0){alert('Escribe cuánto necesitas.');return;}
-    if(!motivo){alert('Cuéntanos brevemente para qué es.');return;}
-    var btn=this; btn.disabled=true; btn.textContent='Enviando...';
-    from('solicitudes_operario').insert({operario_id:usuario.id,tipo:'prestamo',monto_solicitado:monto,mensaje:motivo,estado:'pendiente'}).then(function(){
-      return from('notificaciones').insert({titulo:'💰 Solicitud de préstamo',cuerpo:usuario.nombre+' solicita $'+monto.toFixed(2)+': '+motivo,icono:'💰',leida:false,para_rol:'encargado'});
-    }).then(function(){
-      showToast('✅ Solicitud enviada');
-      renderSolicitudesMenu();
-    }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Enviar solicitud';});
-  });
+  body.innerHTML='<div class="seccion-titulo">💰 Solicitar préstamo</div><div class="loading">Revisando tus préstamos de este mes...</div>';
+  Promise.all([
+    from('config_app').select('*').get(),
+    contarPrestamosDelMes(usuario.id)
+  ]).then(function(r){
+    var cfg={}; (r[0]||[]).forEach(function(c){cfg[c.clave]=c.valor;});
+    var maxMes=parseInt(cfg.prestamo_max_activos_mes)||1;
+    var montoMax=(cfg.prestamo_monto_max!==undefined&&cfg.prestamo_monto_max!==null&&cfg.prestamo_monto_max!=='')?parseFloat(cfg.prestamo_monto_max):null;
+    var usados=r[1]||0;
+    var alTope=usados>=maxMes;
+    var estadoTxt=alTope
+      ? '<div style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);border-radius:var(--radio-sm);padding:.75rem .9rem;margin-bottom:1rem;"><strong style="color:var(--rojo);">🚫 Ya tienes '+usados+' préstamo(s) activo(s) este mes</strong><div class="hint" style="margin-top:.25rem;">El máximo permitido es '+maxMes+' por mes. Podrás solicitar otro a partir del próximo mes.</div></div>'
+      : '<div style="background:var(--verde-tenue);border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);padding:.75rem .9rem;margin-bottom:1rem;"><strong style="color:var(--verde-mid);">Llevas '+usados+'/'+maxMes+' préstamo(s) usados este mes</strong></div>';
+    if(alTope){
+      body.innerHTML='<div class="seccion-titulo">💰 Solicitar préstamo</div>'+estadoTxt+'<button class="btn-back" style="margin-top:1rem;" onclick="renderSolicitudesMenu()">← Volver a Solicitudes</button>';
+      return;
+    }
+    body.innerHTML='<div class="seccion-titulo">💰 Solicitar préstamo</div>'+estadoTxt+'<div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Tu solicitud llega directo a administración para revisión — no es automático, te avisarán cuando la resuelvan.'+(montoMax!=null?' Monto máximo por préstamo: $'+montoMax.toFixed(2)+'.':'')+'</p><div class="form-group"><label>¿Cuánto necesitas?</label><input type="number" id="sp-monto" min="0" step="any" placeholder="$0.00"></div><div class="form-group"><label>¿Para qué lo necesitas?</label><textarea id="sp-motivo" rows="4" placeholder="Cuéntanos brevemente el motivo..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="sp-enviar">Enviar solicitud</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderSolicitudesMenu()">← Volver a Solicitudes</button>';
+    document.getElementById('sp-enviar').addEventListener('click',function(){
+      var monto=parseFloat(document.getElementById('sp-monto').value)||0;
+      var motivo=(document.getElementById('sp-motivo').value||'').trim();
+      if(monto<=0){alert('Escribe cuánto necesitas.');return;}
+      if(!motivo){alert('Cuéntanos brevemente para qué es.');return;}
+      if(montoMax!=null&&monto>montoMax){alert('El monto máximo que se puede solicitar por préstamo es $'+montoMax.toFixed(2)+'.');return;}
+      var btn=this; btn.disabled=true; btn.textContent='Enviando...';
+      from('solicitudes_operario').insert({operario_id:usuario.id,tipo:'prestamo',monto_solicitado:monto,mensaje:motivo,estado:'pendiente'}).then(function(){
+        return from('notificaciones').insert({titulo:'💰 Solicitud de préstamo',cuerpo:usuario.nombre+' solicita $'+monto.toFixed(2)+': '+motivo,icono:'💰',leida:false,para_rol:'encargado'});
+      }).then(function(){
+        showToast('✅ Solicitud enviada');
+        renderSolicitudesMenu();
+      }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Enviar solicitud';});
+    });
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
 function renderSolicitudOtro(){
@@ -7075,6 +7260,7 @@ function renderConfig(){
     var html='<div class="seccion-titulo">📞 Números de emergencia</div><div class="form-card"><div class="form-group"><label>Policía</label><input type="tel" id="cfg-policia" value="'+(cfg.emergencia_policia||'911')+'"></div><div class="form-group"><label>Bomberos</label><input type="tel" id="cfg-bomberos" value="'+(cfg.emergencia_bomberos||'911')+'"></div><div class="form-group"><label>Ambulancia</label><input type="tel" id="cfg-ambulancia" value="'+(cfg.emergencia_ambulancia||'911')+'"></div><button class="btn-primary" id="cfg-guardar-emerg">Guardar números</button></div>';
     html+='<div class="seccion-titulo" style="margin-top:1.25rem;">⏰ Tarifa de hora extra</div><div class="form-card"><div class="form-group"><label>Pago por hora extra ($)</label><input type="number" id="cfg-tarifa-extra" min="0" step="1" value="'+(cfg.tarifa_hora_extra||70)+'"></div><button class="btn-primary" id="cfg-guardar-tarifa">Guardar tarifa</button></div>';
     html+='<div class="seccion-titulo" style="margin-top:1.25rem;">📍 Ubicación del rancho</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Párate dentro del rancho con tu celular y toca el botón — se usa para avisar si alguien marca asistencia fuera de zona.</p>'+(cfg.rancho_lat?'<p class="hint" style="margin-bottom:.75rem;color:var(--verde-mid);font-weight:700;">✅ Ubicación guardada</p>':'<p class="hint" style="margin-bottom:.75rem;color:var(--tierra);font-weight:700;">⚠️ Aún no se ha definido</p>')+'<button class="btn-primary" id="cfg-fijar-ubicacion">📍 Usar mi ubicación actual</button><div class="form-group" style="margin-top:.9rem;"><label>Radio permitido (metros)</label><input type="number" id="cfg-radio" value="'+(cfg.rancho_radio_metros||800)+'"><button class="btn-sm btn-completar" id="cfg-guardar-radio" style="margin-top:.5rem;">Guardar radio</button></div></div>';
+    html+='<div class="seccion-titulo" style="margin-top:1.25rem;">💰 Préstamos a colaboradores</div><div class="form-card"><div class="form-group"><label>Máximo de préstamos por colaborador al mes</label><input type="number" id="cfg-prestamo-max-mes" min="1" step="1" value="'+(cfg.prestamo_max_activos_mes||1)+'"></div><div class="form-group"><label>Monto máximo que se puede autorizar por préstamo ($)</label><input type="number" id="cfg-prestamo-monto-max" min="0" step="1" value="'+(cfg.prestamo_monto_max||'')+'"></div><p class="hint">Con esto, el colaborador verá en su app cuántos préstamos lleva usados este mes y no podrá solicitar más una vez que llegue al máximo. Administración tampoco podrá registrar un préstamo por encima del monto máximo.</p><button class="btn-primary" id="cfg-guardar-prestamo">Guardar límites de préstamos</button></div>';
     body.innerHTML=html;
     document.getElementById('cfg-guardar-tarifa').addEventListener('click',function(){
       var tarifa=document.getElementById('cfg-tarifa-extra').value||70;
@@ -7103,6 +7289,15 @@ function renderConfig(){
         from('config_app').eq('clave','emergencia_bomberos').update({valor:bom}),
         from('config_app').eq('clave','emergencia_ambulancia').update({valor:amb})
       ]).then(function(){showToast('✅ Números guardados');}).catch(function(e){alert('Error: '+e.message);});
+    });
+    document.getElementById('cfg-guardar-prestamo').addEventListener('click',function(){
+      var maxMes=parseInt(document.getElementById('cfg-prestamo-max-mes').value)||1;
+      var montoMax=document.getElementById('cfg-prestamo-monto-max').value;
+      montoMax=montoMax===''?'':(parseFloat(montoMax)||0);
+      Promise.all([
+        from('config_app').eq('clave','prestamo_max_activos_mes').update({valor:String(maxMes)}),
+        from('config_app').eq('clave','prestamo_monto_max').update({valor:String(montoMax)})
+      ]).then(function(){showToast('✅ Límites de préstamos guardados');}).catch(function(e){alert('Error: '+e.message);});
     });
   });
 }
