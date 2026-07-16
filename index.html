@@ -6234,8 +6234,17 @@ function pintarTareas(todas,hoyOrdenes,esCache,completadas,evidenciaPorOrden,com
     cont.innerHTML=prefijo+html;
     cont.querySelectorAll('[data-ini]').forEach(function(b){b.addEventListener('click',function(){
       var oid=this.dataset.ini;
-      if(navigator.onLine) from('ordenes_trabajo').eq('id',oid).update({estado:'en_proceso'}).then(function(){cargarTareas();}).catch(function(){riegoEncolar(oid,{estado:'en_proceso'});cargarTareas();});
-      else{riegoEncolar(oid,{estado:'en_proceso'});var t=todas.find(function(x){return x.id===oid;});if(t)t.estado='en_proceso';pintarTareas(todas,hoyOrdenes,true,completadas,evidenciaPorOrden);}
+      var t=todas.find(function(x){return x.id===oid;});
+      if(t) t.estado='en_proceso';
+      pintarTareas(todas,hoyOrdenes,false,completadas,evidenciaPorOrden,componentesPorFormula);
+      if(navigator.onLine){
+        from('ordenes_trabajo').eq('id',oid).update({estado:'en_proceso'}).catch(function(){
+          riegoEncolar(oid,{estado:'en_proceso'});
+          showToast('📡 Sin señal — se guardó en tu celular y se subirá solo.');
+        });
+      } else {
+        riegoEncolar(oid,{estado:'en_proceso'});
+      }
     });});
     cont.querySelectorAll('[data-eje]').forEach(function(b){b.addEventListener('click',function(){iniciarEjecucion(this.dataset.eje);});});
   }catch(err){
@@ -6594,17 +6603,17 @@ function ejecutarGuardadoFinal(o){
   if(nuevoEstado==='completada') updatePayload.completado_en=new Date().toISOString();
   var reg={usuario_id:usuario.id,tabla_id:o.tabla_id,tipo_labor_id:o.tipo_labor_id,subtipo_labor_id:o.subtipo_labor_id||null,surcos_trabajados:capturaEjec.surcos,cantidad_insumo:esAplic?o.volumen_aplicado_litros:(capturaEjec.cantidad||null),foto_url:capturaEjec.fotoUrl||null,capturado_en:new Date().toISOString(),orden_id:o.id};
   var fotoQuedoLocal = capturaEjec.fotoUrl && capturaEjec.fotoUrl.indexOf('offline:')===0;
-  if(!navigator.onLine||fotoQuedoLocal){
+
+  function guardarLocalYSalir(avisoTambo){
     colaOffline.push(reg);
     localStorage.setItem('mootsil_cola',JSON.stringify(colaOffline));
-    from('ordenes_trabajo').eq('id',o.id).update(updatePayload).then(function(){
-      if(nuevoEstado==='completada'&&o.activo_rancho_id) from('activos_rancho').eq('id',o.activo_rancho_id).update({fecha_ultimo_mantenimiento:fechaHoyLocal()}).catch(function(){});
-      if(!document.getElementById('exito-sub').textContent) document.getElementById('exito-sub').textContent='Sin señal. Guardado en tu dispositivo y se subirá cuando haya internet.'+(esAplic&&tambosADeducir>0?' El tambo extra se descontará del inventario cuando regrese la conexión.':'');
-      mostrar('screen-exito'); ordenEjecutando=null;
-    }).catch(function(){
-      riegoEncolar(o.id,updatePayload);
-      mostrar('screen-exito'); ordenEjecutando=null;
-    });
+    riegoEncolar(o.id,updatePayload);
+    if(!document.getElementById('exito-sub').textContent) document.getElementById('exito-sub').textContent='Sin señal. Guardado en tu dispositivo y se subirá cuando haya internet.'+(avisoTambo?' El tambo extra se descontará del inventario cuando regrese la conexión.':'');
+    mostrar('screen-exito'); ordenEjecutando=null;
+  }
+
+  if(!navigator.onLine||fotoQuedoLocal){
+    guardarLocalYSalir(esAplic&&tambosADeducir>0);
     return;
   }
   var deducirTambosExtra = (esAplic&&tambosADeducir>0) ? Promise.all((o.componentesFormula||[]).map(function(c){
@@ -6619,21 +6628,26 @@ function ejecutarGuardadoFinal(o){
   deducirTambosExtra.then(function(){
     return from('registros_labor').insert(reg);
   }).then(function(){
-    from('ordenes_trabajo').eq('id',o.id).update(updatePayload).then(function(){
-      if(nuevoEstado==='completada'&&o.activo_rancho_id) from('activos_rancho').eq('id',o.activo_rancho_id).update({fecha_ultimo_mantenimiento:fechaHoyLocal()}).catch(function(){});
-      var lb=cats.tiposLabor.find(function(l){return l.id===o.tipo_labor_id;}), tb=cats.tablas.find(function(t){return t.id===o.tabla_id;});
-      var verbo = progreso.completo ? 'completó' : 'avanzó en';
-      showToast('✅ '+usuario.nombre+' '+verbo+' '+(lb?lb.nombre:'')+' en '+(tb?tb.nombre:''));
-      var detalle=esAplic?('Fórmula: '+(o.formula?o.formula.nombre:'')+' · Surcos: '+progreso.union.length+'/'+progreso.totalAsignados.length+(progreso.completo?'':' · Faltan: '+progreso.faltan.join(', '))):('Surcos: '+capturaEjec.surcos.join(', ')+(progreso.completo?'':' · Faltan: '+progreso.faltan.join(', ')));
-      var avisoOverage = (esAplic&&tambosADeducir>0) ? from('notificaciones').insert({titulo:'⚠️ Se usaron más tambos de los planeados',cuerpo:usuario.nombre+' ya lleva '+tambosUsadosNuevo+' tambo(s) en '+(lb?lb.nombre:'')+' · '+(tb?tb.nombre:'')+', pero solo se planearon '+tambosPlan+'. Se descontó el extra del inventario automáticamente.',icono:'⚠️',leida:false,para_rol:'encargado'}) : Promise.resolve();
-      avisoOverage.then(function(){
-        return from('notificaciones').insert({titulo: progreso.completo?'✅ Labor completada':'🔶 Avance parcial registrado',cuerpo:usuario.nombre+' '+verbo+' '+(lb?lb.nombre:'')+' en '+(tb?tb.nombre:'')+' — '+detalle,icono: progreso.completo?'✅':'🔶',leida:false,para_rol:'encargado'});
-      }).then(function(){
-        document.getElementById('exito-sub').textContent = progreso.completo ? 'Registro guardado. El encargado recibirá un aviso.' : 'Avance guardado. Faltan '+progreso.faltan.length+' surco(s) — seguirá apareciendo en tus tareas.';
-        mostrar('screen-exito'); ordenEjecutando=null;
-      });
+    return from('ordenes_trabajo').eq('id',o.id).update(updatePayload);
+  }).then(function(){
+    if(nuevoEstado==='completada'&&o.activo_rancho_id) from('activos_rancho').eq('id',o.activo_rancho_id).update({fecha_ultimo_mantenimiento:fechaHoyLocal()}).catch(function(){});
+    var lb=cats.tiposLabor.find(function(l){return l.id===o.tipo_labor_id;}), tb=cats.tablas.find(function(t){return t.id===o.tabla_id;});
+    var verbo = progreso.completo ? 'completó' : 'avanzó en';
+    showToast('✅ '+usuario.nombre+' '+verbo+' '+(lb?lb.nombre:'')+' en '+(tb?tb.nombre:''));
+    var detalle=esAplic?('Fórmula: '+(o.formula?o.formula.nombre:'')+' · Surcos: '+progreso.union.length+'/'+progreso.totalAsignados.length+(progreso.completo?'':' · Faltan: '+progreso.faltan.join(', '))):('Surcos: '+capturaEjec.surcos.join(', ')+(progreso.completo?'':' · Faltan: '+progreso.faltan.join(', ')));
+    var avisoOverage = (esAplic&&tambosADeducir>0) ? from('notificaciones').insert({titulo:'⚠️ Se usaron más tambos de los planeados',cuerpo:usuario.nombre+' ya lleva '+tambosUsadosNuevo+' tambo(s) en '+(lb?lb.nombre:'')+' · '+(tb?tb.nombre:'')+', pero solo se planearon '+tambosPlan+'. Se descontó el extra del inventario automáticamente.',icono:'⚠️',leida:false,para_rol:'encargado'}) : Promise.resolve();
+    avisoOverage.then(function(){
+      return from('notificaciones').insert({titulo: progreso.completo?'✅ Labor completada':'🔶 Avance parcial registrado',cuerpo:usuario.nombre+' '+verbo+' '+(lb?lb.nombre:'')+' en '+(tb?tb.nombre:'')+' — '+detalle,icono: progreso.completo?'✅':'🔶',leida:false,para_rol:'encargado'});
+    }).then(function(){
+      document.getElementById('exito-sub').textContent = progreso.completo ? 'Registro guardado. El encargado recibirá un aviso.' : 'Avance guardado. Faltan '+progreso.faltan.length+' surco(s) — seguirá apareciendo en tus tareas.';
+      mostrar('screen-exito'); ordenEjecutando=null;
+    }).catch(function(){
+      document.getElementById('exito-sub').textContent = progreso.completo ? 'Registro guardado. El encargado recibirá un aviso.' : 'Avance guardado. Faltan '+progreso.faltan.length+' surco(s) — seguirá apareciendo en tus tareas.';
+      mostrar('screen-exito'); ordenEjecutando=null;
     });
-  }).catch(function(e){alert('Error: '+e.message);});
+  }).catch(function(){
+    guardarLocalYSalir(esAplic&&tambosADeducir>0);
+  });
 }
 
 function sincronizarEvidenciasPendientes(){
