@@ -1236,7 +1236,7 @@ function cargarReporte(){
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
-var INSUMO_SUBCATEGORIAS=['Ácidos','Fungicidas','Herbicidas','Insecticidas','Abono','Adherentes','Arrancadores','Aminoácidos','Coadyuvante','Defoliante','Fertilizantes','Fertilizante Orgánico','Estructurador','Enraizador','Mejorador','Potencializador','Regulador de crecimiento'];
+var INSUMO_SUBCATEGORIAS=['Ácidos','Fungicidas','Herbicidas','Insecticidas','Abono','Adherentes','Arrancadores','Aminoácidos','Bioestimulante','Coadyuvante','Defoliante','Fertilizantes','Fertilizante Orgánico','Estructurador','Enraizador','Mejorador','Potencializador','Regulador de crecimiento'];
 var SEGURIDAD_SUBCATEGORIAS=['Guantes','Lentes de protección','Fajas','Cascos','Botas de seguridad','Cubrebocas','Chalecos reflejantes','Tapones auditivos','Overol / Ropa de protección','Otros'];
 var REFACCIONES_SUBCATEGORIAS=['Gasolina','Aceite 2 Tiempos','Aceite 4 Tiempos','Bujías','Hilo para poda','Filtros','Refacciones varias','Otros'];
 var GALERA_SUBCATEGORIAS=['Clamshell 6oz','Clamshell 9oz','Clamshell 12oz','Clamshell 18oz','Cajas de cartón','Charolas','Bolsas','Etiquetas / Stickers','Ligas','Cinta adhesiva','Otros'];
@@ -1901,6 +1901,23 @@ function revertirInventarioOrdenAplicacion(orden){
   }).catch(function(){});
 }
 
+function eliminarFormulaConCascada(fid,nombre){
+  return from('ordenes_trabajo').select('id,operario_id,factor_escala,tambos_planeados,tambos_usados').eq('formula_id',fid).in('estado',['pendiente','en_proceso']).get().then(function(pendientes){
+    pendientes=pendientes||[];
+    return from('formulas_aplicacion').eq('id',fid).update({activo:false}).then(function(){
+      return Promise.all(pendientes.map(function(o){return from('ordenes_trabajo').eq('id',o.id).update({estado:'cancelada'});}));
+    }).then(function(){
+      return pendientes.reduce(function(p,o){return p.then(function(){return revertirInventarioOrdenAplicacion({id:o.id,formula_id:fid,factor_escala:o.factor_escala,tambos_planeados:o.tambos_planeados,tambos_usados:o.tambos_usados});});},Promise.resolve());
+    }).then(function(){
+      return Promise.all(pendientes.map(function(o){
+        return from('notificaciones').insert({titulo:'🗑️ Aplicación cancelada',cuerpo:'La tarea "'+nombre+'" fue cancelada por el encargado (fórmula eliminada). El insumo asignado se devolvió al inventario.',icono:'🗑️',leida:false,para_rol:'operario',para_usuario:o.operario_id});
+      }));
+    }).then(function(){
+      showToast('🗑️ Fórmula eliminada'+(pendientes.length?' y '+pendientes.length+' tarea(s) pendiente(s) cancelada(s), inventario devuelto':''));
+    });
+  });
+}
+
 function barraSubtabsFormulas(){
   var tabs=[['programadas','🆕 Programadas'],['hoy','🔥 Aplicar Hoy'],['aplicadas','✅ Aplicadas']];
   return '<div style="display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap;">'+tabs.map(function(t){
@@ -2031,20 +2048,7 @@ function renderAplicacionesEstatus(){
         e.stopPropagation();
         var fid=this.dataset.borrar, nombre=this.dataset.nombre;
         if(!confirm('¿Eliminar la fórmula "'+nombre+'"? Esta acción no se puede deshacer. Si algún operario ya la tiene asignada, esa tarea también se cancelará.')) return;
-        from('ordenes_trabajo').select('id,operario_id,factor_escala,tambos_planeados,tambos_usados').eq('formula_id',fid).in('estado',['pendiente','en_proceso']).get().then(function(pendientes){
-          pendientes=pendientes||[];
-          return from('formulas_aplicacion').eq('id',fid).update({activo:false}).then(function(){
-            return Promise.all(pendientes.map(function(o){return from('ordenes_trabajo').eq('id',o.id).update({estado:'cancelada'});}));
-          }).then(function(){
-            return pendientes.reduce(function(p,o){return p.then(function(){return revertirInventarioOrdenAplicacion({id:o.id,formula_id:fid,factor_escala:o.factor_escala,tambos_planeados:o.tambos_planeados,tambos_usados:o.tambos_usados});});},Promise.resolve());
-          }).then(function(){
-            return Promise.all(pendientes.map(function(o){
-              return from('notificaciones').insert({titulo:'🗑️ Aplicación cancelada',cuerpo:'La tarea "'+nombre+'" fue cancelada por el encargado (fórmula eliminada). El insumo asignado se devolvió al inventario.',icono:'🗑️',leida:false,para_rol:'operario',para_usuario:o.operario_id});
-            }));
-          }).then(function(){
-            showToast('🗑️ Fórmula eliminada'+(pendientes.length?' y '+pendientes.length+' tarea(s) pendiente(s) cancelada(s), inventario devuelto':''));
-          });
-        }).then(function(){
+        eliminarFormulaConCascada(fid,nombre).then(function(){
           renderAplicacionesEstatus();
         }).catch(function(e){alert('Error: '+e.message);});
       });
@@ -2249,9 +2253,16 @@ function renderCatalogoDetalle(formulaId){
       return '<div class="resumen-row"><span class="resumen-key">'+(c.item?c.item.nombre:'?')+'</span><span class="resumen-val">'+fmtAmigable(c.cantidad_base,c.item?c.item.unidad:'')+faltaTxt+'</span></div>';
     }).join(''):'<p class="hint">Esta fórmula no tiene componentes cargados.</p>';
     var volverCat=CATALOGO_TIPO_SEL?'cargarCatalogoLista(\''+CATALOGO_TIPO_SEL.categoria+'\','+(CATALOGO_TIPO_SEL.soloPlantillas?'true':'false')+')':'renderCatalogoFormulas()';
-    body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📚 '+(VIA_ICONOS[f.via]||'')+' '+f.nombre+(f.es_plantilla?' 📌':'')+'<button type="button" onclick="'+volverCat+'" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Catálogo</button></div><div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row"><span class="resumen-key">Tipo</span><span class="resumen-val">'+(CATEGORIA_ICONOS[f.categoria]||'')+' '+f.categoria+(f.categoria==='Combinada'&&f.categorias_combinadas&&f.categorias_combinadas.length?' ('+f.categorias_combinadas.join(' + ')+')':'')+'</span></div><div class="resumen-row"><span class="resumen-key">Vía</span><span class="resumen-val">'+(VIA_ICONOS[f.via]||'')+' '+f.via+'</span></div><div class="resumen-row"><span class="resumen-key">Bombas compatibles</span><span class="resumen-val">'+bombasTxt+'</span></div><div class="resumen-row"><span class="resumen-key">Volumen base</span><span class="resumen-val">🛢️ '+numFmt(f.volumen_base_litros)+' L'+(f.duracion_o_surcos?' · '+f.duracion_o_surcos+' surcos/tambo':'')+'</span></div><div class="resumen-row"><span class="resumen-key">Observaciones / Notas</span><span class="resumen-val">'+(f.notas?f.notas:'<span style="color:var(--gris-3);">Sin notas — toca Editar para agregar</span>')+'</span></div><div class="resumen-row"><span class="resumen-key">Componentes (para '+numFmt(f.volumen_base_litros)+' L)</span></div>'+resumenComp+'</div><p class="hint" style="margin-bottom:1rem;">Esto es la receta guardada. "Editar" corrige esta misma fórmula del catálogo (nombre, componentes, notas, etc). "Usar esta plantilla" crea una copia nueva para asignarla a plantación/tabla sin tocar el original.</p><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn-primary" id="cat-editar" style="flex:1;min-width:150px;background:var(--tierra);">✏️ Editar esta fórmula</button><button class="btn-primary" id="cat-usar-plantilla" style="flex:1;min-width:150px;">🧬 Usar esta plantilla</button></div></div><button class="btn-back" style="margin-top:1rem;" onclick="'+volverCat+'">← Volver al catálogo</button>';
+    body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📚 '+(VIA_ICONOS[f.via]||'')+' '+f.nombre+(f.es_plantilla?' 📌':'')+'<button type="button" onclick="'+volverCat+'" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Catálogo</button></div><div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row"><span class="resumen-key">Tipo</span><span class="resumen-val">'+(CATEGORIA_ICONOS[f.categoria]||'')+' '+f.categoria+(f.categoria==='Combinada'&&f.categorias_combinadas&&f.categorias_combinadas.length?' ('+f.categorias_combinadas.join(' + ')+')':'')+'</span></div><div class="resumen-row"><span class="resumen-key">Vía</span><span class="resumen-val">'+(VIA_ICONOS[f.via]||'')+' '+f.via+'</span></div><div class="resumen-row"><span class="resumen-key">Bombas compatibles</span><span class="resumen-val">'+bombasTxt+'</span></div><div class="resumen-row"><span class="resumen-key">Volumen base</span><span class="resumen-val">🛢️ '+numFmt(f.volumen_base_litros)+' L'+(f.duracion_o_surcos?' · '+f.duracion_o_surcos+' surcos/tambo':'')+'</span></div><div class="resumen-row"><span class="resumen-key">Observaciones / Notas</span><span class="resumen-val">'+(f.notas?f.notas:'<span style="color:var(--gris-3);">Sin notas — toca Editar para agregar</span>')+'</span></div><div class="resumen-row"><span class="resumen-key">Componentes (para '+numFmt(f.volumen_base_litros)+' L)</span></div>'+resumenComp+'</div><p class="hint" style="margin-bottom:1rem;">Esto es la receta guardada. "Editar" corrige esta misma fórmula del catálogo (nombre, componentes, notas, etc). "Usar esta plantilla" crea una copia nueva para asignarla a plantación/tabla sin tocar el original.</p><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn-primary" id="cat-editar" style="flex:1;min-width:150px;background:var(--tierra);">✏️ Editar esta fórmula</button><button class="btn-primary" id="cat-usar-plantilla" style="flex:1;min-width:150px;">🧬 Usar esta plantilla</button></div></div><button type="button" id="cat-eliminar" style="width:100%;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.85rem;cursor:pointer;margin-bottom:1rem;">🗑️ Eliminar esta fórmula del catálogo</button><button class="btn-back" style="margin-top:0;" onclick="'+volverCat+'">← Volver al catálogo</button>';
     document.getElementById('cat-usar-plantilla').addEventListener('click',function(){cargarPlantillaCatalogo(formulaId);});
     document.getElementById('cat-editar').addEventListener('click',function(){renderFormulaForm(formulaId,true);});
+    document.getElementById('cat-eliminar').addEventListener('click',function(){
+      if(!confirm('¿Eliminar la fórmula "'+f.nombre+'" del catálogo? Esta acción no se puede deshacer. Si algún operario ya la tiene asignada, esa tarea también se cancelará.')) return;
+      eliminarFormulaConCascada(formulaId,f.nombre).then(function(){
+        if(CATALOGO_TIPO_SEL) renderCatalogoConCategoria(CATALOGO_TIPO_SEL.categoria,CATALOGO_TIPO_SEL.soloPlantillas);
+        else renderCatalogoFormulas();
+      }).catch(function(e){alert('Error: '+e.message);});
+    });
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
@@ -2526,7 +2537,7 @@ function pintarFormulaCompList(){
       ? '<select class="fcomp-unidad-sel" data-row="'+r.row+'" style="min-width:70px;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.8rem;">'+alternas.map(function(u){return '<option value="'+u+'"'+(u===unidadEntrada?' selected':'')+'>'+u+'</option>';}).join('')+'</select>'
       : '<span style="font-size:.78rem;color:var(--gris-3);min-width:40px;" class="fcomp-unidad-lbl" data-row="'+r.row+'">'+(r.unidad||'')+'</span>';
     var valorMostrado = convertirDesdeBase(r.cantidad,unidadEntrada,r.unidad);
-    return '<div class="form-card" style="margin-bottom:.5rem;padding:.75rem;" data-row="'+r.row+'"><div class="fcomp-item-wrap" data-row="'+r.row+'" style="position:relative;"><input type="text" class="fcomp-item-buscar" data-row="'+r.row+'" autocomplete="off" placeholder="🔍 Buscar componente..." value="'+(r.nombre?r.nombre.replace(/"/g,'&quot;'):'')+'"><div class="fcomp-item-resultados" data-row="'+r.row+'" style="display:none;position:absolute;left:0;right:0;top:100%;z-index:30;background:#fff;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);max-height:220px;overflow-y:auto;box-shadow:0 6px 16px rgba(0,0,0,.15);"></div></div><div class="fcomp-nuevo-box" data-row="'+r.row+'" style="display:none;margin-top:.5rem;gap:8px;"><input type="text" class="fcomp-nuevo-nombre" data-row="'+r.row+'" placeholder="Nombre del componente" style="width:100%;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;margin-bottom:.4rem;"><select class="fcomp-nuevo-unidad" data-row="'+r.row+'" style="width:100%;margin-bottom:.4rem;"><option value="litros">Litros</option><option value="ml">Mililitros</option><option value="kg">Kilogramos</option><option value="gr">Gramos</option><option value="pza">Piezas</option></select><div style="display:flex;gap:6px;margin-bottom:.4rem;"><input type="text" class="fcomp-nuevo-unidadcompra" data-row="'+r.row+'" placeholder="¿Se compra en? Ej. Saco (opcional)" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.8rem;"><input type="number" class="fcomp-nuevo-factorcompra" data-row="'+r.row+'" min="0" placeholder="Ej. 25" style="width:70px;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.8rem;"></div><button type="button" class="fcomp-crear" data-row="'+r.row+'" style="padding:6px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">Crear y usar</button></div><div style="display:flex;gap:8px;align-items:center;margin-top:.5rem;"><input type="number" class="fcomp-cant" data-row="'+r.row+'" min="0" placeholder="cantidad para 200L" value="'+(valorMostrado||'')+'" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;">'+unidadSelectHtml+'<button type="button" class="fcomp-quitar" data-row="'+r.row+'" style="border:none;background:none;color:var(--rojo);font-size:1.1rem;cursor:pointer;">✕</button></div><p class="hint" style="margin:.3rem 0 0;">La cantidad de arriba es lo que la fórmula usa, no el stock — el stock se registra aparte en Inventario.</p></div>';
+    return '<div class="form-card" style="margin-bottom:.5rem;padding:.75rem;" data-row="'+r.row+'"><div class="fcomp-item-wrap" data-row="'+r.row+'" style="position:relative;"><input type="text" class="fcomp-item-buscar" data-row="'+r.row+'" autocomplete="off" placeholder="🔍 Buscar componente..." value="'+(r.nombre?r.nombre.replace(/"/g,'&quot;'):'')+'"><div class="fcomp-item-resultados" data-row="'+r.row+'" style="display:none;position:absolute;left:0;right:0;top:100%;z-index:30;background:#fff;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);max-height:220px;overflow-y:auto;box-shadow:0 6px 16px rgba(0,0,0,.15);"></div></div><div class="fcomp-nuevo-box" data-row="'+r.row+'" style="display:none;margin-top:.5rem;gap:8px;"><input type="text" class="fcomp-nuevo-nombre" data-row="'+r.row+'" placeholder="Nombre del componente" style="width:100%;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;margin-bottom:.4rem;"><select class="fcomp-nuevo-unidad" data-row="'+r.row+'" style="width:100%;margin-bottom:.4rem;"><option value="litros">Litros</option><option value="ml">Mililitros</option><option value="kg">Kilogramos</option><option value="gr">Gramos</option><option value="pza">Piezas</option></select><select class="fcomp-nuevo-categoria" data-row="'+r.row+'" style="width:100%;margin-bottom:.4rem;">'+INSUMO_SUBCATEGORIAS.map(function(cat){return '<option value="'+cat+'">'+cat+'</option>';}).join('')+'</select><div style="display:flex;gap:6px;margin-bottom:.4rem;"><input type="text" class="fcomp-nuevo-unidadcompra" data-row="'+r.row+'" placeholder="¿Se compra en? Ej. Saco (opcional)" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.8rem;"><input type="number" class="fcomp-nuevo-factorcompra" data-row="'+r.row+'" min="0" placeholder="Ej. 25" style="width:70px;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.8rem;"></div><button type="button" class="fcomp-crear" data-row="'+r.row+'" style="padding:6px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">Crear y usar</button></div><div style="display:flex;gap:8px;align-items:center;margin-top:.5rem;"><input type="number" class="fcomp-cant" data-row="'+r.row+'" min="0" placeholder="cantidad para 200L" value="'+(valorMostrado||'')+'" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;">'+unidadSelectHtml+'<button type="button" class="fcomp-quitar" data-row="'+r.row+'" style="border:none;background:none;color:var(--rojo);font-size:1.1rem;cursor:pointer;">✕</button></div><p class="hint" style="margin:.3rem 0 0;">La cantidad de arriba es lo que la fórmula usa, no el stock — el stock se registra aparte en Inventario.</p></div>';
   }).join('');
   function filtrarInventarioFcomp(query){
     query=(query||'').trim().toLowerCase();
@@ -2581,20 +2592,42 @@ function pintarFormulaCompList(){
   cont.querySelectorAll('.fcomp-crear').forEach(function(btn){
     btn.addEventListener('click',function(){
       var rid=parseInt(this.dataset.row);
+      var thisBtn=this;
       var nombre=(cont.querySelector('.fcomp-nuevo-nombre[data-row="'+rid+'"]').value||'').trim();
       var unidad=cont.querySelector('.fcomp-nuevo-unidad[data-row="'+rid+'"]').value;
+      var categoriaSel=cont.querySelector('.fcomp-nuevo-categoria[data-row="'+rid+'"]');
+      var categoria=categoriaSel?categoriaSel.value:'Otros';
       var unidadCompra=(cont.querySelector('.fcomp-nuevo-unidadcompra[data-row="'+rid+'"]').value||'').trim()||null;
       var factorCompra=parseFloat(cont.querySelector('.fcomp-nuevo-factorcompra[data-row="'+rid+'"]').value)||null;
       if(!nombre){alert('Escribe el nombre del componente.');return;}
-      var existente=cats.inventario.find(function(x){return x.nombre.toLowerCase()===nombre.toLowerCase();});
-      if(existente){aplicarComponenteCreado(rid,existente);return;}
-      from('inventario_items').insert({nombre:nombre,unidad:unidad,stock_actual:0,stock_minimo:0,unidad_compra:unidadCompra,factor_compra:factorCompra,activo:true}).then(function(){
-        return from('inventario_items').select('*').eq('activo',true).order('nombre').get();
-      }).then(function(rows){
-        cats.inventario=rows||[];
-        var it=cats.inventario.find(function(x){return x.nombre.toLowerCase()===nombre.toLowerCase();});
-        aplicarComponenteCreado(rid,it);
-      }).catch(function(e){alert('Error: '+e.message);});
+      var existenteActivo=cats.inventario.find(function(x){return x.nombre.toLowerCase()===nombre.toLowerCase();});
+      if(existenteActivo){aplicarComponenteCreado(rid,existenteActivo);return;}
+      thisBtn.disabled=true; thisBtn.textContent='Creando...';
+      from('inventario_items').select('*').get().then(function(todos){
+        var existenteCualquiera=(todos||[]).find(function(x){return x.nombre.toLowerCase()===nombre.toLowerCase();});
+        if(existenteCualquiera&&!existenteCualquiera.activo){
+          return from('inventario_items').eq('id',existenteCualquiera.id).update({activo:true,categoria:categoria,grupo:'insumos'}).then(function(){
+            return from('inventario_items').select('*').eq('activo',true).order('nombre').get();
+          }).then(function(rows){
+            cats.inventario=rows||[];
+            var it=cats.inventario.find(function(x){return x.id===existenteCualquiera.id;});
+            aplicarComponenteCreado(rid,it);
+          });
+        }
+        if(existenteCualquiera&&existenteCualquiera.activo){
+          aplicarComponenteCreado(rid,existenteCualquiera);
+          return;
+        }
+        return from('inventario_items').insert({nombre:nombre,categoria:categoria,grupo:'insumos',unidad:unidad,stock_actual:0,stock_minimo:0,unidad_compra:unidadCompra,factor_compra:factorCompra,activo:true}).then(function(){
+          return from('inventario_items').select('*').eq('activo',true).order('nombre').get();
+        }).then(function(rows){
+          cats.inventario=rows||[];
+          var it=cats.inventario.find(function(x){return x.nombre.toLowerCase()===nombre.toLowerCase();});
+          aplicarComponenteCreado(rid,it);
+        });
+      }).catch(function(e){alert('No se pudo registrar el insumo: '+e.message);}).then(function(){
+        if(thisBtn){thisBtn.disabled=false;thisBtn.textContent='Crear y usar';}
+      });
     });
   });
   cont.querySelectorAll('.fcomp-cant').forEach(function(inp){
