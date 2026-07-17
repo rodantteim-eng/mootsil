@@ -3262,18 +3262,22 @@ function renderAsigAplicComponentes(){
   var body=document.getElementById('enc-body');
   var faltantes=[];
   var tambosPlan=aplic.tambosPlaneados||1;
+  var esBombasReceta=aplic.modoCantidad==='bombas'&&aplic.bomba!=='inyeccion';
   var filas=aplic.componentes.map(function(c){
-    var cantEscalada=c.cantidad_base*aplic.factor*tambosPlan;
+    var cantPorUnidad=c.cantidad_base*aplic.factor;
+    var cantEscalada=cantPorUnidad*tambosPlan;
     var stock=c.item?c.item.stock_actual:0;
     var falta=cantEscalada-stock;
     var unidadItem=c.item?c.item.unidad:'';
     if(falta>0) faltantes.push({nombre:c.item?c.item.nombre:'',falta:falta,unidad:unidadItem});
-    return '<div style="display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--gris-1);font-size:.85rem;"><span>'+(c.item?c.item.nombre:'')+'</span><strong>'+fmtAmigable(cantEscalada,unidadItem)+'</strong></div>';
+    var detallePorBomba=(esBombasReceta&&tambosPlan>1)?('<div style="font-size:.72rem;color:var(--tierra);font-weight:700;margin-top:.15rem;">🎒 '+fmtAmigable(cantPorUnidad,unidadItem)+' por bomba</div>'):'';
+    return '<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:.5rem 0;border-bottom:1px solid var(--gris-1);font-size:.85rem;"><span>'+(c.item?c.item.nombre:'')+'</span><div style="text-align:right;"><strong>'+fmtAmigable(cantEscalada,unidadItem)+'</strong>'+(tambosPlan>1?' <span style="font-size:.68rem;color:var(--gris-3);font-weight:600;">total ('+tambosPlan+' bombas)</span>':'')+detallePorBomba+'</div></div>';
   }).join('');
   var alertaHtml=faltantes.length?'<div style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);border-radius:var(--radio-sm);padding:.75rem;margin-bottom:1rem;font-size:.82rem;"><strong style="color:var(--rojo);">⚠️ No alcanza el inventario</strong><br>'+faltantes.map(function(f){return f.nombre+' (faltan '+fmtAmigable(f.falta,f.unidad)+')';}).join(', ')+'</div>':'';
-  var unidadVolTxt=(aplic.modoCantidad==='bombas'&&aplic.bomba!=='inyeccion')?'bombas':'tambos';
+  var avisoPorBomba=(esBombasReceta&&tambosPlan>1)?'<div style="background:var(--tierra-tenue);border:1.5px solid var(--tierra);border-radius:var(--radio-sm);padding:.75rem;margin-bottom:1rem;font-size:.82rem;"><strong style="color:var(--tierra);">🎒 Prepara cada bomba por separado</strong><br>La cantidad marcada "por bomba" es lo que va en CADA mochila — no mezcles todo el total en una sola bomba.</div>':'';
+  var unidadVolTxt=esBombasReceta?'bombas':'tambos';
   var tituloVol=tambosPlan>1?(numFmt(aplic.volumen)+' L × '+tambosPlan+' '+unidadVolTxt+' = '+numFmt(aplic.volumen*tambosPlan)+' L en total'):(numFmt(aplic.volumen)+' L ('+Math.round(aplic.factor*100)+'% de la base)');
-  body.innerHTML='<div class="seccion-titulo">🧪 Receta ajustada · '+tituloVol+'</div>'+alertaHtml+'<div class="form-card">'+filas+'</div><button class="btn-primary" style="margin-top:1.25rem;" id="aplic-comp-continuar">Continuar →</button><button class="btn-back" style="margin-top:.75rem;" onclick="'+(aplic.bomba==='inyeccion'?'renderAsigAplicFormulas()':'renderAsigAplicCantidad()')+'">← Volver</button>';
+  body.innerHTML='<div class="seccion-titulo">🧪 Receta ajustada · '+tituloVol+'</div>'+avisoPorBomba+alertaHtml+'<div class="form-card">'+filas+'</div><button class="btn-primary" style="margin-top:1.25rem;" id="aplic-comp-continuar">Continuar →</button><button class="btn-back" style="margin-top:.75rem;" onclick="'+(aplic.bomba==='inyeccion'?'renderAsigAplicFormulas()':'renderAsigAplicCantidad()')+'">← Volver</button>';
   document.getElementById('aplic-comp-continuar').addEventListener('click',function(){
     if(faltantes.length&&!confirm('El inventario no alcanza para esta cantidad. ¿Asignar de todas formas? (tendrás que comprar antes de aplicar)')) return;
     renderAsigAplicOperarios();
