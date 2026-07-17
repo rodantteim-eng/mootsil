@@ -338,10 +338,14 @@ var formSurcos=[];
 var ROLES={admin:'Admin',encargado:'Encargado',operario:'Labores',ingeniero:'Ingeniero','dueño':'Dueño',inversionista:'Inversionista',cosechador:'Cosechador',galerista:'Galerista',labores_eventual:'Labores Eventual'};
 var ROLES_COLABORADOR={operario:'Colaborador',cosechador:'Colaborador de cosecha',galerista:'Colaborador de galera',labores_eventual:'Colaborador eventual'};
 var ROLE_COLORS={admin:'background:#c0392b;color:#fff',encargado:'background:#e6a817;color:#1a1a18',operario:'background:#4a9a6a;color:#fff',ingeniero:'background:#e67e22;color:#fff','dueño':'background:#2980b9;color:#fff',inversionista:'background:#6c3483;color:#fff',cosechador:'background:#1a3a2a;color:#fff',galerista:'background:#e91e8c;color:#fff',labores_eventual:'background:#7f8c8d;color:#fff'};
-var ICONOS={'Riego':'💧','Aplicaciones':'🧪','Poda':'✂️','Deshierbado':'🌱','Guiro':'🧵','Trineado':'🔪','Limpieza':'🧹','Sistema de riego':'🚿','Sistema de Tutoreo':'🪢','Macrotuneles':'⛺','Trampas':'🪤','Pozo':'🕳️','Equipos':'🛠️','Cuarto de Sucios':'🧺','Almacén':'📦','Galera':'🏚️','Otras':'➕','Via riego':'💧','Foliar':'🌿','Drench':'🧪','Enrejado':'🔲','Desbrozadora':'🔧','Infraestructura':'🏗️'};
+var ICONOS={'Riego':'💧','Aplicaciones':'🧪','Poda':'✂️','Deshierbado':'🌱','Guiro':'🧵','Trineado':'🔪','Limpieza':'🧹','Sistema de riego':'🚿','Sistema de Tutoreo':'🪢','Tutoreo':'🪢','Macrotuneles':'⛺','Trampas':'🪤','Pozo':'🕳️','Equipos':'🛠️','Cuarto de Sucios':'🧺','Almacén':'📦','Galera':'🏚️','Otras':'➕','Via riego':'💧','Foliar':'🌿','Drench':'🧪','Enrejado':'🔲','Desbrozadora':'🔧','Infraestructura':'🏗️','Plasticos':'🏕️','Malla':'🥅','Arcos':'⛩️','Mantenimiento de herramienta':'🔧'};
 var riegoOrdenes=[], riegoTimer=null, riegoAlarmaActiva=false, riegoAudioCtx=null;
 var riegoColaOffline=JSON.parse(localStorage.getItem('mootsil_riego_cola')||'[]');
 
+function ordenEsTiempo(o){
+  if(o.subtipo&&typeof o.subtipo.requiere_tiempo==='boolean') return o.subtipo.requiere_tiempo;
+  return !!(o.tipo_labor&&o.tipo_labor.requiere_tiempo);
+}
 function riegoActualizarEstado(o,cambios){
   Object.keys(cambios).forEach(function(k){o[k]=cambios[k];});
   if(navigator.onLine){
@@ -759,6 +763,7 @@ function cambiarEstado(id,estado){
 }
 
 var asignarLaborSel=null;
+var asignarLaborSubSel=null;
 var riegoAsigMinutos={}, riegoAsigOperarios=[], riegoAsigFecha=null;
 
 var modoAsignacionLabor='normal';
@@ -783,8 +788,8 @@ function renderAsignarEstatus(){
   var hoy=fechaHoyLocal();
   var hace30dias=new Date(Date.now()-30*86400000).toISOString().slice(0,10);
   Promise.all([
-    from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_tiempo,requiere_formula,es_cosecha),subtipo:subtipos_labor(nombre)').in('estado',['pendiente','en_proceso']).order('fecha_asignacion',{ascending:false}).get(),
-    from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo,requiere_formula,es_cosecha),subtipo:subtipos_labor(nombre)').eq('estado','completada').gte('fecha_asignacion',hace30dias).order('fecha_asignacion',{ascending:false}).limit(150).get()
+    from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_tiempo,requiere_formula,es_cosecha),subtipo:subtipos_labor(nombre,requiere_tiempo)').in('estado',['pendiente','en_proceso']).order('fecha_asignacion',{ascending:false}).get(),
+    from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo,requiere_formula,es_cosecha),subtipo:subtipos_labor(nombre,requiere_tiempo)').eq('estado','completada').gte('fecha_asignacion',hace30dias).order('fecha_asignacion',{ascending:false}).limit(150).get()
   ]).then(function(r){
     var activas=(r[0]||[]).filter(function(o){return o.tabla&&o.tipo_labor&&!o.tipo_labor.requiere_formula&&!o.tipo_labor.es_cosecha;});
     var terminadas=(r[1]||[]).filter(function(o){return o.tabla&&o.tipo_labor&&!o.tipo_labor.requiere_formula&&!o.tipo_labor.es_cosecha;});
@@ -799,8 +804,8 @@ function renderAsignarEstatus(){
       body.innerHTML=html;
       return;
     }
-    var riegoItems=filtradas.filter(function(o){return o.tipo_labor&&o.tipo_labor.requiere_tiempo;});
-    var otrosItems=filtradas.filter(function(o){return !(o.tipo_labor&&o.tipo_labor.requiere_tiempo);});
+    var riegoItems=filtradas.filter(function(o){return ordenEsTiempo(o);});
+    var otrosItems=filtradas.filter(function(o){return !ordenEsTiempo(o);});
     var gruposRiego={};
     var ordenGrupos=[];
     riegoItems.forEach(function(o){
@@ -1019,6 +1024,7 @@ function renderGestionarLaborElegirOperario(modo,ordenId){
 
 function renderFormAsignar(){
   asignarLaborSel=null;
+  asignarLaborSubSel=null;
   modoAsignacionLabor='normal';
   horasExtraAutorizadas=2;
   var body=document.getElementById('enc-body');
@@ -1033,9 +1039,15 @@ function renderFormAsignar(){
     el.addEventListener('click',function(){
       var lb=cats.tiposLabor.find(function(l){return l.id===this.dataset.id;}.bind(this));
       asignarLaborSel=lb;
+      asignarLaborSubSel=null;
       if(lb&&lb.requiere_tiempo){
-        riegoAsigMinutos={};riegoAsigOperarios=[];riegoAsigFecha=fechaHoyLocal();
-        renderAsigRiegoPlantaciones();
+        var subsTiempo=cats.subtiposLabor.filter(function(s){return s.tipo_labor_id===lb.id;});
+        if(subsTiempo.length){
+          renderAsigRiegoSubtipos(subsTiempo);
+        } else {
+          riegoAsigMinutos={};riegoAsigOperarios=[];riegoAsigFecha=fechaHoyLocal();
+          renderAsigRiegoPlantaciones();
+        }
       } else if(lb&&lb.requiere_formula){
         aplicReset();
         renderAsigAplicPorFecha();
@@ -1055,6 +1067,13 @@ function renderFormAsignar(){
     var existente=cats.tiposLabor.find(function(l){return l.nombre.toLowerCase()===nombre.toLowerCase();});
     if(existente){
       asignarLaborSel=existente;
+      asignarLaborSubSel=null;
+      if(existente.requiere_tiempo){
+        var subsTiempo2=cats.subtiposLabor.filter(function(s){return s.tipo_labor_id===existente.id;});
+        if(subsTiempo2.length){ renderAsigRiegoSubtipos(subsTiempo2); }
+        else { riegoAsigMinutos={};riegoAsigOperarios=[];riegoAsigFecha=fechaHoyLocal();renderAsigRiegoPlantaciones(); }
+        return;
+      }
       renderFormAsignarPaso2();
       return;
     }
@@ -1074,11 +1093,11 @@ function renderFormAsignarPaso2(){
   var body=document.getElementById('enc-body');
   var opO=cats.equipoDeCampo.map(function(o){return '<button type="button" class="op-chip" data-id="'+o.id+'" onclick="toggleChip(this)">'+o.nombre+'</button>';}).join('');
   var pO=cats.plantaciones.map(function(p){return '<option value="'+p.id+'">'+p.nombre+'</option>';}).join('');
-  var esTiempo=!!(lb&&lb.requiere_tiempo);
+  var esTiempo=!!(lb&&lb.requiere_tiempo)&&!asignarLaborSubSel;
   body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Paso 2 de 2 · Detalles<button type="button" onclick="renderFormAsignar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cambiar labor</button></div>'+(modoAsignacionLabor==='extra'?'<div style="background:var(--tierra-tenue);border:1.5px solid var(--tierra);border-radius:var(--radio-sm);padding:.6rem .85rem;margin-bottom:.75rem;font-size:.8rem;font-weight:700;color:var(--tierra);">⏰ Se asignará como Hora Extra (autoriza también su registro de asistencia)</div>':'')+'<div class="form-card"><div class="labor-chosen">'+(ICONOS[lb.nombre]||'🔧')+' <strong>'+lb.nombre+'</strong></div><div class="form-group"><label>Operarios</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Plantación</label><select id="fpl"><option value="">Selecciona...</option>'+pO+'</select></div><div class="form-group" id="ftb-wrap" style="display:'+(esTiempo?'none':'')+'"><label>Tabla</label><select id="ftb"><option value="">Primero elige plantación</option></select></div><div class="form-group" id="fsg" style="display:none"><label>Detalle</label><select id="fsb"></select></div><div class="form-group" id="fcg" style="display:'+(lb.requiere_cantidad_insumo?'':'none')+'"><label>Cantidad esperada</label><input type="number" id="fca" placeholder="0" min="0"/></div><div class="form-group" id="frg" style="display:'+(esTiempo?'':'none')+'"><label>Duración de riego por tabla (minutos)</label><div id="frg-tablas"></div><p class="hint">Deja vacío la tabla que no quieras asignar hoy.</p></div><div class="form-group" id="fsurcos-wrap" style="display:'+(esTiempo?'none':'')+'"><label>Surcos a trabajar</label><div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;"><button type="button" onclick="selTodosF()" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">Tabla completa</button><button type="button" onclick="selNingunoF()" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.78rem;cursor:pointer;">Limpiar</button></div><div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;"><span style="font-size:.78rem;color:var(--gris-3)">Del surco</span><input type="number" id="f-ri" min="1" style="width:52px;padding:3px 6px;border:1.5px solid var(--gris-2);border-radius:6px;font-size:.85rem;" placeholder="1"><span style="font-size:.78rem;color:var(--gris-3)">al</span><input type="number" id="f-rf" min="1" style="width:52px;padding:3px 6px;border:1.5px solid var(--gris-2);border-radius:6px;font-size:.85rem;" placeholder="12"><button type="button" onclick="aplicarRangoF()" style="padding:4px 10px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.78rem;cursor:pointer;">Aplicar</button></div><div class="surcos-grid" id="fsc"></div><p class="hint">O toca surcos individuales</p></div><div class="form-group"><label>Duración</label><select id="fdu"><option value="dia">Solo hoy</option><option value="labor_completa">Labor completa</option></select></div><div class="form-group"><label>Fecha</label><input type="date" id="ffe" value="'+fechaHoyLocal()+'"/></div><div class="form-group"><label>Notas</label><input type="text" id="fno" placeholder="Opcional..."/></div><button class="btn-primary" onclick="guardarOrden()">'+(modoAsignacionLabor==='extra'?'Asignar como hora extra':'Asignar orden')+'</button></div>';
   formSurcos=[];
-  var sbs=cats.subtiposLabor.filter(function(s){return s.tipo_labor_id===lb.id;});
-  if(sbs.length){document.getElementById('fsb').innerHTML='<option value="">Selecciona...</option>'+sbs.map(function(s){return '<option value="'+s.id+'">'+s.nombre+'</option>';}).join('');document.getElementById('fsg').style.display='';}
+  var sbs=cats.subtiposLabor.filter(function(s){return s.tipo_labor_id===lb.id&&!s.requiere_tiempo;});
+  if(sbs.length){document.getElementById('fsb').innerHTML='<option value="">Selecciona...</option>'+sbs.map(function(s){return '<option value="'+s.id+'">'+s.nombre+'</option>';}).join('');document.getElementById('fsg').style.display='';if(asignarLaborSubSel){document.getElementById('fsb').value=asignarLaborSubSel.id;}}
   document.getElementById('fpl').addEventListener('change',function(){
     var ts=cats.tablas.filter(function(t){return t.plantacion_id===this.value;}.bind(this));
     document.getElementById('ftb').innerHTML='<option value="">Selecciona...</option>'+ts.map(function(t){return '<option value="'+t.id+'">'+t.nombre+'</option>';}).join('');
@@ -1096,6 +1115,26 @@ function renderRiegoForm(){
   var ts=cats.tablas.filter(function(t){return t.plantacion_id===plId;});
   if(!ts.length){cont.innerHTML='<p class="hint">Primero elige una plantación.</p>';return;}
   cont.innerHTML=ts.map(function(t){return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><span style="flex:1;font-size:.85rem;font-weight:600;">'+t.nombre+'</span><input type="number" min="0" class="riego-min" data-tabla="'+t.id+'" placeholder="min" style="width:70px;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;background:var(--gris-1);"></div>';}).join('');
+}
+
+function renderAsigRiegoSubtipos(subs){
+  var body=document.getElementById('enc-body');
+  var tiles=subs.map(function(s){
+    return '<div class="labor-tile" data-id="'+s.id+'"><div class="labor-tile-ic">'+(s.requiere_tiempo?'⏱️':(ICONOS[s.nombre]||'🔧'))+'</div><div class="labor-tile-lbl">'+s.nombre+'</div></div>';
+  }).join('');
+  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">💧 Riego · ¿Qué tipo de riego?<button type="button" onclick="renderFormAsignar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cambiar labor</button></div><p class="hint" style="margin-bottom:.75rem;">"Hidratación" activa el cronómetro de riego por tabla. Las demás son labores normales de mantenimiento del sistema.</p><div class="labor-grid">'+tiles+'</div>';
+  body.querySelectorAll('.labor-tile[data-id]').forEach(function(el){
+    el.addEventListener('click',function(){
+      var sub=subs.find(function(s){return s.id===this.dataset.id;}.bind(this));
+      asignarLaborSubSel=sub;
+      if(sub&&sub.requiere_tiempo){
+        riegoAsigMinutos={};riegoAsigOperarios=[];riegoAsigFecha=fechaHoyLocal();
+        renderAsigRiegoPlantaciones();
+      } else {
+        renderFormAsignarPaso2();
+      }
+    });
+  });
 }
 
 function renderAsigRiegoPlantaciones(){
@@ -1179,8 +1218,9 @@ function guardarRiegoAsignacion(){
   var filas=Object.keys(riegoAsigMinutos).filter(function(k){return riegoAsigMinutos[k]>0;}).map(function(tid){return {tabla:tid,min:riegoAsigMinutos[tid]};});
   if(!filas.length){alert('No hay tablas con tiempo asignado.');if(btn){btn.disabled=false;btn.textContent='✅ Asignar riego';}return;}
   var lbId=asignarLaborSel.id;
+  var subId=asignarLaborSubSel?asignarLaborSubSel.id:null;
   var tareas=[];
-  riegoAsigOperarios.forEach(function(oid){filas.forEach(function(r){tareas.push({asignado_por:usuario.id,operario_id:oid,tabla_id:r.tabla,tipo_labor_id:lbId,duracion_minutos:r.min,duracion:'dia',fecha_asignacion:riegoAsigFecha,notas_encargado:not,estado:'pendiente'});});});
+  riegoAsigOperarios.forEach(function(oid){filas.forEach(function(r){tareas.push({asignado_por:usuario.id,operario_id:oid,tabla_id:r.tabla,tipo_labor_id:lbId,subtipo_labor_id:subId,duracion_minutos:r.min,duracion:'dia',fecha_asignacion:riegoAsigFecha,notas_encargado:not,estado:'pendiente'});});});
   Promise.all(tareas.map(function(t){return from('ordenes_trabajo').insert(t);})).then(function(){
     Promise.all(riegoAsigOperarios.map(function(oid){
       return from('notificaciones').insert({titulo:'💧 Riego asignado',cuerpo:usuario.nombre+' asignó riego a '+(cats.operarios.find(function(o){return o.id===oid;})||{}).nombre+' en '+filas.length+' tabla(s)',icono:'💧',leida:false,para_rol:'operario',para_usuario:oid});
@@ -6780,9 +6820,9 @@ function cargarTareas(subtab){
   body.innerHTML=barraSubtabsTareas()+'<div id="tareas-contenido"><div class="loading">Cargando tus tareas...</div></div>';
   var hoy=fechaHoyLocal();
   Promise.all([
-    from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_cantidad_insumo,unidad_insumo,requiere_tiempo,requiere_formula),subtipo:subtipos_labor(nombre),activo_rancho:activos_rancho(nombre,imagen_url),formula:formulas_aplicacion(nombre,via,categoria)').eq('operario_id',usuario.id).in('estado',['pendiente','en_proceso']).order('fecha_asignacion',{ascending:true}).get(),
-    from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo),activo_rancho:activos_rancho(nombre,imagen_url)').eq('operario_id',usuario.id).eq('fecha_asignacion',hoy).order('creado_en',{ascending:false}).get(),
-    from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo),activo_rancho:activos_rancho(nombre,imagen_url)').eq('operario_id',usuario.id).eq('estado','completada').order('fecha_asignacion',{ascending:false}).limit(60).get()
+    from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_cantidad_insumo,unidad_insumo,requiere_tiempo,requiere_formula),subtipo:subtipos_labor(nombre,requiere_tiempo),activo_rancho:activos_rancho(nombre,imagen_url),formula:formulas_aplicacion(nombre,via,categoria)').eq('operario_id',usuario.id).in('estado',['pendiente','en_proceso']).order('fecha_asignacion',{ascending:true}).get(),
+    from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo),subtipo:subtipos_labor(nombre,requiere_tiempo),activo_rancho:activos_rancho(nombre,imagen_url)').eq('operario_id',usuario.id).eq('fecha_asignacion',hoy).order('creado_en',{ascending:false}).get(),
+    from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo),subtipo:subtipos_labor(nombre,requiere_tiempo),activo_rancho:activos_rancho(nombre,imagen_url)').eq('operario_id',usuario.id).eq('estado','completada').order('fecha_asignacion',{ascending:false}).limit(60).get()
   ]).then(function(res){
     var todas=res[0]||[], hoyOrdenes=res[1]||[], completadas=res[2]||[];
     var idsComp=completadas.map(function(o){return o.id;});
@@ -6829,11 +6869,11 @@ function pintarTareas(todas,hoyOrdenes,esCache,completadas,evidenciaPorOrden,com
   }
   try{
     var hoy=fechaHoyLocal();
-    riegoOrdenes=hoyOrdenes.filter(function(o){return o.tipo_labor&&o.tipo_labor.requiere_tiempo;});
-    var tareasTodas=todas.filter(function(t){return (t.tabla||t.activo_rancho_id)&&!(t.tipo_labor&&t.tipo_labor.requiere_tiempo);});
+    riegoOrdenes=hoyOrdenes.filter(function(o){return o.tipo_labor&&ordenEsTiempo(o);});
+    var tareasTodas=todas.filter(function(t){return (t.tabla||t.activo_rancho_id)&&!ordenEsTiempo(t);});
     var porHacer=tareasTodas.filter(function(t){return t.estado==='pendiente';});
     var enProceso=tareasTodas.filter(function(t){return t.estado==='en_proceso';});
-    var completadasNormales=completadas.filter(function(o){return (o.tabla||o.activo_rancho_id)&&!(o.tipo_labor&&o.tipo_labor.requiere_tiempo);});
+    var completadasNormales=completadas.filter(function(o){return (o.tabla||o.activo_rancho_id)&&!ordenEsTiempo(o);});
 
     function tarjetaTarea(t){
       if(t.activo_rancho_id){
