@@ -7077,12 +7077,39 @@ function renderRiegoEjecucion(ordenId){
 
   if(o.estado==='en_proceso'){
     var inicio=new Date(o.hora_inicio_real).getTime();
-    var finMs=inicio+o.duracion_minutos*60000;
-    body.innerHTML='<div class="seccion-titulo">💧 '+(p?p.nombre:'')+' · '+o.tabla.nombre+'</div><div class="riego-ejec-card" id="riego-card"><div class="riego-ejec-min" id="riego-cuenta">--:--</div><p class="hint" id="riego-msg">Riego en curso</p><button class="btn-primary" style="background:var(--rojo)" id="riego-terminar">⏹ Terminar riego</button></div><p class="hint" style="margin-top:.75rem;">Mantén esta pantalla abierta para escuchar la alarma cuando falten 5 min.</p><button class="btn-back" style="margin-top:.5rem;" onclick="renderRiegoTablas(\''+o.tabla.plantacion_id+'\')">← Volver a tablas</button>';
+    var finMs=inicio+o.duracion_minutos*60000+(o.minutos_pausados_acumulados||0)*60000;
+
+    if(o.pausado_en){
+      var pausaInicio=new Date(o.pausado_en).getTime();
+      var restanteAlPausar=finMs-pausaInicio;
+      var negP=restanteAlPausar<0, absP=Math.abs(restanteAlPausar);
+      var mmP=Math.floor(absP/60000), ssP=Math.floor((absP%60000)/1000);
+      var textoRestante=(negP?'+':'')+String(mmP).padStart(2,'0')+':'+String(ssP).padStart(2,'0');
+      var motivoHtml=o.motivo_pausa?'<p class="hint" style="margin-top:.35rem;">Motivo: '+o.motivo_pausa+'</p>':'';
+      body.innerHTML='<div class="seccion-titulo">💧 '+(p?p.nombre:'')+' · '+o.tabla.nombre+'</div><div class="riego-ejec-card" id="riego-card" style="background:#fff6e5;border:1.5px solid #f0b429;"><div class="riego-ejec-min">⏸ '+textoRestante+'</div><p class="hint" id="riego-msg">Riego en pausa — tiempo restante congelado</p>'+motivoHtml+'<div style="display:flex;gap:8px;margin-top:.75rem;"><button class="btn-primary" id="riego-reanudar" style="flex:1;">▶ Reanudar riego</button><button class="btn-primary" id="riego-terminar-pausado" style="flex:1;background:var(--rojo)">⏹ Terminar</button></div></div><button class="btn-back" style="margin-top:1rem;" onclick="renderRiegoTablas(\''+o.tabla.plantacion_id+'\')">← Volver a tablas</button>';
+      document.getElementById('riego-reanudar').addEventListener('click',function(){
+        var minutosPausa=(Date.now()-pausaInicio)/60000;
+        riegoActualizarEstado(o,{pausado_en:null,motivo_pausa:null,minutos_pausados_acumulados:(o.minutos_pausados_acumulados||0)+minutosPausa});
+        renderRiegoEjecucion(ordenId);
+      });
+      document.getElementById('riego-terminar-pausado').addEventListener('click',function(){
+        riegoActualizarEstado(o,{estado:'completada',hora_fin_real:new Date().toISOString()});
+        renderRiegoTablas(o.tabla.plantacion_id);
+      });
+      return;
+    }
+
+    body.innerHTML='<div class="seccion-titulo">💧 '+(p?p.nombre:'')+' · '+o.tabla.nombre+'</div><div class="riego-ejec-card" id="riego-card"><div class="riego-ejec-min" id="riego-cuenta">--:--</div><p class="hint" id="riego-msg">Riego en curso</p><div style="display:flex;gap:8px;"><button class="btn-primary" style="flex:1;background:#f0b429" id="riego-pausar">⏸ Pausar</button><button class="btn-primary" style="flex:1;background:var(--rojo)" id="riego-terminar">⏹ Terminar riego</button></div></div><p class="hint" style="margin-top:.75rem;">Mantén esta pantalla abierta para escuchar la alarma cuando falten 5 min. Si hay una emergencia (fuga, accidente, etc.), usa Pausar sin perder el tiempo restante.</p><button class="btn-back" style="margin-top:.5rem;" onclick="renderRiegoTablas(\''+o.tabla.plantacion_id+'\')">← Volver a tablas</button>';
     document.getElementById('riego-terminar').addEventListener('click',function(){
       pararRiegoTimer();
       riegoActualizarEstado(o,{estado:'completada',hora_fin_real:new Date().toISOString()});
       renderRiegoTablas(o.tabla.plantacion_id);
+    });
+    document.getElementById('riego-pausar').addEventListener('click',function(){
+      pararRiegoTimer();
+      var motivo=prompt('¿Por qué pausas el riego? (opcional)\nEj. fuga, accidente, emergencia...')||'';
+      riegoActualizarEstado(o,{pausado_en:new Date().toISOString(),motivo_pausa:motivo.trim()?motivo.trim():null});
+      renderRiegoEjecucion(ordenId);
     });
     function tick(){
       var restanteMs=finMs-Date.now();
