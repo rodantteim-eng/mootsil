@@ -2988,6 +2988,13 @@ function guardarFormula(){
 
 var BOMBA_CAPACIDAD={'inyeccion':200,'motor':25,'manual':20};
 function bombasPorTambo(bomba){var cap=BOMBA_CAPACIDAD[bomba]||20;return Math.round((200/cap)*10)/10;}
+function unidadPlanAplic(o){
+  var vol=o.volumen_aplicado_litros, plan=o.tambos_planeados;
+  if(!o.bomba_usada||o.bomba_usada==='inyeccion'||!plan) return {esBombas:false,singular:'tambo',plural:'tambos',art:'los',cuantos:'Cuántos'};
+  var porUnidad=vol/plan;
+  var esBombas=Math.abs(porUnidad-200)>1;
+  return {esBombas:esBombas,singular:esBombas?'bomba':'tambo',plural:esBombas?'bombas':'tambos',art:esBombas?'las':'los',cuantos:esBombas?'Cuántas':'Cuántos'};
+}
 var aplic={plantacionId:null,tablaId:null,formula:null,componentes:[],bomba:null,numBombas:null,volumen:null,factor:1,tambosPlaneados:null,operarios:[],fecha:null,notas:null,esExtra:false,horasExtra:2,modoCantidad:'tambo'};
 
 function aplicReset(){
@@ -3167,6 +3174,7 @@ function cargarFormulaParaAsignar(formulaId){
       renderAsigAplicComponentes();
     } else {
       aplic.tambosPlaneados=null;
+      aplic.numBombas=null;
       renderAsigAplicCantidad();
     }
   });
@@ -3184,49 +3192,27 @@ function renderAsigAplicCantidad(){
   var tablaCant=cats.tablas.find(function(x){return x.id===aplic.tablaId;});
   var surcosPorTambo=aplic.formula.duracion_o_surcos;
   var surcosPorBomba=surcosPorTambo?(Math.round((surcosPorTambo/bombasParaTambo)*100)/100):null;
-  function calcularSugerenciaTambos(modoActual,numBombasActual){
-    var surcosPorUnidad = modoActual==='bombas' ? (surcosPorBomba&&numBombasActual?surcosPorBomba*numBombasActual:null) : surcosPorTambo;
-    var sugerido = (surcosPorUnidad&&tablaCant&&tablaCant.cantidad_surcos)?Math.max(1,Math.ceil(tablaCant.cantidad_surcos/surcosPorUnidad)):1;
-    return {surcosPorUnidad:surcosPorUnidad,sugerido:sugerido};
-  }
-  function textoLabelTambos(modoActual){
-    return modoActual==='bombas' ? '¿Cuántas veces vas a preparar esta mezcla para cubrir TODA la tabla?' : '¿Cuántos tambos como este necesitará para cubrir TODA la tabla?';
-  }
-  function textoHintTambos(modoActual,numBombasActual){
-    var info=calcularSugerenciaTambos(modoActual,numBombasActual);
-    if(!info.surcosPorUnidad||!tablaCant||!tablaCant.cantidad_surcos){
-      return 'La fórmula no tiene definido el rendimiento (surcos por bomba) — lo puedes fijar en Fórmulas → Bombas. Captura manualmente '+(modoActual==='bombas'?'cuántas veces prepararás esta mezcla':'cuántos tambos necesitará')+' para esta tabla completa.';
+  // Modo TAMBO: cada mezcla es un tambo completo de 200L; se repite N veces.
+  var tambosSugeridos=(surcosPorTambo&&tablaCant&&tablaCant.cantidad_surcos)?Math.max(1,Math.ceil(tablaCant.cantidad_surcos/surcosPorTambo)):1;
+  if(aplic.tambosPlaneados==null) aplic.tambosPlaneados=tambosSugeridos;
+  var hintTambos=(surcosPorTambo&&tablaCant&&tablaCant.cantidad_surcos)?('Con '+surcosPorTambo+' surcos por tambo y '+tablaCant.cantidad_surcos+' surcos en '+(tablaCant.nombre||'la tabla')+', sugerimos '+tambosSugeridos+' tambo(s). Ajusta si sabes que es distinto.'):'La fórmula no tiene definido cuántos surcos cubre un tambo — lo puedes fijar en Fórmulas → Bombas. Captura manualmente cuántos tambos necesitará esta tabla completa.';
+  var boxTambos='<div class="form-group" id="aplic-tambos-box" style="margin-top:1rem;"><label>¿Cuántos tambos como este necesitará para cubrir TODA la tabla?</label><input type="number" id="aplic-tambos-input" min="1" step="1" value="'+aplic.tambosPlaneados+'"><p class="hint">'+hintTambos+'</p></div>';
+  // Modo BOMBAS: cada bomba es su propia mezcla (el operario mezcla por cada bomba que prepara). Se captura directo el total de bombas para toda la tabla — sin pasos intermedios.
+  var bombasSugeridas=(surcosPorBomba&&tablaCant&&tablaCant.cantidad_surcos)?Math.max(1,Math.ceil(tablaCant.cantidad_surcos/surcosPorBomba)):1;
+  if(aplic.numBombas==null) aplic.numBombas=bombasSugeridas;
+  function textoHintBombas(n){
+    if(!surcosPorBomba||!tablaCant||!tablaCant.cantidad_surcos){
+      return 'La fórmula no tiene definido el rendimiento (surcos por bomba) — lo puedes fijar en Fórmulas → Bombas. Captura manualmente cuántas bombas en total necesitará esta tabla.';
     }
-    if(modoActual==='bombas'){
-      return 'Con '+surcosPorBomba+' surcos por bomba ('+info.surcosPorUnidad+' surcos con esta mezcla de '+numBombasActual+' bomba(s)) y '+tablaCant.cantidad_surcos+' surcos en '+(tablaCant.nombre||'la tabla')+', te sugerimos preparar esta mezcla '+info.sugerido+' '+(info.sugerido===1?'vez':'veces')+'. Ajusta si sabes que es distinto.';
-    }
-    return 'Con '+surcosPorTambo+' surcos por tambo y '+tablaCant.cantidad_surcos+' surcos en '+(tablaCant.nombre||'la tabla')+', sugerimos '+info.sugerido+' tambo(s). Ajusta si sabes que es distinto.';
+    var cubre=Math.round(surcosPorBomba*n*100)/100;
+    return 'Con '+surcosPorBomba+' surcos por bomba, '+n+' bomba(s) cubren aprox. '+cubre+' de los '+tablaCant.cantidad_surcos+' surcos de '+(tablaCant.nombre||'la tabla')+'. Para cubrirla completa se sugieren '+bombasSugeridas+' bomba(s). Ajusta según lo que vayas a preparar hoy.';
   }
-  var infoInicial=calcularSugerenciaTambos(modo,aplic.numBombas||1);
-  if(aplic.tambosPlaneados==null) aplic.tambosPlaneados=infoInicial.sugerido;
-  var hintTambos=textoHintTambos(modo,aplic.numBombas||1);
-  var labelTambos=textoLabelTambos(modo);
-  var boxTambos=esInyeccionCant?'':'<div class="form-group" id="aplic-tambos-box" style="margin-top:1rem;"><label id="aplic-tambos-label">'+labelTambos+'</label><input type="number" id="aplic-tambos-input" min="1" step="1" value="'+aplic.tambosPlaneados+'"><p class="hint" id="aplic-tambos-hint">'+hintTambos+'</p></div>';
-  body.innerHTML='<div class="seccion-titulo">🧪 '+aplic.formula.nombre+'</div><p class="hint" style="margin-bottom:.75rem;">Equipo: <strong>'+BOMBA_ICONOS[aplic.bomba]+' '+BOMBA_LABELS[aplic.bomba]+'</strong> (definido por la fórmula) · <a href="javascript:void(0)" id="aplic-cambiar-equipo" style="color:var(--verde-mid);font-weight:600;">cambiar</a></p><div id="aplic-equipo-box" style="display:none;margin-bottom:1rem;" class="labor-grid">'+tilesEquipo+'</div><div class="form-card"><div class="form-group"><label>¿Cuánto se va a mezclar CADA VEZ?</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip'+(modo==='tambo'?' sel':'')+'" id="aplic-modo-tambo">🛢️ Tambo completo (200 L)</button><button type="button" class="op-chip'+(modo==='bombas'?' sel':'')+'" id="aplic-modo-bombas">🎒 Por bombas</button></div></div><div id="aplic-tambo-info" style="'+(modo==='tambo'?'':'display:none;')+'"><p class="hint">≈ '+bombasParaTambo+' '+BOMBA_LABELS[aplic.bomba].toLowerCase()+'s de '+cap+' L c/u para llenar el tambo.</p></div><div id="aplic-bombas-info" style="'+(modo==='bombas'?'':'display:none;')+'"><input type="number" id="aplic-numbombas" min="1" value="'+(aplic.numBombas||1)+'" style="width:100%;text-align:center;font-size:2.4rem;font-weight:800;color:var(--verde-mid);border:none;background:transparent;outline:none;"><p class="hint">bombas de '+cap+' L c/u</p><p class="hint" id="aplic-vol-preview" style="font-weight:700;"></p></div>'+boxTambos+'<button class="btn-primary" style="margin-top:1rem;" id="aplic-cant-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigAplicFormulas()">← Volver a fórmula</button>';
-  var ultimoSugerido=infoInicial.sugerido;
+  body.innerHTML='<div class="seccion-titulo">🧪 '+aplic.formula.nombre+'</div><p class="hint" style="margin-bottom:.75rem;">Equipo: <strong>'+BOMBA_ICONOS[aplic.bomba]+' '+BOMBA_LABELS[aplic.bomba]+'</strong> (definido por la fórmula) · <a href="javascript:void(0)" id="aplic-cambiar-equipo" style="color:var(--verde-mid);font-weight:600;">cambiar</a></p><div id="aplic-equipo-box" style="display:none;margin-bottom:1rem;" class="labor-grid">'+tilesEquipo+'</div><div class="form-card"><div class="form-group"><label>¿Cuánto se va a mezclar CADA VEZ?</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip'+(modo==='tambo'?' sel':'')+'" id="aplic-modo-tambo">🛢️ Tambo completo (200 L)</button><button type="button" class="op-chip'+(modo==='bombas'?' sel':'')+'" id="aplic-modo-bombas">🎒 Por bombas</button></div></div><div id="aplic-tambo-info" style="'+(modo==='tambo'?'':'display:none;')+'"><p class="hint">≈ '+bombasParaTambo+' '+BOMBA_LABELS[aplic.bomba].toLowerCase()+'s de '+cap+' L c/u para llenar el tambo.</p>'+boxTambos+'</div><div id="aplic-bombas-info" style="'+(modo==='bombas'?'':'display:none;')+'"><label style="display:block;font-size:.78rem;font-weight:600;color:var(--gris-3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.4rem;">¿Cuántas bombas en total va a preparar para cubrir la tabla?</label><input type="number" id="aplic-numbombas" min="1" value="'+aplic.numBombas+'" style="width:100%;text-align:center;font-size:2.4rem;font-weight:800;color:var(--verde-mid);border:none;background:transparent;outline:none;"><p class="hint">bombas de '+cap+' L c/u — cada bomba es una mezcla aparte</p><p class="hint" id="aplic-vol-preview" style="font-weight:700;"></p><p class="hint" id="aplic-bombas-hint">'+textoHintBombas(aplic.numBombas)+'</p></div><button class="btn-primary" style="margin-top:1rem;" id="aplic-cant-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigAplicFormulas()">← Volver a fórmula</button>';
   function actualizarPreview(){
     var n=parseFloat(document.getElementById('aplic-numbombas').value)||0;
     document.getElementById('aplic-vol-preview').textContent='= '+numFmt(n*cap)+' litros totales';
-  }
-  function actualizarSugerenciaTambos(){
-    if(esInyeccionCant) return;
-    var nB=parseFloat(document.getElementById('aplic-numbombas').value)||1;
-    var lbl=document.getElementById('aplic-tambos-label');
-    var hint=document.getElementById('aplic-tambos-hint');
-    var input=document.getElementById('aplic-tambos-input');
-    if(lbl) lbl.textContent=textoLabelTambos(aplic.modoCantidad);
-    if(hint) hint.textContent=textoHintTambos(aplic.modoCantidad,nB);
-    var info=calcularSugerenciaTambos(aplic.modoCantidad,nB);
-    if(input&&parseFloat(input.value)===ultimoSugerido){
-      input.value=info.sugerido;
-      aplic.tambosPlaneados=info.sugerido;
-    }
-    ultimoSugerido=info.sugerido;
+    var hint=document.getElementById('aplic-bombas-hint');
+    if(hint) hint.textContent=textoHintBombas(n);
   }
   document.getElementById('aplic-cambiar-equipo').addEventListener('click',function(){
     var box=document.getElementById('aplic-equipo-box');
@@ -3238,7 +3224,7 @@ function renderAsigAplicCantidad(){
       aplic.numBombas=1; aplic.volumen=200; aplic.factor=1; aplic.tambosPlaneados=1;
       renderAsigAplicComponentes();
     } else {
-      aplic.tambosPlaneados=null;
+      aplic.tambosPlaneados=null; aplic.numBombas=null;
       renderAsigAplicCantidad();
     }
   });});
@@ -3248,7 +3234,6 @@ function renderAsigAplicCantidad(){
     document.getElementById('aplic-modo-bombas').classList.remove('sel');
     document.getElementById('aplic-tambo-info').style.display='';
     document.getElementById('aplic-bombas-info').style.display='none';
-    actualizarSugerenciaTambos();
   });
   document.getElementById('aplic-modo-bombas').addEventListener('click',function(){
     aplic.modoCantidad='bombas';
@@ -3257,25 +3242,20 @@ function renderAsigAplicCantidad(){
     document.getElementById('aplic-tambo-info').style.display='none';
     document.getElementById('aplic-bombas-info').style.display='';
     actualizarPreview();
-    actualizarSugerenciaTambos();
   });
-  document.getElementById('aplic-numbombas').addEventListener('input',function(){actualizarPreview();actualizarSugerenciaTambos();});
+  document.getElementById('aplic-numbombas').addEventListener('input',actualizarPreview);
   actualizarPreview();
   document.getElementById('aplic-cant-continuar').addEventListener('click',function(){
     if(aplic.modoCantidad==='bombas'){
       var n=parseFloat(document.getElementById('aplic-numbombas').value)||0;
-      if(n<=0){alert('Captura cuántas bombas se van a usar.');return;}
-      aplic.numBombas=n; aplic.volumen=n*cap; aplic.factor=aplic.volumen/200;
+      if(n<=0){alert('Captura cuántas bombas en total va a preparar.');return;}
+      aplic.numBombas=n; aplic.volumen=cap; aplic.factor=cap/200; aplic.tambosPlaneados=n;
     } else {
       aplic.numBombas=bombasParaTambo; aplic.volumen=200; aplic.factor=1;
-    }
-    if(!esInyeccionCant){
       var tInput=document.getElementById('aplic-tambos-input');
       var tVal=tInput?(parseFloat(tInput.value)||1):1;
       if(tVal<1){alert('Captura cuántos tambos necesitará esta tabla (mínimo 1).');return;}
       aplic.tambosPlaneados=tVal;
-    } else {
-      aplic.tambosPlaneados=1;
     }
     renderAsigAplicComponentes();
   });
@@ -3294,7 +3274,8 @@ function renderAsigAplicComponentes(){
     return '<div style="display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--gris-1);font-size:.85rem;"><span>'+(c.item?c.item.nombre:'')+'</span><strong>'+fmtAmigable(cantEscalada,unidadItem)+'</strong></div>';
   }).join('');
   var alertaHtml=faltantes.length?'<div style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);border-radius:var(--radio-sm);padding:.75rem;margin-bottom:1rem;font-size:.82rem;"><strong style="color:var(--rojo);">⚠️ No alcanza el inventario</strong><br>'+faltantes.map(function(f){return f.nombre+' (faltan '+fmtAmigable(f.falta,f.unidad)+')';}).join(', ')+'</div>':'';
-  var tituloVol=tambosPlan>1?(numFmt(aplic.volumen)+' L × '+tambosPlan+' tambos = '+numFmt(aplic.volumen*tambosPlan)+' L en total'):(numFmt(aplic.volumen)+' L ('+Math.round(aplic.factor*100)+'% de la base)');
+  var unidadVolTxt=(aplic.modoCantidad==='bombas'&&aplic.bomba!=='inyeccion')?'bombas':'tambos';
+  var tituloVol=tambosPlan>1?(numFmt(aplic.volumen)+' L × '+tambosPlan+' '+unidadVolTxt+' = '+numFmt(aplic.volumen*tambosPlan)+' L en total'):(numFmt(aplic.volumen)+' L ('+Math.round(aplic.factor*100)+'% de la base)');
   body.innerHTML='<div class="seccion-titulo">🧪 Receta ajustada · '+tituloVol+'</div>'+alertaHtml+'<div class="form-card">'+filas+'</div><button class="btn-primary" style="margin-top:1.25rem;" id="aplic-comp-continuar">Continuar →</button><button class="btn-back" style="margin-top:.75rem;" onclick="'+(aplic.bomba==='inyeccion'?'renderAsigAplicFormulas()':'renderAsigAplicCantidad()')+'">← Volver</button>';
   document.getElementById('aplic-comp-continuar').addEventListener('click',function(){
     if(faltantes.length&&!confirm('El inventario no alcanza para esta cantidad. ¿Asignar de todas formas? (tendrás que comprar antes de aplicar)')) return;
@@ -3336,9 +3317,10 @@ function renderAsigAplicNotas(){
   var p=cats.plantaciones.find(function(x){return x.id===aplic.plantacionId;});
   var opNombres=aplic.operarios.map(function(id){var o=cats.operarios.find(function(x){return x.id===id;});return o?o.nombre:'';}).join(', ');
   var tambosPlanNotas=aplic.tambosPlaneados||1;
+  var esBombasNotas=aplic.modoCantidad==='bombas'&&aplic.bomba!=='inyeccion';
   var resumenComp=aplic.componentes.map(function(c){return (c.item?c.item.nombre:'')+' · '+fmtAmigable(c.cantidad_base*aplic.factor*tambosPlanNotas,c.item?c.item.unidad:'');}).join('<br>');
-  var filaTambos=(aplic.bomba!=='inyeccion')?('<div class="resumen-row"><span class="resumen-key">Tambos planeados</span><span class="resumen-val">🛢️ '+tambosPlanNotas+'</span></div>'):'';
-  body.innerHTML='<div class="seccion-titulo">🧪 Confirmar aplicación</div><div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row"><span class="resumen-key">Fórmula</span><span class="resumen-val">'+aplic.formula.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Ubicación</span><span class="resumen-val">📍 '+(p?p.nombre:'')+' · '+(t?t.nombre:'')+'</span></div><div class="resumen-row"><span class="resumen-key">Equipo</span><span class="resumen-val">'+BOMBA_ICONOS[aplic.bomba]+' '+BOMBA_LABELS[aplic.bomba]+(aplic.bomba!=='inyeccion'?' × '+aplic.numBombas:'')+'</span></div><div class="resumen-row"><span class="resumen-key">Volumen por tambo</span><span class="resumen-val">'+numFmt(aplic.volumen)+' L</span></div>'+filaTambos+'<div class="resumen-row"><span class="resumen-key">Modo</span><span class="resumen-val">'+(aplic.esExtra?('⏰ Hora Extra ('+numFmt(aplic.horasExtra)+' h autorizadas)'):'🧑‍🌾 Labores')+'</span></div><div class="resumen-row"><span class="resumen-key">Operarios</span><span class="resumen-val">'+opNombres+'</span></div><div class="resumen-row"><span class="resumen-key">Fecha</span><span class="resumen-val">'+aplic.fecha+'</span></div><div class="resumen-row"><span class="resumen-key">Componentes a usar (total)</span></div><div style="font-size:.82rem;padding:.35rem 0;">'+resumenComp+'</div></div><p class="hint" style="margin-bottom:1rem;">⚠️ Al confirmar, esta cantidad total se descuenta del inventario de inmediato. Si el operario necesita más tambos de los planeados, el sistema descontará el extra automáticamente cuando lo reporte. Queda pendiente de validación por un ingeniero.</p><div class="form-group"><label>Notas (opcional)</label><input type="text" id="aplic-notas-input" placeholder="Instrucciones para el operario..."></div><button class="btn-primary" id="aplic-finalizar">✅ Asignar aplicación</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigAplicFecha()">← Volver a fecha</button>';
+  var filaTambos=(aplic.bomba!=='inyeccion')?('<div class="resumen-row"><span class="resumen-key">'+(esBombasNotas?'Bombas planeadas':'Tambos planeados')+'</span><span class="resumen-val">'+(esBombasNotas?'🎒':'🛢️')+' '+tambosPlanNotas+'</span></div>'):'';
+  body.innerHTML='<div class="seccion-titulo">🧪 Confirmar aplicación</div><div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row"><span class="resumen-key">Fórmula</span><span class="resumen-val">'+aplic.formula.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Ubicación</span><span class="resumen-val">📍 '+(p?p.nombre:'')+' · '+(t?t.nombre:'')+'</span></div><div class="resumen-row"><span class="resumen-key">Equipo</span><span class="resumen-val">'+BOMBA_ICONOS[aplic.bomba]+' '+BOMBA_LABELS[aplic.bomba]+'</span></div><div class="resumen-row"><span class="resumen-key">'+(esBombasNotas?'Volumen por bomba':'Volumen por tambo')+'</span><span class="resumen-val">'+numFmt(aplic.volumen)+' L</span></div>'+filaTambos+'<div class="resumen-row"><span class="resumen-key">Modo</span><span class="resumen-val">'+(aplic.esExtra?('⏰ Hora Extra ('+numFmt(aplic.horasExtra)+' h autorizadas)'):'🧑‍🌾 Labores')+'</span></div><div class="resumen-row"><span class="resumen-key">Operarios</span><span class="resumen-val">'+opNombres+'</span></div><div class="resumen-row"><span class="resumen-key">Fecha</span><span class="resumen-val">'+aplic.fecha+'</span></div><div class="resumen-row"><span class="resumen-key">Componentes a usar (total)</span></div><div style="font-size:.82rem;padding:.35rem 0;">'+resumenComp+'</div></div><p class="hint" style="margin-bottom:1rem;">⚠️ Al confirmar, esta cantidad total se descuenta del inventario de inmediato. Si el operario necesita más de lo planeado, el sistema descontará el extra automáticamente cuando lo reporte; si al final usa menos, la diferencia se devuelve sola al inventario. Queda pendiente de validación por un ingeniero.</p><div class="form-group"><label>Notas (opcional)</label><input type="text" id="aplic-notas-input" placeholder="Instrucciones para el operario..."></div><button class="btn-primary" id="aplic-finalizar">✅ Asignar aplicación</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigAplicFecha()">← Volver a fecha</button>';
   document.getElementById('aplic-finalizar').addEventListener('click',guardarAplicacion);
 }
 
@@ -3356,10 +3338,11 @@ function guardarAplicacion(){
     var autorizarExtra = aplic.esExtra ? Promise.all(aplic.operarios.map(function(oid){
       return from('horas_extra_asignadas').insert({operario_id:oid,asignado_por:usuario.id,fecha:aplic.fecha,motivo:notas,tipo_labor_id:lbAplic.id,estado:'aprobada',horas_max:aplic.horasExtra});
     })) : Promise.resolve();
+    var unidadMovTxt=(aplic.modoCantidad==='bombas'&&aplic.bomba!=='inyeccion')?'bombas':'tambos';
     var movs=aplic.componentes.map(function(c){
       var cant=c.cantidad_base*aplic.factor*tambosPlan;
       var nuevoStock=(c.item?c.item.stock_actual:0)-cant;
-      return from('movimientos_inventario').insert({item_id:c.item_id,tipo:'salida',cantidad:cant,motivo:'Aplicación: '+aplic.formula.nombre+(tambosPlan>1?' ('+tambosPlan+' tambos)':''),referencia_orden_id:primeraOrdenId,usuario_id:usuario.id,stock_anterior:c.item?c.item.stock_actual:0,stock_posterior:nuevoStock}).then(function(){
+      return from('movimientos_inventario').insert({item_id:c.item_id,tipo:'salida',cantidad:cant,motivo:'Aplicación: '+aplic.formula.nombre+(tambosPlan>1?' ('+tambosPlan+' '+unidadMovTxt+')':''),referencia_orden_id:primeraOrdenId,usuario_id:usuario.id,stock_anterior:c.item?c.item.stock_actual:0,stock_posterior:nuevoStock}).then(function(){
         return from('inventario_items').eq('id',c.item_id).update({stock_actual:nuevoStock});
       });
     });
@@ -5851,7 +5834,8 @@ function renderEjecAplicacion(planta,tabla){
     var totalAsigApl=(o.surcos_asignados&&o.surcos_asignados.length)?o.surcos_asignados.map(String):(tabla&&tabla.cantidad_surcos?Array.from({length:tabla.cantidad_surcos},function(_,i){return String(i+1);}):[]);
     var yaComplApl=(o.surcos_completados||[]).map(String);
     var esInyeccionEjec=o.bomba_usada==='inyeccion';
-    var tambosInputHtml=esInyeccionEjec?'':'<div class="form-group"><label>¿Cuántos tambos preparaste para este avance?</label><input type="number" id="ejec-tambos-input" min="1" step="1" value="'+(capturaEjec.tambosEsteAvance||1)+'"><p class="hint">Cuenta solo los tambos de hoy, no los de avances anteriores.</p></div>';
+    var unidadEjec=unidadPlanAplic(o);
+    var tambosInputHtml=esInyeccionEjec?'':'<div class="form-group"><label>¿'+unidadEjec.cuantos+' '+unidadEjec.plural+' preparaste para este avance?</label><input type="number" id="ejec-tambos-input" min="1" step="1" value="'+(capturaEjec.tambosEsteAvance||1)+'"><p class="hint">Cuenta solo '+unidadEjec.art+' '+unidadEjec.plural+' de hoy, no '+unidadEjec.art+' de avances anteriores.</p></div>';
     body.innerHTML=bar+'<div class="step-label">Paso 3 de 4</div><div class="step-title">Surcos cubiertos'+(yaComplApl.length?' ('+yaComplApl.length+'/'+totalAsigApl.length+' ya registrados)':'')+'</div>'+tambosInputHtml+'<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;"><button type="button" id="ejec-sel-todos" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">Todos los que faltan</button><button type="button" id="ejec-sel-ninguno" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.78rem;cursor:pointer;">Limpiar</button></div><div class="surcos-grid" style="grid-template-columns:repeat(4,1fr);">'+totalAsigApl.map(function(num){
       var completado=yaComplApl.indexOf(num)>-1;
       if(completado) return '<button class="surco-btn sel" disabled style="opacity:.55;">'+num+' ✓</button>';
@@ -5881,9 +5865,10 @@ function capturarAvanceAplicEjec(){
   var o=ordenEjecutando;
   var esInyeccionEjec=o.bomba_usada==='inyeccion';
   if(!esInyeccionEjec){
+    var unidadCap=unidadPlanAplic(o);
     var tInput=document.getElementById('ejec-tambos-input');
     var tVal=tInput?(parseFloat(tInput.value)||0):1;
-    if(tVal<1){alert('Captura cuántos tambos preparaste para este avance (mínimo 1).');return false;}
+    if(tVal<1){alert('Captura '+unidadCap.cuantos.toLowerCase()+' '+unidadCap.plural+' preparaste para este avance (mínimo 1).');return false;}
     capturaEjec.tambosEsteAvance=tVal;
   } else {
     capturaEjec.tambosEsteAvance=0;
@@ -6848,7 +6833,8 @@ function pintarTareas(todas,hoyOrdenes,esCache,completadas,evidenciaPorOrden,com
         var productosHtml=compList.length?compList.map(function(c){
           return '<div style="display:flex;justify-content:space-between;font-size:.78rem;padding:.15rem 0;"><span>'+(c.item?c.item.nombre:'')+'</span><strong>'+fmtAmigable(c.cantidad_base*factor,c.item?c.item.unidad:'')+'</strong></div>';
         }).join(''):'';
-        var tambosTxt=(t.bomba_usada!=='inyeccion'&&t.tambos_planeados)?(' · 🛢️ '+(t.tambos_usados||0)+'/'+t.tambos_planeados+' tambos'):'';
+        var unidadTarjeta=unidadPlanAplic(t);
+        var tambosTxt=(t.bomba_usada!=='inyeccion'&&t.tambos_planeados)?(' · '+(unidadTarjeta.esBombas?'🎒':'🛢️')+' '+(t.tambos_usados||0)+'/'+t.tambos_planeados+' '+unidadTarjeta.plural):'';
         aplicInfoHtml='<div style="margin-top:.5rem;padding-top:.5rem;border-top:1px dashed var(--gris-2);font-size:.8rem;">'+(t.formula&&t.formula.categoria?'<span style="color:var(--gris-3);">'+(CATEGORIA_ICONOS[t.formula.categoria]||'')+' '+t.formula.categoria+'</span><br/>':'')+'⚙️ '+(BOMBA_ICONOS[t.bomba_usada]||'')+' '+(BOMBA_LABELS[t.bomba_usada]||t.bomba_usada||'')+' · 🧴 '+numFmt(t.volumen_aplicado_litros||0)+' L'+tambosTxt+(productosHtml?'<div style="margin-top:.35rem;"><strong style="font-size:.72rem;color:var(--gris-3);text-transform:uppercase;letter-spacing:.03em;">Productos a usar</strong>'+productosHtml+'</div>':'')+'</div>';
       }
       return '<div class="tarea-card" style="'+(atrasada?'border-left-color:var(--rojo);':(t.es_hora_extra?'border-left-color:var(--tierra);':''))+'"><div class="tarea-title">'+ic+' '+tituloLabor+etiquetaTipo+etiquetaEstado+(atrasada?' <span style="color:var(--rojo);font-size:.72rem;font-weight:700;">⚠️ Desde '+t.fecha_asignacion+'</span>':'')+'</div><div class="tarea-meta">📍 '+(p?p.nombre:'')+' · '+t.tabla.nombre+'<br/>🔢 Surcos: '+su+progresoTxt+(t.notas_encargado?'<br/>📝 '+t.notas_encargado:'')+'</div>'+aplicInfoHtml+'<div style="margin-top:.75rem;display:flex;gap:8px;">'+(t.estado==='pendiente'?'<button class="btn-sm btn-iniciar" data-ini="'+t.id+'">▶ Iniciar</button>':'')+(t.estado==='en_proceso'?'<button class="btn-sm btn-completar" data-eje="'+t.id+'">✅ Registrar avance</button>':'')+'</div></div>';
@@ -7250,6 +7236,7 @@ function ejecutarGuardadoFinal(o){
   var excedentePrevio = Math.max(0,tambosUsadosPrevios-tambosPlan);
   var excedenteNuevo = Math.max(0,tambosUsadosNuevo-tambosPlan);
   var tambosADeducir = excedenteNuevo-excedentePrevio;
+  var sobranteNoUsado = (esAplic&&nuevoEstado==='completada') ? Math.max(0,tambosPlan-tambosUsadosNuevo) : 0;
   var updatePayload = esMantenimiento ? {estado:nuevoEstado, herramienta_limpia:capturaEjec.herramientaLimpia||false} : (esAplic ? {estado:nuevoEstado, surcos_completados:progreso.union, tambos_usados:tambosUsadosNuevo, herramienta_limpia:capturaEjec.herramientaLimpia||false} : {estado:nuevoEstado, surcos_completados:progreso.union, herramienta_limpia:capturaEjec.herramientaLimpia||false});
   if(nuevoEstado==='completada') updatePayload.completado_en=new Date().toISOString();
   var reg={usuario_id:usuario.id,tabla_id:o.tabla_id,tipo_labor_id:o.tipo_labor_id,subtipo_labor_id:o.subtipo_labor_id||null,surcos_trabajados:capturaEjec.surcos,cantidad_insumo:esAplic?o.volumen_aplicado_litros:(capturaEjec.cantidad||null),foto_url:capturaEjec.fotoUrl||null,capturado_en:new Date().toISOString(),orden_id:o.id};
@@ -7276,7 +7263,16 @@ function ejecutarGuardadoFinal(o){
       return from('inventario_items').eq('id',c.item_id).update({stock_actual:nuevoStock});
     });
   })) : Promise.resolve();
-  deducirTambosExtra.then(function(){
+  var devolverSobrante = (esAplic&&sobranteNoUsado>0) ? Promise.all((o.componentesFormula||[]).map(function(c){
+    var item=cats.inventario.find(function(x){return x.id===c.item_id;});
+    var stockActual=item?item.stock_actual:0;
+    var cant=c.cantidad_base*(o.factor_escala||1)*sobranteNoUsado;
+    var nuevoStock=stockActual+cant;
+    return from('movimientos_inventario').insert({item_id:c.item_id,tipo:'entrada',cantidad:cant,motivo:'Devolución automática: mezcla(s) planeada(s) no usada(s) en '+(o.formula?o.formula.nombre:''),referencia_orden_id:o.id,usuario_id:usuario.id,stock_anterior:stockActual,stock_posterior:nuevoStock}).then(function(){
+      return from('inventario_items').eq('id',c.item_id).update({stock_actual:nuevoStock});
+    });
+  })) : Promise.resolve();
+  Promise.all([deducirTambosExtra,devolverSobrante]).then(function(){
     return from('registros_labor').insert(reg);
   }).then(function(){
     return from('ordenes_trabajo').eq('id',o.id).update(updatePayload);
@@ -7286,8 +7282,10 @@ function ejecutarGuardadoFinal(o){
     var verbo = progreso.completo ? 'completó' : (horaExtraSinTerminar ? 'cumplió su hora extra trabajando' : 'avanzó en');
     showToast('✅ '+usuario.nombre+' '+verbo+' '+(lb?lb.nombre:'')+' en '+(tb?tb.nombre:''));
     var detalle=esAplic?('Fórmula: '+(o.formula?o.formula.nombre:'')+' · Surcos: '+progreso.union.length+'/'+progreso.totalAsignados.length+(progreso.completo?'':(horaExtraSinTerminar?' · El resto queda para otro turno':' · Faltan: '+progreso.faltan.join(', ')))):('Surcos: '+capturaEjec.surcos.join(', ')+(progreso.completo?'':(horaExtraSinTerminar?' · El resto queda para otro turno':' · Faltan: '+progreso.faltan.join(', '))));
-    var avisoOverage = (esAplic&&tambosADeducir>0) ? from('notificaciones').insert({titulo:'⚠️ Se usaron más tambos de los planeados',cuerpo:usuario.nombre+' ya lleva '+tambosUsadosNuevo+' tambo(s) en '+(lb?lb.nombre:'')+' · '+(tb?tb.nombre:'')+', pero solo se planearon '+tambosPlan+'. Se descontó el extra del inventario automáticamente.',icono:'⚠️',leida:false,para_rol:'encargado'}) : Promise.resolve();
-    avisoOverage.then(function(){
+    var unidadAviso=esAplic?unidadPlanAplic(o):{plural:'tambos',singular:'tambo'};
+    var avisoOverage = (esAplic&&tambosADeducir>0) ? from('notificaciones').insert({titulo:'⚠️ Se usaron más '+unidadAviso.plural+' de las planeadas',cuerpo:usuario.nombre+' ya lleva '+tambosUsadosNuevo+' '+unidadAviso.singular+'(s) en '+(lb?lb.nombre:'')+' · '+(tb?tb.nombre:'')+', pero solo se planearon '+tambosPlan+'. Se descontó el extra del inventario automáticamente.',icono:'⚠️',leida:false,para_rol:'encargado'}) : Promise.resolve();
+    var avisoSobrante = (esAplic&&sobranteNoUsado>0) ? from('notificaciones').insert({titulo:'↩️ Insumo no usado devuelto al inventario',cuerpo:'Se planearon '+tambosPlan+' '+unidadAviso.singular+'(s) para '+(lb?lb.nombre:'')+' · '+(tb?tb.nombre:'')+', pero solo se usaron '+tambosUsadosNuevo+'. La diferencia ('+sobranteNoUsado+') se devolvió automáticamente al inventario.',icono:'↩️',leida:false,para_rol:'encargado'}) : Promise.resolve();
+    Promise.all([avisoOverage,avisoSobrante]).then(function(){
       return from('notificaciones').insert({titulo: nuevoEstado==='completada'?'✅ Labor completada':'🔶 Avance parcial registrado',cuerpo:usuario.nombre+' '+verbo+' '+(lb?lb.nombre:'')+' en '+(tb?tb.nombre:'')+' — '+detalle,icono: nuevoEstado==='completada'?'✅':'🔶',leida:false,para_rol:'encargado'});
     }).then(function(){
       document.getElementById('exito-sub').textContent = nuevoEstado==='completada' ? 'Registro guardado. El encargado recibirá un aviso.' : 'Avance guardado. Faltan '+progreso.faltan.length+' surco(s) — seguirá apareciendo en tus tareas.';
