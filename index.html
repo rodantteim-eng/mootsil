@@ -948,13 +948,16 @@ function pintarGestionLabor(){
       var progreso=progresoSurcosOrden(o);
       var avanceTxt=progreso.totalAsignados.length>0?('Avance: '+progreso.completados.length+'/'+progreso.totalAsignados.length+' surcos'+(progreso.faltan.length?' · Faltan: '+progreso.faltan.join(', '):'')):'';
       var estBadge=o.estado==='en_proceso'?'🔶 En proceso':'🆕 Pendiente';
-      return '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem;">'+(o.operario?o.operario.nombre:'')+'</strong><span style="font-size:.72rem;font-weight:700;">'+estBadge+'</span></div>'+(avanceTxt?'<div class="orden-meta">'+avanceTxt+'</div>':'')+'<div style="display:flex;gap:8px;margin-top:.5rem;flex-wrap:wrap;"><button type="button" class="btn-sm" style="background:var(--gris-1);color:var(--negro);" data-cambiar-op="'+o.id+'">🔄 Cambiar operario</button><button type="button" class="btn-sm btn-cancelar" data-cancelar-uno="'+o.id+'" data-nombre="'+(o.operario?o.operario.nombre:'').replace(/"/g,'&quot;')+'">✖️ Cancelar</button></div></div>';
+      return '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem;">'+(o.operario?o.operario.nombre:'')+'</strong><span style="font-size:.72rem;font-weight:700;">'+estBadge+'</span></div>'+(avanceTxt?'<div class="orden-meta">'+avanceTxt+'</div>':'')+'<div style="display:flex;gap:8px;margin-top:.5rem;flex-wrap:wrap;"><button type="button" class="btn-sm" style="background:var(--verde-tenue);border:1.5px solid var(--verde-mid);color:var(--verde);" data-editar-orden="'+o.id+'">✏️ Editar</button><button type="button" class="btn-sm" style="background:var(--gris-1);color:var(--negro);" data-cambiar-op="'+o.id+'">🔄 Cambiar operario</button><button type="button" class="btn-sm btn-cancelar" data-cancelar-uno="'+o.id+'" data-nombre="'+(o.operario?o.operario.nombre:'').replace(/"/g,'&quot;')+'">✖️ Cancelar</button></div></div>';
     }).join('');
     html+='<button type="button" class="btn-primary" id="gl-agregar" style="margin-top:.5rem;width:100%;">➕ Agregar a otro operario</button>';
     html+='<button type="button" id="gl-cancelar-todo" style="width:100%;margin-top:.75rem;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.85rem;cursor:pointer;">🚫 Cancelar toda esta labor</button>';
     html+='<button class="btn-back" style="margin-top:1rem;" onclick="renderAsignarEstatus()">← Volver a Asignar</button>';
     body.innerHTML=html;
 
+    body.querySelectorAll('[data-editar-orden]').forEach(function(btn){
+      btn.addEventListener('click',function(){renderEditarOrdenIndividual(this.dataset.editarOrden);});
+    });
     body.querySelectorAll('[data-cambiar-op]').forEach(function(btn){
       btn.addEventListener('click',function(){renderGestionarLaborElegirOperario('cambiar',this.dataset.cambiarOp);});
     });
@@ -1024,6 +1027,75 @@ function renderGestionarLaborElegirOperario(modo,ordenId){
       }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Continuar →';});
     }
   });
+}
+
+function renderEditarOrdenIndividual(ordenId){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo">✏️ Editar asignación</div><div class="loading">Cargando...</div>';
+  from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_tabla,requiere_cantidad_insumo,unidad_insumo),subtipo:subtipos_labor(nombre)').eq('id',ordenId).single().then(function(o){
+    var lb=o.tipo_labor||{};
+    var esFiltros=!!(o.subtipo&&o.subtipo.nombre==='Limpieza Filtros');
+    var noTabla=(lb.requiere_tabla===false)||!o.tabla_id;
+    var pO=cats.plantaciones.map(function(p){return '<option value="'+p.id+'"'+(o.tabla&&o.tabla.plantacion_id===p.id?' selected':'')+'>'+p.nombre+'</option>';}).join('');
+    var avisoNoTabla=noTabla?'<div style="background:var(--gris-1);border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);padding:.6rem .85rem;margin-bottom:.75rem;font-size:.8rem;color:var(--gris-3);">ℹ️ Esta labor no está ligada a ninguna plantación ni tabla.</div>':'';
+    var cantField=lb.requiere_cantidad_insumo?'<div class="form-group"><label>Cantidad esperada ('+(lb.unidad_insumo||'')+')</label><input type="number" id="eo-cant" value="'+(o.cantidad_insumo_esperada!=null?o.cantidad_insumo_esperada:'')+'" min="0"/></div>':'';
+    body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">✏️ Editar asignación<button type="button" onclick="pintarGestionLabor()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cancelar</button></div>'+avisoNoTabla+'<div class="form-card"><div class="labor-chosen">'+(ICONOS[lb.nombre]||'🔧')+' <strong>'+lb.nombre+(o.subtipo?' · '+o.subtipo.nombre:'')+'</strong></div>'+(o.operario?'<p class="hint" style="margin-bottom:.6rem;">👷 '+o.operario.nombre+'</p>':'')
+      +(noTabla?'':'<div class="form-group"><label>Plantación</label><select id="eo-pl"><option value="">Selecciona...</option>'+pO+'</select></div><div class="form-group"><label>Tabla</label><select id="eo-tb"><option value="">Selecciona...</option></select></div>')
+      +(noTabla||esFiltros?'':'<div class="form-group"><label>Surcos a trabajar</label><div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;"><button type="button" onclick="selTodosF()" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">Tabla completa</button><button type="button" onclick="selNingunoF()" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.78rem;cursor:pointer;">Limpiar</button></div><div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;"><span style="font-size:.78rem;color:var(--gris-3)">Del surco</span><input type="number" id="f-ri" min="1" style="width:52px;padding:3px 6px;border:1.5px solid var(--gris-2);border-radius:6px;font-size:.85rem;" placeholder="1"><span style="font-size:.78rem;color:var(--gris-3)">al</span><input type="number" id="f-rf" min="1" style="width:52px;padding:3px 6px;border:1.5px solid var(--gris-2);border-radius:6px;font-size:.85rem;" placeholder="12"><button type="button" onclick="aplicarRangoF()" style="padding:4px 10px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.78rem;cursor:pointer;">Aplicar</button></div><div class="surcos-grid" id="fsc"></div><p class="hint">O toca surcos individuales</p></div>')
+      +cantField
+      +'<div class="form-group"><label>Duración</label><select id="eo-dur"><option value="dia"'+(o.duracion==='dia'?' selected':'')+'>Solo hoy</option><option value="labor_completa"'+(o.duracion==='labor_completa'?' selected':'')+'>Labor completa</option></select></div>'
+      +'<div class="form-group"><label>Fecha</label><input type="date" id="eo-fecha" value="'+(o.fecha_asignacion||fechaHoyLocal())+'"/></div>'
+      +'<div class="form-group"><label>Notas</label><input type="text" id="eo-notas" value="'+((o.notas_encargado||'').replace(/"/g,'&quot;'))+'" placeholder="Opcional..."/></div>'
+      +'<button class="btn-primary" id="eo-guardar">Guardar cambios</button></div><button class="btn-back" style="margin-top:1rem;" onclick="pintarGestionLabor()">← Volver sin guardar</button>';
+
+    if(!noTabla){
+      var tid0=o.tabla_id;
+      var plId0=o.tabla?o.tabla.plantacion_id:'';
+      var tSel=document.getElementById('eo-tb');
+      var pSel=document.getElementById('eo-pl');
+      var pintarTablasEo=function(plId,tablaSelId){
+        var ts=cats.tablas.filter(function(t){return t.plantacion_id===plId;});
+        tSel.innerHTML='<option value="">Selecciona...</option>'+ts.map(function(t){return '<option value="'+t.id+'"'+(t.id===tablaSelId?' selected':'')+'>'+t.nombre+'</option>';}).join('');
+      };
+      pintarTablasEo(plId0,tid0);
+      formSurcos=(o.surcos_asignados||[]).slice();
+      if(!esFiltros){
+        var t0=cats.tablas.find(function(t){return t.id===tid0;});
+        var n0=(t0&&t0.cantidad_surcos)?t0.cantidad_surcos:12;
+        var h0='';
+        for(var i=1;i<=n0;i++) h0+='<button type="button" class="surco-btn'+(formSurcos.indexOf(i)>-1?' sel':'')+'" data-n="'+i+'">'+i+'</button>';
+        var g0=document.getElementById('fsc');
+        if(g0){g0.innerHTML=h0;g0.querySelectorAll('.surco-btn').forEach(function(b){b.addEventListener('click',function(e){e.preventDefault();var n=parseInt(this.dataset.n);var idx=formSurcos.indexOf(n);if(idx>-1){formSurcos.splice(idx,1);this.classList.remove('sel');}else{formSurcos.push(n);this.classList.add('sel');}});});}
+      }
+      pSel.addEventListener('change',function(){pintarTablasEo(this.value,null);if(!esFiltros)renderSurcosForm();});
+      tSel.addEventListener('change',function(){if(!esFiltros)renderSurcosForm();});
+    }
+
+    document.getElementById('eo-guardar').addEventListener('click',function(){
+      var btn=this;
+      var tbId=noTabla?null:document.getElementById('eo-tb').value;
+      if(!noTabla&&!tbId){alert('Selecciona una tabla.');return;}
+      if(!noTabla&&!esFiltros&&!formSurcos.length){alert('Selecciona al menos un surco.');return;}
+      var payload={
+        tabla_id:tbId,
+        surcos_asignados:noTabla?null:(esFiltros?(o.surcos_asignados||null):formSurcos),
+        duracion:document.getElementById('eo-dur').value,
+        fecha_asignacion:document.getElementById('eo-fecha').value,
+        notas_encargado:document.getElementById('eo-notas').value||null
+      };
+      if(lb.requiere_cantidad_insumo){
+        var cantEl=document.getElementById('eo-cant');
+        payload.cantidad_insumo_esperada=cantEl?(parseFloat(cantEl.value)||null):null;
+      }
+      btn.disabled=true; btn.textContent='Guardando...';
+      from('ordenes_trabajo').eq('id',ordenId).update(payload).then(function(){
+        return o.operario_id?from('notificaciones').insert({titulo:'✏️ Tarea actualizada',cuerpo:'El encargado corrigió los detalles de tu tarea de '+lb.nombre+'.',icono:'✏️',leida:false,para_rol:'operario',para_usuario:o.operario_id}):Promise.resolve();
+      }).then(function(){
+        showToast('✅ Cambios guardados');
+        renderAsignarEstatus();
+      }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Guardar cambios';});
+    });
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
 function renderFormAsignar(){
