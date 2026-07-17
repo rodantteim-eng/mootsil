@@ -812,7 +812,7 @@ function renderAsignarEstatus(){
     otrosItems.forEach(function(o){
       var k=o.tabla_id+'|'+o.tipo_labor_id+'|'+(o.subtipo_labor_id||'')+'|'+o.fecha_asignacion+'|'+o._ficha;
       if(!gruposLabor[k]){
-        gruposLabor[k]={key:k,tablaId:o.tabla_id,tipoLaborId:o.tipo_labor_id,subtipoLaborId:o.subtipo_labor_id||null,fecha_asignacion:o.fecha_asignacion,notas_encargado:o.notas_encargado,duracion:o.duracion||'dia',tabla:o.tabla,tipoLaborNombre:o.tipo_labor.nombre,subtipoNombre:o.subtipo?o.subtipo.nombre:'',_ficha:o._ficha,ordenes:[]};
+        gruposLabor[k]={key:k,tablaId:o.tabla_id,tipoLaborId:o.tipo_labor_id,subtipoLaborId:o.subtipo_labor_id||null,fecha_asignacion:o.fecha_asignacion,notas_encargado:o.notas_encargado,duracion:o.duracion||'dia',tabla:o.tabla,tipoLaborNombre:o.tipo_labor.nombre,subtipoNombre:o.subtipo?o.subtipo.nombre:'',_ficha:o._ficha,esHoraExtra:!!o.es_hora_extra,ordenes:[]};
         ordenGruposLabor.push(k);
       }
       gruposLabor[k].ordenes.push(o);
@@ -831,7 +831,7 @@ function renderAsignarEstatus(){
       b.addEventListener('click',function(){
         var grp=gruposLabor[this.dataset.gkey];
         if(!grp) return;
-        GESTION_LABOR_GRUPO={tablaId:grp.tablaId,tipoLaborId:grp.tipoLaborId,subtipoLaborId:grp.subtipoLaborId,fecha:grp.fecha_asignacion,notasEncargado:grp.notas_encargado,duracion:grp.duracion,tablaNombre:grp.tabla?grp.tabla.nombre:'',tipoLaborNombre:grp.tipoLaborNombre,subtipoNombre:grp.subtipoNombre};
+        GESTION_LABOR_GRUPO={tablaId:grp.tablaId,tipoLaborId:grp.tipoLaborId,subtipoLaborId:grp.subtipoLaborId,fecha:grp.fecha_asignacion,notasEncargado:grp.notas_encargado,duracion:grp.duracion,tablaNombre:grp.tabla?grp.tabla.nombre:'',tipoLaborNombre:grp.tipoLaborNombre,subtipoNombre:grp.subtipoNombre,esHoraExtra:grp.esHoraExtra};
         pintarGestionLabor();
       });
     });
@@ -839,7 +839,7 @@ function renderAsignarEstatus(){
       b.addEventListener('click',function(){
         var grp=gruposLabor[this.dataset.gkey];
         if(!grp) return;
-        GESTION_LABOR_GRUPO={tablaId:grp.tablaId,tipoLaborId:grp.tipoLaborId,subtipoLaborId:grp.subtipoLaborId,fecha:grp.fecha_asignacion,notasEncargado:grp.notas_encargado,duracion:grp.duracion,tablaNombre:grp.tabla?grp.tabla.nombre:'',tipoLaborNombre:grp.tipoLaborNombre,subtipoNombre:grp.subtipoNombre};
+        GESTION_LABOR_GRUPO={tablaId:grp.tablaId,tipoLaborId:grp.tipoLaborId,subtipoLaborId:grp.subtipoLaborId,fecha:grp.fecha_asignacion,notasEncargado:grp.notas_encargado,duracion:grp.duracion,tablaNombre:grp.tabla?grp.tabla.nombre:'',tipoLaborNombre:grp.tipoLaborNombre,subtipoNombre:grp.subtipoNombre,esHoraExtra:grp.esHoraExtra};
         renderGestionarLaborElegirOperario('agregar',null);
       });
     });
@@ -919,7 +919,7 @@ function renderGestionarLabor(ordenId){
   from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre),subtipo:subtipos_labor(nombre)').eq('id',ordenId).get().then(function(rows){
     var origen=rows&&rows[0];
     if(!origen){renderAsignarEstatus();return;}
-    GESTION_LABOR_GRUPO={tablaId:origen.tabla_id,tipoLaborId:origen.tipo_labor_id,subtipoLaborId:origen.subtipo_labor_id||null,fecha:origen.fecha_asignacion,notasEncargado:origen.notas_encargado||null,duracion:origen.duracion||'dia',tablaNombre:origen.tabla?origen.tabla.nombre:'',tipoLaborNombre:origen.tipo_labor?origen.tipo_labor.nombre:'',subtipoNombre:origen.subtipo?origen.subtipo.nombre:''};
+    GESTION_LABOR_GRUPO={tablaId:origen.tabla_id,tipoLaborId:origen.tipo_labor_id,subtipoLaborId:origen.subtipo_labor_id||null,fecha:origen.fecha_asignacion,notasEncargado:origen.notas_encargado||null,duracion:origen.duracion||'dia',tablaNombre:origen.tabla?origen.tabla.nombre:'',tipoLaborNombre:origen.tipo_labor?origen.tipo_labor.nombre:'',subtipoNombre:origen.subtipo?origen.subtipo.nombre:'',esHoraExtra:!!origen.es_hora_extra};
     pintarGestionLabor();
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
@@ -1007,7 +1007,7 @@ function renderGestionarLaborElegirOperario(modo,ordenId){
         pintarGestionLabor();
       }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Continuar →';});
     } else {
-      from('ordenes_trabajo').insert({asignado_por:usuario.id,operario_id:opId,tabla_id:g.tablaId,tipo_labor_id:g.tipoLaborId,subtipo_labor_id:g.subtipoLaborId,duracion:g.duracion,fecha_asignacion:g.fecha,notas_encargado:g.notasEncargado,estado:'pendiente',es_hora_extra:false}).then(function(){
+      from('ordenes_trabajo').insert({asignado_por:usuario.id,operario_id:opId,tabla_id:g.tablaId,tipo_labor_id:g.tipoLaborId,subtipo_labor_id:g.subtipoLaborId,duracion:g.duracion,fecha_asignacion:g.fecha,notas_encargado:g.notasEncargado,estado:'pendiente',es_hora_extra:!!g.esHoraExtra}).then(function(){
         return from('notificaciones').insert({titulo:'📋 Nueva tarea asignada',cuerpo:usuario.nombre+' asignó a '+opNombre+': '+g.tipoLaborNombre+(g.subtipoNombre?' · '+g.subtipoNombre:'')+' en '+g.tablaNombre,icono:'📋',leida:false,para_rol:'operario',para_usuario:opId});
       }).then(function(){
         showToast('✅ '+opNombre+' agregado a esta labor');
