@@ -3689,7 +3689,7 @@ function renderNuevaCompra(){
     '<div class="form-group"><label>Fecha</label><input type="date" id="nc-fecha" value="'+hoy+'" max="'+hoy+'"></div>'+
     '<div class="form-group"><label>Forma de pago</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip sel" id="nc-fp-contado">✓ Contado</button><button type="button" class="op-chip" id="nc-fp-credito">Crédito</button></div></div>'+
     '<div class="form-group" id="nc-vencimiento-wrap" style="display:none;"><label>Fecha de vencimiento del pago</label><input type="date" id="nc-vencimiento"><p class="hint">Te avisaremos 5 días antes de que venza.</p></div>'+
-    '<div class="form-group"><label>Comprobante / foto de la factura (opcional)</label><input type="file" id="nc-comprobante" accept="image/*"><p class="hint" id="nc-comprobante-status"></p></div>'+
+    '<div class="form-group"><label>Comprobante / foto o PDF de la factura (opcional)</label><input type="file" id="nc-comprobante" accept="image/*,.pdf"><p class="hint" id="nc-comprobante-status"></p></div>'+
     '</div>'+
     '<div class="seccion-titulo" style="margin-top:1rem;font-size:.9rem;">Productos de la factura</div>'+
     '<div id="nc-items"></div>'+
@@ -4001,7 +4001,7 @@ function renderEditarCompra(compraId,volverFn){
       '<div class="form-group"><label>Fecha</label><input type="date" id="ec-fecha" value="'+compra.fecha+'" max="'+hoy+'"></div>'+
       '<div class="form-group"><label>Forma de pago</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip'+(compra.forma_pago==='contado'?' sel':'')+'" id="ec-fp-contado">'+(compra.forma_pago==='contado'?'✓ ':'')+'Contado</button><button type="button" class="op-chip'+(compra.forma_pago==='credito'?' sel':'')+'" id="ec-fp-credito">'+(compra.forma_pago==='credito'?'✓ ':'')+'Crédito</button></div></div>'+
       '<div class="form-group" id="ec-vencimiento-wrap" style="display:'+(compra.forma_pago==='credito'?'':'none')+';"><label>Fecha de vencimiento del pago</label><input type="date" id="ec-vencimiento" value="'+(compra.fecha_vencimiento||'')+'"></div>'+
-      '<div class="form-group"><label>Comprobante / foto de la factura</label>'+(compra.comprobante_url?'<p class="hint">Actual: <a href="'+compra.comprobante_url+'" target="_blank">🧾 Ver comprobante</a></p>':'<p class="hint">Sin comprobante adjuntado.</p>')+'<input type="file" id="ec-comprobante" accept="image/*"><p class="hint" id="ec-comprobante-status"></p></div>'+
+      '<div class="form-group"><label>Comprobante / foto o PDF de la factura</label>'+(compra.comprobante_url?'<p class="hint">Actual: <a href="'+compra.comprobante_url+'" target="_blank">🧾 Ver comprobante</a></p>':'<p class="hint">Sin comprobante adjuntado.</p>')+'<input type="file" id="ec-comprobante" accept="image/*,.pdf"><p class="hint" id="ec-comprobante-status"></p></div>'+
       '</div>'+
       '<div class="seccion-titulo" style="margin-top:1rem;font-size:.9rem;">Productos de la factura</div>'+
       '<div id="ec-items-existentes"></div>'+
@@ -4310,7 +4310,7 @@ function pintarGrupoCompraCard(grp){
   var comprobanteId='cmp-'+(grp.compraId||grp.items[0].id);
   var comprobanteHtml=grp.comprobanteUrl
     ? '<div class="orden-meta"><a href="'+grp.comprobanteUrl+'" target="_blank">🧾 Ver comprobante</a></div>'
-    : '<div class="orden-meta" style="margin-top:.3rem;"><label for="'+comprobanteId+'" style="color:var(--verde-mid);font-weight:600;cursor:pointer;">📎 Adjuntar comprobante</label><input type="file" id="'+comprobanteId+'" accept="image/*" class="btn-adjuntar-comprobante" data-compra-id="'+(grp.compraId||'')+'" data-gasto-id="'+grp.items[0].id+'" style="display:none;"><span class="hint" id="'+comprobanteId+'-status" style="margin-left:6px;"></span></div>';
+    : '<div class="orden-meta" style="margin-top:.3rem;"><label for="'+comprobanteId+'" style="color:var(--verde-mid);font-weight:600;cursor:pointer;">📎 Adjuntar comprobante</label><input type="file" id="'+comprobanteId+'" accept="image/*,.pdf" class="btn-adjuntar-comprobante" data-compra-id="'+(grp.compraId||'')+'" data-gasto-id="'+grp.items[0].id+'" style="display:none;"><span class="hint" id="'+comprobanteId+'-status" style="margin-left:6px;"></span></div>';
   var editarHtml=grp.compraId?'<button type="button" class="btn-editar-compra" data-compra-id="'+grp.compraId+'" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap;">✏️ Editar</button>':'';
   return '<div class="orden-card" style="border-left-color:'+(vencido?'var(--rojo)':'var(--verde-mid)')+';"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><strong style="font-size:.92rem;">🧾 '+grp.proveedorNombre+'</strong><span style="display:flex;align-items:center;gap:8px;"><strong style="font-size:1rem;color:var(--verde-mid);">$'+formatMonto(grp.total)+'</strong>'+editarHtml+'</span></div><div class="orden-meta">📅 '+grp.fecha+' · '+fpTxt+(grp.numeroFactura?' · Factura #'+grp.numeroFactura:'')+'</div>'+comprobanteHtml+'<div style="margin-top:.5rem;">'+itemsHtml+'</div>'+(grp.compraId&&grp.formaPago==='credito'&&grp.estadoPago==='pendiente'?'<button type="button" class="btn-sm btn-completar" style="margin-top:.5rem;" data-marcar-pagado="'+grp.compraId+'">✅ Marcar como pagado</button>':'')+'</div>';
 }
@@ -4812,7 +4812,7 @@ function renderNuevaInversion(usuarioId){
     '<div class="form-group"><label>Fecha de inicio</label><input type="date" id="ni-fecha" value="'+hoy+'"></div>'+
     '<div class="form-group"><label>Plazo (meses, opcional)</label><input type="number" id="ni-plazo" min="0" step="1" placeholder="Ej. 12"></div>'+
     '<div class="form-group"><label>Condiciones / tasa acordada (opcional)</label><input type="text" id="ni-condiciones" placeholder="Ej. 2% mensual sobre el capital"></div>'+
-    '<div class="form-group"><label>Comprobante del depósito inicial (opcional)</label><input type="file" id="ni-comprobante" accept="image/*"><p class="hint" id="ni-comprobante-status"></p></div>'+
+    '<div class="form-group"><label>Comprobante del depósito inicial — foto o PDF (opcional)</label><input type="file" id="ni-comprobante" accept="image/*,.pdf"><p class="hint" id="ni-comprobante-status"></p></div>'+
     '<button class="btn-primary" id="ni-guardar">Guardar contrato</button>'+
     '</div><button class="btn-back" style="margin-top:1rem;" onclick="renderInversionistaDetalle(\''+usuarioId+'\')">← Volver</button>';
 
@@ -4894,7 +4894,7 @@ function renderInversionDetalle(inversionId){
         '<div class="form-group"><label>Monto ($)</label><input type="text" inputmode="decimal" id="im-monto" placeholder="0.00"></div>'+
         '<div class="form-group"><label>Fecha</label><input type="date" id="im-fecha" value="'+fechaHoyLocal()+'"></div>'+
         '<div class="form-group"><label>Concepto (opcional)</label><input type="text" id="im-concepto" placeholder="Ej. Rendimiento de mayo"></div>'+
-        '<div class="form-group"><label>Comprobante (opcional)</label><input type="file" id="im-comprobante" accept="image/*"><p class="hint" id="im-comprobante-status"></p></div>'+
+        '<div class="form-group"><label>Comprobante — foto o PDF (opcional)</label><input type="file" id="im-comprobante" accept="image/*,.pdf"><p class="hint" id="im-comprobante-status"></p></div>'+
         '<button class="btn-primary" id="im-guardar">Registrar depósito</button>'+
       '</div>';
       html+='<div class="form-card"><div class="seccion-titulo" style="margin-top:0;">🔒 Cerrar contrato</div><div class="form-group"><label>Fecha de cierre</label><input type="date" id="ic-fecha" value="'+fechaHoyLocal()+'"></div><div class="form-group"><label>Resumen de cierre (opcional)</label><input type="text" id="ic-resumen" placeholder="Ej. Capital y utilidad liquidados en su totalidad"></div><button class="btn-sm btn-cancelar" id="ic-cerrar">🔒 Cerrar contrato</button></div>';
@@ -4978,7 +4978,7 @@ function renderEditarInversion(inversionId){
       '<div class="form-group"><label>Fecha de inicio</label><input type="date" id="ei-fecha" value="'+c.fecha_inicio+'"></div>'+
       '<div class="form-group"><label>Plazo (meses, opcional)</label><input type="number" id="ei-plazo" min="0" step="1" value="'+(c.plazo_meses||'')+'" placeholder="Ej. 12"></div>'+
       '<div class="form-group"><label>Condiciones / tasa acordada (opcional)</label><input type="text" id="ei-condiciones" value="'+(c.condiciones?c.condiciones.replace(/"/g,'&quot;'):'')+'" placeholder="Ej. 2% mensual sobre el capital"></div>'+
-      '<div class="form-group"><label>Comprobante del depósito inicial (opcional)</label>'+(c.comprobante_url?'<p class="hint">Actual: <a href="'+c.comprobante_url+'" target="_blank">🧾 Ver comprobante</a></p>':'')+'<input type="file" id="ei-comprobante" accept="image/*"><p class="hint" id="ei-comprobante-status"></p></div>'+
+      '<div class="form-group"><label>Comprobante del depósito inicial — foto o PDF (opcional)</label>'+(c.comprobante_url?'<p class="hint">Actual: <a href="'+c.comprobante_url+'" target="_blank">🧾 Ver comprobante</a></p>':'')+'<input type="file" id="ei-comprobante" accept="image/*,.pdf"><p class="hint" id="ei-comprobante-status"></p></div>'+
       '<button class="btn-primary" id="ei-guardar">Guardar cambios</button>'+
       '</div><button class="btn-back" style="margin-top:1rem;" onclick="renderInversionDetalle(\''+inversionId+'\')">← Volver</button>';
 
