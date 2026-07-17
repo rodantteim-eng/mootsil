@@ -4001,7 +4001,7 @@ function renderEditarCompra(compraId,volverFn){
       '<div class="form-group"><label>Fecha</label><input type="date" id="ec-fecha" value="'+compra.fecha+'" max="'+hoy+'"></div>'+
       '<div class="form-group"><label>Forma de pago</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip'+(compra.forma_pago==='contado'?' sel':'')+'" id="ec-fp-contado">'+(compra.forma_pago==='contado'?'✓ ':'')+'Contado</button><button type="button" class="op-chip'+(compra.forma_pago==='credito'?' sel':'')+'" id="ec-fp-credito">'+(compra.forma_pago==='credito'?'✓ ':'')+'Crédito</button></div></div>'+
       '<div class="form-group" id="ec-vencimiento-wrap" style="display:'+(compra.forma_pago==='credito'?'':'none')+';"><label>Fecha de vencimiento del pago</label><input type="date" id="ec-vencimiento" value="'+(compra.fecha_vencimiento||'')+'"></div>'+
-      '<div class="form-group"><label>Comprobante / foto o PDF de la factura</label>'+(compra.comprobante_url?'<p class="hint">Actual: <a href="'+compra.comprobante_url+'" target="_blank">🧾 Ver comprobante</a></p>':'<p class="hint">Sin comprobante adjuntado.</p>')+'<input type="file" id="ec-comprobante" accept="image/*,.pdf"><p class="hint" id="ec-comprobante-status"></p></div>'+
+      '<div class="form-group"><label>Comprobante / foto o PDF de la factura</label><div id="ec-comprobante-actual">'+(compra.comprobante_url?('<p class="hint">Actual: <a href="'+compra.comprobante_url+'" target="_blank">🧾 Ver comprobante</a> · <button type="button" id="ec-comprobante-quitar" style="border:none;background:none;color:var(--rojo);font-size:.78rem;font-weight:600;cursor:pointer;text-decoration:underline;">🗑️ Quitar</button></p>'):'<p class="hint">Sin comprobante adjuntado.</p>')+'</div><input type="file" id="ec-comprobante" accept="image/*,.pdf"><p class="hint" id="ec-comprobante-status"></p></div>'+
       '</div>'+
       '<div class="seccion-titulo" style="margin-top:1rem;font-size:.9rem;">Productos de la factura</div>'+
       '<div id="ec-items-existentes"></div>'+
@@ -4132,8 +4132,18 @@ function renderEditarCompra(compraId,volverFn){
       var f=this.files[0]; if(!f) return;
       var status=document.getElementById('ec-comprobante-status');
       status.textContent='Subiendo...';
-      subirComprobanteGasto(f).then(function(url){comprobanteUrl=url;status.textContent='✅ Comprobante actualizado';}).catch(function(e){status.textContent='Error al subir: '+e.message;});
+      subirComprobanteGasto(f).then(function(url){comprobanteUrl=url;status.textContent='✅ Comprobante actualizado';document.getElementById('ec-comprobante-actual').innerHTML='<p class="hint">Actual: <a href="'+url+'" target="_blank">🧾 Ver comprobante</a> · <button type="button" id="ec-comprobante-quitar" style="border:none;background:none;color:var(--rojo);font-size:.78rem;font-weight:600;cursor:pointer;text-decoration:underline;">🗑️ Quitar</button></p>';wireQuitarComprobanteEc();}).catch(function(e){status.textContent='Error al subir: '+e.message;});
     });
+    function wireQuitarComprobanteEc(){
+      var btn=document.getElementById('ec-comprobante-quitar');
+      if(!btn) return;
+      btn.addEventListener('click',function(){
+        comprobanteUrl=null;
+        document.getElementById('ec-comprobante-actual').innerHTML='<p class="hint">Sin comprobante adjuntado.</p>';
+        document.getElementById('ec-comprobante-status').textContent='Comprobante quitado — guarda los cambios para confirmar.';
+      });
+    }
+    wireQuitarComprobanteEc();
 
     document.getElementById('ec-cancelar-top').addEventListener('click',volver);
     document.getElementById('ec-cancelar-bottom').addEventListener('click',volver);
