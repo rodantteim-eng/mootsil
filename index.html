@@ -765,6 +765,7 @@ function cambiarEstado(id,estado){
 var asignarLaborSel=null;
 var asignarLaborSubSel=null;
 var riegoAsigMinutos={}, riegoAsigOperarios=[], riegoAsigFecha=null;
+var filtrosAsigTablas={}, filtrosAsigOperarios=[], filtrosAsigFecha=null;
 
 var modoAsignacionLabor='normal';
 var horasExtraAutorizadas=2;
@@ -1130,11 +1131,100 @@ function renderAsigRiegoSubtipos(subs){
       if(sub&&sub.requiere_tiempo){
         riegoAsigMinutos={};riegoAsigOperarios=[];riegoAsigFecha=fechaHoyLocal();
         renderAsigRiegoPlantaciones();
+      } else if(sub&&sub.nombre==='Limpieza Filtros'){
+        filtrosAsigTablas={};filtrosAsigOperarios=[];filtrosAsigFecha=fechaHoyLocal();
+        renderAsigFiltrosPlantaciones();
       } else {
         renderFormAsignarPaso2();
       }
     });
   });
+}
+
+function renderAsigFiltrosPlantaciones(){
+  var body=document.getElementById('enc-body');
+  var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🧹 Limpieza de Filtros · Elige plantación<button type="button" onclick="renderFormAsignar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cambiar labor</button></div><p class="hint" style="margin-bottom:.75rem;">Solo indica en qué tablas hay que dar mantenimiento a los filtros, no hace falta capturar surcos.</p><div class="riego-grid">';
+  cats.plantaciones.forEach(function(p){
+    var tabs=cats.tablas.filter(function(t){return t.plantacion_id===p.id;});
+    var asignadas=tabs.filter(function(t){return filtrosAsigTablas[t.id];}).length;
+    var cls=asignadas>0?'verde':'neutra';
+    html+='<div class="riego-circle '+cls+'" data-pid="'+p.id+'"><span>'+p.nombre+'</span><small>'+asignadas+'/'+tabs.length+' tablas</small></div>';
+  });
+  html+='</div>';
+  var totalAsig=Object.keys(filtrosAsigTablas).filter(function(k){return filtrosAsigTablas[k];}).length;
+  html+='<button class="btn-primary" style="margin-top:1.25rem;" '+(totalAsig?'':'disabled')+' onclick="renderAsigFiltrosOperarios()">Continuar → ('+totalAsig+' tabla'+(totalAsig===1?'':'s')+')</button>';
+  body.innerHTML=html;
+  body.querySelectorAll('[data-pid]').forEach(function(el){el.addEventListener('click',function(){renderAsigFiltrosTablas(this.dataset.pid);});});
+}
+
+function renderAsigFiltrosTablas(plantacionId){
+  var body=document.getElementById('enc-body');
+  var p=cats.plantaciones.find(function(x){return x.id===plantacionId;});
+  var tabs=cats.tablas.filter(function(t){return t.plantacion_id===plantacionId;});
+  var html='<div class="seccion-titulo">🧹 '+(p?p.nombre:'')+' · Toca las tablas con mantenimiento</div><div class="riego-grid">';
+  tabs.forEach(function(t){
+    var sel=!!filtrosAsigTablas[t.id];
+    html+='<div class="riego-circle '+(sel?'verde':'neutra')+'" data-tid="'+t.id+'"><span>'+t.nombre+'</span><small>'+(sel?'✅ seleccionada':'toca para elegir')+'</small></div>';
+  });
+  html+='</div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigFiltrosPlantaciones()">← Volver a plantaciones</button>';
+  body.innerHTML=html;
+  body.querySelectorAll('[data-tid]').forEach(function(el){el.addEventListener('click',function(){
+    var tid=this.dataset.tid;
+    if(filtrosAsigTablas[tid]) delete filtrosAsigTablas[tid]; else filtrosAsigTablas[tid]=true;
+    renderAsigFiltrosTablas(plantacionId);
+  });});
+}
+
+function renderAsigFiltrosOperarios(){
+  var body=document.getElementById('enc-body');
+  var opO=cats.equipoDeCampo.map(function(o){return '<button type="button" class="op-chip'+(filtrosAsigOperarios.indexOf(o.id)>-1?' sel':'')+'" data-id="'+o.id+'" onclick="toggleChip(this)">'+o.nombre+'</button>';}).join('');
+  var resumen=Object.keys(filtrosAsigTablas).filter(function(k){return filtrosAsigTablas[k];}).map(function(tid){var t=cats.tablas.find(function(x){return x.id===tid;});var p=t?cats.plantaciones.find(function(x){return x.id===t.plantacion_id;}):null;return t?(p?p.nombre+' · ':'')+t.nombre:'';}).join(', ');
+  body.innerHTML='<div class="seccion-titulo">🧹 Limpieza de Filtros · ¿Quién lo hace?</div><div class="form-card"><p class="hint" style="margin-bottom:.9rem;">Tablas: '+resumen+'</p><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1rem;">'+opO+'</div><button class="btn-primary" id="filtros-op-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigFiltrosPlantaciones()">← Volver a tablas</button>';
+  document.getElementById('filtros-op-continuar').addEventListener('click',function(){
+    var opIds=Array.from(document.querySelectorAll('.op-chip.sel')).map(function(c){return c.dataset.id;});
+    if(!opIds.length){alert('Selecciona al menos un operario.');return;}
+    filtrosAsigOperarios=opIds;
+    renderAsigFiltrosFecha();
+  });
+}
+
+function renderAsigFiltrosFecha(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo">🧹 Limpieza de Filtros · Fecha</div><div class="form-card"><div class="form-group"><label>Fecha</label><input type="date" id="filtros-fecha-input" value="'+(filtrosAsigFecha||fechaHoyLocal())+'"></div><button class="btn-primary" id="filtros-fecha-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigFiltrosOperarios()">← Volver a operarios</button>';
+  document.getElementById('filtros-fecha-continuar').addEventListener('click',function(){
+    filtrosAsigFecha=document.getElementById('filtros-fecha-input').value||fechaHoyLocal();
+    renderAsigFiltrosNotas();
+  });
+}
+
+function renderAsigFiltrosNotas(){
+  var body=document.getElementById('enc-body');
+  var resumen=Object.keys(filtrosAsigTablas).filter(function(k){return filtrosAsigTablas[k];}).map(function(tid){var t=cats.tablas.find(function(x){return x.id===tid;});var p=t?cats.plantaciones.find(function(x){return x.id===t.plantacion_id;}):null;return t?(p?p.nombre+' · ':'')+t.nombre:'';}).join('<br>');
+  var opNombres=filtrosAsigOperarios.map(function(id){var o=cats.equipoDeCampo.find(function(x){return x.id===id;});return o?o.nombre:'';}).join(', ');
+  body.innerHTML='<div class="seccion-titulo">🧹 Limpieza de Filtros · Notas (opcional)</div><div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row"><span class="resumen-key">Tablas</span></div><div style="font-size:.82rem;padding:.35rem 0;">'+resumen+'</div><div class="resumen-row"><span class="resumen-key">Operarios</span><span class="resumen-val">'+opNombres+'</span></div><div class="resumen-row"><span class="resumen-key">Fecha</span><span class="resumen-val">'+filtrosAsigFecha+'</span></div></div><div class="form-group"><input type="text" id="filtros-notas-input" placeholder="Notas para el operario..."></div><button class="btn-primary" id="filtros-finalizar">✅ Asignar</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigFiltrosFecha()">← Volver a fecha</button>';
+  document.getElementById('filtros-finalizar').addEventListener('click',guardarFiltrosAsignacion);
+}
+
+function guardarFiltrosAsignacion(){
+  var btn=document.getElementById('filtros-finalizar'); if(btn){btn.disabled=true;btn.textContent='Guardando...';}
+  var not=document.getElementById('filtros-notas-input').value||null;
+  var tablaIds=Object.keys(filtrosAsigTablas).filter(function(k){return filtrosAsigTablas[k];});
+  if(!tablaIds.length){alert('No hay tablas seleccionadas.');if(btn){btn.disabled=false;btn.textContent='✅ Asignar';}return;}
+  var lbId=asignarLaborSel.id;
+  var subId=asignarLaborSubSel?asignarLaborSubSel.id:null;
+  var esExtra=modoAsignacionLabor==='extra';
+  var tareas=[];
+  filtrosAsigOperarios.forEach(function(oid){tablaIds.forEach(function(tid){tareas.push({asignado_por:usuario.id,operario_id:oid,tabla_id:tid,tipo_labor_id:lbId,subtipo_labor_id:subId,duracion:'dia',fecha_asignacion:filtrosAsigFecha,notas_encargado:not,estado:'pendiente',es_hora_extra:esExtra});});});
+  Promise.all(tareas.map(function(t){return from('ordenes_trabajo').insert(t);})).then(function(){
+    var autorizarExtra = esExtra ? Promise.all(filtrosAsigOperarios.map(function(oid){
+      return from('horas_extra_asignadas').insert({operario_id:oid,asignado_por:usuario.id,fecha:filtrosAsigFecha,motivo:not,tipo_labor_id:lbId,estado:'aprobada',horas_max:horasExtraAutorizadas});
+    })) : Promise.resolve();
+    return autorizarExtra.then(function(){
+      return Promise.all(filtrosAsigOperarios.map(function(oid){
+        return from('notificaciones').insert({titulo:esExtra?'⏰ Limpieza de filtros (hora extra) asignada':'🧹 Limpieza de filtros asignada',cuerpo:usuario.nombre+' asignó limpieza de filtros a '+(cats.equipoDeCampo.find(function(o){return o.id===oid;})||{}).nombre+' en '+tablaIds.length+' tabla(s)'+(esExtra?' (hora extra)':''),icono:'🧹',leida:false,para_rol:'operario',para_usuario:oid});
+      }));
+    });
+  }).then(function(){showToast('🧹 Limpieza de filtros asignada en '+tablaIds.length+' tabla(s). Puedes asignar otra labor.');renderFormAsignar();}).catch(function(e){alert('Error: '+e.message);});
 }
 
 function renderAsigRiegoPlantaciones(){
@@ -6885,7 +6975,9 @@ function pintarTareas(todas,hoyOrdenes,esCache,completadas,evidenciaPorOrden,com
       var esAplic=!!(t.tipo_labor&&t.tipo_labor.requiere_formula&&t.formula_id);
       var ic=esAplic?(VIA_ICONOS[t.formula?t.formula.via:'']||'🧪'):(ICONOS[t.tipo_labor.nombre]||'🔧');
       var tituloLabor=esAplic?(t.formula?t.formula.nombre:t.tipo_labor.nombre):(t.tipo_labor.nombre+(t.subtipo?' · '+t.subtipo.nombre:''));
+      var esFiltrosT=!!(t.subtipo&&t.subtipo.nombre==='Limpieza Filtros');
       var su=(t.surcos_asignados&&t.surcos_asignados.length)?t.surcos_asignados.join(', '):'Todos';
+      var surcosLineaTxt=esFiltrosT?'':('🔢 Surcos: '+su);
       var atrasada=t.fecha_asignacion<hoy;
       var etiquetaTipo=t.es_hora_extra?' <span style="color:var(--tierra);font-size:.7rem;font-weight:700;background:var(--tierra-tenue);padding:2px 8px;border-radius:10px;">⏰ Hora Extra</span>':' <span style="color:var(--verde-mid);font-size:.7rem;font-weight:700;background:var(--verde-tenue);padding:2px 8px;border-radius:10px;">🧑‍🌾 Labores</span>';
       var progresoTxt='', etiquetaEstado='';
@@ -6910,7 +7002,7 @@ function pintarTareas(todas,hoyOrdenes,esCache,completadas,evidenciaPorOrden,com
         var tambosTxt=(t.bomba_usada!=='inyeccion'&&t.tambos_planeados)?(' · '+(unidadTarjeta.esBombas?'🎒':'🛢️')+' '+(t.tambos_usados||0)+'/'+t.tambos_planeados+' '+unidadTarjeta.plural):'';
         aplicInfoHtml='<div style="margin-top:.5rem;padding-top:.5rem;border-top:1px dashed var(--gris-2);font-size:.8rem;">'+(t.formula&&t.formula.categoria?'<span style="color:var(--gris-3);">'+(CATEGORIA_ICONOS[t.formula.categoria]||'')+' '+t.formula.categoria+'</span><br/>':'')+'⚙️ '+(BOMBA_ICONOS[t.bomba_usada]||'')+' '+(BOMBA_LABELS[t.bomba_usada]||t.bomba_usada||'')+' · 🧴 '+numFmt(t.volumen_aplicado_litros||0)+' L'+tambosTxt+(productosHtml?'<div style="margin-top:.35rem;"><strong style="font-size:.72rem;color:var(--gris-3);text-transform:uppercase;letter-spacing:.03em;">Productos a usar</strong>'+productosHtml+'</div>':'')+'</div>';
       }
-      return '<div class="tarea-card" style="'+(atrasada?'border-left-color:var(--rojo);':(t.es_hora_extra?'border-left-color:var(--tierra);':''))+'"><div class="tarea-title">'+ic+' '+tituloLabor+etiquetaTipo+etiquetaEstado+(atrasada?' <span style="color:var(--rojo);font-size:.72rem;font-weight:700;">⚠️ Desde '+t.fecha_asignacion+'</span>':'')+'</div><div class="tarea-meta">📍 '+(p?p.nombre:'')+' · '+t.tabla.nombre+'<br/>🔢 Surcos: '+su+progresoTxt+(t.notas_encargado?'<br/>📝 '+t.notas_encargado:'')+'</div>'+aplicInfoHtml+'<div style="margin-top:.75rem;display:flex;gap:8px;">'+(t.estado==='pendiente'?'<button class="btn-sm btn-iniciar" data-ini="'+t.id+'">▶ Iniciar</button>':'')+(t.estado==='en_proceso'?'<button class="btn-sm btn-completar" data-eje="'+t.id+'">✅ Registrar avance</button>':'')+'</div></div>';
+      return '<div class="tarea-card" style="'+(atrasada?'border-left-color:var(--rojo);':(t.es_hora_extra?'border-left-color:var(--tierra);':''))+'"><div class="tarea-title">'+ic+' '+tituloLabor+etiquetaTipo+etiquetaEstado+(atrasada?' <span style="color:var(--rojo);font-size:.72rem;font-weight:700;">⚠️ Desde '+t.fecha_asignacion+'</span>':'')+'</div><div class="tarea-meta">📍 '+(p?p.nombre:'')+' · '+t.tabla.nombre+(surcosLineaTxt?('<br/>'+surcosLineaTxt):'')+progresoTxt+(t.notas_encargado?'<br/>📝 '+t.notas_encargado:'')+'</div>'+aplicInfoHtml+'<div style="margin-top:.75rem;display:flex;gap:8px;">'+(t.estado==='pendiente'?'<button class="btn-sm btn-iniciar" data-ini="'+t.id+'">▶ Iniciar</button>':'')+(t.estado==='en_proceso'?'<button class="btn-sm btn-completar" data-eje="'+t.id+'">✅ Registrar avance</button>':'')+'</div></div>';
     }
 
     var html='';
@@ -7223,11 +7315,23 @@ function renderEjecMantenimiento(){
   body.innerHTML='<div class="step-label">Mantenimiento de herramienta</div><div class="form-card" style="display:flex;gap:1rem;align-items:center;margin-bottom:1rem;">'+img+'<div><div style="font-weight:800;font-size:1rem;">'+a.nombre+'</div>'+(a.descripcion?'<div class="hint" style="margin:0;">'+a.descripcion+'</div>':'')+'</div></div><p class="hint" style="margin-bottom:1rem;">Revísala, límpiala, y confirma que quedó lista para seguir usándose.</p><div style="display:flex;gap:8px;margin-bottom:1rem;"><button onclick="abrirCamaraApp()" style="flex:1;padding:1rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio);background:var(--verde-tenue);color:var(--verde);font-size:.9rem;font-weight:600;cursor:pointer;">📷 Cámara</button><button onclick="abrirGaleria()" style="flex:1;padding:1rem;border:1.5px solid var(--gris-2);border-radius:var(--radio);background:var(--gris-1);font-size:.9rem;cursor:pointer;">🖼️ Galería</button></div>'+evid+'<div class="nav-row"><button class="btn-back" onclick="ordenEjecutando=null;cargarTareas()">← Cancelar</button><button class="btn-next" onclick="guardarEjec()" style="background:var(--tierra)">✅ Marcar como hecho</button></div>';
 }
 
+function renderEjecFiltros(){
+  var body=document.getElementById('op-body');
+  var o=ordenEjecutando, tabla=o.tabla;
+  var planta=cats.plantaciones.find(function(p){return p.id===tabla.plantacion_id;});
+  var evid=capturaEjec.foto?'<div style="padding:.75rem;background:var(--verde-tenue);border-radius:var(--radio);color:var(--verde);font-size:.85rem;text-align:center;margin-bottom:1rem;">✅ Evidencia capturada</div>':'';
+  var herrChk='<label style="display:flex;align-items:center;gap:.6rem;padding:.75rem;background:var(--gris-1);border-radius:var(--radio);margin-top:.75rem;cursor:pointer;"><input type="checkbox" id="chk-herramienta" '+(capturaEjec.herramientaLimpia?'checked':'')+' style="width:22px;height:22px;flex-shrink:0;"><span style="font-size:.85rem;">🧹 Ya limpié y guardé mis herramientas en su lugar</span></label>';
+  body.innerHTML='<div class="step-label">🧹 Limpieza de Filtros</div><div class="step-title">'+tabla.nombre+'</div><p class="hint" style="margin-bottom:1rem">📍 '+(planta?planta.nombre:'')+' · '+tabla.nombre+' · confirma que ya diste mantenimiento a los filtros de esta tabla.</p><div style="display:flex;gap:8px;margin-bottom:1rem;"><button onclick="abrirCamaraApp()" style="flex:1;padding:1rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio);background:var(--verde-tenue);color:var(--verde);font-size:.9rem;font-weight:600;cursor:pointer;">📷 Cámara</button><button onclick="abrirGaleria()" style="flex:1;padding:1rem;border:1.5px solid var(--gris-2);border-radius:var(--radio);background:var(--gris-1);font-size:.9rem;cursor:pointer;">🖼️ Galería</button></div>'+evid+'<input type="file" id="inp-ev" accept="image/*,video/*" style="display:none" onchange="capturaEjec.foto=true;renderEjecFiltros();">'+herrChk+(o.notas_encargado?'<p class="hint" style="margin-top:.75rem;">📝 '+o.notas_encargado+'</p>':'')+'<div class="nav-row"><button class="btn-back" onclick="ordenEjecutando=null;cargarTareas()">← Cancelar</button><button class="btn-next" onclick="guardarEjec()" style="background:var(--tierra)">✅ Marcar terminado</button></div>';
+  var herrChkEl=document.getElementById('chk-herramienta');
+  if(herrChkEl) herrChkEl.addEventListener('change',function(){capturaEjec.herramientaLimpia=this.checked;});
+}
+
 function renderEjec(){
   var body=document.getElementById('op-body');
   var labor=ordenEjecutando.tipo_labor, tabla=ordenEjecutando.tabla;
   var planta=cats.plantaciones.find(function(p){return p.id===tabla.plantacion_id;});
   if(labor.requiere_formula){renderEjecAplicacion(planta,tabla);return;}
+  if(ordenEjecutando.subtipo&&ordenEjecutando.subtipo.nombre==='Limpieza Filtros'){renderEjecFiltros();return;}
   var tot=labor.requiere_cantidad_insumo?3:2;
   var bar='<div class="steps-bar">'+[1,2,3].slice(0,tot).map(function(i){return '<div class="step-seg '+(i<pasoEjec?'done':i===pasoEjec?'active':'')+'"></div>';}).join('')+'</div>';
 
@@ -7325,8 +7429,10 @@ function calcularProgresoSurcos(o){
 function ejecutarGuardadoFinal(o){
   var esAplic=o.tipo_labor&&o.tipo_labor.requiere_formula;
   var esMantenimiento=!!o.activo_rancho_id;
+  var esFiltros=!!(o.subtipo&&o.subtipo.nombre==='Limpieza Filtros');
   var tieneSurcosDef=o.tabla&&o.tabla.cantidad_surcos>0;
-  var progreso = (esMantenimiento||(esAplic&&!tieneSurcosDef)) ? {completo:true,union:capturaEjec.surcos||[],faltan:[],totalAsignados:capturaEjec.surcos||[]} : calcularProgresoSurcos(o);
+  var totalSurcosTabla=(o.tabla&&o.tabla.cantidad_surcos)?Array.from({length:o.tabla.cantidad_surcos},function(_,i){return String(i+1);}):[];
+  var progreso = (esMantenimiento||(esAplic&&!tieneSurcosDef)) ? {completo:true,union:capturaEjec.surcos||[],faltan:[],totalAsignados:capturaEjec.surcos||[]} : (esFiltros ? {completo:true,union:totalSurcosTabla,faltan:[],totalAsignados:totalSurcosTabla} : calcularProgresoSurcos(o));
   var horaExtraSinTerminar = !!o.es_hora_extra && !progreso.completo;
   var nuevoEstado = (progreso.completo || o.es_hora_extra) ? 'completada' : 'en_proceso';
   var tambosPlan = o.tambos_planeados||1;
