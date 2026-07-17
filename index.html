@@ -723,7 +723,7 @@ function renderTablero(){
     body.querySelectorAll('[data-com]').forEach(function(b){b.addEventListener('click',function(){
       var o=ordenesPorIdTablero[this.dataset.com];
       var progreso=o?progresoSurcosOrden(o):null;
-      if(progreso&&progreso.totalAsignados.length>0&&!progreso.completo){
+      if(progreso&&progreso.totalAsignados.length>0&&!progreso.completo&&!(o&&o.es_hora_extra)){
         if(!confirm('⚠️ Esta labor todavía tiene '+progreso.faltan.length+' surco(s) sin terminar ('+progreso.faltan.join(', ')+').\n\n¿Seguro que quieres marcarla completa de todas formas?')) return;
       }
       cambiarEstado(this.dataset.com,'completada');
@@ -846,7 +846,7 @@ function renderAsignarEstatus(){
     body.querySelectorAll('[data-com]').forEach(function(b){b.addEventListener('click',function(){
       var o=ordenesPorIdAsignar[this.dataset.com];
       var progreso=o?progresoSurcosOrden(o):null;
-      if(progreso&&progreso.totalAsignados.length>0&&!progreso.completo){
+      if(progreso&&progreso.totalAsignados.length>0&&!progreso.completo&&!(o&&o.es_hora_extra)){
         if(!confirm('⚠️ Esta labor todavía tiene '+progreso.faltan.length+' surco(s) sin terminar ('+progreso.faltan.join(', ')+').\n\n¿Seguro que quieres marcarla completa de todas formas?')) return;
       }
       cambiarEstadoAsignar(this.dataset.com,'completada');
@@ -7193,7 +7193,8 @@ function ejecutarGuardadoFinal(o){
   var esMantenimiento=!!o.activo_rancho_id;
   var tieneSurcosDef=o.tabla&&o.tabla.cantidad_surcos>0;
   var progreso = (esMantenimiento||(esAplic&&!tieneSurcosDef)) ? {completo:true,union:capturaEjec.surcos||[],faltan:[],totalAsignados:capturaEjec.surcos||[]} : calcularProgresoSurcos(o);
-  var nuevoEstado = progreso.completo ? 'completada' : 'en_proceso';
+  var horaExtraSinTerminar = !!o.es_hora_extra && !progreso.completo;
+  var nuevoEstado = (progreso.completo || o.es_hora_extra) ? 'completada' : 'en_proceso';
   var tambosPlan = o.tambos_planeados||1;
   var tambosUsadosPrevios = o.tambos_usados||0;
   var tambosEsteAvance = esAplic ? (capturaEjec.tambosEsteAvance||0) : 0;
@@ -7234,17 +7235,17 @@ function ejecutarGuardadoFinal(o){
   }).then(function(){
     if(nuevoEstado==='completada'&&o.activo_rancho_id) from('activos_rancho').eq('id',o.activo_rancho_id).update({fecha_ultimo_mantenimiento:fechaHoyLocal()}).catch(function(){});
     var lb=cats.tiposLabor.find(function(l){return l.id===o.tipo_labor_id;}), tb=cats.tablas.find(function(t){return t.id===o.tabla_id;});
-    var verbo = progreso.completo ? 'completó' : 'avanzó en';
+    var verbo = progreso.completo ? 'completó' : (horaExtraSinTerminar ? 'cumplió su hora extra trabajando' : 'avanzó en');
     showToast('✅ '+usuario.nombre+' '+verbo+' '+(lb?lb.nombre:'')+' en '+(tb?tb.nombre:''));
-    var detalle=esAplic?('Fórmula: '+(o.formula?o.formula.nombre:'')+' · Surcos: '+progreso.union.length+'/'+progreso.totalAsignados.length+(progreso.completo?'':' · Faltan: '+progreso.faltan.join(', '))):('Surcos: '+capturaEjec.surcos.join(', ')+(progreso.completo?'':' · Faltan: '+progreso.faltan.join(', ')));
+    var detalle=esAplic?('Fórmula: '+(o.formula?o.formula.nombre:'')+' · Surcos: '+progreso.union.length+'/'+progreso.totalAsignados.length+(progreso.completo?'':(horaExtraSinTerminar?' · El resto queda para otro turno':' · Faltan: '+progreso.faltan.join(', ')))):('Surcos: '+capturaEjec.surcos.join(', ')+(progreso.completo?'':(horaExtraSinTerminar?' · El resto queda para otro turno':' · Faltan: '+progreso.faltan.join(', '))));
     var avisoOverage = (esAplic&&tambosADeducir>0) ? from('notificaciones').insert({titulo:'⚠️ Se usaron más tambos de los planeados',cuerpo:usuario.nombre+' ya lleva '+tambosUsadosNuevo+' tambo(s) en '+(lb?lb.nombre:'')+' · '+(tb?tb.nombre:'')+', pero solo se planearon '+tambosPlan+'. Se descontó el extra del inventario automáticamente.',icono:'⚠️',leida:false,para_rol:'encargado'}) : Promise.resolve();
     avisoOverage.then(function(){
-      return from('notificaciones').insert({titulo: progreso.completo?'✅ Labor completada':'🔶 Avance parcial registrado',cuerpo:usuario.nombre+' '+verbo+' '+(lb?lb.nombre:'')+' en '+(tb?tb.nombre:'')+' — '+detalle,icono: progreso.completo?'✅':'🔶',leida:false,para_rol:'encargado'});
+      return from('notificaciones').insert({titulo: nuevoEstado==='completada'?'✅ Labor completada':'🔶 Avance parcial registrado',cuerpo:usuario.nombre+' '+verbo+' '+(lb?lb.nombre:'')+' en '+(tb?tb.nombre:'')+' — '+detalle,icono: nuevoEstado==='completada'?'✅':'🔶',leida:false,para_rol:'encargado'});
     }).then(function(){
-      document.getElementById('exito-sub').textContent = progreso.completo ? 'Registro guardado. El encargado recibirá un aviso.' : 'Avance guardado. Faltan '+progreso.faltan.length+' surco(s) — seguirá apareciendo en tus tareas.';
+      document.getElementById('exito-sub').textContent = nuevoEstado==='completada' ? 'Registro guardado. El encargado recibirá un aviso.' : 'Avance guardado. Faltan '+progreso.faltan.length+' surco(s) — seguirá apareciendo en tus tareas.';
       mostrar('screen-exito'); ordenEjecutando=null;
     }).catch(function(){
-      document.getElementById('exito-sub').textContent = progreso.completo ? 'Registro guardado. El encargado recibirá un aviso.' : 'Avance guardado. Faltan '+progreso.faltan.length+' surco(s) — seguirá apareciendo en tus tareas.';
+      document.getElementById('exito-sub').textContent = nuevoEstado==='completada' ? 'Registro guardado. El encargado recibirá un aviso.' : 'Avance guardado. Faltan '+progreso.faltan.length+' surco(s) — seguirá apareciendo en tus tareas.';
       mostrar('screen-exito'); ordenEjecutando=null;
     });
   }).catch(function(){
