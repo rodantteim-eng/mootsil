@@ -2410,12 +2410,14 @@ function renderCatalogoDetalle(formulaId){
     if(!f){renderCatalogoFormulas();return;}
     var p=f.tabla?cats.plantaciones.find(function(x){return x.id===f.tabla.plantacion_id;}):null;
     var bombasTxt=(f.bombas_compatibles||[]).map(function(b){return BOMBA_ICONOS[b]+' '+(BOMBA_LABELS[b]||b);}).join(', ')||'—';
+    var bombaFormulaCat=(f.bombas_compatibles||[])[0];
+    var duracionTxt=f.duracion_o_surcos?(bombaFormulaCat==='inyeccion'?(' · '+f.duracion_o_surcos+' min'):(' · '+numFmt(Math.round((f.duracion_o_surcos/bombasPorTambo(bombaFormulaCat))*100)/100)+' surcos/bomba')):'';
     var resumenComp=comps.length?comps.map(function(c){
       var faltaTxt=(c.item&&c.cantidad_base>c.item.stock_actual)?' <span style="color:var(--rojo);font-weight:700;">⚠️ solo hay '+fmtAmigable(c.item.stock_actual,c.item.unidad)+'</span>':'';
       return '<div class="resumen-row"><span class="resumen-key">'+(c.item?c.item.nombre:'?')+'</span><span class="resumen-val">'+fmtAmigable(c.cantidad_base,c.item?c.item.unidad:'')+faltaTxt+'</span></div>';
     }).join(''):'<p class="hint">Esta fórmula no tiene componentes cargados.</p>';
     var volverCat=CATALOGO_TIPO_SEL?'cargarCatalogoLista(\''+CATALOGO_TIPO_SEL.categoria+'\','+(CATALOGO_TIPO_SEL.soloPlantillas?'true':'false')+')':'renderCatalogoFormulas()';
-    body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📚 '+(VIA_ICONOS[f.via]||'')+' '+f.nombre+(f.es_plantilla?' 📌':'')+'<button type="button" onclick="'+volverCat+'" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Catálogo</button></div><div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row"><span class="resumen-key">Tipo</span><span class="resumen-val">'+(CATEGORIA_ICONOS[f.categoria]||'')+' '+f.categoria+(f.categoria==='Combinada'&&f.categorias_combinadas&&f.categorias_combinadas.length?' ('+f.categorias_combinadas.join(' + ')+')':'')+'</span></div><div class="resumen-row"><span class="resumen-key">Vía</span><span class="resumen-val">'+(VIA_ICONOS[f.via]||'')+' '+f.via+'</span></div><div class="resumen-row"><span class="resumen-key">Bombas compatibles</span><span class="resumen-val">'+bombasTxt+'</span></div><div class="resumen-row"><span class="resumen-key">Volumen base</span><span class="resumen-val">🛢️ '+numFmt(f.volumen_base_litros)+' L'+(f.duracion_o_surcos?' · '+f.duracion_o_surcos+' surcos/tambo':'')+'</span></div><div class="resumen-row"><span class="resumen-key">Observaciones / Notas</span><span class="resumen-val">'+(f.notas?f.notas:'<span style="color:var(--gris-3);">Sin notas — toca Editar para agregar</span>')+'</span></div><div class="resumen-row"><span class="resumen-key">Componentes (para '+numFmt(f.volumen_base_litros)+' L)</span></div>'+resumenComp+'</div><p class="hint" style="margin-bottom:1rem;">Esto es la receta guardada. "Editar" corrige esta misma fórmula del catálogo (nombre, componentes, notas, etc). "Usar esta plantilla" crea una copia nueva para asignarla a plantación/tabla sin tocar el original.</p><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn-primary" id="cat-editar" style="flex:1;min-width:150px;background:var(--tierra);">✏️ Editar esta fórmula</button><button class="btn-primary" id="cat-usar-plantilla" style="flex:1;min-width:150px;">🧬 Usar esta plantilla</button></div></div><button type="button" id="cat-eliminar" style="width:100%;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.85rem;cursor:pointer;margin-bottom:1rem;">🗑️ Eliminar esta fórmula del catálogo</button><button class="btn-back" style="margin-top:0;" onclick="'+volverCat+'">← Volver al catálogo</button>';
+    body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📚 '+(VIA_ICONOS[f.via]||'')+' '+f.nombre+(f.es_plantilla?' 📌':'')+'<button type="button" onclick="'+volverCat+'" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Catálogo</button></div><div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row"><span class="resumen-key">Tipo</span><span class="resumen-val">'+(CATEGORIA_ICONOS[f.categoria]||'')+' '+f.categoria+(f.categoria==='Combinada'&&f.categorias_combinadas&&f.categorias_combinadas.length?' ('+f.categorias_combinadas.join(' + ')+')':'')+'</span></div><div class="resumen-row"><span class="resumen-key">Vía</span><span class="resumen-val">'+(VIA_ICONOS[f.via]||'')+' '+f.via+'</span></div><div class="resumen-row"><span class="resumen-key">Bombas compatibles</span><span class="resumen-val">'+bombasTxt+'</span></div><div class="resumen-row"><span class="resumen-key">Volumen base</span><span class="resumen-val">🛢️ '+numFmt(f.volumen_base_litros)+' L'+duracionTxt+'</span></div><div class="resumen-row"><span class="resumen-key">Observaciones / Notas</span><span class="resumen-val">'+(f.notas?f.notas:'<span style="color:var(--gris-3);">Sin notas — toca Editar para agregar</span>')+'</span></div><div class="resumen-row"><span class="resumen-key">Componentes (para '+numFmt(f.volumen_base_litros)+' L)</span></div>'+resumenComp+'</div><p class="hint" style="margin-bottom:1rem;">Esto es la receta guardada. "Editar" corrige esta misma fórmula del catálogo (nombre, componentes, notas, etc). "Usar esta plantilla" crea una copia nueva para asignarla a plantación/tabla sin tocar el original.</p><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn-primary" id="cat-editar" style="flex:1;min-width:150px;background:var(--tierra);">✏️ Editar esta fórmula</button><button class="btn-primary" id="cat-usar-plantilla" style="flex:1;min-width:150px;">🧬 Usar esta plantilla</button></div></div><button type="button" id="cat-eliminar" style="width:100%;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.85rem;cursor:pointer;margin-bottom:1rem;">🗑️ Eliminar esta fórmula del catálogo</button><button class="btn-back" style="margin-top:0;" onclick="'+volverCat+'">← Volver al catálogo</button>';
     document.getElementById('cat-usar-plantilla').addEventListener('click',function(){cargarPlantillaCatalogo(formulaId);});
     document.getElementById('cat-editar').addEventListener('click',function(){renderFormulaForm(formulaId,true);});
     document.getElementById('cat-eliminar').addEventListener('click',function(){
@@ -2613,7 +2615,13 @@ function renderFormulaPasoBombas(){
   document.getElementById('fm-bomba-continuar').addEventListener('click',function(){
     if(!formulaBombas.length){alert('Selecciona con qué se va a aplicar.');return;}
     var inputExtra=document.getElementById('fm-duracion-surcos-input');
-    window._formulaDuracionSurcos=inputExtra?(parseFloat(inputExtra.value)||null):null;
+    var bombaSel=formulaBombas[0];
+    if(bombaSel==='inyeccion'){
+      window._formulaDuracionSurcos=inputExtra?(parseFloat(inputExtra.value)||null):null;
+    } else {
+      var surcosPorBombaVal=inputExtra?(parseFloat(inputExtra.value)||null):null;
+      window._formulaDuracionSurcos=surcosPorBombaVal?Math.round(surcosPorBombaVal*bombasPorTambo(bombaSel)*100)/100:null;
+    }
     if(formulaVolverAResumen){formulaVolverAResumen=false;renderFormulaPasoNotas();}
     else if(formulaEditandoCatalogo){renderFormulaPasoNombre();}
     else renderFormulaPasoFecha();
@@ -2624,7 +2632,8 @@ function campoDuracionSurcos(bomba){
   if(bomba==='inyeccion'){
     return '<div class="form-group" style="margin-top:1rem;"><label>Duración estimada de la aplicación (minutos)</label><input type="number" id="fm-duracion-surcos-input" min="0" placeholder="Ej. 15" value="'+(window._formulaDuracionSurcos||'')+'"></div>';
   }
-  return '<div class="form-group" style="margin-top:1rem;"><label>¿Cuántos surcos cubre con un tambo (200L)?</label><input type="number" id="fm-duracion-surcos-input" min="0" placeholder="Ej. 6" value="'+(window._formulaDuracionSurcos||'')+'"><p class="hint">Con esto se calcula cuántos tambos se necesitan para cubrir toda la tabla.</p></div>';
+  var valorPorBomba=window._formulaDuracionSurcos?(Math.round((window._formulaDuracionSurcos/bombasPorTambo(bomba))*100)/100):'';
+  return '<div class="form-group" style="margin-top:1rem;"><label>¿Cuántos surcos cubre con UNA bomba/mochila ('+(BOMBA_CAPACIDAD[bomba]||'')+' L)?</label><input type="number" id="fm-duracion-surcos-input" min="0" placeholder="Ej. 6" value="'+valorPorBomba+'"><p class="hint">Este es el rendimiento que te da el ingeniero (surcos que cubre cada bomba). Con esto se calcula cuántas bombas y tambos se necesitan para cubrir toda la tabla.</p></div>';
 }
 
 function renderFormulaPasoFecha(){
@@ -2978,6 +2987,7 @@ function guardarFormula(){
 }
 
 var BOMBA_CAPACIDAD={'inyeccion':200,'motor':25,'manual':20};
+function bombasPorTambo(bomba){var cap=BOMBA_CAPACIDAD[bomba]||20;return Math.round((200/cap)*10)/10;}
 var aplic={plantacionId:null,tablaId:null,formula:null,componentes:[],bomba:null,numBombas:null,volumen:null,factor:1,tambosPlaneados:null,operarios:[],fecha:null,notas:null,esExtra:false,horasExtra:2,modoCantidad:'tambo'};
 
 function aplicReset(){
@@ -3165,7 +3175,7 @@ function cargarFormulaParaAsignar(formulaId){
 function renderAsigAplicCantidad(){
   var body=document.getElementById('enc-body');
   var cap=BOMBA_CAPACIDAD[aplic.bomba];
-  var bombasParaTambo=Math.round((200/cap)*10)/10;
+  var bombasParaTambo=bombasPorTambo(aplic.bomba);
   var modo=aplic.modoCantidad||'tambo';
   var tilesEquipo=['inyeccion','motor','manual'].map(function(b){
     return '<div class="labor-tile'+(aplic.bomba===b?' labor-tile-otra':'')+'" data-bomba="'+b+'"><div class="labor-tile-ic">'+BOMBA_ICONOS[b]+'</div><div class="labor-tile-lbl">'+BOMBA_LABELS[b]+'</div></div>';
@@ -3173,14 +3183,50 @@ function renderAsigAplicCantidad(){
   var esInyeccionCant=aplic.bomba==='inyeccion';
   var tablaCant=cats.tablas.find(function(x){return x.id===aplic.tablaId;});
   var surcosPorTambo=aplic.formula.duracion_o_surcos;
-  var tambosSugeridos=(!esInyeccionCant&&surcosPorTambo&&tablaCant&&tablaCant.cantidad_surcos)?Math.max(1,Math.ceil(tablaCant.cantidad_surcos/surcosPorTambo)):1;
-  if(aplic.tambosPlaneados==null) aplic.tambosPlaneados=tambosSugeridos;
-  var hintTambos=(surcosPorTambo&&tablaCant&&tablaCant.cantidad_surcos)?('Con '+surcosPorTambo+' surcos por tambo y '+tablaCant.cantidad_surcos+' surcos en '+(tablaCant.nombre||'la tabla')+', sugerimos '+tambosSugeridos+' tambo(s). Ajusta si sabes que es distinto.'):'La fórmula no tiene definido cuántos surcos cubre un tambo (lo puedes fijar en Fórmulas → Bombas). Captura manualmente cuántos tambos necesitará esta tabla completa.';
-  var boxTambos=esInyeccionCant?'':'<div class="form-group" id="aplic-tambos-box" style="margin-top:1rem;"><label>¿Cuántos tambos como este necesitará para cubrir TODA la tabla?</label><input type="number" id="aplic-tambos-input" min="1" step="1" value="'+aplic.tambosPlaneados+'"><p class="hint">'+hintTambos+'</p></div>';
+  var surcosPorBomba=surcosPorTambo?(Math.round((surcosPorTambo/bombasParaTambo)*100)/100):null;
+  function calcularSugerenciaTambos(modoActual,numBombasActual){
+    var surcosPorUnidad = modoActual==='bombas' ? (surcosPorBomba&&numBombasActual?surcosPorBomba*numBombasActual:null) : surcosPorTambo;
+    var sugerido = (surcosPorUnidad&&tablaCant&&tablaCant.cantidad_surcos)?Math.max(1,Math.ceil(tablaCant.cantidad_surcos/surcosPorUnidad)):1;
+    return {surcosPorUnidad:surcosPorUnidad,sugerido:sugerido};
+  }
+  function textoLabelTambos(modoActual){
+    return modoActual==='bombas' ? '¿Cuántas veces vas a preparar esta mezcla para cubrir TODA la tabla?' : '¿Cuántos tambos como este necesitará para cubrir TODA la tabla?';
+  }
+  function textoHintTambos(modoActual,numBombasActual){
+    var info=calcularSugerenciaTambos(modoActual,numBombasActual);
+    if(!info.surcosPorUnidad||!tablaCant||!tablaCant.cantidad_surcos){
+      return 'La fórmula no tiene definido el rendimiento (surcos por bomba) — lo puedes fijar en Fórmulas → Bombas. Captura manualmente '+(modoActual==='bombas'?'cuántas veces prepararás esta mezcla':'cuántos tambos necesitará')+' para esta tabla completa.';
+    }
+    if(modoActual==='bombas'){
+      return 'Con '+surcosPorBomba+' surcos por bomba ('+info.surcosPorUnidad+' surcos con esta mezcla de '+numBombasActual+' bomba(s)) y '+tablaCant.cantidad_surcos+' surcos en '+(tablaCant.nombre||'la tabla')+', te sugerimos preparar esta mezcla '+info.sugerido+' '+(info.sugerido===1?'vez':'veces')+'. Ajusta si sabes que es distinto.';
+    }
+    return 'Con '+surcosPorTambo+' surcos por tambo y '+tablaCant.cantidad_surcos+' surcos en '+(tablaCant.nombre||'la tabla')+', sugerimos '+info.sugerido+' tambo(s). Ajusta si sabes que es distinto.';
+  }
+  var infoInicial=calcularSugerenciaTambos(modo,aplic.numBombas||1);
+  if(aplic.tambosPlaneados==null) aplic.tambosPlaneados=infoInicial.sugerido;
+  var hintTambos=textoHintTambos(modo,aplic.numBombas||1);
+  var labelTambos=textoLabelTambos(modo);
+  var boxTambos=esInyeccionCant?'':'<div class="form-group" id="aplic-tambos-box" style="margin-top:1rem;"><label id="aplic-tambos-label">'+labelTambos+'</label><input type="number" id="aplic-tambos-input" min="1" step="1" value="'+aplic.tambosPlaneados+'"><p class="hint" id="aplic-tambos-hint">'+hintTambos+'</p></div>';
   body.innerHTML='<div class="seccion-titulo">🧪 '+aplic.formula.nombre+'</div><p class="hint" style="margin-bottom:.75rem;">Equipo: <strong>'+BOMBA_ICONOS[aplic.bomba]+' '+BOMBA_LABELS[aplic.bomba]+'</strong> (definido por la fórmula) · <a href="javascript:void(0)" id="aplic-cambiar-equipo" style="color:var(--verde-mid);font-weight:600;">cambiar</a></p><div id="aplic-equipo-box" style="display:none;margin-bottom:1rem;" class="labor-grid">'+tilesEquipo+'</div><div class="form-card"><div class="form-group"><label>¿Cuánto se va a mezclar CADA VEZ?</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip'+(modo==='tambo'?' sel':'')+'" id="aplic-modo-tambo">🛢️ Tambo completo (200 L)</button><button type="button" class="op-chip'+(modo==='bombas'?' sel':'')+'" id="aplic-modo-bombas">🎒 Por bombas</button></div></div><div id="aplic-tambo-info" style="'+(modo==='tambo'?'':'display:none;')+'"><p class="hint">≈ '+bombasParaTambo+' '+BOMBA_LABELS[aplic.bomba].toLowerCase()+'s de '+cap+' L c/u para llenar el tambo.</p></div><div id="aplic-bombas-info" style="'+(modo==='bombas'?'':'display:none;')+'"><input type="number" id="aplic-numbombas" min="1" value="'+(aplic.numBombas||1)+'" style="width:100%;text-align:center;font-size:2.4rem;font-weight:800;color:var(--verde-mid);border:none;background:transparent;outline:none;"><p class="hint">bombas de '+cap+' L c/u</p><p class="hint" id="aplic-vol-preview" style="font-weight:700;"></p></div>'+boxTambos+'<button class="btn-primary" style="margin-top:1rem;" id="aplic-cant-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigAplicFormulas()">← Volver a fórmula</button>';
+  var ultimoSugerido=infoInicial.sugerido;
   function actualizarPreview(){
     var n=parseFloat(document.getElementById('aplic-numbombas').value)||0;
     document.getElementById('aplic-vol-preview').textContent='= '+numFmt(n*cap)+' litros totales';
+  }
+  function actualizarSugerenciaTambos(){
+    if(esInyeccionCant) return;
+    var nB=parseFloat(document.getElementById('aplic-numbombas').value)||1;
+    var lbl=document.getElementById('aplic-tambos-label');
+    var hint=document.getElementById('aplic-tambos-hint');
+    var input=document.getElementById('aplic-tambos-input');
+    if(lbl) lbl.textContent=textoLabelTambos(aplic.modoCantidad);
+    if(hint) hint.textContent=textoHintTambos(aplic.modoCantidad,nB);
+    var info=calcularSugerenciaTambos(aplic.modoCantidad,nB);
+    if(input&&parseFloat(input.value)===ultimoSugerido){
+      input.value=info.sugerido;
+      aplic.tambosPlaneados=info.sugerido;
+    }
+    ultimoSugerido=info.sugerido;
   }
   document.getElementById('aplic-cambiar-equipo').addEventListener('click',function(){
     var box=document.getElementById('aplic-equipo-box');
@@ -3202,6 +3248,7 @@ function renderAsigAplicCantidad(){
     document.getElementById('aplic-modo-bombas').classList.remove('sel');
     document.getElementById('aplic-tambo-info').style.display='';
     document.getElementById('aplic-bombas-info').style.display='none';
+    actualizarSugerenciaTambos();
   });
   document.getElementById('aplic-modo-bombas').addEventListener('click',function(){
     aplic.modoCantidad='bombas';
@@ -3210,8 +3257,9 @@ function renderAsigAplicCantidad(){
     document.getElementById('aplic-tambo-info').style.display='none';
     document.getElementById('aplic-bombas-info').style.display='';
     actualizarPreview();
+    actualizarSugerenciaTambos();
   });
-  document.getElementById('aplic-numbombas').addEventListener('input',actualizarPreview);
+  document.getElementById('aplic-numbombas').addEventListener('input',function(){actualizarPreview();actualizarSugerenciaTambos();});
   actualizarPreview();
   document.getElementById('aplic-cant-continuar').addEventListener('click',function(){
     if(aplic.modoCantidad==='bombas'){
