@@ -1525,6 +1525,34 @@ function fmtAmigable(cantidad,unidad){
   return numFmt(cantidad)+' '+unidad;
 }
 
+function tablaEquivalenciasHtml(){
+  var filasKg='', filas100='', filas10='', filasG='';
+  for(var k=1;k<=10;k++){ filasKg+='<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>'+k+' kg</span><span style="font-weight:700;">'+numFmt(k*1000)+' gr</span></div>'; }
+  for(var c=100;c<=1000;c+=100){ filas100+='<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>'+c+' gr</span><span style="font-weight:700;">'+(c/1000)+' kg</span></div>'; }
+  for(var d=10;d<=100;d+=10){ filas10+='<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>'+d+' gr</span><span style="font-weight:700;">'+(d/1000)+' kg</span></div>'; }
+  for(var g=1;g<=10;g++){ filasG+='<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>'+g+' gr</span><span style="font-weight:700;">'+(g/1000)+' kg</span></div>'; }
+  var calcHtml='<div style="background:#fff;border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);padding:.7rem .8rem;margin-bottom:.9rem;"><p style="font-weight:700;font-size:.82rem;color:var(--verde);margin-bottom:.5rem;">🧮 Convierte cualquier número</p><div style="display:flex;gap:6px;align-items:center;"><input type="number" id="eq-calc-input" placeholder="Ej. 7.5" step="any" style="flex:1;min-width:0;padding:.55rem .6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:1rem;"><select id="eq-calc-unidad" style="padding:.55rem .5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;background:#fff;"><option value="kg">kg → gr</option><option value="gr">gr → kg</option></select></div><p id="eq-calc-resultado" style="font-weight:800;font-size:1.3rem;color:var(--verde-mid);margin-top:.5rem;">= —</p></div>';
+  return '<details style="margin-top:1rem;margin-bottom:1rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);padding:.65rem .85rem;background:var(--gris-1);"><summary style="cursor:pointer;font-weight:700;font-size:.82rem;color:var(--tierra);">📏 Convertir gramos y kilos</summary><div style="margin-top:.7rem;">'+calcHtml+'<div style="font-size:.82rem;display:grid;grid-template-columns:1fr 1fr;gap:.6rem .75rem;"><div><p class="hint" style="margin-bottom:.3rem;font-weight:700;color:var(--gris-3);">De 1 a 10 kg</p>'+filasKg+'</div><div><p class="hint" style="margin-bottom:.3rem;font-weight:700;color:var(--gris-3);">De 100 en 100 gr</p>'+filas100+'</div><div><p class="hint" style="margin-bottom:.3rem;font-weight:700;color:var(--gris-3);">De 10 en 10 gr</p>'+filas10+'</div><div><p class="hint" style="margin-bottom:.3rem;font-weight:700;color:var(--gris-3);">De 1 a 10 gr</p>'+filasG+'</div></div></div></details>';
+}
+function wireTablaEquivalencias(){
+  var inp=document.getElementById('eq-calc-input');
+  var sel=document.getElementById('eq-calc-unidad');
+  var out=document.getElementById('eq-calc-resultado');
+  if(!inp||!sel||!out) return;
+  function recalc(){
+    var v=parseFloat(inp.value);
+    if(isNaN(v)){ out.textContent='= —'; return; }
+    if(sel.value==='kg'){ out.textContent='= '+numFmt(v*1000)+' gr'; }
+    else { out.textContent='= '+numFmt(v/1000)+' kg'; }
+  }
+  inp.addEventListener('input',recalc);
+  sel.addEventListener('change',recalc);
+  recalc();
+}
+function componentesUsanPeso(comps){
+  return (comps||[]).some(function(c){var u=c.item?c.item.unidad:'';return u==='kg'||u==='gr';});
+}
+
 function renderActivosRancho(tipoInicial){
   tipoInicial=tipoInicial||'Herramienta';
   var esHerramientas=tipoInicial==='Herramienta';
@@ -3277,7 +3305,9 @@ function renderAsigAplicComponentes(){
   var avisoPorBomba=(esBombasReceta&&tambosPlan>1)?'<div style="background:var(--tierra-tenue);border:1.5px solid var(--tierra);border-radius:var(--radio-sm);padding:.75rem;margin-bottom:1rem;font-size:.82rem;"><strong style="color:var(--tierra);">🎒 Prepara cada bomba por separado</strong><br>La cantidad marcada "por bomba" es lo que va en CADA mochila — no mezcles todo el total en una sola bomba.</div>':'';
   var unidadVolTxt=esBombasReceta?'bombas':'tambos';
   var tituloVol=tambosPlan>1?(numFmt(aplic.volumen)+' L × '+tambosPlan+' '+unidadVolTxt+' = '+numFmt(aplic.volumen*tambosPlan)+' L en total'):(numFmt(aplic.volumen)+' L ('+Math.round(aplic.factor*100)+'% de la base)');
-  body.innerHTML='<div class="seccion-titulo">🧪 Receta ajustada · '+tituloVol+'</div>'+avisoPorBomba+alertaHtml+'<div class="form-card">'+filas+'</div><button class="btn-primary" style="margin-top:1.25rem;" id="aplic-comp-continuar">Continuar →</button><button class="btn-back" style="margin-top:.75rem;" onclick="'+(aplic.bomba==='inyeccion'?'renderAsigAplicFormulas()':'renderAsigAplicCantidad()')+'">← Volver</button>';
+  var tablaEq=componentesUsanPeso(aplic.componentes)?tablaEquivalenciasHtml():'';
+  body.innerHTML='<div class="seccion-titulo">🧪 Receta ajustada · '+tituloVol+'</div>'+avisoPorBomba+alertaHtml+'<div class="form-card">'+filas+'</div>'+tablaEq+'<button class="btn-primary" style="margin-top:1.25rem;" id="aplic-comp-continuar">Continuar →</button><button class="btn-back" style="margin-top:.75rem;" onclick="'+(aplic.bomba==='inyeccion'?'renderAsigAplicFormulas()':'renderAsigAplicCantidad()')+'">← Volver</button>';
+  wireTablaEquivalencias();
   document.getElementById('aplic-comp-continuar').addEventListener('click',function(){
     if(faltantes.length&&!confirm('El inventario no alcanza para esta cantidad. ¿Asignar de todas formas? (tendrás que comprar antes de aplicar)')) return;
     renderAsigAplicOperarios();
@@ -5819,7 +5849,9 @@ function renderEjecAplicacion(planta,tabla){
       return '<label style="display:flex;align-items:center;gap:.6rem;padding:.6rem 0;border-bottom:1px solid var(--gris-1);cursor:pointer;">'+img+'<div style="flex:1;"><div style="font-size:.88rem;font-weight:600;">'+(c.item?c.item.nombre:'')+'</div><div style="font-size:.8rem;color:var(--gris-3);">'+fmtAmigable(c.cantidad_base*(o.factor_escala||1),c.item?c.item.unidad:'')+'</div></div><input type="checkbox" data-insumo="'+iid+'" '+(checked?'checked':'')+' style="width:24px;height:24px;flex-shrink:0;"></label>';
     }).join('');
     var confirmados=capturaEjec.insumosConfirmados.length, totalInsumos=(o.componentesFormula||[]).length;
-    body.innerHTML=bar+'<div class="step-label">Paso 2 de 4</div><div class="form-card" style="margin-bottom:.75rem;"><div style="display:flex;justify-content:space-between;align-items:center;"><div class="step-title" style="margin:0;">🧪 '+(f.nombre||'Aplicación')+'</div><span class="orden-badge '+estBadge[0]+'">'+estBadge[1]+'</span></div><div style="font-size:.85rem;color:var(--gris-3);margin-top:.5rem;line-height:1.6;">📍 <strong>'+(planta?planta.nombre:'')+' · '+tabla.nombre+'</strong><br/>📅 '+(o.fecha_asignacion?fechaLarga(o.fecha_asignacion):'')+'<br/>🛢️ '+(BOMBA_LABELS[o.bomba_usada]||o.bomba_usada)+' · '+numFmt(o.volumen_aplicado_litros)+' L</div></div><div class="seccion-titulo" style="margin-bottom:.25rem;">Productos a usar ('+confirmados+'/'+totalInsumos+' recogidos)</div><div class="form-card">'+filas+'</div>'+(o.notas_encargado?'<p class="hint" style="margin-top:.75rem;">📝 '+o.notas_encargado+'</p>':'')+'<div class="nav-row"><button class="btn-back" onclick="pasoEjec--;renderEjec()">← Atrás</button><button class="btn-next" onclick="pasoEjec++;renderEjec()">Ya la preparé →</button></div>';
+    var tablaEqEjec=componentesUsanPeso(o.componentesFormula)?tablaEquivalenciasHtml():'';
+    body.innerHTML=bar+'<div class="step-label">Paso 2 de 4</div><div class="form-card" style="margin-bottom:.75rem;"><div style="display:flex;justify-content:space-between;align-items:center;"><div class="step-title" style="margin:0;">🧪 '+(f.nombre||'Aplicación')+'</div><span class="orden-badge '+estBadge[0]+'">'+estBadge[1]+'</span></div><div style="font-size:.85rem;color:var(--gris-3);margin-top:.5rem;line-height:1.6;">📍 <strong>'+(planta?planta.nombre:'')+' · '+tabla.nombre+'</strong><br/>📅 '+(o.fecha_asignacion?fechaLarga(o.fecha_asignacion):'')+'<br/>🛢️ '+(BOMBA_LABELS[o.bomba_usada]||o.bomba_usada)+' · '+numFmt(o.volumen_aplicado_litros)+' L</div></div><div class="seccion-titulo" style="margin-bottom:.25rem;">Productos a usar ('+confirmados+'/'+totalInsumos+' recogidos)</div><div class="form-card">'+filas+'</div>'+tablaEqEjec+(o.notas_encargado?'<p class="hint" style="margin-top:.75rem;">📝 '+o.notas_encargado+'</p>':'')+'<div class="nav-row"><button class="btn-back" onclick="pasoEjec--;renderEjec()">← Atrás</button><button class="btn-next" onclick="pasoEjec++;renderEjec()">Ya la preparé →</button></div>';
+    wireTablaEquivalencias();
     body.querySelectorAll('[data-insumo]').forEach(function(chk){
       chk.addEventListener('change',function(){
         var iid=this.dataset.insumo;
