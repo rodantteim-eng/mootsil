@@ -1082,14 +1082,22 @@ function renderFormAsignar(){
       return;
     }
     var requiereTablaNueva=!!document.getElementById('labor-otra-tabla').checked;
-    from('tipos_labor').insert({nombre:nombre,requiere_cantidad_insumo:false,requiere_tiempo:false,requiere_tabla:requiereTablaNueva,activo:true,orden:100}).then(function(){
-      return from('tipos_labor').select('*').eq('nombre',nombre).get();
-    }).then(function(rows){
-      var lb=rows&&rows[0]?rows[0]:{id:null,nombre:nombre,requiere_cantidad_insumo:false,requiere_tiempo:false,requiere_tabla:requiereTablaNueva};
-      cats.tiposLabor.push(lb);
-      asignarLaborSubSel=null;
-      asignarLaborSel=lb;
-      renderFormAsignarPaso2();
+    from('tipos_labor').select('*').eq('nombre',nombre).get().then(function(rowsPrevios){
+      if(rowsPrevios&&rowsPrevios[0]){
+        var lbPrevio=rowsPrevios[0];
+        asignarLaborSubSel=null;
+        asignarLaborSel=lbPrevio;
+        renderFormAsignarPaso2();
+        return;
+      }
+      return from('tipos_labor').insert({nombre:nombre,requiere_cantidad_insumo:false,requiere_tiempo:false,requiere_tabla:requiereTablaNueva,activo:false,orden:100}).then(function(){
+        return from('tipos_labor').select('*').eq('nombre',nombre).get();
+      }).then(function(rows){
+        var lb=rows&&rows[0]?rows[0]:{id:null,nombre:nombre,requiere_cantidad_insumo:false,requiere_tiempo:false,requiere_tabla:requiereTablaNueva};
+        asignarLaborSubSel=null;
+        asignarLaborSel=lb;
+        renderFormAsignarPaso2();
+      });
     }).catch(function(e){alert('Error: '+e.message);});
   });
 }
