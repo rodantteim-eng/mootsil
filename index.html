@@ -4753,7 +4753,7 @@ function renderPagosEventuales(fecha){
   ]).then(function(r){
     var registros=r[0]||[];
     var pagosDelDia=r[1]||[];
-    var pagoPorOperario={}; pagosDelDia.forEach(function(p){pagoPorOperario[p.operario_id]=p;});
+    var pagosPorOperario={}; pagosDelDia.forEach(function(p){(pagosPorOperario[p.operario_id]=pagosPorOperario[p.operario_id]||[]).push(p);});
     var clockPorOperario={};
     registros.forEach(function(reg){
       if(!clockPorOperario[reg.usuario_id]) clockPorOperario[reg.usuario_id]={entrada:null};
@@ -4777,13 +4777,16 @@ function renderPagosEventuales(fecha){
     } else {
       html+=eventuales.map(function(o){
         var clockIn=clockPorOperario[o.id];
-        var pago=pagoPorOperario[o.id];
+        var pagos=pagosPorOperario[o.id]||[];
         var horaE=clockIn&&clockIn.entrada?new Date(clockIn.entrada).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}):null;
         var asistTxt=clockIn?('✅ Marcó asistencia · '+horaE):'— Sin registro de asistencia este día';
-        var accion=pago
-          ? '<div style="margin-top:.5rem;display:flex;justify-content:space-between;align-items:center;"><span style="font-weight:700;color:var(--verde-mid);">✅ Pagado: $'+parseFloat(pago.monto).toFixed(2)+(pago.concepto?' · '+pago.concepto:'')+'</span><button type="button" class="btn-sm btn-cancelar" data-quitar-pago="'+pago.id+'">Quitar</button></div>'
-          : '<div style="margin-top:.5rem;display:flex;gap:8px;align-items:center;"><input type="number" min="0" step="1" placeholder="Monto $" data-monto-input="'+o.id+'" style="flex:1;padding:.5rem .6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><button type="button" class="btn-sm btn-completar" data-registrar-pago="'+o.id+'">💵 Registrar pago</button></div>';
-        return '<div class="orden-card" style="border-left-color:'+(pago?'var(--verde-mid)':(clockIn?'var(--tierra)':'var(--gris-2)'))+';"><strong style="font-size:.9rem;">'+o.nombre+'</strong><div class="orden-meta">'+asistTxt+'</div>'+accion+'</div>';
+        var totalOp=pagos.reduce(function(s,p){return s+parseFloat(p.monto);},0);
+        var pagosHtml=pagos.map(function(pago){
+          return '<div style="margin-top:.5rem;display:flex;justify-content:space-between;align-items:center;"><span style="font-weight:700;color:var(--verde-mid);">✅ Pagado: $'+parseFloat(pago.monto).toFixed(2)+(pago.concepto?' · '+pago.concepto:'')+'</span><button type="button" class="btn-sm btn-cancelar" data-quitar-pago="'+pago.id+'">Quitar</button></div>';
+        }).join('');
+        var totalTxt=pagos.length>1?'<div class="orden-meta" style="margin-top:.35rem;font-weight:700;">Total del día: $'+totalOp.toFixed(2)+'</div>':'';
+        var formAgregar='<div style="margin-top:.5rem;display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><input type="number" min="0" step="1" placeholder="Monto $" data-monto-input="'+o.id+'" style="flex:1;min-width:90px;padding:.5rem .6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><input type="text" placeholder="Concepto (opcional)" data-concepto-input="'+o.id+'" style="flex:1;min-width:120px;padding:.5rem .6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><button type="button" class="btn-sm btn-completar" data-registrar-pago="'+o.id+'">💵 '+(pagos.length?'Agregar otro pago':'Registrar pago')+'</button></div>';
+        return '<div class="orden-card" style="border-left-color:'+(pagos.length?'var(--verde-mid)':(clockIn?'var(--tierra)':'var(--gris-2)'))+';"><strong style="font-size:.9rem;">'+o.nombre+'</strong><div class="orden-meta">'+asistTxt+'</div>'+pagosHtml+totalTxt+formAgregar+'</div>';
       }).join('');
     }
 
@@ -4797,12 +4800,15 @@ function renderPagosEventuales(fecha){
       btn.addEventListener('click',function(){
         var opId=this.dataset.registrarPago;
         var input=body.querySelector('[data-monto-input="'+opId+'"]');
+        var conceptoInput=body.querySelector('[data-concepto-input="'+opId+'"]');
         var monto=parseFloat(input.value);
+        var concepto=(conceptoInput&&conceptoInput.value)?conceptoInput.value:null;
         if(!monto||monto<=0){alert('Captura un monto válido.');return;}
+        var textoOriginal=btn.textContent;
         btn.disabled=true; btn.textContent='Guardando...';
-        from('pagos_eventuales').insert({operario_id:opId,fecha:fecha,monto:monto,pagado_por:usuario.id}).then(function(){
-          return from('notificaciones').insert({titulo:'💳 Pago registrado',cuerpo:'Se te registró un pago de $'+monto.toFixed(2)+' por el día '+fecha+'.',icono:'💳',leida:false,para_rol:'operario',para_usuario:opId});
-        }).then(function(){showToast('✅ Pago registrado');renderPagosEventuales(fecha);}).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='💵 Registrar pago';});
+        from('pagos_eventuales').insert({operario_id:opId,fecha:fecha,monto:monto,concepto:concepto,pagado_por:usuario.id}).then(function(){
+          return from('notificaciones').insert({titulo:'💳 Pago registrado',cuerpo:'Se te registró un pago de $'+monto.toFixed(2)+(concepto?' ('+concepto+')':'')+' por el día '+fecha+'.',icono:'💳',leida:false,para_rol:'operario',para_usuario:opId});
+        }).then(function(){showToast('✅ Pago registrado');renderPagosEventuales(fecha);}).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent=textoOriginal;});
       });
     });
     body.querySelectorAll('[data-quitar-pago]').forEach(function(btn){
