@@ -5569,9 +5569,12 @@ function renderGenerarNomina(fechaRef){
     from('bono_beneficiarios').select('*').get(),
     from('prestamos').select('*').eq('estado','activo').get(),
     from('prestamo_pagos').select('*').eq('semana_inicio',semanaInicio).get(),
-    from('horas_extra_asignadas').select('operario_id,fecha,horas_max').gte('fecha',semanaInicio).lte('fecha',semanaFin).get()
+    from('horas_extra_asignadas').select('operario_id,fecha,horas_max').gte('fecha',semanaInicio).lte('fecha',semanaFin).get(),
+    from('nomina_ajustes').select('*').eq('semana_inicio',semanaInicio).get()
   ]).then(function(r){
     var operarios=r[0]||[], registros=r[1]||[], estados=r[2]||[], estadosExtra=r[3]||[];
+    var ajustesSemana=r[11]||[];
+    var ajustePorOp={}; ajustesSemana.forEach(function(a){ajustePorOp[a.operario_id]=a;});
     var cfg={}; (r[4]||[]).forEach(function(c){cfg[c.clave]=c.valor;});
     var tarifa=parseFloat(cfg.tarifa_hora_extra)||70;
     var permisosAprobados=r[5]||[];
@@ -5608,12 +5611,16 @@ function renderGenerarNomina(fechaRef){
         var permisosOp=permisosAprobados.filter(function(p){return p.usuario_id===o.id;});
         var resumen=calcularResumenAsistencia(regsOp,semanaInicio,permisosOp);
         var sueldoBase=o.sueldo_base||0;
-        var totalSueldo=resumen.diasPagados*sueldoBase;
+        var ajuste=ajustePorOp[o.id];
+        var tieneAjusteDias=!!(ajuste&&ajuste.dias_trabajados_override!=null);
+        var diasPagados=tieneAjusteDias?parseFloat(ajuste.dias_trabajados_override):resumen.diasPagados;
+        var totalSueldo=diasPagados*sueldoBase;
         var est=estadoPorOp[o.id];
         var pagado=est&&est.estado==='pagado';
 
         var mapaMaxOp=mapaHorasMaxPorFecha(horasExtraAsignadas.filter(function(h){return h.operario_id===o.id;}));
-        var horasExtra=horasExtraCapadasDesdeRegistros(regsOp,mapaMaxOp);
+        var tieneAjusteExtra=!!(ajuste&&ajuste.horas_extra_override!=null);
+        var horasExtra=tieneAjusteExtra?parseFloat(ajuste.horas_extra_override):horasExtraCapadasDesdeRegistros(regsOp,mapaMaxOp);
         var totalExtra=horasExtra*tarifa;
         var estExtra=estadoExtraPorOp[o.id];
         var pagadoExtra=estExtra&&estExtra.estado==='pagado';
@@ -5636,8 +5643,9 @@ function renderGenerarNomina(fechaRef){
         accionesPago[idAccion]={operarioId:o.id,nombre:o.nombre,totalSueldo:totalSueldo,horasExtra:horasExtra,totalExtra:totalExtra,deducciones:deduccionesOp,bonosQueCalifican:bonosQueCalifican,scoresOp:scoresOp,nominaCompleta:nominaCompleta,granTotal:granTotal,
           recibo:{nombre:o.nombre,numSemana:numSemana,semanaInicio:semanaInicio,semanaFin:semanaFin,resumen:resumen,sueldoBase:sueldoBase,totalSueldo:totalSueldo,tarifa:tarifa,horasExtra:horasExtra,totalExtra:totalExtra,bonos:bonosQueCalifican.map(function(b){return {descripcion:b.descripcion,monto:parseFloat(b.monto||0)};}),deducciones:deduccionesOp.map(function(d){var pr=prestamoIdsOp[d.prestamo_id];return {concepto:pr?pr.concepto:'Préstamo',numero:d.numero_pago,monto:parseFloat(d.monto)};}),granTotal:granTotal,nominaCompleta:nominaCompleta}};
 
-        var filas='<div class="resumen-row"><span class="resumen-key">💵 Sueldo ('+resumen.trabajados+' días'+(resumen.diasPermisoConGoce?' + '+resumen.diasPermisoConGoce+' permiso c/goce':'')+')</span><span class="resumen-val">+$'+totalSueldo.toFixed(2)+'</span></div>';
-        if(horasExtra>0) filas+='<div class="resumen-row"><span class="resumen-key">⏰ Horas extra ('+horasExtra.toFixed(1)+'h)</span><span class="resumen-val">+$'+totalExtra.toFixed(2)+'</span></div>';
+        var diasLabelTxt=tieneAjusteDias?(diasPagados+' días ✏️'):(resumen.trabajados+' días'+(resumen.diasPermisoConGoce?' + '+resumen.diasPermisoConGoce+' permiso c/goce':''));
+        var filas='<div class="resumen-row"><span class="resumen-key">💵 Sueldo ('+diasLabelTxt+')</span><span class="resumen-val">+$'+totalSueldo.toFixed(2)+'</span></div>';
+        if(horasExtra>0) filas+='<div class="resumen-row"><span class="resumen-key">⏰ Horas extra ('+horasExtra.toFixed(1)+'h'+(tieneAjusteExtra?' ✏️':'')+')</span><span class="resumen-val">+$'+totalExtra.toFixed(2)+'</span></div>';
         bonosQueCalifican.forEach(function(b){
           filas+='<div class="resumen-row"><span class="resumen-key">🎁 '+b.descripcion+'</span><span class="resumen-val">+$'+parseFloat(b.monto||0).toFixed(2)+'</span></div>';
         });
@@ -5652,6 +5660,7 @@ function renderGenerarNomina(fechaRef){
         if(resumen.diasPermisoConGoce) metaExtra.push('🩺 '+resumen.diasPermisoConGoce+' permiso c/goce');
         if(resumen.diasPermisoSinGoce) metaExtra.push('🩺 '+resumen.diasPermisoSinGoce+' permiso s/goce');
         if(!sueldoBase) metaExtra.push('<span style="color:var(--rojo);">⚠️ sin sueldo base</span>');
+        if((tieneAjusteDias||tieneAjusteExtra)&&ajuste&&ajuste.motivo) metaExtra.push('<span style="color:var(--tierra);">✏️ '+ajuste.motivo+'</span>');
 
         return '<div class="orden-card" style="border-left-color:'+(nominaCompleta?'var(--verde-mid)':'var(--tierra)')+';">'+
           '<div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.95rem">'+o.nombre+'</strong><span style="font-size:.72rem;font-weight:700;color:'+(nominaCompleta?'var(--verde-mid)':'var(--tierra)')+';">'+(nominaCompleta?'✅ Pagada':'⏳ Pendiente')+'</span></div>'+
@@ -5661,6 +5670,7 @@ function renderGenerarNomina(fechaRef){
           '<div style="display:flex;gap:8px;margin-top:.6rem;flex-wrap:wrap;">'+
           (nominaCompleta?'<button class="btn-sm btn-cancelar" data-despagar="'+idAccion+'">Marcar como pendiente</button>':'<button class="btn-sm btn-completar" data-pagar="'+idAccion+'">✅ Marcar nómina completa como pagada</button>')+
           '<button type="button" class="btn-sm" style="background:var(--gris-1);color:var(--negro);" data-recibo="'+idAccion+'">🧾 Recibo</button>'+
+          '<button type="button" class="btn-sm" style="background:var(--verde-tenue);border:1.5px solid var(--verde-mid);color:var(--verde);" data-ajustar-nom="'+o.id+'" data-dias="'+diasPagados+'" data-horas="'+horasExtra+'" data-motivo="'+((ajuste&&ajuste.motivo)||'').replace(/"/g,'&quot;')+'">✏️ Ajustar</button>'+
           '</div>'+
           '</div>';
       }).join('');
@@ -5722,8 +5732,42 @@ function renderGenerarNomina(fechaRef){
           abrirRecibo(acc.recibo);
         });
       });
+      body.querySelectorAll('[data-ajustar-nom]').forEach(function(btn){
+        btn.addEventListener('click',function(){
+          renderAjustarNomina(this.dataset.ajustarNom,accionesPago['gn-acc-'+this.dataset.ajustarNom].nombre,semanaInicio,this.dataset.dias,this.dataset.horas,this.dataset.motivo,lunes);
+        });
+      });
     }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function renderAjustarNomina(operarioId,nombre,semanaInicio,diasActual,horasActual,motivoActual,lunesVolver){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo">✏️ Ajustar nómina — '+nombre+'</div><p class="hint" style="margin-bottom:.75rem;">Corrige manualmente los días trabajados y/o las horas extra de esta semana cuando la asistencia por QR no haya quedado bien registrada. El ajuste reemplaza el cálculo automático solo para esta semana.</p><div class="form-card"><div class="form-group"><label>Días trabajados (pagados)</label><input type="number" id="an-dias" min="0" step="0.5" value="'+diasActual+'"></div><div class="form-group"><label>Horas extra</label><input type="number" id="an-horas" min="0" step="0.1" value="'+horasActual+'"></div><div class="form-group"><label>Motivo (opcional)</label><input type="text" id="an-motivo" value="'+(motivoActual||'').replace(/"/g,'&quot;')+'" placeholder="Ej. QR no registró bien la salida"></div><button class="btn-primary" id="an-guardar">Guardar ajuste</button><button type="button" id="an-quitar" style="width:100%;margin-top:.5rem;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--gris-2);background:var(--gris-1);color:var(--gris-3);font-weight:600;font-size:.85rem;cursor:pointer;">↩️ Quitar ajuste (volver al cálculo automático)</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderGenerarNomina(new Date(\''+semanaInicio+'T00:00:00\'))">← Volver sin guardar</button>';
+
+  document.getElementById('an-guardar').addEventListener('click',function(){
+    var btn=this; btn.disabled=true; btn.textContent='Guardando...';
+    var dias=parseFloat(document.getElementById('an-dias').value);
+    var horas=parseFloat(document.getElementById('an-horas').value);
+    var motivo=document.getElementById('an-motivo').value||null;
+    if(isNaN(dias)||isNaN(horas)){alert('Captura valores válidos.');btn.disabled=false;btn.textContent='Guardar ajuste';return;}
+    var payload={operario_id:operarioId,semana_inicio:semanaInicio,dias_trabajados_override:dias,horas_extra_override:horas,motivo:motivo,creado_por:usuario.id,actualizado_en:new Date().toISOString()};
+    from('nomina_ajustes').select('id').eq('operario_id',operarioId).eq('semana_inicio',semanaInicio).get().then(function(rows){
+      var existente=rows&&rows[0];
+      return existente?from('nomina_ajustes').eq('id',existente.id).update(payload):from('nomina_ajustes').insert(payload);
+    }).then(function(){
+      showToast('✅ Ajuste guardado');
+      renderGenerarNomina(new Date(semanaInicio+'T00:00:00'));
+    }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Guardar ajuste';});
+  });
+
+  document.getElementById('an-quitar').addEventListener('click',function(){
+    if(!confirm('¿Quitar el ajuste manual y volver a calcular esta semana automáticamente desde la asistencia?')) return;
+    from('nomina_ajustes').eq('operario_id',operarioId).eq('semana_inicio',semanaInicio).delete().then(function(){
+      showToast('✅ Ajuste eliminado');
+      renderGenerarNomina(new Date(semanaInicio+'T00:00:00'));
+    }).catch(function(e){alert('Error: '+e.message);});
+  });
 }
 
 function abrirRecibo(d){
@@ -7011,9 +7055,15 @@ function cargarTareas(subtab){
   Promise.all([
     from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_cantidad_insumo,unidad_insumo,requiere_tiempo,requiere_formula),subtipo:subtipos_labor(nombre,requiere_tiempo),activo_rancho:activos_rancho(nombre,imagen_url),formula:formulas_aplicacion(nombre,via,categoria)').eq('operario_id',usuario.id).in('estado',['pendiente','en_proceso']).order('fecha_asignacion',{ascending:true}).get(),
     from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo),subtipo:subtipos_labor(nombre,requiere_tiempo),activo_rancho:activos_rancho(nombre,imagen_url)').eq('operario_id',usuario.id).eq('fecha_asignacion',hoy).order('creado_en',{ascending:false}).get(),
-    from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo),subtipo:subtipos_labor(nombre,requiere_tiempo),activo_rancho:activos_rancho(nombre,imagen_url)').eq('operario_id',usuario.id).eq('estado','completada').order('fecha_asignacion',{ascending:false}).limit(60).get()
+    from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo),subtipo:subtipos_labor(nombre,requiere_tiempo),activo_rancho:activos_rancho(nombre,imagen_url)').eq('operario_id',usuario.id).eq('estado','completada').order('fecha_asignacion',{ascending:false}).limit(60).get(),
+    from('horas_extra_asignadas').select('fecha,tipo_labor_id,horas_max,creado_en').eq('operario_id',usuario.id).eq('estado','aprobada').get()
   ]).then(function(res){
     var todas=res[0]||[], hoyOrdenes=res[1]||[], completadas=res[2]||[];
+    var horasExtraPorClave={};
+    (res[3]||[]).forEach(function(h){
+      var k=h.fecha+'|'+h.tipo_labor_id;
+      if(!horasExtraPorClave[k]||(h.creado_en||'')>(horasExtraPorClave[k]._creado||'')) horasExtraPorClave[k]={horas:h.horas_max,_creado:h.creado_en||''};
+    });
     var idsComp=completadas.map(function(o){return o.id;});
     var evidenciaFetch = idsComp.length ? from('registros_labor').select('orden_id,foto_url').in('orden_id',idsComp).get() : Promise.resolve([]);
     var formulaIds=Array.from(new Set(todas.filter(function(t){return t.formula_id;}).map(function(t){return t.formula_id;})));
@@ -7024,13 +7074,13 @@ function cargarTareas(subtab){
       (regs||[]).forEach(function(r){evidenciaPorOrden[r.orden_id]=!!r.foto_url;});
       var componentesPorFormula={};
       compRows.forEach(function(c){(componentesPorFormula[c.formula_id]=componentesPorFormula[c.formula_id]||[]).push(c);});
-      try{localStorage.setItem('mootsil_tareas_cache_'+usuario.id,JSON.stringify({todas:todas,hoyOrdenes:hoyOrdenes,completadas:completadas,evidenciaPorOrden:evidenciaPorOrden,componentesPorFormula:componentesPorFormula,ts:Date.now()}));}catch(e){}
-      pintarTareas(todas,hoyOrdenes,false,completadas,evidenciaPorOrden,componentesPorFormula);
+      try{localStorage.setItem('mootsil_tareas_cache_'+usuario.id,JSON.stringify({todas:todas,hoyOrdenes:hoyOrdenes,completadas:completadas,evidenciaPorOrden:evidenciaPorOrden,componentesPorFormula:componentesPorFormula,horasExtraPorClave:horasExtraPorClave,ts:Date.now()}));}catch(e){}
+      pintarTareas(todas,hoyOrdenes,false,completadas,evidenciaPorOrden,componentesPorFormula,horasExtraPorClave);
     });
   }).catch(function(err){
     var cache=null;
     try{cache=JSON.parse(localStorage.getItem('mootsil_tareas_cache_'+usuario.id)||'null');}catch(e){}
-    if(cache){ pintarTareas(cache.todas,cache.hoyOrdenes,true,cache.completadas||[],cache.evidenciaPorOrden||{},cache.componentesPorFormula||{}); }
+    if(cache){ pintarTareas(cache.todas,cache.hoyOrdenes,true,cache.completadas||[],cache.evidenciaPorOrden||{},cache.componentesPorFormula||{},cache.horasExtraPorClave||{}); }
     else{
       var cont=document.getElementById('tareas-contenido');
       if(cont) cont.innerHTML='<div class="empty">📡 Sin señal y sin tareas guardadas.<br/>Conéctate al menos una vez para descargarlas.</div>';
@@ -7045,8 +7095,8 @@ function barraSubtabsTareas(){
   }).join('')+'</div>';
 }
 
-function pintarTareas(todas,hoyOrdenes,esCache,completadas,evidenciaPorOrden,componentesPorFormula){
-  completadas=completadas||[]; evidenciaPorOrden=evidenciaPorOrden||{}; componentesPorFormula=componentesPorFormula||{};
+function pintarTareas(todas,hoyOrdenes,esCache,completadas,evidenciaPorOrden,componentesPorFormula,horasExtraPorClave){
+  completadas=completadas||[]; evidenciaPorOrden=evidenciaPorOrden||{}; componentesPorFormula=componentesPorFormula||{}; horasExtraPorClave=horasExtraPorClave||{};
   var body=document.getElementById('op-body');
   if(!document.getElementById('tareas-contenido')){
     body.innerHTML=barraSubtabsTareas()+'<div id="tareas-contenido"></div>';
@@ -7072,7 +7122,8 @@ function pintarTareas(todas,hoyOrdenes,esCache,completadas,evidenciaPorOrden,com
       }
       if(!t.tabla_id){
         var atrasadaG=t.fecha_asignacion<hoy;
-        var etiquetaTipoG=t.es_hora_extra?' <span style="color:var(--tierra);font-size:.7rem;font-weight:700;background:var(--tierra-tenue);padding:2px 8px;border-radius:10px;">⏰ Hora Extra</span>':' <span style="color:var(--verde-mid);font-size:.7rem;font-weight:700;background:var(--verde-tenue);padding:2px 8px;border-radius:10px;">🧑‍🌾 Labores</span>';
+        var horasExtraG=t.es_hora_extra?horasExtraPorClave[t.fecha_asignacion+'|'+t.tipo_labor_id]:null;
+        var etiquetaTipoG=t.es_hora_extra?' <span style="color:var(--tierra);font-size:.7rem;font-weight:700;background:var(--tierra-tenue);padding:2px 8px;border-radius:10px;">⏰ Hora Extra'+(horasExtraG?(' · '+numFmt(horasExtraG.horas)+'h autorizadas'):'')+'</span>':' <span style="color:var(--verde-mid);font-size:.7rem;font-weight:700;background:var(--verde-tenue);padding:2px 8px;border-radius:10px;">🧑‍🌾 Labores</span>';
         return '<div class="tarea-card" style="'+(atrasadaG?'border-left-color:var(--rojo);':(t.es_hora_extra?'border-left-color:var(--tierra);':''))+'"><div class="tarea-title">'+(ICONOS[t.tipo_labor.nombre]||'🔧')+' '+t.tipo_labor.nombre+(t.subtipo?' · '+t.subtipo.nombre:'')+etiquetaTipoG+(atrasadaG?' <span style="color:var(--rojo);font-size:.72rem;font-weight:700;">⚠️ Desde '+t.fecha_asignacion+'</span>':'')+'</div><div class="tarea-meta">📋 Actividad general (sin tabla)'+(t.notas_encargado?'<br/>📝 '+t.notas_encargado:'')+'</div><div style="margin-top:.75rem;display:flex;gap:8px;">'+(t.estado==='pendiente'?'<button class="btn-sm btn-iniciar" data-ini="'+t.id+'">▶ Iniciar</button>':'')+(t.estado==='en_proceso'?'<button class="btn-sm btn-completar" data-eje="'+t.id+'">✅ Registrar avance</button>':'')+'</div></div>';
       }
       var p=cats.plantaciones.find(function(x){return x.id===t.tabla.plantacion_id;});
@@ -7083,7 +7134,8 @@ function pintarTareas(todas,hoyOrdenes,esCache,completadas,evidenciaPorOrden,com
       var su=(t.surcos_asignados&&t.surcos_asignados.length)?t.surcos_asignados.join(', '):'Todos';
       var surcosLineaTxt=esFiltrosT?'':('🔢 Surcos: '+su);
       var atrasada=t.fecha_asignacion<hoy;
-      var etiquetaTipo=t.es_hora_extra?' <span style="color:var(--tierra);font-size:.7rem;font-weight:700;background:var(--tierra-tenue);padding:2px 8px;border-radius:10px;">⏰ Hora Extra</span>':' <span style="color:var(--verde-mid);font-size:.7rem;font-weight:700;background:var(--verde-tenue);padding:2px 8px;border-radius:10px;">🧑‍🌾 Labores</span>';
+      var horasExtra=t.es_hora_extra?horasExtraPorClave[t.fecha_asignacion+'|'+t.tipo_labor_id]:null;
+      var etiquetaTipo=t.es_hora_extra?' <span style="color:var(--tierra);font-size:.7rem;font-weight:700;background:var(--tierra-tenue);padding:2px 8px;border-radius:10px;">⏰ Hora Extra'+(horasExtra?(' · '+numFmt(horasExtra.horas)+'h autorizadas'):'')+'</span>':' <span style="color:var(--verde-mid);font-size:.7rem;font-weight:700;background:var(--verde-tenue);padding:2px 8px;border-radius:10px;">🧑‍🌾 Labores</span>';
       var progresoTxt='', etiquetaEstado='';
       if(t.estado==='en_proceso'){
         var tieneAvance=t.surcos_completados&&t.surcos_completados.length>0;
