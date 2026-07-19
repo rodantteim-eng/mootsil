@@ -634,8 +634,8 @@ function renderTablero(){
   var en7dias=new Date(Date.now()+7*86400000).toISOString().slice(0,10);
   var hace30dias=new Date(Date.now()-30*86400000).toISOString().slice(0,10);
   Promise.all([
-    from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre),subtipo:subtipos_labor(nombre),activo_rancho:activos_rancho(nombre)').in('estado',['pendiente','en_proceso']).order('creado_en',{ascending:false}).get(),
-    from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre),subtipo:subtipos_labor(nombre),activo_rancho:activos_rancho(nombre)').in('estado',['completada','cancelada']).gte('fecha_asignacion',hace30dias).order('creado_en',{ascending:false}).limit(150).get(),
+    from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_formula,requiere_tiempo),subtipo:subtipos_labor(nombre,requiere_tiempo),activo_rancho:activos_rancho(nombre)').in('estado',['pendiente','en_proceso']).order('creado_en',{ascending:false}).get(),
+    from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_formula,requiere_tiempo),subtipo:subtipos_labor(nombre,requiere_tiempo),activo_rancho:activos_rancho(nombre)').in('estado',['completada','cancelada']).gte('fecha_asignacion',hace30dias).order('creado_en',{ascending:false}).limit(150).get(),
     from('formulas_aplicacion').select('id,nombre,fecha_programada,tabla_id').eq('activo',true).get(),
     from('ordenes_trabajo').select('formula_id,estado').not('formula_id','is','null').get(),
     from('permisos').select('id').eq('estado','pendiente').get(),
@@ -723,6 +723,7 @@ function renderTablero(){
       renderAsigAplicPorFecha();
     });
     var ordenesPorIdTablero={}; todas.forEach(function(o){ordenesPorIdTablero[o.id]=o;});
+    body.querySelectorAll('[data-regavance]').forEach(function(b){b.addEventListener('click',function(){renderAdminCompletar(this.dataset.regavance);});});
     body.querySelectorAll('[data-can]').forEach(function(b){b.addEventListener('click',function(){cambiarEstado(this.dataset.can,'cancelada');});});
     body.querySelectorAll('[data-com]').forEach(function(b){b.addEventListener('click',function(){
       var o=ordenesPorIdTablero[this.dataset.com];
@@ -747,9 +748,12 @@ function cardHtml(o){
   var ic=o.activo_rancho_id?'🔧':(ICONOS[o.tipo_labor.nombre]||'🔧');
   var bl={pendiente:'badge-pendiente',en_proceso:'badge-en_proceso',completada:'badge-completada',cancelada:'badge-completada'};
   var lb={pendiente:'Pendiente',en_proceso:'En proceso',completada:'Completada',cancelada:'Cancelada'};
+  var esTiempoCard=ordenEsTiempo(o);
+  var esAplicCard=!!(o.tipo_labor&&o.tipo_labor.requiere_formula&&o.formula_id);
   var ac='';
   if(o.estado==='pendiente') ac='<button class="btn-sm btn-cancelar" data-can="'+o.id+'">Cancelar</button>';
-  if(o.estado==='en_proceso') ac='<button class="btn-sm btn-completar" data-com="'+o.id+'">Marcar completa</button> <button class="btn-sm btn-cancelar" data-can="'+o.id+'">Cancelar</button>';
+  if(o.estado==='en_proceso') ac=(esAplicCard?'':'<button class="btn-sm btn-completar" data-com="'+o.id+'">Marcar completa</button> ')+'<button class="btn-sm btn-cancelar" data-can="'+o.id+'">Cancelar</button>';
+  if((o.estado==='pendiente'||o.estado==='en_proceso')&&!esTiempoCard) ac='<button class="btn-sm" style="background:var(--verde-tenue);border:1.5px solid var(--verde-mid);color:var(--verde);font-weight:700;" data-regavance="'+o.id+'">📝 Registrar avance</button> '+ac;
   var progreso=progresoSurcosOrden(o);
   var avanceTxt=(o.estado==='en_proceso'&&progreso.totalAsignados.length>0)?('<br/>🔶 Avance: '+progreso.completados.length+'/'+progreso.totalAsignados.length+' surcos'+(progreso.faltan.length?' · Faltan: '+progreso.faltan.join(', '):'')):'';
   var ubicacionTxt=o.activo_rancho_id?('🔧 '+(o.activo_rancho?o.activo_rancho.nombre:'Herramienta/Equipo')):(o.tabla?((p?p.nombre+' ':'')+o.tabla.nombre):'Actividad general (sin tabla)');
@@ -762,6 +766,206 @@ function cambiarEstado(id,estado){
     if(estado==='completada') from('notificaciones').insert({titulo:'✅ Labor completada',cuerpo:'Una orden fue marcada como completada.',icono:'✅',leida:false,para_rol:'encargado'}).then(function(){renderTablero();});
     else renderTablero();
   });
+}
+
+var ADMIN_COMPLETAR_ORDEN=null, ADMIN_COMPLETAR_SURCOS=[];
+
+function renderAdminCompletar(ordenId){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo">📝 Registrar avance</div><div class="loading">Cargando...</div>';
+  from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_formula,requiere_cantidad_insumo,unidad_insumo),subtipo:subtipos_labor(nombre),activo_rancho:activos_rancho(nombre)').eq('id',ordenId).single().then(function(o){
+    var esAplic=!!(o.tipo_labor&&o.tipo_labor.requiere_formula&&o.formula_id);
+    if(esAplic){
+      Promise.all([
+        from('formulas_aplicacion').select('*').eq('id',o.formula_id).get(),
+        from('formula_componentes').select('*,item:inventario_items!item_id(nombre,unidad)').eq('formula_id',o.formula_id).get()
+      ]).then(function(r){
+        o.formula=r[0]&&r[0][0];
+        o.componentesFormula=r[1]||[];
+        ADMIN_COMPLETAR_ORDEN=o; ADMIN_COMPLETAR_SURCOS=[];
+        pintarAdminCompletar();
+      }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+    } else {
+      ADMIN_COMPLETAR_ORDEN=o; ADMIN_COMPLETAR_SURCOS=[];
+      pintarAdminCompletar();
+    }
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function acSurcosAsignados(o){
+  var tieneSurcosDef=o.tabla&&o.tabla.cantidad_surcos>0;
+  return (o.surcos_asignados&&o.surcos_asignados.length)?o.surcos_asignados.map(String):(tieneSurcosDef?Array.from({length:o.tabla.cantidad_surcos},function(_,i){return String(i+1);}):[]);
+}
+
+function acPintarGrid(){
+  var o=ADMIN_COMPLETAR_ORDEN;
+  var totalAsignados=acSurcosAsignados(o);
+  var yaCompletados=(o.surcos_completados||[]).map(String);
+  var grid=document.getElementById('ac-surcos');
+  if(!grid) return;
+  grid.innerHTML=totalAsignados.map(function(n){
+    var completo=yaCompletados.indexOf(n)>-1;
+    var sel=completo||ADMIN_COMPLETAR_SURCOS.indexOf(n)>-1;
+    return '<button type="button" class="surco-btn'+(sel?' sel':'')+'" data-n="'+n+'"'+(completo?' disabled style="opacity:.55;cursor:not-allowed;"':'')+'>'+n+'</button>';
+  }).join('');
+  grid.querySelectorAll('.surco-btn:not([disabled])').forEach(function(b){
+    b.addEventListener('click',function(){
+      var n=this.dataset.n;
+      var idx=ADMIN_COMPLETAR_SURCOS.indexOf(n);
+      if(idx>-1){ADMIN_COMPLETAR_SURCOS.splice(idx,1);this.classList.remove('sel');}
+      else{ADMIN_COMPLETAR_SURCOS.push(n);this.classList.add('sel');}
+    });
+  });
+}
+
+function acSelTodos(){
+  var o=ADMIN_COMPLETAR_ORDEN;
+  var totalAsignados=acSurcosAsignados(o);
+  var yaCompletados=(o.surcos_completados||[]).map(String);
+  ADMIN_COMPLETAR_SURCOS=totalAsignados.filter(function(s){return yaCompletados.indexOf(s)===-1;});
+  acPintarGrid();
+}
+function acSelNinguno(){
+  ADMIN_COMPLETAR_SURCOS=[];
+  acPintarGrid();
+}
+
+function pintarAdminCompletar(){
+  var body=document.getElementById('enc-body');
+  var o=ADMIN_COMPLETAR_ORDEN;
+  if(!o){renderTablero();return;}
+  var lb=o.tipo_labor||{};
+  var esAplic=!!(lb.requiere_formula&&o.formula_id);
+  var esMantenimiento=!!o.activo_rancho_id;
+  var esFiltros=!!(o.subtipo&&o.subtipo.nombre==='Limpieza Filtros');
+  var esGeneral=!o.tabla_id&&!o.activo_rancho_id&&!esAplic;
+  var esSimple=esMantenimiento||esFiltros||esGeneral;
+  var tieneSurcosDef=o.tabla&&o.tabla.cantidad_surcos>0;
+  var titulo=(o.activo_rancho_id?(o.activo_rancho?o.activo_rancho.nombre:'Herramienta/Equipo'):(lb.nombre||''))+(o.subtipo?' · '+o.subtipo.nombre:'');
+  var ubic=o.activo_rancho_id?'🔧 Herramienta/Equipo':(o.tabla?('📍 '+o.tabla.nombre):'📋 Actividad general (sin tabla)');
+  var opNombre=o.operario?o.operario.nombre:'';
+
+  var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📝 Registrar avance<button type="button" onclick="ADMIN_COMPLETAR_ORDEN=null;renderTablero();" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Volver</button></div>';
+  html+='<div class="form-card"><div class="labor-chosen">'+(ICONOS[lb.nombre]||'🔧')+' <strong>'+titulo+'</strong></div><p class="hint" style="margin-bottom:.6rem;">👷 '+opNombre+' · '+ubic+'</p>';
+  html+='<p class="hint" style="background:var(--gris-1);padding:.6rem .75rem;border-radius:var(--radio-sm);margin-bottom:.75rem;">ℹ️ Usa esto para registrar en el sistema el avance que el operario ya hizo en campo, mientras se acostumbra a marcarlo desde su celular. Quedará a nombre de '+(opNombre||'el operario')+'.</p>';
+
+  if(esAplic){
+    var tambosPlan=o.tambos_planeados||1;
+    var tambosUsadosPrevios=o.tambos_usados||0;
+    var unidad=unidadPlanAplic(o);
+    var sugerido=Math.max(0,tambosPlan-tambosUsadosPrevios);
+    html+='<div class="form-group"><label>'+unidad.cuantos+' '+unidad.plural+' se aplicaron en este avance</label><input type="number" id="ac-tambos" min="0" step="0.5" value="'+sugerido+'"><p class="hint">Fórmula: '+(o.formula?o.formula.nombre:'')+' · Planeados: '+tambosPlan+' · Usados hasta ahora: '+tambosUsadosPrevios+'</p></div>';
+    if(tieneSurcosDef){
+      html+='<div class="form-group"><label>Surcos cubiertos en este avance</label><div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;"><button type="button" onclick="acSelTodos()" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">Todos los que faltan</button><button type="button" onclick="acSelNinguno()" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.78rem;cursor:pointer;">Limpiar</button></div><div class="surcos-grid" id="ac-surcos"></div><p class="hint">Los ya marcados (sombreados) siguen así. Toca los nuevos que se cubrieron.</p></div>';
+    }
+  } else if(!esSimple){
+    html+='<div class="form-group"><label>Surcos cubiertos en este avance</label><div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;"><button type="button" onclick="acSelTodos()" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">Todos los que faltan</button><button type="button" onclick="acSelNinguno()" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.78rem;cursor:pointer;">Limpiar</button></div><div class="surcos-grid" id="ac-surcos"></div><p class="hint">Los ya marcados (sombreados) siguen así. Toca los nuevos que se cubrieron.</p></div>';
+    if(lb.requiere_cantidad_insumo){
+      html+='<div class="form-group"><label>Cantidad usada ('+(lb.unidad_insumo||'')+')</label><input type="number" id="ac-cant" min="0" value="'+(o.cantidad_insumo_esperada!=null?o.cantidad_insumo_esperada:'')+'"></div>';
+    }
+  } else {
+    html+='<p class="hint">Confirma que esta actividad ya quedó terminada.</p>';
+  }
+
+  html+='<button class="btn-primary" id="ac-guardar" style="margin-top:.75rem;">'+(esSimple?'✅ Marcar como terminada':'💾 Guardar avance')+'</button></div>';
+  body.innerHTML=html;
+
+  if(!esSimple) acPintarGrid();
+
+  document.getElementById('ac-guardar').addEventListener('click',function(){guardarAdminCompletar();});
+}
+
+function guardarAdminCompletar(){
+  var o=ADMIN_COMPLETAR_ORDEN;
+  if(!o) return;
+  var btn=document.getElementById('ac-guardar');
+  var lb=o.tipo_labor||{};
+  var esAplic=!!(lb.requiere_formula&&o.formula_id);
+  var esMantenimiento=!!o.activo_rancho_id;
+  var esFiltros=!!(o.subtipo&&o.subtipo.nombre==='Limpieza Filtros');
+  var esGeneral=!o.tabla_id&&!o.activo_rancho_id&&!esAplic;
+  var esSimple=esMantenimiento||esFiltros||esGeneral;
+  var tieneSurcosDef=o.tabla&&o.tabla.cantidad_surcos>0;
+  var totalAsignados=acSurcosAsignados(o);
+  var yaCompletados=(o.surcos_completados||[]).map(String);
+  var nuevosSurcos=ADMIN_COMPLETAR_SURCOS.map(String);
+  var union=Array.from(new Set(yaCompletados.concat(nuevosSurcos)));
+  var faltan=totalAsignados.filter(function(s){return union.indexOf(s)===-1;});
+  var progresoCompleto = esSimple ? true : (totalAsignados.length>0 ? faltan.length===0 : false);
+
+  var tambosPlan=o.tambos_planeados||1;
+  var tambosUsadosPrevios=o.tambos_usados||0;
+  var tambosEsteAvance=0;
+  if(esAplic){
+    var tEl=document.getElementById('ac-tambos');
+    tambosEsteAvance=tEl?(parseFloat(tEl.value)||0):0;
+  }
+  var tambosUsadosNuevo=tambosUsadosPrevios+tambosEsteAvance;
+  var excedentePrevio=Math.max(0,tambosUsadosPrevios-tambosPlan);
+  var excedenteNuevo=Math.max(0,tambosUsadosNuevo-tambosPlan);
+  var tambosADeducir=excedenteNuevo-excedentePrevio;
+
+  if(esAplic&&!tieneSurcosDef){ progresoCompleto = tambosUsadosNuevo>=tambosPlan; }
+
+  if(!esSimple&&!nuevosSurcos.length&&!esAplic){
+    if(!confirm('No marcaste ningún surco nuevo. ¿Aún así quieres guardar sin cambios de avance?')) return;
+  }
+
+  btn.disabled=true; btn.textContent='Guardando...';
+
+  var nuevoEstado = (progresoCompleto || o.es_hora_extra) ? 'completada' : 'en_proceso';
+  var sobranteNoUsado = (esAplic&&nuevoEstado==='completada') ? Math.max(0,tambosPlan-tambosUsadosNuevo) : 0;
+
+  var updatePayload = esSimple ? {estado:nuevoEstado} : (esAplic ? {estado:nuevoEstado, tambos_usados:tambosUsadosNuevo} : {estado:nuevoEstado, surcos_completados:union});
+  if(esAplic&&tieneSurcosDef) updatePayload.surcos_completados=union;
+  if(nuevoEstado==='completada') updatePayload.completado_en=new Date().toISOString();
+
+  var cantEl=document.getElementById('ac-cant');
+  var cantidadUsada = (!esSimple&&!esAplic&&lb.requiere_cantidad_insumo&&cantEl) ? (parseFloat(cantEl.value)||null) : (esAplic?o.volumen_aplicado_litros:null);
+
+  var reg={usuario_id:o.operario_id||usuario.id,tabla_id:o.tabla_id||null,tipo_labor_id:o.tipo_labor_id,subtipo_labor_id:o.subtipo_labor_id||null,surcos_trabajados:esSimple?[]:nuevosSurcos,cantidad_insumo:cantidadUsada,foto_url:null,capturado_en:new Date().toISOString(),notas:'Registrado por el encargado desde el tablero',orden_id:o.id};
+
+  function restaurarBoton(){ if(btn){btn.disabled=false;btn.textContent=esSimple?'✅ Marcar como terminada':'💾 Guardar avance';} }
+
+  function finalizar(){
+    from('registros_labor').insert(reg).then(function(){
+      return from('ordenes_trabajo').eq('id',o.id).update(updatePayload);
+    }).then(function(){
+      if(nuevoEstado==='completada'&&o.activo_rancho_id) from('activos_rancho').eq('id',o.activo_rancho_id).update({fecha_ultimo_mantenimiento:fechaHoyLocal()}).catch(function(){});
+      var verbo=nuevoEstado==='completada'?'se completó':'tuvo avance parcial';
+      var detalle=esAplic?('Fórmula: '+(o.formula?o.formula.nombre:'')+(tieneSurcosDef?(' · Surcos: '+union.length+'/'+totalAsignados.length):'')):(esSimple?'':('Surcos: '+nuevosSurcos.join(', ')));
+      return from('notificaciones').insert({titulo: nuevoEstado==='completada'?'✅ Labor completada (registrada por el encargado)':'🔶 Avance registrado por el encargado',cuerpo:(o.operario?o.operario.nombre:'')+' '+verbo+' en '+(lb.nombre||'')+(o.tabla?(' · '+o.tabla.nombre):'')+(detalle?(' — '+detalle):''),icono: nuevoEstado==='completada'?'✅':'🔶',leida:false,para_rol:'encargado'});
+    }).then(function(){
+      showToast(nuevoEstado==='completada'?'✅ Labor marcada como completada':'✅ Avance guardado');
+      ADMIN_COMPLETAR_ORDEN=null; ADMIN_COMPLETAR_SURCOS=[];
+      renderTablero();
+    }).catch(function(e){alert('Error: '+e.message);restaurarBoton();});
+  }
+
+  if(esAplic&&(tambosADeducir>0||sobranteNoUsado>0)){
+    var comps=o.componentesFormula||[];
+    var deducir = tambosADeducir>0 ? Promise.all(comps.map(function(c){
+      var item=cats.inventario.find(function(x){return x.id===c.item_id;});
+      var stockActual=item?item.stock_actual:0;
+      var cant=c.cantidad_base*(o.factor_escala||1)*tambosADeducir;
+      var nuevoStock=stockActual-cant;
+      return from('movimientos_inventario').insert({item_id:c.item_id,tipo:'salida',cantidad:cant,motivo:'Aplicación (tambo extra no planeado, registrado por el encargado): '+(o.formula?o.formula.nombre:''),referencia_orden_id:o.id,usuario_id:usuario.id,stock_anterior:stockActual,stock_posterior:nuevoStock}).then(function(){
+        return from('inventario_items').eq('id',c.item_id).update({stock_actual:nuevoStock});
+      });
+    })) : Promise.resolve();
+    var devolver = sobranteNoUsado>0 ? Promise.all(comps.map(function(c){
+      var item=cats.inventario.find(function(x){return x.id===c.item_id;});
+      var stockActual=item?item.stock_actual:0;
+      var cant=c.cantidad_base*(o.factor_escala||1)*sobranteNoUsado;
+      var nuevoStock=stockActual+cant;
+      return from('movimientos_inventario').insert({item_id:c.item_id,tipo:'entrada',cantidad:cant,motivo:'Devolución automática (registrado por el encargado): mezcla(s) planeada(s) no usada(s) en '+(o.formula?o.formula.nombre:''),referencia_orden_id:o.id,usuario_id:usuario.id,stock_anterior:stockActual,stock_posterior:nuevoStock}).then(function(){
+        return from('inventario_items').eq('id',c.item_id).update({stock_actual:nuevoStock});
+      });
+    })) : Promise.resolve();
+    Promise.all([deducir,devolver]).then(finalizar).catch(function(e){alert('Error actualizando inventario: '+e.message);restaurarBoton();});
+  } else {
+    finalizar();
+  }
 }
 
 var asignarLaborSel=null;
