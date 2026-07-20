@@ -1854,7 +1854,8 @@ var TABS_INVENTARIO=[
   {key:'equipos',lbl:'⚙️ Equipos',fn:"renderActivosRancho('Equipo')"}
 ];
 function pintarTabsInventario(activeKey){
-  return '<div style="display:flex;gap:6px;margin-bottom:.75rem;flex-wrap:wrap;">'+TABS_INVENTARIO.map(function(t){
+  var tabs=(usuario.rol==='ingeniero')?TABS_INVENTARIO.filter(function(t){return t.key==='insumos';}):TABS_INVENTARIO;
+  return '<div style="display:flex;gap:6px;margin-bottom:.75rem;flex-wrap:wrap;">'+tabs.map(function(t){
     return '<button type="button" class="rep-view-btn'+(t.key===activeKey?' active':'')+'" onclick="'+t.fn+'">'+t.lbl+'</button>';
   }).join('')+'</div>';
 }
