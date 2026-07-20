@@ -280,7 +280,7 @@ var KEY_SB = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 function api(path, opts) {
   opts = opts || {};
   var ctrl = (typeof AbortController!=='undefined') ? new AbortController() : null;
-  var timer = ctrl ? setTimeout(function(){ctrl.abort();}, 8000) : null;
+  var timer = ctrl ? setTimeout(function(){ctrl.abort();}, 25000) : null;
   return fetch(URL_SB + path, {
     method: opts.method || 'GET',
     headers: Object.assign({'apikey':KEY_SB,'Authorization':'Bearer '+KEY_SB,'Content-Type':'application/json','Prefer':opts.prefer||''}, opts.headers||{}),
@@ -634,8 +634,8 @@ function renderTablero(){
   var en7dias=new Date(Date.now()+7*86400000).toISOString().slice(0,10);
   var hace30dias=new Date(Date.now()-30*86400000).toISOString().slice(0,10);
   Promise.all([
-    from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_formula,requiere_tiempo),subtipo:subtipos_labor(nombre,requiere_tiempo),activo_rancho:activos_rancho(nombre)').in('estado',['pendiente','en_proceso']).order('creado_en',{ascending:false}).get(),
-    from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_formula,requiere_tiempo),subtipo:subtipos_labor(nombre,requiere_tiempo),activo_rancho:activos_rancho(nombre)').in('estado',['completada','cancelada']).gte('fecha_asignacion',hace30dias).order('creado_en',{ascending:false}).limit(150).get(),
+    from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_formula,requiere_tiempo),subtipo:subtipos_labor(nombre,requiere_tiempo),activo_rancho:activos_rancho(nombre),formula:formulas_aplicacion(nombre,via)').in('estado',['pendiente','en_proceso']).order('creado_en',{ascending:false}).get(),
+    from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_formula,requiere_tiempo),subtipo:subtipos_labor(nombre,requiere_tiempo),activo_rancho:activos_rancho(nombre),formula:formulas_aplicacion(nombre,via)').in('estado',['completada','cancelada']).gte('fecha_asignacion',hace30dias).order('creado_en',{ascending:false}).limit(150).get(),
     from('formulas_aplicacion').select('id,nombre,fecha_programada,tabla_id').eq('activo',true).get(),
     from('ordenes_trabajo').select('formula_id,estado').not('formula_id','is','null').get(),
     from('permisos').select('id').eq('estado','pendiente').get(),
@@ -750,6 +750,7 @@ function cardHtml(o){
   var lb={pendiente:'Pendiente',en_proceso:'En proceso',completada:'Completada',cancelada:'Cancelada'};
   var esTiempoCard=ordenEsTiempo(o);
   var esAplicCard=!!(o.tipo_labor&&o.tipo_labor.requiere_formula&&o.formula_id);
+  var nombreLaborTxt=(esAplicCard&&o.formula)?o.formula.nombre:(o.tipo_labor.nombre+(o.subtipo?' · '+o.subtipo.nombre:''));
   var ac='';
   if(o.estado==='pendiente') ac='<button class="btn-sm btn-cancelar" data-can="'+o.id+'">Cancelar</button>';
   if(o.estado==='en_proceso') ac=(esAplicCard?'':'<button class="btn-sm btn-completar" data-com="'+o.id+'">Marcar completa</button> ')+'<button class="btn-sm btn-cancelar" data-can="'+o.id+'">Cancelar</button>';
@@ -758,7 +759,8 @@ function cardHtml(o){
   var avanceTxt=(o.estado==='en_proceso'&&progreso.totalAsignados.length>0)?('<br/>🔶 Avance: '+progreso.completados.length+'/'+progreso.totalAsignados.length+' surcos'+(progreso.faltan.length?' · Faltan: '+progreso.faltan.join(', '):'')):'';
   var ubicacionTxt=o.activo_rancho_id?('🔧 '+(o.activo_rancho?o.activo_rancho.nombre:'Herramienta/Equipo')):(o.tabla?((p?p.nombre+' ':'')+o.tabla.nombre):'Actividad general (sin tabla)');
   var surcosTxt=o.tabla?('<br/>Surcos: '+((o.surcos_asignados||[]).join(', ')||'todos')+avanceTxt):'';
-  return '<div class="orden-card '+o.estado+'"><div class="orden-header"><div class="orden-labor">'+ic+' '+o.tipo_labor.nombre+(o.subtipo?' · '+o.subtipo.nombre:'')+'</div><span class="orden-badge '+bl[o.estado]+'">'+lb[o.estado]+'</span></div><div class="orden-meta"><strong>'+(o.operario?o.operario.nombre:'')+'</strong> · '+ubicacionTxt+surcosTxt+'</div>'+(ac?'<div class="orden-actions">'+ac+'</div>':'')+'</div>';
+  var tipoBadgeTxt=esAplicCard?'<div style="font-size:.68rem;color:var(--gris-3);">🧪 Aplicación'+(o.formula&&o.formula.via?' · '+o.formula.via:'')+'</div>':'';
+  return '<div class="orden-card '+o.estado+'"><div class="orden-header"><div class="orden-labor">'+ic+' '+nombreLaborTxt+'</div><span class="orden-badge '+bl[o.estado]+'">'+lb[o.estado]+'</span></div>'+tipoBadgeTxt+'<div class="orden-meta"><strong>'+(o.operario?o.operario.nombre:'')+'</strong> · '+ubicacionTxt+surcosTxt+'</div>'+(ac?'<div class="orden-actions">'+ac+'</div>':'')+'</div>';
 }
 
 function cambiarEstado(id,estado){
@@ -768,9 +770,10 @@ function cambiarEstado(id,estado){
   });
 }
 
-var ADMIN_COMPLETAR_ORDEN=null, ADMIN_COMPLETAR_SURCOS=[];
+var ADMIN_COMPLETAR_ORDEN=null, ADMIN_COMPLETAR_SURCOS=[], ADMIN_COMPLETAR_VOLVER=null;
 
-function renderAdminCompletar(ordenId){
+function renderAdminCompletar(ordenId,volverFn){
+  ADMIN_COMPLETAR_VOLVER=volverFn||renderTablero;
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo">📝 Registrar avance</div><div class="loading">Cargando...</div>';
   from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_formula,requiere_cantidad_insumo,unidad_insumo),subtipo:subtipos_labor(nombre),activo_rancho:activos_rancho(nombre)').eq('id',ordenId).single().then(function(o){
@@ -833,7 +836,7 @@ function acSelNinguno(){
 function pintarAdminCompletar(){
   var body=document.getElementById('enc-body');
   var o=ADMIN_COMPLETAR_ORDEN;
-  if(!o){renderTablero();return;}
+  if(!o){(ADMIN_COMPLETAR_VOLVER||renderTablero)();return;}
   var lb=o.tipo_labor||{};
   var esAplic=!!(lb.requiere_formula&&o.formula_id);
   var esMantenimiento=!!o.activo_rancho_id;
@@ -845,7 +848,7 @@ function pintarAdminCompletar(){
   var ubic=o.activo_rancho_id?'🔧 Herramienta/Equipo':(o.tabla?('📍 '+o.tabla.nombre):'📋 Actividad general (sin tabla)');
   var opNombre=o.operario?o.operario.nombre:'';
 
-  var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📝 Registrar avance<button type="button" onclick="ADMIN_COMPLETAR_ORDEN=null;renderTablero();" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Volver</button></div>';
+  var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📝 Registrar avance<button type="button" id="ac-volver" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Volver</button></div>';
   html+='<div class="form-card"><div class="labor-chosen">'+(ICONOS[lb.nombre]||'🔧')+' <strong>'+titulo+'</strong></div><p class="hint" style="margin-bottom:.6rem;">👷 '+opNombre+' · '+ubic+'</p>';
   html+='<p class="hint" style="background:var(--gris-1);padding:.6rem .75rem;border-radius:var(--radio-sm);margin-bottom:.75rem;">ℹ️ Usa esto para registrar en el sistema el avance que el operario ya hizo en campo, mientras se acostumbra a marcarlo desde su celular. Quedará a nombre de '+(opNombre||'el operario')+'.</p>';
 
@@ -873,6 +876,7 @@ function pintarAdminCompletar(){
   if(!esSimple) acPintarGrid();
 
   document.getElementById('ac-guardar').addEventListener('click',function(){guardarAdminCompletar();});
+  document.getElementById('ac-volver').addEventListener('click',function(){ADMIN_COMPLETAR_ORDEN=null;(ADMIN_COMPLETAR_VOLVER||renderTablero)();});
 }
 
 function guardarAdminCompletar(){
@@ -938,7 +942,7 @@ function guardarAdminCompletar(){
     }).then(function(){
       showToast(nuevoEstado==='completada'?'✅ Labor marcada como completada':'✅ Avance guardado');
       ADMIN_COMPLETAR_ORDEN=null; ADMIN_COMPLETAR_SURCOS=[];
-      renderTablero();
+      (ADMIN_COMPLETAR_VOLVER||renderTablero)();
     }).catch(function(e){alert('Error: '+e.message);restaurarBoton();});
   }
 
@@ -1038,6 +1042,7 @@ function renderAsignarEstatus(){
     html+=tarjetas.map(function(x){return x.html;}).join('');
     body.innerHTML=html;
     var ordenesPorIdAsignar={}; todas.forEach(function(o){ordenesPorIdAsignar[o.id]=o;});
+    body.querySelectorAll('[data-regavance]').forEach(function(b){b.addEventListener('click',function(){renderAdminCompletar(this.dataset.regavance,renderAsignarEstatus);});});
     body.querySelectorAll('[data-can]').forEach(function(b){b.addEventListener('click',function(){cambiarEstadoAsignar(this.dataset.can,'cancelada');});});
     body.querySelectorAll('.glab-gestionar').forEach(function(b){
       b.addEventListener('click',function(){
@@ -1111,6 +1116,7 @@ function tarjetaLaborAgrupada(grupo){
     var acciones='';
     if(o.estado==='pendiente') acciones='<button class="btn-sm btn-cancelar" data-can="'+o.id+'">Cancelar</button>';
     if(o.estado==='en_proceso') acciones='<button class="btn-sm btn-completar" data-com="'+o.id+'">Marcar completa</button> <button class="btn-sm btn-cancelar" data-can="'+o.id+'">Cancelar</button>';
+    if(o.estado==='pendiente'||o.estado==='en_proceso') acciones='<button type="button" class="btn-sm" style="background:var(--verde-tenue);border:1.5px solid var(--verde-mid);color:var(--verde);font-weight:700;" data-regavance="'+o.id+'">📝 Registrar avance</button> '+acciones;
     return '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:.4rem 0;border-top:1px solid var(--gris-1);flex-wrap:wrap;"><span style="font-size:.8rem;"><strong>'+(o.operario?o.operario.nombre:'')+'</strong><br/><span style="font-size:.7rem;font-weight:700;color:'+eb[1]+';">'+eb[0]+'</span>'+avanceTxt+'</span><span>'+acciones+'</span></div>';
   }).join('');
   return '<div class="orden-card" style="border-left-color:'+colorBorde+';'+(esTerminada?'opacity:.8;':'')+'"><strong style="font-size:.92rem">'+ic+' '+grupo.tipoLaborNombre+(grupo.subtipoNombre?' · '+grupo.subtipoNombre:'')+'</strong>'+etiquetaTipo+'<div style="font-size:.85rem;font-weight:700;color:'+(atrasada?'var(--rojo)':'var(--gris-3)')+';margin-top:.2rem;">📅 '+fechaLarga(grupo.fecha_asignacion)+(atrasada?' ⚠️':'')+'</div><div class="orden-meta">'+(grupo.tabla?('📍 '+(p?p.nombre:'')+' · '+grupo.tabla.nombre):'📋 Actividad general (sin tabla)')+(grupo.notas_encargado?'<br/>📝 '+grupo.notas_encargado:'')+'</div><div style="font-size:.7rem;color:var(--verde-mid);font-weight:700;margin-top:.4rem;">👷 Asignada a: '+nombresConEstado+(esTerminada?'':' <button type="button" class="glab-gestionar" data-gkey="'+grupo.key+'" style="border:none;background:none;color:var(--tierra);font-size:.7rem;font-weight:700;cursor:pointer;text-decoration:underline;padding:0;">✏️ gestionar</button>')+'</div>'+filasOperarios+(esTerminada?'':'<button type="button" class="btn-sm glab-agregar" data-gkey="'+grupo.key+'" style="margin-top:.5rem;background:var(--verde-tenue);border:1.5px solid var(--verde-mid);color:var(--verde);">+ Agregar otro operario</button>')+'</div>';
@@ -1152,13 +1158,16 @@ function pintarGestionLabor(){
       var progreso=progresoSurcosOrden(o);
       var avanceTxt=progreso.totalAsignados.length>0?('Avance: '+progreso.completados.length+'/'+progreso.totalAsignados.length+' surcos'+(progreso.faltan.length?' · Faltan: '+progreso.faltan.join(', '):'')):'';
       var estBadge=o.estado==='en_proceso'?'🔶 En proceso':'🆕 Pendiente';
-      return '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem;">'+(o.operario?o.operario.nombre:'')+'</strong><span style="font-size:.72rem;font-weight:700;">'+estBadge+'</span></div>'+(avanceTxt?'<div class="orden-meta">'+avanceTxt+'</div>':'')+'<div style="display:flex;gap:8px;margin-top:.5rem;flex-wrap:wrap;"><button type="button" class="btn-sm" style="background:var(--verde-tenue);border:1.5px solid var(--verde-mid);color:var(--verde);" data-editar-orden="'+o.id+'">✏️ Editar</button><button type="button" class="btn-sm" style="background:var(--gris-1);color:var(--negro);" data-cambiar-op="'+o.id+'">🔄 Cambiar operario</button><button type="button" class="btn-sm btn-cancelar" data-cancelar-uno="'+o.id+'" data-nombre="'+(o.operario?o.operario.nombre:'').replace(/"/g,'&quot;')+'">✖️ Cancelar</button></div></div>';
+      return '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem;">'+(o.operario?o.operario.nombre:'')+'</strong><span style="font-size:.72rem;font-weight:700;">'+estBadge+'</span></div>'+(avanceTxt?'<div class="orden-meta">'+avanceTxt+'</div>':'')+'<div style="display:flex;gap:8px;margin-top:.5rem;flex-wrap:wrap;"><button type="button" class="btn-sm" style="background:var(--verde-tenue);border:1.5px solid var(--verde-mid);color:var(--verde);font-weight:700;" data-regavance="'+o.id+'">📝 Registrar avance</button><button type="button" class="btn-sm" style="background:var(--verde-tenue);border:1.5px solid var(--verde-mid);color:var(--verde);" data-editar-orden="'+o.id+'">✏️ Editar</button><button type="button" class="btn-sm" style="background:var(--gris-1);color:var(--negro);" data-cambiar-op="'+o.id+'">🔄 Cambiar operario</button><button type="button" class="btn-sm btn-cancelar" data-cancelar-uno="'+o.id+'" data-nombre="'+(o.operario?o.operario.nombre:'').replace(/"/g,'&quot;')+'">✖️ Cancelar</button></div></div>';
     }).join('');
     html+='<button type="button" class="btn-primary" id="gl-agregar" style="margin-top:.5rem;width:100%;">➕ Agregar a otro operario</button>';
     html+='<button type="button" id="gl-cancelar-todo" style="width:100%;margin-top:.75rem;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.85rem;cursor:pointer;">🚫 Cancelar toda esta labor</button>';
     html+='<button class="btn-back" style="margin-top:1rem;" onclick="renderAsignarEstatus()">← Volver a Asignar</button>';
     body.innerHTML=html;
 
+    body.querySelectorAll('[data-regavance]').forEach(function(btn){
+      btn.addEventListener('click',function(){renderAdminCompletar(this.dataset.regavance,pintarGestionLabor);});
+    });
     body.querySelectorAll('[data-editar-orden]').forEach(function(btn){
       btn.addEventListener('click',function(){renderEditarOrdenIndividual(this.dataset.editarOrden);});
     });
@@ -3543,9 +3552,12 @@ function renderEditarModoAsignacion(formulaId){
     rows=rows||[];
     if(!rows.length){body.innerHTML='<div class="seccion-titulo">✏️ Gestionar operarios asignados</div><div class="empty">No hay asignaciones activas para esta fórmula.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderAplicacionesEstatus()">← Volver a Aplicaciones</button>';return;}
     var html='<div class="seccion-titulo">✏️ Gestionar operarios asignados</div>'+(rows.length>1?'<p class="hint" style="margin-bottom:.75rem;">Hay '+rows.length+' operarios en esta aplicación.</p>':'')+rows.map(function(o){
-      return '<div class="orden-card"><strong style="font-size:.9rem;">'+(o.operario?o.operario.nombre:'')+'</strong><div class="orden-meta">Actualmente: '+(o.es_hora_extra?'⏰ Hora Extra':'🧑‍🌾 Labores')+'</div><div style="display:flex;gap:8px;margin-top:.5rem;flex-wrap:wrap;"><button type="button" class="btn-sm btn-completar" data-toggle-modo="'+o.id+'" data-actual="'+(o.es_hora_extra?'1':'0')+'" data-op="'+o.operario_id+'" data-labor="'+o.tipo_labor_id+'" data-fecha="'+o.fecha_asignacion+'">Cambiar a '+(o.es_hora_extra?'🧑‍🌾 Labores':'⏰ Hora Extra')+'</button>'+(rows.length>1?'<button type="button" class="btn-sm btn-cancelar" data-quitar="'+o.id+'" data-nombre="'+(o.operario?o.operario.nombre:'').replace(/"/g,'&quot;')+'">🗑️ Quitar de esta aplicación</button>':'')+'</div></div>';
+      return '<div class="orden-card"><strong style="font-size:.9rem;">'+(o.operario?o.operario.nombre:'')+'</strong><div class="orden-meta">Actualmente: '+(o.es_hora_extra?'⏰ Hora Extra':'🧑‍🌾 Labores')+'</div><div style="display:flex;gap:8px;margin-top:.5rem;flex-wrap:wrap;"><button type="button" class="btn-sm" style="background:var(--verde-tenue);border:1.5px solid var(--verde-mid);color:var(--verde);font-weight:700;" data-regavance="'+o.id+'">📝 Registrar avance</button><button type="button" class="btn-sm btn-completar" data-toggle-modo="'+o.id+'" data-actual="'+(o.es_hora_extra?'1':'0')+'" data-op="'+o.operario_id+'" data-labor="'+o.tipo_labor_id+'" data-fecha="'+o.fecha_asignacion+'">Cambiar a '+(o.es_hora_extra?'🧑‍🌾 Labores':'⏰ Hora Extra')+'</button>'+(rows.length>1?'<button type="button" class="btn-sm btn-cancelar" data-quitar="'+o.id+'" data-nombre="'+(o.operario?o.operario.nombre:'').replace(/"/g,'&quot;')+'">🗑️ Quitar de esta aplicación</button>':'')+'</div></div>';
     }).join('');
     body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderAplicacionesEstatus()">← Volver a Aplicaciones</button>';
+    body.querySelectorAll('[data-regavance]').forEach(function(btn){
+      btn.addEventListener('click',function(){renderAdminCompletar(this.dataset.regavance,renderAplicacionesEstatus);});
+    });
     body.querySelectorAll('[data-toggle-modo]').forEach(function(btn){
       btn.addEventListener('click',function(){
         var oid=this.dataset.toggleModo, eraExtra=this.dataset.actual==='1', opId=this.dataset.op, laborId=this.dataset.labor, fecha=this.dataset.fecha;
@@ -7780,7 +7792,7 @@ function guardarEjec(){
       return;
     }
     var ctrl=(typeof AbortController!=='undefined')?new AbortController():null;
-    var timer=ctrl?setTimeout(function(){ctrl.abort();},8000):null;
+    var timer=ctrl?setTimeout(function(){ctrl.abort();},40000):null;
     fetch(URL_SB+'/storage/v1/object/evidencias/'+nombre,{method:'POST',headers:{'apikey':KEY_SB,'Authorization':'Bearer '+KEY_SB,'Content-Type':mime,'x-upsert':'true'},body:capturaEjec.fotoBlob,signal:ctrl?ctrl.signal:undefined}).then(function(r){
       if(timer) clearTimeout(timer);
       if(!r.ok) throw new Error('HTTP '+r.status);
