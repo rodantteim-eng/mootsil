@@ -3434,6 +3434,20 @@ function guardarFormula(){
       }));
     });
   }).then(function(){
+    var nuevaFecha=window._formulaFechaExistente||null;
+    if(!formulaEditId||!nuevaFecha) return;
+    return from('ordenes_trabajo').select('id,operario_id,fecha_asignacion,operario:usuarios!operario_id(nombre)').eq('formula_id',formulaEditId).in('estado',['pendiente','en_proceso']).get().then(function(rows){
+      var desfasadas=(rows||[]).filter(function(o){return o.fecha_asignacion!==nuevaFecha;});
+      if(!desfasadas.length) return;
+      var nombresDesfasados=Array.from(new Set(desfasadas.map(function(o){return o.operario?o.operario.nombre:'?';}))).join(', ');
+      if(!confirm('Esta fórmula ya está asignada a: '+nombresDesfasados+', con fecha distinta a la nueva.\n\n¿Actualizar también la fecha de su(s) tarea(s) a '+fechaLarga(nuevaFecha)+'?')) return;
+      return Promise.all(desfasadas.map(function(o){
+        return from('ordenes_trabajo').eq('id',o.id).update({fecha_asignacion:nuevaFecha}).then(function(){
+          return from('notificaciones').insert({titulo:'📅 Fecha de aplicación actualizada',cuerpo:'El encargado cambió la fecha de tu aplicación "'+nombre+'" a '+fechaLarga(nuevaFecha)+'.',icono:'📅',leida:false,para_rol:'operario',para_usuario:o.operario_id});
+        });
+      }));
+    });
+  }).then(function(){
     var hayFaltante=comps.some(function(c){
       var item=cats.inventario.find(function(x){return x.id===c.item_id;});
       var disponible=item?item.stock_actual:0;
