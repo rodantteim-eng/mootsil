@@ -675,7 +675,8 @@ function renderTablero(){
     var enP=todas.filter(function(o){return o.estado==='en_proceso';}).length;
     var comp=todas.filter(function(o){return o.estado==='completada';}).length;
     var tiposChips=[['','Todo'],['labores','🔧 Labores'],['aplicaciones','🧪 Aplicaciones']];
-    var html=avisoHtml+'<div style="display:flex;gap:6px;margin-bottom:.6rem;flex-wrap:wrap;">'+tiposChips.map(function(t){return '<button type="button" class="rep-view-btn'+((TABLERO_TIPO_FILTRO||'')===t[0]?' active':'')+'" data-tipofiltro="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>';
+    var accesosHtml='<div style="margin-bottom:.6rem;"><button type="button" id="tablero-btn-horasextra" style="border:1.5px solid var(--tierra);background:var(--tierra-tenue);color:var(--tierra);font-weight:700;font-size:.78rem;padding:.45rem .9rem;border-radius:20px;cursor:pointer;">⏰ Gestionar Horas Extra</button></div>';
+    var html=avisoHtml+accesosHtml+'<div style="display:flex;gap:6px;margin-bottom:.6rem;flex-wrap:wrap;">'+tiposChips.map(function(t){return '<button type="button" class="rep-view-btn'+((TABLERO_TIPO_FILTRO||'')===t[0]?' active':'')+'" data-tipofiltro="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>';
     html+='<div class="stats-row"><div class="stat-card" data-filtro="pendiente" style="cursor:pointer;'+(TABLERO_FILTRO==='pendiente'?'box-shadow:0 0 0 2px var(--tierra) inset;':'')+'"><div class="stat-num stat-am">'+pend+'</div><div class="stat-lbl">Pendientes</div></div><div class="stat-card" data-filtro="en_proceso" style="cursor:pointer;'+(TABLERO_FILTRO==='en_proceso'?'box-shadow:0 0 0 2px var(--verde-mid) inset;':'')+'"><div class="stat-num stat-vd">'+enP+'</div><div class="stat-lbl">En proceso</div></div><div class="stat-card" data-filtro="completada" style="cursor:pointer;'+(TABLERO_FILTRO==='completada'?'box-shadow:0 0 0 2px #2980b9 inset;':'')+'"><div class="stat-num stat-az">'+comp+'</div><div class="stat-lbl">Completadas</div></div></div>';
     var todasTipo=TABLERO_TIPO_FILTRO?todas.filter(function(o){return TABLERO_TIPO_FILTRO==='aplicaciones'?!!o.formula_id:!o.formula_id;}):todas;
     if(TABLERO_FILTRO) html+='<p class="hint" style="margin-bottom:.5rem;">Filtrando por: <strong>'+(TABLERO_FILTRO==='pendiente'?'Pendientes':TABLERO_FILTRO==='en_proceso'?'En proceso':'Completadas')+'</strong> · <a href="#" id="tablero-quitar-filtro" style="color:var(--verde-mid);">Quitar filtro</a></p>';
@@ -705,6 +706,8 @@ function renderTablero(){
     });
     var quitarFiltroEl=document.getElementById('tablero-quitar-filtro');
     if(quitarFiltroEl) quitarFiltroEl.addEventListener('click',function(e){e.preventDefault();TABLERO_FILTRO=null;renderTablero();});
+    var btnHorasExtraEl=document.getElementById('tablero-btn-horasextra');
+    if(btnHorasExtraEl) btnHorasExtraEl.addEventListener('click',renderGestionHorasExtra);
     var avisoPermisosEl=document.getElementById('aviso-permisos-pendientes');
     if(avisoPermisosEl) avisoPermisosEl.addEventListener('click',renderPermisosRevision);
     var avisoSolicitudesOpEl=document.getElementById('aviso-solicitudes-operario');
@@ -3434,20 +3437,6 @@ function guardarFormula(){
       }));
     });
   }).then(function(){
-    var nuevaFecha=window._formulaFechaExistente||null;
-    if(!formulaEditId||!nuevaFecha) return;
-    return from('ordenes_trabajo').select('id,operario_id,fecha_asignacion,operario:usuarios!operario_id(nombre)').eq('formula_id',formulaEditId).in('estado',['pendiente','en_proceso']).get().then(function(rows){
-      var desfasadas=(rows||[]).filter(function(o){return o.fecha_asignacion!==nuevaFecha;});
-      if(!desfasadas.length) return;
-      var nombresDesfasados=Array.from(new Set(desfasadas.map(function(o){return o.operario?o.operario.nombre:'?';}))).join(', ');
-      if(!confirm('Esta fórmula ya está asignada a: '+nombresDesfasados+', con fecha distinta a la nueva.\n\n¿Actualizar también la fecha de su(s) tarea(s) a '+fechaLarga(nuevaFecha)+'?')) return;
-      return Promise.all(desfasadas.map(function(o){
-        return from('ordenes_trabajo').eq('id',o.id).update({fecha_asignacion:nuevaFecha}).then(function(){
-          return from('notificaciones').insert({titulo:'📅 Fecha de aplicación actualizada',cuerpo:'El encargado cambió la fecha de tu aplicación "'+nombre+'" a '+fechaLarga(nuevaFecha)+'.',icono:'📅',leida:false,para_rol:'operario',para_usuario:o.operario_id});
-        });
-      }));
-    });
-  }).then(function(){
     var hayFaltante=comps.some(function(c){
       var item=cats.inventario.find(function(x){return x.id===c.item_id;});
       var disponible=item?item.stock_actual:0;
@@ -4970,6 +4959,80 @@ function renderControlAsistencias(fecha){
     document.getElementById('ca-ant').addEventListener('click',function(){var d=new Date(fecha+'T00:00:00');d.setDate(d.getDate()-1);renderControlAsistencias(d.toISOString().slice(0,10));});
     var btnSig=document.getElementById('ca-sig');
     if(!esHoy) btnSig.addEventListener('click',function(){var d=new Date(fecha+'T00:00:00');d.setDate(d.getDate()+1);renderControlAsistencias(d.toISOString().slice(0,10));});
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function renderGestionHorasExtra(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo">⏰ Gestionar Horas Extra</div><div class="loading">Cargando...</div>';
+  var lunes=inicioDeSemana(new Date());
+  var domingo=new Date(lunes); domingo.setDate(lunes.getDate()+6);
+  var semanaInicio=lunes.toISOString().slice(0,10), semanaFin=domingo.toISOString().slice(0,10);
+  var numSemana=numeroSemanaISO(lunes);
+  Promise.all([
+    from('horas_extra_asignadas').select('*,operario:usuarios!operario_id(nombre),tipo_labor:tipos_labor(nombre)').gte('fecha',semanaInicio).lte('fecha',semanaFin).eq('estado','aprobada').order('fecha',{ascending:true}).get(),
+    from('ordenes_trabajo').select('id,operario_id,fecha_asignacion,tipo_labor_id,formula_id,estado').eq('es_hora_extra',true).gte('fecha_asignacion',semanaInicio).lte('fecha_asignacion',semanaFin).get()
+  ]).then(function(r){
+    var asignadas=r[0]||[], ordenes=r[1]||[];
+    var operariosSel=(cats.equipoDeCampo||cats.operarios.concat(cats.eventuales||[])).slice().sort(function(a,b){return a.nombre.localeCompare(b.nombre);});
+    var actividadesSel=(cats.tiposLabor||[]).filter(function(l){return !l.es_cosecha;});
+    var mesInicio=lunes.toLocaleDateString('es-MX',{month:'long'});
+    var mesFin=domingo.toLocaleDateString('es-MX',{month:'long'});
+    var rango=(mesInicio===mesFin)
+      ? ('del Lunes '+lunes.getDate()+' al Domingo '+domingo.getDate()+' de '+mesFin+' de '+domingo.getFullYear())
+      : ('del Lunes '+lunes.getDate()+' de '+mesInicio+' al Domingo '+domingo.getDate()+' de '+mesFin+' de '+domingo.getFullYear());
+    var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">⏰ Gestionar Horas Extra<button type="button" onclick="renderTablero()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Tablero</button></div>';
+    html+='<p class="hint" style="margin-bottom:1rem;">Semana '+numSemana+' · '+rango+'. Aquí puedes corregir el colaborador, la actividad, las horas o la fecha (dentro de esta misma semana) de una hora extra ya asignada.</p>';
+    if(!asignadas.length){
+      html+='<div class="empty">No hay horas extra autorizadas esta semana.</div>';
+    } else {
+      html+=asignadas.map(function(h){
+        var matches=ordenes.filter(function(o){return o.operario_id===h.operario_id&&o.fecha_asignacion===h.fecha&&o.tipo_labor_id===h.tipo_labor_id;});
+        var tieneAplic=matches.some(function(o){return !!o.formula_id;});
+        var opOpts=operariosSel.map(function(o){return '<option value="'+o.id+'"'+(o.id===h.operario_id?' selected':'')+'>'+o.nombre+'</option>';}).join('');
+        var actOpts=actividadesSel.map(function(l){return '<option value="'+l.id+'"'+(l.id===h.tipo_labor_id?' selected':'')+'>'+l.nombre+'</option>';}).join('');
+        return '<div class="orden-card"><strong style="font-size:.87rem;">'+(h.operario?h.operario.nombre:'')+'</strong><div class="orden-meta">'+(h.tipo_labor?h.tipo_labor.nombre:'')+' · '+h.fecha+' · '+numFmt(h.horas_max||0)+' h'+(tieneAplic?' · 🧪 aplicación ligada':'')+'</div>'+
+          '<div style="display:flex;flex-direction:column;gap:.5rem;margin-top:.6rem;">'+
+          '<div class="form-group" style="margin:0;"><label style="font-size:.72rem;">Colaborador</label><select class="ghe-op" style="width:100%;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);">'+opOpts+'</select></div>'+
+          '<div class="form-group" style="margin:0;"><label style="font-size:.72rem;">Actividad</label><select class="ghe-act" style="width:100%;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);">'+actOpts+'</select></div>'+
+          '<div style="display:flex;gap:.5rem;"><div class="form-group" style="margin:0;flex:1;"><label style="font-size:.72rem;">Horas autorizadas</label><input type="number" class="ghe-horas" min="0.5" step="0.5" value="'+(h.horas_max||0)+'" style="width:100%;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);"></div><div class="form-group" style="margin:0;flex:1;"><label style="font-size:.72rem;">Fecha</label><input type="date" class="ghe-fecha" value="'+h.fecha+'" min="'+semanaInicio+'" max="'+semanaFin+'" style="width:100%;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);"></div></div>'+
+          (tieneAplic?'<p class="hint" style="margin:0;color:var(--tierra);">⚠️ Esta hora extra tiene una aplicación ligada. Si cambias la actividad aquí, la aplicación NO se mueve — para eso edita la aplicación directamente desde Aplicaciones.</p>':'')+
+          '<button type="button" class="btn-sm btn-completar ghe-guardar" data-heid="'+h.id+'">💾 Guardar cambios</button>'+
+          '</div></div>';
+      }).join('');
+    }
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderTablero()">← Volver a Tablero</button>';
+    body.querySelectorAll('.ghe-guardar').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var heid=this.dataset.heid;
+        var card=this.closest('.orden-card');
+        var h=asignadas.find(function(x){return x.id===heid;});
+        if(!h) return;
+        var nuevoOp=card.querySelector('.ghe-op').value;
+        var nuevoAct=card.querySelector('.ghe-act').value;
+        var nuevasHoras=parseFloat(card.querySelector('.ghe-horas').value)||0;
+        var nuevaFecha=card.querySelector('.ghe-fecha').value;
+        if(!nuevaFecha||nuevaFecha<semanaInicio||nuevaFecha>semanaFin){alert('La fecha debe ser dentro de la semana en curso ('+semanaInicio+' a '+semanaFin+').');return;}
+        if(nuevasHoras<=0){alert('Indica un número de horas válido.');return;}
+        var sinCambios=nuevoOp===h.operario_id&&nuevoAct===h.tipo_labor_id&&nuevasHoras===parseFloat(h.horas_max||0)&&nuevaFecha===h.fecha;
+        if(sinCambios){showToast('Sin cambios que guardar.');return;}
+        if(!confirm('¿Guardar estos cambios de hora extra? Esto también actualizará la tarea asignada de este colaborador si existe.')) return;
+        var btnEl=this; btnEl.disabled=true; btnEl.textContent='Guardando...';
+        var matches=ordenes.filter(function(o){return o.operario_id===h.operario_id&&o.fecha_asignacion===h.fecha&&o.tipo_labor_id===h.tipo_labor_id&&(o.estado==='pendiente'||o.estado==='en_proceso');});
+        from('horas_extra_asignadas').eq('id',h.id).update({operario_id:nuevoOp,tipo_labor_id:nuevoAct,horas_max:nuevasHoras,fecha:nuevaFecha}).then(function(){
+          return Promise.all(matches.map(function(o){
+            var payload={operario_id:nuevoOp,fecha_asignacion:nuevaFecha};
+            if(!o.formula_id) payload.tipo_labor_id=nuevoAct;
+            return from('ordenes_trabajo').eq('id',o.id).update(payload);
+          }));
+        }).then(function(){
+          return from('notificaciones').insert({titulo:'⏰ Hora extra actualizada',cuerpo:usuario.nombre+' actualizó tu hora extra — ahora es el '+nuevaFecha+' ('+numFmt(nuevasHoras)+' h)',icono:'⏰',leida:false,para_rol:'operario',para_usuario:nuevoOp});
+        }).then(function(){
+          showToast('✅ Hora extra actualizada');
+          renderGestionHorasExtra();
+        }).catch(function(e){alert('Error: '+e.message);btnEl.disabled=false;btnEl.textContent='💾 Guardar cambios';});
+      });
+    });
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
@@ -6805,8 +6868,9 @@ function renderAsisEntrada(){
     var extraHoy=rows&&rows[0];
     window._extraHoyId=extraHoy?extraHoy.id:null;
     var extDeshabilitado=!extraHoy;
-    var horasTxt=extraHoy?('✅ '+numFmt(extraHoy.horas_max)+' h autorizadas'+(extraHoy.tipo_labor?(' · '+(ICONOS[extraHoy.tipo_labor.nombre]||'🔧')+' '+extraHoy.tipo_labor.nombre):'')):'Sin horas extra autorizadas hoy';
-    body.innerHTML='<div class="seccion-titulo">📥 Entrada</div><div style="display:flex;gap:10px;"><button type="button" id="asis-btn-lab" class="labor-tile" style="flex:1;border:2px solid var(--verde-mid);" onclick="marcarAsistencia(\'entrada\',\'labores\')"><div class="labor-tile-ic">🧑‍🌾</div><div class="labor-tile-lbl">Entrada Labores</div></button><button type="button" id="asis-btn-ext" class="labor-tile" style="flex:1;border:2px solid var(--tierra);'+(extDeshabilitado?'opacity:.4;':'')+'" '+(extDeshabilitado?'disabled':'onclick="marcarAsistencia(\'entrada\',\'extras\')"')+'><div class="labor-tile-ic">⏰</div><div class="labor-tile-lbl">Entrada Hora Extra</div><div style="font-size:.66rem;font-weight:700;margin-top:.2rem;color:'+(extDeshabilitado?'var(--gris-3)':'var(--tierra)')+';">'+horasTxt+'</div></button></div><div id="asis-msg" style="margin-top:1rem;text-align:center;font-size:.85rem;color:var(--gris-3);">Toca el botón que corresponda — usamos tu ubicación para confirmar que estás en el rancho.</div><button class="btn-back" style="margin-top:1.5rem;" onclick="renderAsistenciaMenu()">← Volver a Asistencia</button>';
+    var labExtraTxt=extraHoy&&extraHoy.tipo_labor?(' — '+(ICONOS[extraHoy.tipo_labor.nombre]||'🔧')+' '+extraHoy.tipo_labor.nombre):'';
+    var extLbl=extraHoy?('⏰ '+numFmt(extraHoy.horas_max)+' h autorizadas'):'Hora Extra';
+    body.innerHTML='<div class="seccion-titulo">📥 Entrada</div><p class="hint" style="margin-bottom:1rem;">Toca tu botón al llegar al rancho. Necesitamos confirmar que estás en la zona para registrar tu entrada.</p><div style="display:flex;gap:10px;"><button type="button" id="asis-btn-lab" class="labor-tile" style="flex:1;border:2px solid var(--verde-mid);" data-activo="1" onclick="marcarAsistencia(\'entrada\',\'labores\')"><div class="labor-tile-ic">🧑‍🌾</div><div class="labor-tile-lbl">Entrada Labores</div></button><button type="button" id="asis-btn-ext" class="labor-tile" style="flex:1;border:2px solid var(--tierra);'+(extDeshabilitado?'opacity:.4;':'')+'" data-activo="'+(extDeshabilitado?'0':'1')+'" '+(extDeshabilitado?'disabled':'onclick="marcarAsistencia(\'entrada\',\'extras\')"')+'><div class="labor-tile-ic">⏰</div><div class="labor-tile-lbl">'+extLbl+'</div></button></div><div id="asis-msg" style="margin-top:1rem;text-align:center;font-size:.85rem;color:var(--gris-3);">'+(extDeshabilitado?'No tienes horas extra autorizadas hoy.':'Hoy tienes hora extra autorizada'+labExtraTxt+'.')+'</div><button class="btn-back" style="margin-top:1.5rem;" onclick="renderAsistenciaMenu()">← Volver a Asistencia</button>';
     cargarUltimoRegistroHoy('entrada');
   });
 }
@@ -6819,8 +6883,8 @@ function renderAsisSalida(){
     var extraHoy=rows&&rows[0];
     window._extraHoyId=extraHoy?extraHoy.id:null;
     var extDeshabilitado=!extraHoy;
-    var horasTxt=extraHoy?('✅ '+numFmt(extraHoy.horas_max)+' h autorizadas'+(extraHoy.tipo_labor?(' · '+(ICONOS[extraHoy.tipo_labor.nombre]||'🔧')+' '+extraHoy.tipo_labor.nombre):'')):'Sin horas extra autorizadas hoy';
-    body.innerHTML='<div class="seccion-titulo">📤 Salida</div><div style="display:flex;gap:10px;"><button type="button" id="asis-btn-lab" class="labor-tile" style="flex:1;border:2px solid var(--verde-mid);" onclick="marcarAsistencia(\'salida\',\'labores\')"><div class="labor-tile-ic">🧑‍🌾</div><div class="labor-tile-lbl">Salida Labores</div></button><button type="button" id="asis-btn-ext" class="labor-tile" style="flex:1;border:2px solid var(--tierra);'+(extDeshabilitado?'opacity:.4;':'')+'" '+(extDeshabilitado?'disabled':'onclick="marcarAsistencia(\'salida\',\'extras\')"')+'><div class="labor-tile-ic">⏰</div><div class="labor-tile-lbl">Salida Hora Extra</div><div style="font-size:.66rem;font-weight:700;margin-top:.2rem;color:'+(extDeshabilitado?'var(--gris-3)':'var(--tierra)')+';">'+horasTxt+'</div></button></div><div id="asis-msg" style="margin-top:1rem;text-align:center;font-size:.85rem;color:var(--gris-3);">Toca el botón que corresponda — usamos tu ubicación para confirmar que estás en el rancho.</div><button class="btn-back" style="margin-top:1.5rem;" onclick="renderAsistenciaMenu()">← Volver a Asistencia</button>';
+    var extLbl=extraHoy?('⏰ '+numFmt(extraHoy.horas_max)+' h autorizadas'):'Hora Extra';
+    body.innerHTML='<div class="seccion-titulo">📤 Salida</div><p class="hint" style="margin-bottom:1rem;">Toca tu botón antes de irte. Necesitamos confirmar que sigues en la zona para registrar tu salida.</p><div style="display:flex;gap:10px;"><button type="button" id="asis-btn-lab" class="labor-tile" style="flex:1;border:2px solid var(--verde-mid);" data-activo="1" onclick="marcarAsistencia(\'salida\',\'labores\')"><div class="labor-tile-ic">🧑‍🌾</div><div class="labor-tile-lbl">Salida Labores</div></button><button type="button" id="asis-btn-ext" class="labor-tile" style="flex:1;border:2px solid var(--tierra);'+(extDeshabilitado?'opacity:.4;':'')+'" data-activo="'+(extDeshabilitado?'0':'1')+'" '+(extDeshabilitado?'disabled':'onclick="marcarAsistencia(\'salida\',\'extras\')"')+'><div class="labor-tile-ic">⏰</div><div class="labor-tile-lbl">'+extLbl+'</div></button></div><div id="asis-msg" style="margin-top:1rem;text-align:center;font-size:.85rem;color:var(--gris-3);">'+(extDeshabilitado?'No tienes horas extra autorizadas hoy.':'Hoy tienes hora extra autorizada.')+'</div><button class="btn-back" style="margin-top:1.5rem;" onclick="renderAsistenciaMenu()">← Volver a Asistencia</button>';
     cargarUltimoRegistroHoy('salida');
   });
 }
@@ -6834,13 +6898,24 @@ function cargarUltimoRegistroHoy(tipo){
 
 function pintarMensajeAsistencia(tipo,modalidad,hora,retardo){
   var lab=document.getElementById('asis-btn-lab'), ext=document.getElementById('asis-btn-ext'), msg=document.getElementById('asis-msg');
-  if(!lab) return;
-  lab.classList.remove('labor-tile-otra'); ext.classList.remove('labor-tile-otra');
+  if(!lab||!msg) return;
+  lab.classList.remove('labor-tile-otra'); if(ext) ext.classList.remove('labor-tile-otra');
   var hh=new Date(hora).toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',hour12:true});
-  var verbo=tipo==='entrada'?'Iniciamos':'Terminaste';
-  var tag=modalidad==='labores'?'Labores':'Horas Extra';
-  if(modalidad==='labores') lab.classList.add('labor-tile-otra'); else ext.classList.add('labor-tile-otra');
-  msg.innerHTML='<strong style="color:'+(modalidad==='labores'?'var(--verde-mid)':'var(--tierra)')+';">'+verbo+' '+tag+' '+usuario.nombre+'</strong><br>'+(tipo==='entrada'?'Entrada':'Salida')+' '+hh+(retardo?' <span style="color:var(--rojo);font-weight:700;">⚠️ Retardo</span>':'');
+  var tag=modalidad==='labores'?'Labores':'Hora Extra';
+  if(modalidad==='labores') lab.classList.add('labor-tile-otra'); else if(ext) ext.classList.add('labor-tile-otra');
+  var color=modalidad==='labores'?'var(--verde-mid)':'var(--tierra)';
+  var primerNombre=(usuario.nombre||'').split(' ')[0];
+  var cuerpo;
+  if(tipo==='entrada'){
+    var saludos=['¡Buen día, '+primerNombre+'! 🌄','¡Bienvenido, '+primerNombre+'! 💪','¡Arriba ese ánimo, '+primerNombre+'! 🌱','¡Qué gusto verte, '+primerNombre+'! ☀️'];
+    var animo=saludos[new Date(hora).getDate()%saludos.length];
+    cuerpo='<strong style="color:'+color+';">'+animo+'</strong><br>Entrada de '+tag+' registrada a las '+hh+(retardo?' <span style="color:var(--rojo);font-weight:700;">⚠️ con retardo</span>':'')+'<div class="hint" style="margin-top:.4rem;">¡Que tengas un excelente día en el rancho!</div>';
+  } else {
+    var gracias=['¡Gracias por tu esfuerzo hoy, '+primerNombre+'! 🙌','¡Buen trabajo, '+primerNombre+'! 🌾','¡Bien hecho, '+primerNombre+'! 👏'];
+    var animoS=gracias[new Date(hora).getDate()%gracias.length];
+    cuerpo='<strong style="color:'+color+';">'+animoS+'</strong><br>Salida de '+tag+' registrada a las '+hh+'<div class="hint" style="margin-top:.4rem;">Descansa, nos vemos pronto 🌿</div>';
+  }
+  msg.innerHTML=cuerpo;
 }
 
 function haversineMetros(lat1,lng1,lat2,lng2){
@@ -6849,6 +6924,20 @@ function haversineMetros(lat1,lng1,lat2,lng2){
   var dLat=toRad(lat2-lat1), dLng=toRad(lng2-lng1);
   var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)*Math.sin(dLng/2);
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function asisReactivarBotones(){
+  var lab=document.getElementById('asis-btn-lab'), ext=document.getElementById('asis-btn-ext');
+  if(lab) lab.disabled=false;
+  if(ext&&ext.dataset.activo==='1') ext.disabled=false;
+}
+
+function mostrarErrorUbicacion(tipo,distancia,radio){
+  asisReactivarBotones();
+  var msg=document.getElementById('asis-msg');
+  if(!msg) return;
+  var faltan=Math.max(1,Math.round(distancia-radio));
+  msg.innerHTML='<div style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);border-radius:var(--radio-sm);padding:.85rem;text-align:center;"><strong style="color:var(--rojo);">📍 Estás fuera del rancho</strong><div class="hint" style="margin-top:.3rem;">Debes estar a menos de '+radio+' m del rancho para registrar tu '+(tipo==='entrada'?'entrada':'salida')+'. Te faltan aproximadamente '+faltan+' m. Acércate e inténtalo de nuevo.</div></div>';
 }
 
 function marcarAsistencia(tipo,modalidad){
@@ -6863,33 +6952,43 @@ function marcarAsistencia(tipo,modalidad){
   var payload={usuario_id:usuario.id,tipo:tipo,modalidad:modalidad,registrado_en:ahora,fecha:hoy,retardo:retardo};
   if(modalidad==='extras'&&window._extraHoyId) payload.horas_extra_id=window._extraHoyId;
 
-  function guardarConUbicacion(lat,lng){
+  var lab=document.getElementById('asis-btn-lab'), ext=document.getElementById('asis-btn-ext'), msg=document.getElementById('asis-msg');
+  if(lab) lab.disabled=true;
+  if(ext) ext.disabled=true;
+  if(msg) msg.innerHTML='<div style="text-align:center;color:var(--gris-3);">📍 Verificando tu ubicación...</div>';
+
+  function guardarRegistro(lat,lng,fueraDeZona){
     if(lat!=null) payload.lat=lat;
     if(lng!=null) payload.lng=lng;
-    var chequeoZona = (lat!=null&&lng!=null) ? from('config_app').select('*').get() : Promise.resolve(null);
-    chequeoZona.then(function(rows){
-      if(rows){
-        var cfg={}; rows.forEach(function(r){cfg[r.clave]=r.valor;});
-        if(cfg.rancho_lat&&cfg.rancho_lng){
-          var d=haversineMetros(lat,lng,parseFloat(cfg.rancho_lat),parseFloat(cfg.rancho_lng));
-          payload.fuera_de_zona = d > (parseFloat(cfg.rancho_radio_metros)||800);
-        }
-      }
-      return from('asistencia_registros').insert(payload);
-    }).then(function(){
+    if(fueraDeZona!=null) payload.fuera_de_zona=fueraDeZona;
+    from('asistencia_registros').insert(payload).then(function(){
       pintarMensajeAsistencia(tipo,modalidad,ahora,retardo);
-      showToast('✅ '+(tipo==='entrada'?'Entrada':'Salida')+' registrada'+(retardo?' — con retardo':'')+(payload.fuera_de_zona?' ⚠️ fuera de zona':''));
-    }).catch(function(e){alert('Error: '+e.message);});
+      showToast('✅ '+(tipo==='entrada'?'Entrada':'Salida')+' registrada'+(retardo?' — con retardo':''));
+    }).catch(function(e){asisReactivarBotones(); if(msg) msg.innerHTML=''; alert('Error: '+e.message);});
+  }
+
+  function verificarYGuardar(lat,lng){
+    from('config_app').select('*').get().then(function(rows){
+      var cfg={}; (rows||[]).forEach(function(r){cfg[r.clave]=r.valor;});
+      if(lat!=null&&lng!=null&&cfg.rancho_lat&&cfg.rancho_lng){
+        var radio=parseFloat(cfg.rancho_radio_metros)||500;
+        var d=haversineMetros(lat,lng,parseFloat(cfg.rancho_lat),parseFloat(cfg.rancho_lng));
+        if(d>radio){ mostrarErrorUbicacion(tipo,d,radio); return; }
+        guardarRegistro(lat,lng,false);
+      } else {
+        guardarRegistro(lat,lng,null);
+      }
+    }).catch(function(){ guardarRegistro(lat,lng,null); });
   }
 
   if(navigator.geolocation){
     navigator.geolocation.getCurrentPosition(
-      function(pos){guardarConUbicacion(pos.coords.latitude,pos.coords.longitude);},
-      function(){guardarConUbicacion(null,null);},
-      {timeout:6000,maximumAge:60000}
+      function(pos){verificarYGuardar(pos.coords.latitude,pos.coords.longitude);},
+      function(){verificarYGuardar(null,null);},
+      {timeout:10000,maximumAge:30000,enableHighAccuracy:true}
     );
   } else {
-    guardarConUbicacion(null,null);
+    verificarYGuardar(null,null);
   }
 }
 
@@ -7141,137 +7240,194 @@ function numeroSemanaISO(fecha){
   return Math.ceil((((d-yearStart)/86400000)+1)/7);
 }
 
+var HIST_SEMANA_INICIO=null;
+
+function fechaCortaDia(fechaStr){
+  var d=new Date(fechaStr+'T00:00:00');
+  var txt=d.toLocaleDateString('es-MX',{weekday:'short',day:'numeric',month:'short'});
+  return txt.charAt(0).toUpperCase()+txt.slice(1);
+}
+
+function calcularResumenSemana(registrosSemana,permisosAprobados,lunes,domingo){
+  var hoyStr=fechaHoyLocal();
+  var hoy=new Date(hoyStr+'T00:00:00');
+  var trabajadosMap={};
+  registrosSemana.forEach(function(r){
+    if(r.modalidad!=='labores') return;
+    if(!trabajadosMap[r.fecha]) trabajadosMap[r.fecha]={entrada:null,salida:null,retardo:false};
+    if(r.tipo==='entrada'&&(!trabajadosMap[r.fecha].entrada||r.registrado_en<trabajadosMap[r.fecha].entrada)){trabajadosMap[r.fecha].entrada=r.registrado_en;trabajadosMap[r.fecha].retardo=!!r.retardo;}
+    if(r.tipo==='salida'&&(!trabajadosMap[r.fecha].salida||r.registrado_en>trabajadosMap[r.fecha].salida)) trabajadosMap[r.fecha].salida=r.registrado_en;
+  });
+  var dias=[], horasSemanales=0, retardosFechas=[], faltasFechas=[], permisoFechas=[];
+  var d=new Date(lunes);
+  for(var i=0;i<7;i++){
+    var fStr=d.toISOString().slice(0,10);
+    var esFuturo=d>hoy;
+    var esHoy=fStr===hoyStr;
+    var esDomingo=d.getDay()===0;
+    var tr=trabajadosMap[fStr];
+    var horasDia=0;
+    if(tr&&tr.entrada&&tr.salida) horasDia=(new Date(tr.salida)-new Date(tr.entrada))/3600000;
+    if(horasDia>0) horasSemanales+=horasDia;
+    if(tr&&tr.retardo) retardosFechas.push({fecha:fStr,hora:tr.entrada});
+    var estado;
+    if(tr&&tr.entrada) estado='trabajado';
+    else if(esDomingo) estado='domingo';
+    else if(esFuturo) estado='futuro';
+    else if(esHoy) estado='hoy';
+    else {
+      var perm=permisoEnFecha(permisosAprobados,fStr);
+      if(perm){estado='permiso';permisoFechas.push({fecha:fStr,tipo:perm.tipo,con_goce:perm.con_goce});}
+      else {estado='falta';faltasFechas.push(fStr);}
+    }
+    dias.push({fecha:fStr,estado:estado,entrada:tr?tr.entrada:null,salida:tr?tr.salida:null,retardo:tr?tr.retardo:false,horas:horasDia});
+    d.setDate(d.getDate()+1);
+  }
+  return {horasSemanales:horasSemanales,faltas:faltasFechas.length,retardos:retardosFechas.length,faltasFechas:faltasFechas,retardosFechas:retardosFechas,permisoFechas:permisoFechas,dias:dias};
+}
+
 function renderAsisHistorial(){
   var body=document.getElementById('op-body');
   body.innerHTML='<div class="seccion-titulo">📊 Historial</div><div class="loading">Cargando...</div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsistenciaMenu()">← Volver a Asistencia</button>';
   Promise.all([
     from('asistencia_registros').select('*').eq('usuario_id',usuario.id).order('registrado_en',{ascending:false}).get(),
     from('permisos').select('*').eq('usuario_id',usuario.id).order('creado_en',{ascending:false}).get(),
-    from('usuarios').select('fecha_ingreso').eq('id',usuario.id).get()
+    from('usuarios').select('fecha_ingreso').eq('id',usuario.id).get(),
+    from('horas_extra_asignadas').select('fecha,horas_max').eq('operario_id',usuario.id).eq('estado','aprobada').get(),
+    from('alertas_campo').select('*').eq('usuario_id',usuario.id).eq('categoria','emergencia').order('creado_en',{ascending:false}).limit(30).get()
   ]).then(function(r){
-    var registros=r[0]||[], permisos=r[1]||[];
-    var fechaIngreso=(r[2]&&r[2][0]&&r[2][0].fecha_ingreso)||null;
-    var ingresoHtml='';
-    if(fechaIngreso){
-      var dIng=new Date(fechaIngreso+'T00:00:00');
-      ingresoHtml='<p class="hint" style="margin-bottom:.75rem;">📅 Con nosotros desde '+dIng.toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'})+'</p>';
-    }
-    var mesesSet={};
-    registros.forEach(function(reg){mesesSet[reg.fecha.slice(0,7)]=true;});
-    var hoyD=new Date();
-    var mesActual=hoyD.toISOString().slice(0,7);
-    mesesSet[mesActual]=true;
-    var meses=Object.keys(mesesSet).sort().reverse();
-    window._histRegistros=registros; window._histPermisos=permisos;
-    var selectorHtml='<div class="form-group" style="margin-bottom:1rem;"><label>Mes</label><select id="hist-mes-sel">'+meses.map(function(m){
-      var d=new Date(m+'-02T00:00:00');
-      var lbl=d.toLocaleDateString('es-MX',{month:'long',year:'numeric'});
-      return '<option value="'+m+'"'+(m===mesActual?' selected':'')+' style="text-transform:capitalize;">'+lbl+'</option>';
-    }).join('')+'</select></div>';
-    var body2=document.getElementById('op-body');
-    body2.innerHTML='<div class="seccion-titulo">📊 Historial</div>'+ingresoHtml+selectorHtml+'<div id="hist-contenido"></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsistenciaMenu()">← Volver a Asistencia</button>';
-    document.getElementById('hist-mes-sel').addEventListener('change',function(){pintarHistorialMes(this.value);});
-    pintarHistorialMes(mesActual);
-  });
+    window._histRegistros=r[0]||[];
+    window._histPermisos=r[1]||[];
+    window._histFechaIngreso=(r[2]&&r[2][0]&&r[2][0].fecha_ingreso)||null;
+    window._histHorasExtraAsig=r[3]||[];
+    window._histEmergencias=r[4]||[];
+    HIST_SEMANA_INICIO=inicioDeSemana(new Date()).toISOString().slice(0,10);
+    pintarHistorialSemana(HIST_SEMANA_INICIO);
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
-function pintarHistorialMes(mesStr){
-  var cont=document.getElementById('hist-contenido');
-  if(!cont) return;
-  var registros=window._histRegistros||[], permisos=window._histPermisos||[];
-  var primerDiaMes=mesStr+'-01';
-  var registrosMes=registros.filter(function(reg){return reg.fecha.slice(0,7)===mesStr;});
+function pintarHistorialSemana(semanaInicioStr){
+  HIST_SEMANA_INICIO=semanaInicioStr;
+  var body=document.getElementById('op-body');
+  var lunes=new Date(semanaInicioStr+'T00:00:00');
+  var domingo=new Date(lunes); domingo.setDate(lunes.getDate()+6);
+  var semanaFin=domingo.toISOString().slice(0,10);
+  var numSemana=numeroSemanaISO(lunes);
+  var mesInicio=lunes.toLocaleDateString('es-MX',{month:'long'});
+  var mesFin=domingo.toLocaleDateString('es-MX',{month:'long'});
+  var rango=(mesInicio===mesFin)
+    ? ('del Lunes '+lunes.getDate()+' al Domingo '+domingo.getDate()+' de '+mesFin+' de '+domingo.getFullYear())
+    : ('del Lunes '+lunes.getDate()+' de '+mesInicio+' al Domingo '+domingo.getDate()+' de '+mesFin+' de '+domingo.getFullYear());
+
+  var registros=(window._histRegistros||[]).filter(function(reg){return reg.fecha>=semanaInicioStr&&reg.fecha<=semanaFin;});
+  var permisos=window._histPermisos||[];
   var permisosAprobados=permisos.filter(function(p){return p.estado==='aprobado';});
-  var resumen=calcularResumenAsistencia(registrosMes,primerDiaMes,permisosAprobados);
-  var porDia={};
-  registrosMes.forEach(function(reg){
-    var key=reg.fecha+'|'+reg.modalidad;
-    if(!porDia[key]) porDia[key]={fecha:reg.fecha,modalidad:reg.modalidad,entrada:null,salida:null,retardo:false};
-    if(reg.tipo==='entrada'&&(!porDia[key].entrada||reg.registrado_en<porDia[key].entrada)){porDia[key].entrada=reg.registrado_en;porDia[key].retardo=reg.retardo;}
-    if(reg.tipo==='salida'&&(!porDia[key].salida||reg.registrado_en>porDia[key].salida)) porDia[key].salida=reg.registrado_en;
-  });
-  var claves=Object.keys(porDia).sort().reverse();
-  var totalHorasExtra=0;
-  claves.forEach(function(k){
-    var d=porDia[k];
-    if(d.modalidad==='extras'&&d.entrada&&d.salida){
-      totalHorasExtra += (new Date(d.salida)-new Date(d.entrada))/3600000;
-    }
-  });
+  var permisosSemana=permisos.filter(function(p){return p.fecha_inicio<=semanaFin&&p.fecha_fin>=semanaInicioStr;});
+  var horasExtraAsig=(window._histHorasExtraAsig||[]).filter(function(h){return h.fecha>=semanaInicioStr&&h.fecha<=semanaFin;});
+  var emergenciasSemana=(window._histEmergencias||[]).filter(function(e){var f=(e.creado_en||'').slice(0,10); return f>=semanaInicioStr&&f<=semanaFin;});
+
+  var resumen=calcularResumenSemana(registros,permisosAprobados,lunes,domingo);
+  var mapaMax=mapaHorasMaxPorFecha(horasExtraAsig);
+  var regsExtra=registros.filter(function(r){return r.modalidad==='extras';});
+  var horasExtraTotal=horasExtraCapadasDesdeRegistros(regsExtra,mapaMax);
+  resumen.horasExtraTotal=horasExtraTotal;
   window._histResumenActual=resumen;
-  var html='<div class="stats-row"><div class="stat-card" data-cat="trabajados" style="cursor:pointer;"><div class="stat-num stat-vd">'+resumen.trabajados+'</div><div class="stat-lbl">Trabajados</div></div><div class="stat-card" data-cat="faltas" style="cursor:pointer;"><div class="stat-num" style="color:var(--rojo);">'+resumen.faltas+'</div><div class="stat-lbl">Faltas</div></div><div class="stat-card" data-cat="retardos" style="cursor:pointer;"><div class="stat-num stat-am">'+resumen.retardos+'</div><div class="stat-lbl">Retardos</div></div></div><div id="hist-detalle-cat"></div>';
-  html+='<div style="background:var(--verde-tenue);border-radius:var(--radio-sm);padding:.85rem;margin-bottom:1rem;text-align:center;"><strong style="color:var(--verde);font-size:1.1rem;">'+totalHorasExtra.toFixed(1)+' h</strong><div class="hint" style="margin:0;">Total de horas extra trabajadas</div></div>';
-  if(claves.length){
-    var semanas={};
-    claves.forEach(function(k){
-      var d=porDia[k];
-      var fd=new Date(d.fecha+'T00:00:00');
-      var diaSemana=fd.getDay();
-      var lunes=new Date(fd);
-      lunes.setDate(fd.getDate()-((diaSemana+6)%7));
-      var domingo=new Date(lunes);
-      domingo.setDate(lunes.getDate()+6);
-      var claveSemana=lunes.toISOString().slice(0,10);
-      if(!semanas[claveSemana]) semanas[claveSemana]={inicio:lunes,fin:domingo,dias:[],trabajados:0,horasExtra:0};
-      semanas[claveSemana].dias.push(d);
-      if(d.modalidad==='labores') semanas[claveSemana].trabajados++;
-      if(d.modalidad==='extras'&&d.entrada&&d.salida) semanas[claveSemana].horasExtra += (new Date(d.salida)-new Date(d.entrada))/3600000;
-    });
-    var clavesSemana=Object.keys(semanas).sort().reverse();
-    html+='<div class="seccion-titulo" style="margin-top:0;">Por semana</div>';
-    html+=clavesSemana.map(function(sk){
-      var s=semanas[sk];
-      var numSemana=numeroSemanaISO(s.inicio);
-      var mesInicio=s.inicio.toLocaleDateString('es-MX',{month:'long'});
-      var mesFin=s.fin.toLocaleDateString('es-MX',{month:'long'});
-      var rango = (mesInicio===mesFin)
-        ? ('del '+s.inicio.getDate()+' al '+s.fin.getDate()+' de '+mesFin+' '+s.fin.getFullYear())
-        : ('del '+s.inicio.getDate()+' '+mesInicio+' al '+s.fin.getDate()+' '+mesFin+' '+s.fin.getFullYear());
-      var filas=s.dias.map(function(d){
-        var hE=d.entrada?new Date(d.entrada).toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',hour12:true}):'—';
-        var hS=d.salida?new Date(d.salida).toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',hour12:true}):'—';
-        return '<div style="font-size:.78rem;display:flex;justify-content:space-between;padding:.35rem 0;border-bottom:1px solid var(--gris-1);"><span>'+d.fecha+(d.modalidad==='extras'?' · extra':'')+(d.retardo?' · <span style="color:var(--rojo);font-weight:700;">retardo</span>':'')+'</span><span style="color:var(--verde-mid);font-weight:700;">'+hE+' → '+hS+'</span></div>';
-      }).join('');
-      return '<div class="orden-card"><div style="margin-bottom:.4rem;"><strong style="font-size:.85rem;">Semana '+numSemana+'</strong><div style="font-size:.75rem;color:var(--gris-3);">'+rango+' · '+s.trabajados+' días'+(s.horasExtra>0?' · '+s.horasExtra.toFixed(1)+'h extra':'')+'</div></div>'+filas+'</div>';
-    }).join('');
-  } else { html+='<div class="empty">Sin registros de asistencia este mes.</div>'; }
-  if(permisos.length){
+
+  var semAnt=new Date(lunes); semAnt.setDate(semAnt.getDate()-7);
+  var semSig=new Date(lunes); semSig.setDate(semSig.getDate()+7);
+  var semAntStr=semAnt.toISOString().slice(0,10), semSigStr=semSig.toISOString().slice(0,10);
+  var hoyStr=fechaHoyLocal();
+  var puedeAvanzar=semanaFin<hoyStr;
+
+  var ICONOS_DIA={trabajado:'✅',falta:'❌',permiso:'📝',domingo:'😴',futuro:'⚪',hoy:'🕐'};
+  var gridDias='<div style="display:flex;gap:4px;justify-content:space-between;margin-bottom:1rem;">'+resumen.dias.map(function(d){
+    var etq=new Date(d.fecha+'T00:00:00').toLocaleDateString('es-MX',{weekday:'narrow'});
+    return '<div style="flex:1;text-align:center;background:var(--blanco);border-radius:10px;padding:.4rem .1rem;"><div style="font-size:.62rem;color:var(--gris-3);text-transform:uppercase;">'+etq+'</div><div style="font-size:1rem;">'+ICONOS_DIA[d.estado]+'</div></div>';
+  }).join('')+'</div>';
+
+  var ingresoHtml='';
+  if(window._histFechaIngreso){
+    var dIng=new Date(window._histFechaIngreso+'T00:00:00');
+    ingresoHtml='<p class="hint" style="margin-bottom:.5rem;">📅 Con nosotros desde '+dIng.toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'})+'</p>';
+  }
+
+  var navHtml='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;gap:8px;"><button type="button" id="hist-sem-ant" style="border:none;background:var(--gris-1);border-radius:20px;padding:.4rem .9rem;font-size:.78rem;cursor:pointer;">← Semana anterior</button>'+(puedeAvanzar?'<button type="button" id="hist-sem-sig" style="border:none;background:var(--gris-1);border-radius:20px;padding:.4rem .9rem;font-size:.78rem;cursor:pointer;">Semana siguiente →</button>':'')+'</div>';
+  var tituloSemana='<p class="hint" style="margin-bottom:.75rem;font-weight:700;color:var(--verde);">Semana '+numSemana+'<br><span style="font-weight:400;color:var(--gris-3);">'+rango+'</span></p>';
+
+  var statsHtml='<div class="stats-row" style="grid-template-columns:repeat(2,1fr);"><div class="stat-card" data-cat="horas" style="cursor:pointer;"><div class="stat-num stat-vd">'+resumen.horasSemanales.toFixed(1)+'h</div><div class="stat-lbl">Horas Semanales</div></div><div class="stat-card" data-cat="faltas" style="cursor:pointer;"><div class="stat-num" style="color:var(--rojo);">'+resumen.faltas+'</div><div class="stat-lbl">Faltas</div></div><div class="stat-card" data-cat="retardos" style="cursor:pointer;"><div class="stat-num stat-am">'+resumen.retardos+'</div><div class="stat-lbl">Retardos</div></div><div class="stat-card" data-cat="extra" style="cursor:pointer;"><div class="stat-num" style="color:var(--tierra);">'+horasExtraTotal.toFixed(1)+'h</div><div class="stat-lbl">Horas Extra</div></div></div><div id="hist-detalle-cat"></div>';
+
+  var permisosHtml='';
+  if(permisosSemana.length){
     var estLbl={pendiente:'⏳ Pendiente',aprobado:'✅ Aprobado',rechazado:'❌ Rechazado'};
     var estColor={pendiente:'var(--tierra)',aprobado:'var(--verde-mid)',rechazado:'var(--rojo)'};
-    html+='<div class="seccion-titulo" style="margin-top:1rem;">Permisos</div>'+permisos.map(function(p){
-        var goceTxt=p.estado==='aprobado'?('<div class="hint" style="margin-top:.1rem;">'+(p.con_goce?'💰 Con goce de sueldo':'🚫 Sin goce de sueldo')+'</div>'):'';
-        return '<div style="background:var(--blanco);border-radius:12px;padding:.75rem;font-size:.8rem;margin-bottom:.4rem;"><div style="display:flex;justify-content:space-between;"><span>'+(p.tipo==='medico'?'🩺 Médico':'👤 Personal')+' · '+p.fecha_inicio+' a '+p.fecha_fin+'</span><span style="color:'+estColor[p.estado]+';font-weight:700;">'+estLbl[p.estado]+'</span></div>'+(p.folio?'<div class="hint" style="margin-top:.2rem;">🔖 '+p.folio+'</div>':'')+(p.motivo?'<div class="hint" style="margin-top:.1rem;">'+p.motivo+'</div>':'')+goceTxt+(p.evidencia_url?'<div style="margin-top:.2rem;"><a href="'+p.evidencia_url+'" target="_blank" style="color:var(--verde-mid);font-weight:700;font-size:.78rem;">📎 Ver comprobante</a></div>':'')+'</div>';
-      }).join('');
-    }
-    cont.innerHTML=html;
-    cont.querySelectorAll('[data-cat]').forEach(function(el){el.addEventListener('click',function(){mostrarDetalleHistorial(this.dataset.cat);});});
+    permisosHtml='<div class="seccion-titulo" style="margin-top:1rem;">Permisos</div>'+permisosSemana.map(function(p){
+      var goceTxt=p.estado==='aprobado'?('<div class="hint" style="margin-top:.1rem;">'+(p.con_goce?'💰 Con goce de sueldo':'🚫 Sin goce de sueldo')+'</div>'):'';
+      return '<div style="background:var(--blanco);border-radius:12px;padding:.75rem;font-size:.8rem;margin-bottom:.4rem;"><div style="display:flex;justify-content:space-between;"><span>'+(p.tipo==='medico'?'🩺 Médico':'👤 Personal')+' · '+p.fecha_inicio+' a '+p.fecha_fin+'</span><span style="color:'+estColor[p.estado]+';font-weight:700;">'+estLbl[p.estado]+'</span></div>'+(p.folio?'<div class="hint" style="margin-top:.2rem;">🔖 '+p.folio+'</div>':'')+(p.motivo?'<div class="hint" style="margin-top:.1rem;">'+p.motivo+'</div>':'')+goceTxt+(p.evidencia_url?'<div style="margin-top:.2rem;"><a href="'+p.evidencia_url+'" target="_blank" style="color:var(--verde-mid);font-weight:700;font-size:.78rem;">📎 Ver comprobante</a></div>':'')+'</div>';
+    }).join('');
+  }
+
+  var emergHtml='';
+  if(emergenciasSemana.length){
+    emergHtml='<div class="seccion-titulo" style="margin-top:1rem;">🆘 Emergencias reportadas</div>'+emergenciasSemana.map(function(e){
+      var f=new Date(e.creado_en).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'numeric',minute:'2-digit',hour12:true});
+      return '<div style="background:var(--rojo-tenue);border-radius:12px;padding:.75rem;font-size:.8rem;margin-bottom:.4rem;"><strong style="color:var(--rojo);">'+f+'</strong><div class="hint" style="margin-top:.15rem;">'+(e.descripcion||'')+'</div></div>';
+    }).join('');
+  }
+
+  body.innerHTML='<div class="seccion-titulo">📊 Historial</div>'+ingresoHtml+navHtml+tituloSemana+gridDias+statsHtml+permisosHtml+emergHtml+'<button class="btn-back" style="margin-top:1rem;" onclick="renderAsistenciaMenu()">← Volver a Asistencia</button>';
+
+  var btnAnt=document.getElementById('hist-sem-ant');
+  if(btnAnt) btnAnt.addEventListener('click',function(){pintarHistorialSemana(semAntStr);});
+  var btnSig=document.getElementById('hist-sem-sig');
+  if(btnSig) btnSig.addEventListener('click',function(){pintarHistorialSemana(semSigStr);});
+  body.querySelectorAll('[data-cat]').forEach(function(el){el.addEventListener('click',function(){mostrarDetalleHistorialSemana(this.dataset.cat);});});
 }
 
-function mostrarDetalleHistorial(cat){
+function mostrarDetalleHistorialSemana(cat){
   var det=document.getElementById('hist-detalle-cat');
   if(!det) return;
   var r=window._histResumenActual;
   if(!r) return;
   var html='';
-  if(cat==='trabajados'){
-    html='<div class="seccion-titulo" style="margin-top:.75rem;">✅ Días trabajados ('+r.trabajados+')</div>';
-    if(!r.trabajadosFechas.length) html+='<div class="empty">Sin días trabajados este mes.</div>';
-    else html+=r.trabajadosFechas.map(function(f){
-      var hE=new Date(r.trabajadosHoras[f]).toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',hour12:true});
-      return '<div style="background:var(--blanco);border-radius:10px;padding:.6rem .75rem;font-size:.8rem;margin-bottom:.35rem;display:flex;justify-content:space-between;"><span>'+f+'</span><span style="color:var(--verde-mid);font-weight:700;">Entrada '+hE+'</span></div>';
+  if(cat==='horas'){
+    html='<div class="seccion-titulo" style="margin-top:.75rem;">⏱️ Horas trabajadas ('+r.horasSemanales.toFixed(1)+' h)</div>';
+    var diasTrabajados=r.dias.filter(function(d){return d.estado==='trabajado';});
+    if(!diasTrabajados.length) html+='<div class="empty">Sin días trabajados esta semana.</div>';
+    else html+=diasTrabajados.map(function(d){
+      var hE=d.entrada?new Date(d.entrada).toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',hour12:true}):'—';
+      var hS=d.salida?new Date(d.salida).toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',hour12:true}):'— (sin salida aún)';
+      return '<div style="background:var(--blanco);border-radius:10px;padding:.6rem .75rem;font-size:.8rem;margin-bottom:.35rem;display:flex;justify-content:space-between;"><span>'+fechaCortaDia(d.fecha)+(d.retardo?' · <span style="color:var(--rojo);font-weight:700;">retardo</span>':'')+'</span><span style="color:var(--verde-mid);font-weight:700;">'+hE+' → '+hS+'</span></div>';
     }).join('');
   } else if(cat==='faltas'){
     html='<div class="seccion-titulo" style="margin-top:.75rem;">❌ Faltas ('+r.faltas+')</div>';
-    if(!r.faltasFechas.length) html+='<div class="empty">Sin faltas este mes 🎉</div>';
+    if(!r.faltasFechas.length) html+='<div class="empty">Sin faltas esta semana 🎉</div>';
     else html+=r.faltasFechas.map(function(f){
-      return '<div style="background:var(--blanco);border-radius:10px;padding:.6rem .75rem;font-size:.8rem;margin-bottom:.35rem;color:var(--rojo);font-weight:700;">'+f+'</div>';
+      return '<div style="background:var(--blanco);border-radius:10px;padding:.6rem .75rem;font-size:.8rem;margin-bottom:.35rem;color:var(--rojo);font-weight:700;">'+fechaCortaDia(f)+'</div>';
     }).join('');
   } else if(cat==='retardos'){
     html='<div class="seccion-titulo" style="margin-top:.75rem;">⏰ Retardos ('+r.retardos+')</div>';
-    if(!r.retardosFechas.length) html+='<div class="empty">Sin retardos este mes 🎉</div>';
+    if(!r.retardosFechas.length) html+='<div class="empty">Sin retardos esta semana 🎉</div>';
     else html+=r.retardosFechas.map(function(x){
       var h=new Date(x.hora).toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',hour12:true});
-      return '<div style="background:var(--blanco);border-radius:10px;padding:.6rem .75rem;font-size:.8rem;margin-bottom:.35rem;display:flex;justify-content:space-between;"><span>'+x.fecha+'</span><span style="color:var(--tierra);font-weight:700;">Entrada '+h+'</span></div>';
+      return '<div style="background:var(--blanco);border-radius:10px;padding:.6rem .75rem;font-size:.8rem;margin-bottom:.35rem;display:flex;justify-content:space-between;"><span>'+fechaCortaDia(x.fecha)+'</span><span style="color:var(--tierra);font-weight:700;">Entrada '+h+'</span></div>';
+    }).join('');
+  } else if(cat==='extra'){
+    html='<div class="seccion-titulo" style="margin-top:.75rem;">⚡ Horas extra ('+(r.horasExtraTotal||0).toFixed(1)+' h)</div>';
+    var lunesStr=r.dias[0].fecha, domingoStr=r.dias[6].fecha;
+    var regsExtraSemana=(window._histRegistros||[]).filter(function(reg){return reg.modalidad==='extras'&&reg.fecha>=lunesStr&&reg.fecha<=domingoStr;});
+    var porDiaExtra={};
+    regsExtraSemana.forEach(function(reg){
+      if(!porDiaExtra[reg.fecha]) porDiaExtra[reg.fecha]={entrada:null,salida:null};
+      if(reg.tipo==='entrada'&&(!porDiaExtra[reg.fecha].entrada||reg.registrado_en<porDiaExtra[reg.fecha].entrada)) porDiaExtra[reg.fecha].entrada=reg.registrado_en;
+      if(reg.tipo==='salida'&&(!porDiaExtra[reg.fecha].salida||reg.registrado_en>porDiaExtra[reg.fecha].salida)) porDiaExtra[reg.fecha].salida=reg.registrado_en;
+    });
+    var clavesExtra=Object.keys(porDiaExtra).sort();
+    if(!clavesExtra.length) html+='<div class="empty">Sin horas extra esta semana.</div>';
+    else html+=clavesExtra.map(function(f){
+      var dd=porDiaExtra[f];
+      var hE=dd.entrada?new Date(dd.entrada).toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',hour12:true}):'—';
+      var hS=dd.salida?new Date(dd.salida).toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',hour12:true}):'— (sin salida aún)';
+      return '<div style="background:var(--blanco);border-radius:10px;padding:.6rem .75rem;font-size:.8rem;margin-bottom:.35rem;display:flex;justify-content:space-between;"><span>'+fechaCortaDia(f)+'</span><span style="color:var(--tierra);font-weight:700;">'+hE+' → '+hS+'</span></div>';
     }).join('');
   }
   det.innerHTML=html;
@@ -7947,7 +8103,7 @@ function renderConfig(){
     var cfg={}; (rows||[]).forEach(function(c){cfg[c.clave]=c.valor;});
     var html='<div class="seccion-titulo">📞 Números de emergencia</div><div class="form-card"><div class="form-group"><label>Policía</label><input type="tel" id="cfg-policia" value="'+(cfg.emergencia_policia||'911')+'"></div><div class="form-group"><label>Bomberos</label><input type="tel" id="cfg-bomberos" value="'+(cfg.emergencia_bomberos||'911')+'"></div><div class="form-group"><label>Ambulancia</label><input type="tel" id="cfg-ambulancia" value="'+(cfg.emergencia_ambulancia||'911')+'"></div><button class="btn-primary" id="cfg-guardar-emerg">Guardar números</button></div>';
     html+='<div class="seccion-titulo" style="margin-top:1.25rem;">⏰ Tarifa de hora extra</div><div class="form-card"><div class="form-group"><label>Pago por hora extra ($)</label><input type="number" id="cfg-tarifa-extra" min="0" step="1" value="'+(cfg.tarifa_hora_extra||70)+'"></div><button class="btn-primary" id="cfg-guardar-tarifa">Guardar tarifa</button></div>';
-    html+='<div class="seccion-titulo" style="margin-top:1.25rem;">📍 Ubicación del rancho</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Párate dentro del rancho con tu celular y toca el botón — se usa para avisar si alguien marca asistencia fuera de zona.</p>'+(cfg.rancho_lat?'<p class="hint" style="margin-bottom:.75rem;color:var(--verde-mid);font-weight:700;">✅ Ubicación guardada</p>':'<p class="hint" style="margin-bottom:.75rem;color:var(--tierra);font-weight:700;">⚠️ Aún no se ha definido</p>')+'<button class="btn-primary" id="cfg-fijar-ubicacion">📍 Usar mi ubicación actual</button><div class="form-group" style="margin-top:.9rem;"><label>Radio permitido (metros)</label><input type="number" id="cfg-radio" value="'+(cfg.rancho_radio_metros||800)+'"><button class="btn-sm btn-completar" id="cfg-guardar-radio" style="margin-top:.5rem;">Guardar radio</button></div></div>';
+    html+='<div class="seccion-titulo" style="margin-top:1.25rem;">📍 Ubicación del rancho</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Párate dentro del rancho con tu celular y toca el botón. Mientras esto no esté definido, los colaboradores pueden registrar su entrada/salida desde cualquier lugar. En cuanto lo definas, la app bloqueará el registro de asistencia a quien esté fuera del radio permitido.</p>'+(cfg.rancho_lat?'<p class="hint" style="margin-bottom:.75rem;color:var(--verde-mid);font-weight:700;">✅ Ubicación guardada — el bloqueo por zona ya está activo</p>':'<p class="hint" style="margin-bottom:.75rem;color:var(--tierra);font-weight:700;">⚠️ Aún no se ha definido — el bloqueo por zona todavía NO está activo</p>')+'<button class="btn-primary" id="cfg-fijar-ubicacion">📍 Usar mi ubicación actual</button><div class="form-group" style="margin-top:.9rem;"><label>Radio permitido (metros)</label><input type="number" id="cfg-radio" value="'+(cfg.rancho_radio_metros||500)+'"><button class="btn-sm btn-completar" id="cfg-guardar-radio" style="margin-top:.5rem;">Guardar radio</button></div></div>';
     html+='<div class="seccion-titulo" style="margin-top:1.25rem;">💰 Préstamos a colaboradores</div><div class="form-card"><div class="form-group"><label>Máximo de préstamos por colaborador al mes</label><input type="number" id="cfg-prestamo-max-mes" min="1" step="1" value="'+(cfg.prestamo_max_activos_mes||1)+'"></div><div class="form-group"><label>Monto máximo que se puede autorizar por préstamo ($)</label><input type="number" id="cfg-prestamo-monto-max" min="0" step="1" value="'+(cfg.prestamo_monto_max||'')+'"></div><p class="hint">Con esto, el colaborador verá en su app cuántos préstamos lleva usados este mes y no podrá solicitar más una vez que llegue al máximo. Administración tampoco podrá registrar un préstamo por encima del monto máximo.</p><button class="btn-primary" id="cfg-guardar-prestamo">Guardar límites de préstamos</button></div>';
     body.innerHTML=html;
     document.getElementById('cfg-guardar-tarifa').addEventListener('click',function(){
