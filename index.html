@@ -707,7 +707,7 @@ function renderTablero(){
     var quitarFiltroEl=document.getElementById('tablero-quitar-filtro');
     if(quitarFiltroEl) quitarFiltroEl.addEventListener('click',function(e){e.preventDefault();TABLERO_FILTRO=null;renderTablero();});
     var btnHorasExtraEl=document.getElementById('tablero-btn-horasextra');
-    if(btnHorasExtraEl) btnHorasExtraEl.addEventListener('click',renderGestionHorasExtra);
+    if(btnHorasExtraEl) btnHorasExtraEl.addEventListener('click',function(){renderGestionHorasExtra(null,null,null,renderTablero);});
     var avisoPermisosEl=document.getElementById('aviso-permisos-pendientes');
     if(avisoPermisosEl) avisoPermisosEl.addEventListener('click',renderPermisosRevision);
     var avisoSolicitudesOpEl=document.getElementById('aviso-solicitudes-operario');
@@ -774,6 +774,7 @@ function cambiarEstado(id,estado){
 }
 
 var ADMIN_COMPLETAR_ORDEN=null, ADMIN_COMPLETAR_SURCOS=[], ADMIN_COMPLETAR_VOLVER=null;
+var GESTION_HORAS_EXTRA_VOLVER=null;
 
 function renderAdminCompletar(ordenId,volverFn){
   ADMIN_COMPLETAR_VOLVER=volverFn||renderTablero;
@@ -1046,6 +1047,12 @@ function renderAsignarEstatus(){
     body.innerHTML=html;
     var ordenesPorIdAsignar={}; todas.forEach(function(o){ordenesPorIdAsignar[o.id]=o;});
     body.querySelectorAll('[data-regavance]').forEach(function(b){b.addEventListener('click',function(){renderAdminCompletar(this.dataset.regavance,renderAsignarEstatus);});});
+    body.querySelectorAll('[data-corregirextra]').forEach(function(b){
+      b.addEventListener('click',function(){
+        var partes=this.dataset.corregirextra.split('|');
+        renderGestionHorasExtra(partes[0],partes[1],partes[2],renderAsignarEstatus);
+      });
+    });
     body.querySelectorAll('[data-can]').forEach(function(b){b.addEventListener('click',function(){cambiarEstadoAsignar(this.dataset.can,'cancelada');});});
     body.querySelectorAll('.glab-gestionar').forEach(function(b){
       b.addEventListener('click',function(){
@@ -1120,6 +1127,7 @@ function tarjetaLaborAgrupada(grupo){
     if(o.estado==='pendiente') acciones='<button class="btn-sm btn-cancelar" data-can="'+o.id+'">Cancelar</button>';
     if(o.estado==='en_proceso') acciones='<button class="btn-sm btn-completar" data-com="'+o.id+'">Marcar completa</button> <button class="btn-sm btn-cancelar" data-can="'+o.id+'">Cancelar</button>';
     if(o.estado==='pendiente'||o.estado==='en_proceso') acciones='<button type="button" class="btn-sm" style="background:var(--verde-tenue);border:1.5px solid var(--verde-mid);color:var(--verde);font-weight:700;" data-regavance="'+o.id+'">📝 Registrar avance</button> '+acciones;
+    if(o.es_hora_extra) acciones='<button type="button" class="btn-sm" style="background:var(--tierra-tenue);border:1.5px solid var(--tierra);color:var(--tierra);font-weight:700;" data-corregirextra="'+o.operario_id+'|'+grupo.fecha_asignacion+'|'+grupo.tipoLaborId+'">✏️ Corregir hora extra</button> '+acciones;
     return '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:.4rem 0;border-top:1px solid var(--gris-1);flex-wrap:wrap;"><span style="font-size:.8rem;"><strong>'+(o.operario?o.operario.nombre:'')+'</strong><br/><span style="font-size:.7rem;font-weight:700;color:'+eb[1]+';">'+eb[0]+'</span>'+avanceTxt+'</span><span>'+acciones+'</span></div>';
   }).join('');
   return '<div class="orden-card" style="border-left-color:'+colorBorde+';'+(esTerminada?'opacity:.8;':'')+'"><strong style="font-size:.92rem">'+ic+' '+grupo.tipoLaborNombre+(grupo.subtipoNombre?' · '+grupo.subtipoNombre:'')+'</strong>'+etiquetaTipo+'<div style="font-size:.85rem;font-weight:700;color:'+(atrasada?'var(--rojo)':'var(--gris-3)')+';margin-top:.2rem;">📅 '+fechaLarga(grupo.fecha_asignacion)+(atrasada?' ⚠️':'')+'</div><div class="orden-meta">'+(grupo.tabla?('📍 '+(p?p.nombre:'')+' · '+grupo.tabla.nombre):'📋 Actividad general (sin tabla)')+(grupo.notas_encargado?'<br/>📝 '+grupo.notas_encargado:'')+'</div><div style="font-size:.7rem;color:var(--verde-mid);font-weight:700;margin-top:.4rem;">👷 Asignada a: '+nombresConEstado+(esTerminada?'':' <button type="button" class="glab-gestionar" data-gkey="'+grupo.key+'" style="border:none;background:none;color:var(--tierra);font-size:.7rem;font-weight:700;cursor:pointer;text-decoration:underline;padding:0;">✏️ gestionar</button>')+'</div>'+filasOperarios+(esTerminada?'':'<button type="button" class="btn-sm glab-agregar" data-gkey="'+grupo.key+'" style="margin-top:.5rem;background:var(--verde-tenue);border:1.5px solid var(--verde-mid);color:var(--verde);">+ Agregar otro operario</button>')+'</div>';
@@ -1161,7 +1169,8 @@ function pintarGestionLabor(){
       var progreso=progresoSurcosOrden(o);
       var avanceTxt=progreso.totalAsignados.length>0?('Avance: '+progreso.completados.length+'/'+progreso.totalAsignados.length+' surcos'+(progreso.faltan.length?' · Faltan: '+progreso.faltan.join(', '):'')):'';
       var estBadge=o.estado==='en_proceso'?'🔶 En proceso':'🆕 Pendiente';
-      return '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem;">'+(o.operario?o.operario.nombre:'')+'</strong><span style="font-size:.72rem;font-weight:700;">'+estBadge+'</span></div>'+(avanceTxt?'<div class="orden-meta">'+avanceTxt+'</div>':'')+'<div style="display:flex;gap:8px;margin-top:.5rem;flex-wrap:wrap;"><button type="button" class="btn-sm" style="background:var(--verde-tenue);border:1.5px solid var(--verde-mid);color:var(--verde);font-weight:700;" data-regavance="'+o.id+'">📝 Registrar avance</button><button type="button" class="btn-sm" style="background:var(--verde-tenue);border:1.5px solid var(--verde-mid);color:var(--verde);" data-editar-orden="'+o.id+'">✏️ Editar</button><button type="button" class="btn-sm" style="background:var(--gris-1);color:var(--negro);" data-cambiar-op="'+o.id+'">🔄 Cambiar operario</button><button type="button" class="btn-sm btn-cancelar" data-cancelar-uno="'+o.id+'" data-nombre="'+(o.operario?o.operario.nombre:'').replace(/"/g,'&quot;')+'">✖️ Cancelar</button></div></div>';
+      var extraBtnTxt=o.es_hora_extra?'<button type="button" class="btn-sm" style="background:var(--tierra-tenue);border:1.5px solid var(--tierra);color:var(--tierra);font-weight:700;" data-corregirextra="'+o.operario_id+'|'+g.fecha+'|'+g.tipoLaborId+'">✏️ Corregir hora extra</button>':'';
+      return '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem;">'+(o.operario?o.operario.nombre:'')+'</strong><span style="font-size:.72rem;font-weight:700;">'+estBadge+'</span></div>'+(avanceTxt?'<div class="orden-meta">'+avanceTxt+'</div>':'')+'<div style="display:flex;gap:8px;margin-top:.5rem;flex-wrap:wrap;">'+extraBtnTxt+'<button type="button" class="btn-sm" style="background:var(--verde-tenue);border:1.5px solid var(--verde-mid);color:var(--verde);font-weight:700;" data-regavance="'+o.id+'">📝 Registrar avance</button><button type="button" class="btn-sm" style="background:var(--verde-tenue);border:1.5px solid var(--verde-mid);color:var(--verde);" data-editar-orden="'+o.id+'">✏️ Editar</button><button type="button" class="btn-sm" style="background:var(--gris-1);color:var(--negro);" data-cambiar-op="'+o.id+'">🔄 Cambiar operario</button><button type="button" class="btn-sm btn-cancelar" data-cancelar-uno="'+o.id+'" data-nombre="'+(o.operario?o.operario.nombre:'').replace(/"/g,'&quot;')+'">✖️ Cancelar</button></div></div>';
     }).join('');
     html+='<button type="button" class="btn-primary" id="gl-agregar" style="margin-top:.5rem;width:100%;">➕ Agregar a otro operario</button>';
     html+='<button type="button" id="gl-cancelar-todo" style="width:100%;margin-top:.75rem;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.85rem;cursor:pointer;">🚫 Cancelar toda esta labor</button>';
@@ -1170,6 +1179,12 @@ function pintarGestionLabor(){
 
     body.querySelectorAll('[data-regavance]').forEach(function(btn){
       btn.addEventListener('click',function(){renderAdminCompletar(this.dataset.regavance,pintarGestionLabor);});
+    });
+    body.querySelectorAll('[data-corregirextra]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var partes=this.dataset.corregirextra.split('|');
+        renderGestionHorasExtra(partes[0],partes[1],partes[2],pintarGestionLabor);
+      });
     });
     body.querySelectorAll('[data-editar-orden]').forEach(function(btn){
       btn.addEventListener('click',function(){renderEditarOrdenIndividual(this.dataset.editarOrden);});
@@ -3556,11 +3571,18 @@ function renderEditarModoAsignacion(formulaId){
     rows=rows||[];
     if(!rows.length){body.innerHTML='<div class="seccion-titulo">✏️ Gestionar operarios asignados</div><div class="empty">No hay asignaciones activas para esta fórmula.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderAplicacionesEstatus()">← Volver a Aplicaciones</button>';return;}
     var html='<div class="seccion-titulo">✏️ Gestionar operarios asignados</div>'+(rows.length>1?'<p class="hint" style="margin-bottom:.75rem;">Hay '+rows.length+' operarios en esta aplicación.</p>':'')+rows.map(function(o){
-      return '<div class="orden-card"><strong style="font-size:.9rem;">'+(o.operario?o.operario.nombre:'')+'</strong><div class="orden-meta">Actualmente: '+(o.es_hora_extra?'⏰ Hora Extra':'🧑‍🌾 Labores')+'</div><div style="display:flex;gap:8px;margin-top:.5rem;flex-wrap:wrap;"><button type="button" class="btn-sm" style="background:var(--verde-tenue);border:1.5px solid var(--verde-mid);color:var(--verde);font-weight:700;" data-regavance="'+o.id+'">📝 Registrar avance</button><button type="button" class="btn-sm btn-completar" data-toggle-modo="'+o.id+'" data-actual="'+(o.es_hora_extra?'1':'0')+'" data-op="'+o.operario_id+'" data-labor="'+o.tipo_labor_id+'" data-fecha="'+o.fecha_asignacion+'">Cambiar a '+(o.es_hora_extra?'🧑‍🌾 Labores':'⏰ Hora Extra')+'</button>'+(rows.length>1?'<button type="button" class="btn-sm btn-cancelar" data-quitar="'+o.id+'" data-nombre="'+(o.operario?o.operario.nombre:'').replace(/"/g,'&quot;')+'">🗑️ Quitar de esta aplicación</button>':'')+'</div></div>';
+      var extraBtnTxt=o.es_hora_extra?'<button type="button" class="btn-sm" style="background:var(--tierra-tenue);border:1.5px solid var(--tierra);color:var(--tierra);font-weight:700;" data-corregirextra="'+o.operario_id+'|'+o.fecha_asignacion+'|'+o.tipo_labor_id+'">✏️ Corregir hora extra</button>':'';
+      return '<div class="orden-card"><strong style="font-size:.9rem;">'+(o.operario?o.operario.nombre:'')+'</strong><div class="orden-meta">Actualmente: '+(o.es_hora_extra?'⏰ Hora Extra':'🧑‍🌾 Labores')+'</div><div style="display:flex;gap:8px;margin-top:.5rem;flex-wrap:wrap;">'+extraBtnTxt+'<button type="button" class="btn-sm" style="background:var(--verde-tenue);border:1.5px solid var(--verde-mid);color:var(--verde);font-weight:700;" data-regavance="'+o.id+'">📝 Registrar avance</button><button type="button" class="btn-sm btn-completar" data-toggle-modo="'+o.id+'" data-actual="'+(o.es_hora_extra?'1':'0')+'" data-op="'+o.operario_id+'" data-labor="'+o.tipo_labor_id+'" data-fecha="'+o.fecha_asignacion+'">Cambiar a '+(o.es_hora_extra?'🧑‍🌾 Labores':'⏰ Hora Extra')+'</button>'+(rows.length>1?'<button type="button" class="btn-sm btn-cancelar" data-quitar="'+o.id+'" data-nombre="'+(o.operario?o.operario.nombre:'').replace(/"/g,'&quot;')+'">🗑️ Quitar de esta aplicación</button>':'')+'</div></div>';
     }).join('');
     body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderAplicacionesEstatus()">← Volver a Aplicaciones</button>';
     body.querySelectorAll('[data-regavance]').forEach(function(btn){
       btn.addEventListener('click',function(){renderAdminCompletar(this.dataset.regavance,renderAplicacionesEstatus);});
+    });
+    body.querySelectorAll('[data-corregirextra]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var partes=this.dataset.corregirextra.split('|');
+        renderGestionHorasExtra(partes[0],partes[1],partes[2],function(){renderEditarModoAsignacion(formulaId);});
+      });
     });
     body.querySelectorAll('[data-toggle-modo]').forEach(function(btn){
       btn.addEventListener('click',function(){
@@ -4962,10 +4984,12 @@ function renderControlAsistencias(fecha){
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
-function renderGestionHorasExtra(){
+function renderGestionHorasExtra(focusOperarioId,focusFecha,focusTipoLaborId,volverFn){
+  GESTION_HORAS_EXTRA_VOLVER=volverFn||renderTablero;
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo">⏰ Gestionar Horas Extra</div><div class="loading">Cargando...</div>';
-  var lunes=inicioDeSemana(new Date());
+  var fechaBase=focusFecha?new Date(focusFecha+'T00:00:00'):new Date();
+  var lunes=inicioDeSemana(fechaBase);
   var domingo=new Date(lunes); domingo.setDate(lunes.getDate()+6);
   var semanaInicio=lunes.toISOString().slice(0,10), semanaFin=domingo.toISOString().slice(0,10);
   var numSemana=numeroSemanaISO(lunes);
@@ -4981,7 +5005,8 @@ function renderGestionHorasExtra(){
     var rango=(mesInicio===mesFin)
       ? ('del Lunes '+lunes.getDate()+' al Domingo '+domingo.getDate()+' de '+mesFin+' de '+domingo.getFullYear())
       : ('del Lunes '+lunes.getDate()+' de '+mesInicio+' al Domingo '+domingo.getDate()+' de '+mesFin+' de '+domingo.getFullYear());
-    var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">⏰ Gestionar Horas Extra<button type="button" onclick="renderTablero()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Tablero</button></div>';
+    var hayFoco=!!(focusOperarioId&&focusFecha&&focusTipoLaborId);
+    var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">⏰ Gestionar Horas Extra<button type="button" id="ghe-volver-arriba" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Volver</button></div>';
     html+='<p class="hint" style="margin-bottom:1rem;">Semana '+numSemana+' · '+rango+'. Aquí puedes corregir el colaborador, la actividad, las horas o la fecha (dentro de esta misma semana) de una hora extra ya asignada.</p>';
     if(!asignadas.length){
       html+='<div class="empty">No hay horas extra autorizadas esta semana.</div>';
@@ -4989,9 +5014,10 @@ function renderGestionHorasExtra(){
       html+=asignadas.map(function(h){
         var matches=ordenes.filter(function(o){return o.operario_id===h.operario_id&&o.fecha_asignacion===h.fecha&&o.tipo_labor_id===h.tipo_labor_id;});
         var tieneAplic=matches.some(function(o){return !!o.formula_id;});
+        var esFoco=hayFoco&&h.operario_id===focusOperarioId&&h.fecha===focusFecha&&h.tipo_labor_id===focusTipoLaborId;
         var opOpts=operariosSel.map(function(o){return '<option value="'+o.id+'"'+(o.id===h.operario_id?' selected':'')+'>'+o.nombre+'</option>';}).join('');
         var actOpts=actividadesSel.map(function(l){return '<option value="'+l.id+'"'+(l.id===h.tipo_labor_id?' selected':'')+'>'+l.nombre+'</option>';}).join('');
-        return '<div class="orden-card"><strong style="font-size:.87rem;">'+(h.operario?h.operario.nombre:'')+'</strong><div class="orden-meta">'+(h.tipo_labor?h.tipo_labor.nombre:'')+' · '+h.fecha+' · '+numFmt(h.horas_max||0)+' h'+(tieneAplic?' · 🧪 aplicación ligada':'')+'</div>'+
+        return '<div class="orden-card"'+(esFoco?' data-foco="1" style="box-shadow:0 0 0 3px var(--tierra);"':'')+'><strong style="font-size:.87rem;">'+(h.operario?h.operario.nombre:'')+'</strong><div class="orden-meta">'+(h.tipo_labor?h.tipo_labor.nombre:'')+' · '+h.fecha+' · '+numFmt(h.horas_max||0)+' h'+(tieneAplic?' · 🧪 aplicación ligada':'')+'</div>'+
           '<div style="display:flex;flex-direction:column;gap:.5rem;margin-top:.6rem;">'+
           '<div class="form-group" style="margin:0;"><label style="font-size:.72rem;">Colaborador</label><select class="ghe-op" style="width:100%;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);">'+opOpts+'</select></div>'+
           '<div class="form-group" style="margin:0;"><label style="font-size:.72rem;">Actividad</label><select class="ghe-act" style="width:100%;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);">'+actOpts+'</select></div>'+
@@ -5001,7 +5027,13 @@ function renderGestionHorasExtra(){
           '</div></div>';
       }).join('');
     }
-    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderTablero()">← Volver a Tablero</button>';
+    body.innerHTML=html+'<button class="btn-back" id="ghe-volver-abajo" style="margin-top:1rem;">← Volver</button>';
+    var btnVolverA=document.getElementById('ghe-volver-arriba');
+    if(btnVolverA) btnVolverA.addEventListener('click',function(){(GESTION_HORAS_EXTRA_VOLVER||renderTablero)();});
+    var btnVolverB=document.getElementById('ghe-volver-abajo');
+    if(btnVolverB) btnVolverB.addEventListener('click',function(){(GESTION_HORAS_EXTRA_VOLVER||renderTablero)();});
+    var elFoco=body.querySelector('[data-foco="1"]');
+    if(elFoco) elFoco.scrollIntoView({behavior:'smooth',block:'center'});
     body.querySelectorAll('.ghe-guardar').forEach(function(btn){
       btn.addEventListener('click',function(){
         var heid=this.dataset.heid;
@@ -5029,7 +5061,7 @@ function renderGestionHorasExtra(){
           return from('notificaciones').insert({titulo:'⏰ Hora extra actualizada',cuerpo:usuario.nombre+' actualizó tu hora extra — ahora es el '+nuevaFecha+' ('+numFmt(nuevasHoras)+' h)',icono:'⏰',leida:false,para_rol:'operario',para_usuario:nuevoOp});
         }).then(function(){
           showToast('✅ Hora extra actualizada');
-          renderGestionHorasExtra();
+          renderGestionHorasExtra(nuevoOp,nuevaFecha,nuevoAct,GESTION_HORAS_EXTRA_VOLVER);
         }).catch(function(e){alert('Error: '+e.message);btnEl.disabled=false;btnEl.textContent='💾 Guardar cambios';});
       });
     });
