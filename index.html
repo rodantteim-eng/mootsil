@@ -657,9 +657,10 @@ function renderTablero(){
     from('permisos').select('id').eq('estado','pendiente').get(),
     from('solicitudes_labor').select('id').eq('estado','pendiente').get(),
     from('solicitudes_operario').select('id').eq('estado','pendiente').get(),
-    from('activos_rancho').select('id,nombre,fecha_ultimo_mantenimiento,frecuencia_mantenimiento_dias').eq('activo',true).not('frecuencia_mantenimiento_dias','is','null').get()
+    from('activos_rancho').select('id,nombre,fecha_ultimo_mantenimiento,frecuencia_mantenimiento_dias').eq('activo',true).not('frecuencia_mantenimiento_dias','is','null').get(),
+    riegoSemanalConteoFaltantes()
   ]).then(function(r){
-    var todas=(r[0]||[]).concat(r[1]||[]), formulas=r[2]||[], ordenesConFormula=(r[3]||[]).filter(function(o){return o.estado!=='cancelada';}), permisosPendientes=r[4]||[], solicitudesPendientes=r[5]||[], solicitudesOpPendientes=r[6]||[], activosParaMant=r[7]||[];
+    var todas=(r[0]||[]).concat(r[1]||[]), formulas=r[2]||[], ordenesConFormula=(r[3]||[]).filter(function(o){return o.estado!=='cancelada';}), permisosPendientes=r[4]||[], solicitudesPendientes=r[5]||[], solicitudesOpPendientes=r[6]||[], activosParaMant=r[7]||[], riegoFaltantes=r[8]||0;
     var hoyMant=fechaHoyLocal();
     var activosVencidos=activosParaMant.filter(function(a){
       if(!a.fecha_ultimo_mantenimiento) return true;
@@ -686,6 +687,9 @@ function renderTablero(){
     }
     if(pendientesFormula.length){
       avisoHtml+='<div style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);border-radius:var(--radio-sm);padding:.85rem;margin-bottom:1rem;cursor:pointer;" id="aviso-aplic-pendientes"><strong style="color:var(--rojo);">🧪 '+pendientesFormula.length+' aplicación(es) programada(s)'+(hoyN?' — '+hoyN+' para HOY':' esta semana')+' sin asignar</strong><div class="hint" style="margin-top:.25rem;">Toca para ir a asignarlas</div></div>';
+    }
+    if(riegoFaltantes){
+      avisoHtml+='<div style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);border-radius:var(--radio-sm);padding:.85rem;margin-bottom:1rem;cursor:pointer;" id="aviso-riego-semanal"><strong style="color:var(--rojo);">🚿 '+riegoFaltantes+' tabla(s) sin aplicación de riego programada esta semana</strong><div class="hint" style="margin-top:.25rem;">Toca para ver cuáles y programarlas (o marcarlas como no requeridas)</div></div>';
     }
     var pend=todas.filter(function(o){return o.estado==='pendiente';}).length;
     var enP=todas.filter(function(o){return o.estado==='en_proceso';}).length;
@@ -741,6 +745,8 @@ function renderTablero(){
       aplicReset();
       renderAsigAplicPorFecha();
     });
+    var avisoRiegoEl=document.getElementById('aviso-riego-semanal');
+    if(avisoRiegoEl) avisoRiegoEl.addEventListener('click',function(){renderRiegoSemanal();});
     var ordenesPorIdTablero={}; todas.forEach(function(o){ordenesPorIdTablero[o.id]=o;});
     body.querySelectorAll('[data-regavance]').forEach(function(b){b.addEventListener('click',function(){renderAdminCompletar(this.dataset.regavance);});});
     body.querySelectorAll('[data-can]').forEach(function(b){b.addEventListener('click',function(){cambiarEstado(this.dataset.can,'cancelada');});});
@@ -2450,7 +2456,7 @@ var formulaPlantacionId=null, formulaTablaId=null;
 
 function headerAplicaciones(pendientesValidar){
   var badge=pendientesValidar?(' ('+pendientesValidar+')'):'';
-  return '<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4rem;">🧪 Aplicaciones<div style="display:flex;flex-wrap:wrap;gap:.6rem;"><button type="button" onclick="renderFormulaForm()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">➕ Nueva</button><button type="button" onclick="renderCatalogoFormulas()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">📚 Catálogo</button><button type="button" onclick="renderValidar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">✅ Validar'+badge+'</button></div></div>';
+  return '<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4rem;">🧪 Aplicaciones<div style="display:flex;flex-wrap:wrap;gap:.6rem;"><button type="button" onclick="renderFormulaForm()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">➕ Nueva</button><button type="button" onclick="renderCatalogoFormulas()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">📚 Catálogo</button><button type="button" onclick="renderRiegoSemanal()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">🚿 Riego Semanal</button><button type="button" onclick="renderValidar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">✅ Validar'+badge+'</button></div></div>';
 }
 
 function headerLabores(){
@@ -2721,6 +2727,140 @@ function renderAplicacionesEstatus(){
       });
     });
     body.querySelectorAll('[data-fid]').forEach(function(el){el.addEventListener('click',function(){renderFormulaForm(this.dataset.fid);});});
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function riegoSemanalConteoFaltantes(){
+  var lunes=inicioDeSemana(new Date());
+  var domingo=new Date(lunes); domingo.setDate(lunes.getDate()+6);
+  var semanaInicio=lunes.toISOString().slice(0,10), semanaFin=domingo.toISOString().slice(0,10);
+  return Promise.all([
+    from('formulas_aplicacion').select('id,tabla_id').eq('via','Riego').eq('activo',true).eq('es_plantilla',false).gte('fecha_programada',semanaInicio).lte('fecha_programada',semanaFin).get(),
+    from('riego_semanal_excepciones').select('tabla_id').eq('semana_inicio',semanaInicio).get()
+  ]).then(function(r){
+    var tablasConFormula={}; (r[0]||[]).forEach(function(f){tablasConFormula[f.tabla_id]=true;});
+    var tablasConExcepcion={}; (r[1]||[]).forEach(function(e){tablasConExcepcion[e.tabla_id]=true;});
+    var faltantes=(cats.tablas||[]).filter(function(t){return !tablasConFormula[t.id]&&!tablasConExcepcion[t.id];});
+    return faltantes.length;
+  }).catch(function(){return 0;});
+}
+
+function renderRiegoSemanal(semanaInicioStr){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo">🚿 Riego Semanal</div><div class="loading">Cargando...</div>';
+  var lunes=semanaInicioStr?new Date(semanaInicioStr+'T00:00:00'):inicioDeSemana(new Date());
+  var domingo=new Date(lunes); domingo.setDate(lunes.getDate()+6);
+  semanaInicioStr=lunes.toISOString().slice(0,10);
+  var semanaFin=domingo.toISOString().slice(0,10);
+  var numSemana=numeroSemanaISO(lunes);
+  Promise.all([
+    from('formulas_aplicacion').select('id,tabla_id,fecha_programada').eq('via','Riego').eq('activo',true).eq('es_plantilla',false).gte('fecha_programada',semanaInicioStr).lte('fecha_programada',semanaFin).get(),
+    from('riego_semanal_excepciones').select('*').eq('semana_inicio',semanaInicioStr).get(),
+    from('ordenes_trabajo').select('id,formula_id,estado').not('formula_id','is','null').get()
+  ]).then(function(r){
+    var formulas=r[0]||[], excepciones=r[1]||[], ordenes=(r[2]||[]).filter(function(o){return o.estado!=='cancelada';});
+    var excepPorTabla={}; excepciones.forEach(function(e){excepPorTabla[e.tabla_id]=e;});
+    var ordenesPorFormula={};
+    ordenes.forEach(function(o){ if(!ordenesPorFormula[o.formula_id]) ordenesPorFormula[o.formula_id]=[]; ordenesPorFormula[o.formula_id].push(o); });
+    var formulasPorTabla={};
+    formulas.forEach(function(f){ if(!formulasPorTabla[f.tabla_id]) formulasPorTabla[f.tabla_id]=[]; formulasPorTabla[f.tabla_id].push(f); });
+
+    var tablasTodas=(cats.tablas||[]).slice().sort(function(a,b){
+      var pa=cats.plantaciones.find(function(x){return x.id===a.plantacion_id;});
+      var pb=cats.plantaciones.find(function(x){return x.id===b.plantacion_id;});
+      var na=(pa?pa.nombre:'')+' '+a.nombre, nb=(pb?pb.nombre:'')+' '+b.nombre;
+      return na.localeCompare(nb);
+    });
+
+    var filas=tablasTodas.map(function(t){
+      var p=cats.plantaciones.find(function(x){return x.id===t.plantacion_id;});
+      var fs=formulasPorTabla[t.id]||[];
+      var excep=excepPorTabla[t.id];
+      var estado, colorBorde, txt;
+      if(fs.length){
+        var completadaAlguna=fs.some(function(f){return (ordenesPorFormula[f.id]||[]).some(function(o){return o.estado==='completada';});});
+        var asignadaAlguna=fs.some(function(f){return (ordenesPorFormula[f.id]||[]).length>0;});
+        if(completadaAlguna){estado='aplicada';colorBorde='var(--verde-mid)';txt='✅ Aplicada esta semana';}
+        else if(asignadaAlguna){estado='asignada';colorBorde='var(--tierra)';txt='🔶 Asignada, en curso';}
+        else {estado='programada';colorBorde='var(--tierra)';txt='🔵 Programada, falta asignar';}
+      } else if(excep){
+        estado='excepcion';colorBorde='var(--gris-3)';txt='⏸️ No requiere esta semana'+(excep.motivo?(' — '+excep.motivo):'');
+      } else {
+        estado='sin_programar';colorBorde='var(--rojo)';txt='⚠️ Sin programar esta semana';
+      }
+      return {tabla:t,plantacion:p,estado:estado,colorBorde:colorBorde,txt:txt,excep:excep};
+    });
+
+    var faltantes=filas.filter(function(f){return f.estado==='sin_programar';}).length;
+
+    var mesInicio=lunes.toLocaleDateString('es-MX',{month:'long'});
+    var mesFin=domingo.toLocaleDateString('es-MX',{month:'long'});
+    var rango=(mesInicio===mesFin)
+      ? ('del Lunes '+lunes.getDate()+' al Domingo '+domingo.getDate()+' de '+mesFin+' de '+domingo.getFullYear())
+      : ('del Lunes '+lunes.getDate()+' de '+mesInicio+' al Domingo '+domingo.getDate()+' de '+mesFin+' de '+domingo.getFullYear());
+
+    var semAnt=new Date(lunes); semAnt.setDate(semAnt.getDate()-7);
+    var semSig=new Date(lunes); semSig.setDate(semSig.getDate()+7);
+    var semAntStr=semAnt.toISOString().slice(0,10), semSigStr=semSig.toISOString().slice(0,10);
+
+    var navHtml='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;gap:8px;"><button type="button" id="rs-sem-ant" style="border:none;background:var(--gris-1);border-radius:20px;padding:.4rem .9rem;font-size:.78rem;cursor:pointer;">← Semana anterior</button><button type="button" id="rs-sem-sig" style="border:none;background:var(--gris-1);border-radius:20px;padding:.4rem .9rem;font-size:.78rem;cursor:pointer;">Semana siguiente →</button></div>';
+
+    var resumenHtml=faltantes
+      ? '<div style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);border-radius:var(--radio-sm);padding:.85rem;margin-bottom:1rem;"><strong style="color:var(--rojo);">⚠️ '+faltantes+' tabla(s) sin programar esta semana</strong></div>'
+      : '<div style="background:var(--verde-tenue);border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);padding:.85rem;margin-bottom:1rem;"><strong style="color:var(--verde-mid);">✅ Todas las tablas están cubiertas esta semana</strong></div>';
+
+    var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🚿 Riego Semanal<button type="button" onclick="renderAplicacionesEstatus()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Aplicaciones</button></div>'+navHtml+'<p class="hint" style="margin-bottom:.75rem;font-weight:700;color:var(--verde);">Semana '+numSemana+'<br><span style="font-weight:400;color:var(--gris-3);">'+rango+'</span></p>'+resumenHtml;
+
+    html+=filas.map(function(f){
+      var acciones='';
+      if(f.estado==='sin_programar'){
+        acciones='<button type="button" class="btn-sm btn-completar" data-programar="'+f.tabla.id+'">➕ Programar aplicación</button> <button type="button" class="btn-sm" style="background:var(--gris-1);" data-excepcion="'+f.tabla.id+'">🚫 No requiere esta semana</button>';
+      } else if(f.estado==='excepcion'){
+        acciones='<button type="button" class="btn-sm" style="background:var(--gris-1);" data-quitar-excepcion="'+f.excep.id+'">↩️ Sí requiere esta semana</button>';
+      }
+      return '<div class="orden-card" style="border-left-color:'+f.colorBorde+';"><strong style="font-size:.9rem;">'+(f.plantacion?f.plantacion.nombre:'')+' · '+f.tabla.nombre+'</strong><div class="orden-meta" style="color:'+f.colorBorde+';font-weight:600;">'+f.txt+'</div>'+(acciones?'<div style="margin-top:.5rem;display:flex;gap:8px;flex-wrap:wrap;">'+acciones+'</div>':'')+'</div>';
+    }).join('');
+
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderAplicacionesEstatus()">← Volver a Aplicaciones</button>';
+
+    var btnAnt=document.getElementById('rs-sem-ant');
+    if(btnAnt) btnAnt.addEventListener('click',function(){renderRiegoSemanal(semAntStr);});
+    var btnSig=document.getElementById('rs-sem-sig');
+    if(btnSig) btnSig.addEventListener('click',function(){renderRiegoSemanal(semSigStr);});
+
+    body.querySelectorAll('[data-excepcion]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var tid=this.dataset.excepcion;
+        var motivo=prompt('¿Por qué no requiere aplicación esta semana? (opcional)','');
+        if(motivo===null) return;
+        from('riego_semanal_excepciones').insert({tabla_id:tid,semana_inicio:semanaInicioStr,motivo:motivo||null,creado_por:usuario.id}).then(function(){
+          showToast('✅ Marcada como no requerida esta semana');
+          renderRiegoSemanal(semanaInicioStr);
+        }).catch(function(e){alert('Error: '+e.message);});
+      });
+    });
+    body.querySelectorAll('[data-quitar-excepcion]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var eid=this.dataset.quitarExcepcion;
+        from('riego_semanal_excepciones').eq('id',eid).delete().then(function(){
+          showToast('✅ Actualizado');
+          renderRiegoSemanal(semanaInicioStr);
+        }).catch(function(e){alert('Error: '+e.message);});
+      });
+    });
+    body.querySelectorAll('[data-programar]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var tid=this.dataset.programar;
+        var t=cats.tablas.find(function(x){return x.id===tid;});
+        formulaEditId=null; formulaVolverAResumen=false;
+        formulaVia=null; formulaCategoria=null; formulaCategoriasCombinadas=[]; formulaEsPlantilla=false; formulaBombas=[]; formulaCompRows=[]; formulaCompSeq=0;
+        window._formulaCreadorExistente=null; window._formulaDuracionSurcos=null;
+        window._formulaNombreExistente=''; window._formulaNotasExistente=''; window._formulaFechaExistente='';
+        formulaModoCatalogoDirecto=false; formulaEditandoCatalogo=false;
+        formulaTablaId=tid; formulaPlantacionId=t?t.plantacion_id:null;
+        renderFormulaPasoVia();
+      });
+    });
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
