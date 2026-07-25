@@ -1364,7 +1364,7 @@ function renderFormAsignar(){
   var tiles=cats.tiposLabor.filter(function(l){return !l.es_cosecha&&!l.requiere_formula&&l.nombre!=='Mantenimiento de herramienta';}).map(function(l){
     return '<div class="labor-tile" data-id="'+l.id+'" data-nombre="'+l.nombre+'"><div class="labor-tile-ic">'+(ICONOS[l.nombre]||'🔧')+'</div><div class="labor-tile-lbl">'+l.nombre+'</div></div>';
   }).join('');
-  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🧰 Selecciona la labor<button type="button" onclick="renderAsignarEstatus()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Labores</button></div><div style="display:flex;gap:8px;margin-bottom:1rem;"><button type="button" class="op-chip sel" id="modo-normal" data-modo="normal">🕐 Normal</button><button type="button" class="op-chip" id="modo-extra" data-modo="extra">⏰ Hora Extra</button></div><div class="form-group" id="labor-horas-wrap" style="display:none;"><label>¿Cuántas horas autorizas?</label><input type="number" id="labor-horas-input" min="0.5" step="0.5" value="2"><p class="hint">Se le pagará por este número de horas, aunque tarde más en escanear su salida.</p></div><div class="labor-grid">'+tiles+'<div class="labor-tile labor-tile-otra" id="labor-otra-tile"><div class="labor-tile-ic">➕</div><div class="labor-tile-lbl">Otra</div></div></div><div id="labor-otra-box" style="display:none;margin-top:.75rem;" class="form-card"><label style="display:block;font-size:.75rem;font-weight:600;color:var(--gris-3);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">Nombre de la labor</label><input type="text" id="labor-otra-input" placeholder="Ej. Fertirriego" style="width:100%;padding:.65rem .75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;background:var(--gris-1);margin-bottom:.6rem;"><label style="display:flex;align-items:center;gap:.5rem;padding:.5rem 0;cursor:pointer;font-size:.85rem;"><input type="checkbox" id="labor-otra-tabla" checked style="width:20px;height:20px;flex-shrink:0;"><span>Esta labor se hace en una plantación/tabla específica</span></label><p class="hint" style="margin-bottom:.6rem;">Desmarca esta casilla para actividades generales que no están ligadas a ninguna tabla (ej. acarreo de material, mandados, etc.)</p><button class="btn-primary" id="labor-otra-btn">Usar esta labor</button></div>';
+  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🧰 Selecciona la labor<button type="button" onclick="renderAsignarEstatus()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Labores</button></div><div style="display:flex;gap:8px;margin-bottom:1rem;"><button type="button" class="op-chip sel" id="modo-normal" data-modo="normal">🕐 Normal</button><button type="button" class="op-chip" id="modo-extra" data-modo="extra">⏰ Hora Extra</button></div><div class="form-group" id="labor-horas-wrap" style="display:none;"><label>¿Cuántas horas autorizas?</label><input type="number" id="labor-horas-input" min="0.5" step="0.5" value="2"><p class="hint">Se le pagará por este número de horas, aunque tarde más en escanear su salida.</p></div><div class="labor-grid">'+tiles+'<div class="labor-tile labor-tile-otra" id="labor-otra-tile"><div class="labor-tile-ic">➕</div><div class="labor-tile-lbl">Otra</div></div></div><div id="labor-otra-box" style="display:none;margin-top:.75rem;" class="form-card"><label style="display:block;font-size:.75rem;font-weight:600;color:var(--gris-3);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">Nombre de la labor</label><input type="text" id="labor-otra-input" placeholder="Ej. Fertirriego" style="width:100%;padding:.65rem .75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;background:var(--gris-1);margin-bottom:.6rem;"><label style="display:flex;align-items:center;gap:.5rem;padding:.5rem 0;cursor:pointer;font-size:.85rem;"><input type="checkbox" id="labor-otra-tabla" checked style="width:20px;height:20px;flex-shrink:0;"><span>Esta labor se hace en una plantación/tabla específica</span></label><p class="hint" style="margin-bottom:.6rem;">Desmarca esta casilla para actividades generales que no están ligadas a ninguna tabla (ej. acarreo de material, mandados, etc.)</p><label style="display:flex;align-items:center;gap:.5rem;padding:.5rem 0;cursor:pointer;font-size:.85rem;"><input type="checkbox" id="labor-otra-catalogo" style="width:20px;height:20px;flex-shrink:0;"><span>📌 Agregar esta labor al catálogo (aparecerá como botón para la próxima vez)</span></label><p class="hint" style="margin-bottom:.6rem;">Si no la marcas, se usa solo por esta vez y seguirás capturando su nombre aquí cada vez que la necesites — útil para actividades muy específicas que no se repiten.</p><button class="btn-primary" id="labor-otra-btn">Usar esta labor</button></div>';
   document.getElementById('modo-normal').addEventListener('click',function(){modoAsignacionLabor='normal';this.classList.add('sel');document.getElementById('modo-extra').classList.remove('sel');document.getElementById('labor-horas-wrap').style.display='none';});
   document.getElementById('modo-extra').addEventListener('click',function(){modoAsignacionLabor='extra';this.classList.add('sel');document.getElementById('modo-normal').classList.remove('sel');document.getElementById('labor-horas-wrap').style.display='';});
   document.getElementById('labor-horas-input').addEventListener('input',function(){horasExtraAutorizadas=parseFloat(this.value)||2;});
@@ -1394,38 +1394,65 @@ function renderFormAsignar(){
     box.style.display=box.style.display==='none'?'':'none';
     if(box.style.display!=='none') document.getElementById('labor-otra-input').focus();
   });
+  document.getElementById('labor-otra-input').addEventListener('blur',function(){
+    var nombre=(this.value||'').trim();
+    if(!nombre) return;
+    var chkTabla=document.getElementById('labor-otra-tabla');
+    var chkCat=document.getElementById('labor-otra-catalogo');
+    var enCat=cats.tiposLabor.find(function(l){return l.nombre.toLowerCase()===nombre.toLowerCase();});
+    if(enCat){ chkTabla.checked=enCat.requiere_tabla!==false; chkCat.checked=!!enCat.activo; return; }
+    from('tipos_labor').select('requiere_tabla,activo').eq('nombre',nombre).get().then(function(rows){
+      if(rows&&rows[0]){ chkTabla.checked=rows[0].requiere_tabla!==false; chkCat.checked=!!rows[0].activo; }
+    }).catch(function(){});
+  });
   document.getElementById('labor-otra-btn').addEventListener('click',function(){
     var nombre=(document.getElementById('labor-otra-input').value||'').trim();
     if(!nombre){alert('Escribe el nombre de la labor.');return;}
-    var existente=cats.tiposLabor.find(function(l){return l.nombre.toLowerCase()===nombre.toLowerCase();});
-    if(existente){
-      asignarLaborSel=existente;
+    var requiereTablaNueva=!!document.getElementById('labor-otra-tabla').checked;
+    var enCatalogoNueva=!!document.getElementById('labor-otra-catalogo').checked;
+    function continuarCon(lb){
+      asignarLaborSel=lb;
       asignarLaborSubSel=null;
-      if(existente.requiere_tiempo){
-        var subsTiempo2=cats.subtiposLabor.filter(function(s){return s.tipo_labor_id===existente.id;});
+      if(lb.requiere_tiempo){
+        var subsTiempo2=cats.subtiposLabor.filter(function(s){return s.tipo_labor_id===lb.id;});
         if(subsTiempo2.length){ renderAsigRiegoSubtipos(subsTiempo2); }
         else { riegoAsigMinutos={};riegoAsigOperarios=[];riegoAsigFecha=fechaHoyLocal();renderAsigRiegoPlantaciones(); }
         return;
       }
       renderFormAsignarPaso2();
+    }
+    function usarExistente(lb){
+      // Si cambió "requiere tabla" o si ahora se quiere (des)agregar al catálogo, actualiza el registro
+      // guardado — así se puede corregir después sin tener que borrar y recrear la labor.
+      var cambios={};
+      if(!!lb.requiere_tabla!==requiereTablaNueva) cambios.requiere_tabla=requiereTablaNueva;
+      if(!!lb.activo!==enCatalogoNueva) cambios.activo=enCatalogoNueva;
+      if(Object.keys(cambios).length){
+        return from('tipos_labor').eq('id',lb.id).update(cambios).then(function(){
+          Object.keys(cambios).forEach(function(k){ lb[k]=cambios[k]; });
+          if(enCatalogoNueva&&cats.tiposLabor.indexOf(lb)===-1) cats.tiposLabor.push(lb);
+          if(!enCatalogoNueva) cats.tiposLabor=cats.tiposLabor.filter(function(x){return x.id!==lb.id;});
+          continuarCon(lb);
+        });
+      }
+      continuarCon(lb);
+      return Promise.resolve();
+    }
+    var existente=cats.tiposLabor.find(function(l){return l.nombre.toLowerCase()===nombre.toLowerCase();});
+    if(existente){
+      usarExistente(existente).catch(function(e){alert('Error: '+e.message);});
       return;
     }
-    var requiereTablaNueva=!!document.getElementById('labor-otra-tabla').checked;
     from('tipos_labor').select('*').eq('nombre',nombre).get().then(function(rowsPrevios){
       if(rowsPrevios&&rowsPrevios[0]){
-        var lbPrevio=rowsPrevios[0];
-        asignarLaborSubSel=null;
-        asignarLaborSel=lbPrevio;
-        renderFormAsignarPaso2();
-        return;
+        return usarExistente(rowsPrevios[0]);
       }
-      return from('tipos_labor').insert({nombre:nombre,requiere_cantidad_insumo:false,requiere_tiempo:false,requiere_tabla:requiereTablaNueva,activo:false,orden:100}).then(function(){
+      return from('tipos_labor').insert({nombre:nombre,requiere_cantidad_insumo:false,requiere_tiempo:false,requiere_tabla:requiereTablaNueva,activo:enCatalogoNueva,orden:100}).then(function(){
         return from('tipos_labor').select('*').eq('nombre',nombre).get();
       }).then(function(rows){
-        var lb=rows&&rows[0]?rows[0]:{id:null,nombre:nombre,requiere_cantidad_insumo:false,requiere_tiempo:false,requiere_tabla:requiereTablaNueva};
-        asignarLaborSubSel=null;
-        asignarLaborSel=lb;
-        renderFormAsignarPaso2();
+        var lb=rows&&rows[0]?rows[0]:{id:null,nombre:nombre,requiere_cantidad_insumo:false,requiere_tiempo:false,requiere_tabla:requiereTablaNueva,activo:enCatalogoNueva};
+        if(enCatalogoNueva) cats.tiposLabor.push(lb);
+        continuarCon(lb);
       });
     }).catch(function(e){alert('Error: '+e.message);});
   });
