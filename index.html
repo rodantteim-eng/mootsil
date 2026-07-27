@@ -3619,7 +3619,10 @@ function guardarFormula(){
   }
   var comps=formulaCompRows.filter(function(r){return r.item_id&&r.cantidad>0;});
   var btn=document.getElementById('fm-guardar'); btn.disabled=true; btn.textContent='Guardando...';
-  var payload={nombre:nombre,via:formulaVia,categoria:formulaCategoria,categoria_catalogo:catCatalogo,categorias_combinadas:formulaCategoria==='Combinada'?formulaCategoriasCombinadas:null,es_plantilla:esPlantilla,bombas_compatibles:formulaBombas,duracion_o_surcos:window._formulaDuracionSurcos||null,tabla_id:formulaTablaId,fecha_programada:window._formulaFechaExistente||null,volumen_base_litros:200,notas:notas,creado_por:usuario.id,activo:true};
+  var payload={nombre:nombre,via:formulaVia,categoria:formulaCategoria,categoria_catalogo:catCatalogo,categorias_combinadas:formulaCategoria==='Combinada'?formulaCategoriasCombinadas:null,es_plantilla:esPlantilla,bombas_compatibles:formulaBombas,duracion_o_surcos:window._formulaDuracionSurcos||null,tabla_id:formulaTablaId,fecha_programada:window._formulaFechaExistente||null,volumen_base_litros:200,notas:notas,activo:true};
+  // "creado_por" solo se define al CREAR la fórmula — al editar (nombre, notas, componentes, etc.)
+  // no debe cambiar de dueño el crédito de quién la formuló originalmente.
+  if(!formulaEditId) payload.creado_por=usuario.id;
   var guardar=formulaEditId?from('formulas_aplicacion').eq('id',formulaEditId).update(payload):from('formulas_aplicacion').insert(payload);
   guardar.then(function(resp){
     var fid=formulaEditId||(resp&&resp[0]&&resp[0].id);
