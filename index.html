@@ -2328,8 +2328,10 @@ function renderInventarioItem(itemId){
   document.getElementById('inv-mov-cantidad').addEventListener('input',calcularEquivalencia);
   document.getElementById('inv-mov-guardar').addEventListener('click',function(){
     var tipo=tipoMov;
-    var cantInput=parseFloat(document.getElementById('inv-mov-cantidad').value)||0;
-    if(cantInput<=0){alert('Captura una cantidad mayor a 0.');return;}
+    var cantInputRaw=document.getElementById('inv-mov-cantidad').value;
+    var cantInput=parseFloat(cantInputRaw);
+    if(isNaN(cantInput)||cantInput<0){alert('Captura una cantidad válida (puede ser 0 si el ajuste es para dejar el conteo en cero).');return;}
+    if(tipo!=='ajuste'&&cantInput<=0){alert('Captura una cantidad mayor a 0.');return;}
     var factorUsado=modoCaptura==='paquete'?tamanoPaqueteActual():1;
     var cant=modoCaptura==='paquete'?cantInput*factorUsado:cantInput;
     var motivoBase=document.getElementById('inv-mov-motivo').value||null;
