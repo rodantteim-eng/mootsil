@@ -40,10 +40,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .tab.active{color:var(--blanco);border-bottom-color:var(--blanco);}
 .app-body{background:var(--gris-1);flex:1;overflow-y:auto;padding:1rem;}
 .op-master-header{background:var(--verde);flex-shrink:0;}
-.op-header-top{display:flex;align-items:flex-start;justify-content:space-between;padding:1.35rem 1.2rem .95rem;gap:.7rem;}
-.op-header-id h1{color:var(--blanco);font-size:1.12rem;font-weight:700;white-space:nowrap;}
-.op-header-sub{font-size:.9rem;font-weight:600;margin-top:.25rem;}
+.op-header-top{display:flex;align-items:flex-start;justify-content:space-between;padding:1.35rem 1.2rem .95rem;gap:.6rem;}
+.op-header-id{flex:1;min-width:0;}
+.op-header-id h1{color:var(--blanco);font-size:1.08rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.op-header-sub{font-size:.85rem;font-weight:600;margin-top:.22rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .op-header-actions{display:flex;align-items:center;gap:.85rem;flex-shrink:0;}
+@media (max-width:400px){
+  .op-header-top{padding:1.2rem 1rem .85rem;gap:.45rem;}
+  .op-header-id h1{font-size:.98rem;}
+  .op-header-sub{font-size:.74rem;}
+  .op-header-actions{gap:.6rem;}
+}
 .op-btn-reportar{display:flex;flex-direction:column;align-items:center;gap:.2rem;background:none;border:none;color:var(--blanco);cursor:pointer;font-family:inherit;}
 .op-btn-reportar-ic{width:44px;height:44px;border-radius:50%;background:var(--rojo);display:flex;align-items:center;justify-content:center;}
 .op-btn-reportar-ic svg{width:22px;height:22px;}
@@ -63,6 +70,40 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .op-nav-item .op-nav-ic{font-size:1.15rem;}
 .op-nav-item .op-nav-lbl{font-size:.62rem;font-weight:600;}
 .op-nav-item.active{color:var(--blanco);}
+.op-inicio{display:flex;flex-direction:column;gap:1rem;padding:1rem;}
+.op-inicio-card{background:var(--blanco);border-radius:var(--radio);padding:1rem;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.op-inicio-titulo{font-weight:700;font-size:.95rem;color:var(--verde-oscuro,#1a3a2a);margin-bottom:.6rem;}
+.op-inicio-bienvenida{padding:0;overflow:hidden;background:linear-gradient(180deg,var(--verde-mid,#2d6644) 0%,var(--verde,#1a3a2a) 100%);color:#fff;}
+.op-inicio-bienvenida-escena{position:relative;min-height:96px;display:flex;align-items:flex-end;justify-content:center;padding-top:.9rem;background:linear-gradient(180deg,rgba(255,255,255,.10) 0%,rgba(255,255,255,0) 65%);}
+.op-inicio-bienvenida-mootsilito-wrap{width:84px;height:84px;border-radius:50%;background:rgba(255,255,255,.16);border:3px solid rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;}
+.op-inicio-avatar{width:100%;height:100%;object-fit:cover;}
+.op-inicio-avatar-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:2.1rem;}
+.op-inicio-bienvenida-texto{text-align:center;padding:.85rem 1.1rem 1.1rem;}
+.op-inicio-saludo{font-weight:800;font-size:1.05rem;}
+.op-inicio-frase{font-size:.8rem;opacity:.92;margin-top:.2rem;}
+.op-jornada-fila{display:flex;justify-content:space-between;align-items:center;padding:.35rem 0;border-bottom:1px solid var(--gris-1);font-size:.85rem;}
+.op-jornada-fila:last-of-type{border-bottom:none;}
+.op-jornada-vacio{font-size:.85rem;color:var(--gris-3);padding:.4rem 0;}
+.op-btn-iniciar-labor{width:100%;margin-top:.75rem;}
+.op-accesos-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.6rem;}
+.op-acceso-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.3rem;background:var(--gris-fondo,#f4f6f4);border:none;border-radius:calc(var(--radio) - 4px);padding:.75rem .4rem;font-size:.75rem;font-weight:600;color:var(--texto,#222);cursor:pointer;font-family:inherit;}
+.op-acceso-ic{font-size:1.3rem;}
+.op-proxima-fila{display:flex;align-items:center;gap:.6rem;padding:.5rem 0;border-bottom:1px solid var(--gris-1);}
+.op-proxima-fila:last-child{border-bottom:none;}
+.op-proxima-ic{font-size:1.2rem;flex-shrink:0;}
+.op-proxima-info{flex:1;min-width:0;}
+.op-proxima-titulo{font-size:.82rem;font-weight:600;color:var(--texto,#222);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.op-proxima-meta{font-size:.72rem;color:var(--gris-3);}
+.op-proxima-badge{font-size:.62rem;font-weight:700;padding:.2rem .45rem;border-radius:10px;white-space:nowrap;flex-shrink:0;}
+.op-proxima-badge-extra{background:#fdecea;color:#c0392b;}
+.op-proxima-badge-prog{background:#eaf3ec;color:#2d6a4f;}
+@media (min-width:768px){
+  .op-inicio{display:grid;grid-template-columns:1fr 1fr;gap:1rem;padding:1.1rem;}
+  .op-inicio-bienvenida,.op-inicio-accesos{grid-column:1/-1;}
+}
+@media (min-width:1100px){
+  .op-inicio{max-width:1150px;margin:0 auto;grid-template-columns:1fr 1.3fr;gap:1.5rem;padding:1.5rem;}
+}
 .orden-card{background:var(--blanco);border-radius:var(--radio);padding:1rem;margin-bottom:.75rem;border-left:4px solid var(--gris-2);}
 .orden-card.pendiente{border-left-color:var(--amarillo);}
 .orden-card.en_proceso{border-left-color:var(--verde-claro);}
@@ -384,6 +425,10 @@ function from(table) {
 }
 
 var pin='', usuario=null;
+// Fallback único y provisional del Mootsilito — compartido por Header, Inicio y (más adelante) Perfil.
+// Se reemplazará por el Catálogo Oficial de Mootsilitos cuando esté disponible; mientras tanto no debe
+// haber más de un emoji de respaldo distinto en la app.
+var MOOTSILITO_FALLBACK_IC='🧑‍🌾';
 var cats={plantaciones:[],tablas:[],tiposLabor:[],subtiposLabor:[],operarios:[],inventario:[],cosechadores:[],eventuales:[],equipoDeCampo:[],proveedores:[]};
 var ordenEjecutando=null, pasoEjec=1;
 var capturaEjec={surcos:[],cantidad:0,foto:false,herramientaLimpia:false,requiereLimpieza:false,epp:{}};
@@ -394,6 +439,7 @@ var ROLES_COLABORADOR={operario:'Colaborador',cosechador:'Colaborador de cosecha
 var ROLE_COLORS={admin:'background:#c0392b;color:#fff',encargado:'background:#e6a817;color:#1a1a18',operario:'background:#4a9a6a;color:#fff',ingeniero:'background:#e67e22;color:#fff','dueño':'background:#2980b9;color:#fff',inversionista:'background:#6c3483;color:#fff',cosechador:'background:#1a3a2a;color:#fff',galerista:'background:#e91e8c;color:#fff',labores_eventual:'background:#7f8c8d;color:#fff'};
 var ICONOS={'Riego':'💧','Aplicaciones':'🧪','Poda':'✂️','Deshierbado':'🌱','Guiro':'🧵','Trineado':'🔪','Limpieza':'🧹','Sistema de riego':'🚿','Sistema de Tutoreo':'🪢','Tutoreo':'🪢','Macrotuneles':'⛺','Trampas':'🪤','Pozo':'🕳️','Equipos':'🛠️','Cuarto de Sucios':'🧺','Almacén':'📦','Galera':'🏚️','Otras':'➕','Via riego':'💧','Foliar':'🌿','Drench':'🧪','Enrejado':'🔲','Desbrozadora':'🔧','Infraestructura':'🏗️','Plasticos':'🏕️','Malla':'🥅','Arcos':'⛩️','Mantenimiento de herramienta':'🔧'};
 var riegoOrdenes=[], riegoTimer=null, riegoAlarmaActiva=false, riegoAudioCtx=null;
+var jornadaTimer=null;
 var riegoColaOffline=JSON.parse(localStorage.getItem('mootsil_riego_cola')||'[]');
 
 function ordenEsTiempo(o){
@@ -6898,6 +6944,7 @@ function capturarAvanceAplicEjec(){
 function tabOperario(tab){
   ['inicio','asistencia','tareas','pagos','perfil'].forEach(function(t){var el=document.getElementById('op-nav-'+t);if(el)el.classList.remove('active');});
   pararRiegoTimer();
+  pararJornadaTimer();
   if(tab==='tareas'){document.getElementById('op-nav-tareas').classList.add('active');cargarTareas();}
   else if(tab==='asistencia'){document.getElementById('op-nav-asistencia').classList.add('active');renderAsistenciaMenu();}
   else if(tab==='pagos'){document.getElementById('op-nav-pagos').classList.add('active');renderPagosMenu();}
@@ -6916,16 +6963,192 @@ var FRASES_BIENVENIDA=[
   'Un buen día empieza con buena actitud'
 ];
 
+function pararJornadaTimer(){ if(jornadaTimer){clearInterval(jornadaTimer);jornadaTimer=null;} }
+
+function obtenerJornadaHoy(){
+  var hoy=fechaHoyLocal();
+  return from('asistencia_registros').select('*').eq('usuario_id',usuario.id).eq('fecha',hoy).eq('modalidad','labores').order('registrado_en',{ascending:true}).get().then(function(rows){
+    rows=rows||[];
+    var entradas=rows.filter(function(r){return r.tipo==='entrada';});
+    var salidas=rows.filter(function(r){return r.tipo==='salida';});
+    var ultimaEntrada=entradas.length?entradas[entradas.length-1]:null;
+    var ultimaSalida=salidas.length?salidas[salidas.length-1]:null;
+    var enTurno=!!ultimaEntrada&&(!ultimaSalida||new Date(ultimaSalida.registrado_en)<new Date(ultimaEntrada.registrado_en));
+    return {entrada:ultimaEntrada,salida:ultimaSalida,enTurno:enTurno};
+  });
+}
+
+function elegirLaborDestacada(todas){
+  var tareasTodas=(todas||[]).filter(function(t){return !ordenEsTiempo(t);});
+  var enProceso=tareasTodas.filter(function(t){return t.estado==='en_proceso';});
+  if(enProceso.length) return enProceso[0];
+  var pendientes=tareasTodas.filter(function(t){return t.estado==='pendiente';});
+  return pendientes.length?pendientes[0]:null;
+}
+
+function iniciarLaborDestacada(oid,estabaPendiente){
+  if(estabaPendiente) marcarOrdenEnProceso(oid);
+  iniciarEjecucion(oid);
+}
+
+function formatearDuracion(ms){
+  if(ms<0) ms=0;
+  var totalMin=Math.floor(ms/60000);
+  var h=Math.floor(totalMin/60), m=totalMin%60;
+  return h+'h '+m+'m';
+}
+
+function actualizarContadorJornada(entradaIso){
+  var el=document.getElementById('op-jornada-transcurrido');
+  if(!el) return;
+  el.textContent=formatearDuracion(Date.now()-new Date(entradaIso).getTime());
+}
+
+function construirFilaProximaTarea(t){
+  var esAplic=!!(t.tipo_labor&&t.tipo_labor.requiere_formula&&t.formula_id);
+  var ic=esAplic?(VIA_ICONOS[t.formula?t.formula.via:'']||'🧪'):(ICONOS[t.tipo_labor?t.tipo_labor.nombre:'']||'🔧');
+  var titulo=t.activo_rancho_id?('Mantenimiento — '+(t.activo_rancho?t.activo_rancho.nombre:'')):(esAplic?(t.formula?t.formula.nombre:(t.tipo_labor?t.tipo_labor.nombre:'')):((t.tipo_labor?t.tipo_labor.nombre:'')+(t.subtipo?' · '+t.subtipo.nombre:'')));
+  var ubic=t.tabla?t.tabla.nombre:(t.activo_rancho_id?'Herramienta':'Sin tabla');
+  var etiquetaTipo=t.es_hora_extra?'<span class="op-proxima-badge op-proxima-badge-extra">⏰ Hora extra</span>':'<span class="op-proxima-badge op-proxima-badge-prog">📅 Programada</span>';
+  return '<div class="op-proxima-fila"><div class="op-proxima-ic">'+(t.activo_rancho_id?'🔧':ic)+'</div><div class="op-proxima-info"><div class="op-proxima-titulo">'+titulo+'</div><div class="op-proxima-meta">'+ubic+' · '+t.fecha_asignacion+'</div></div>'+etiquetaTipo+'</div>';
+}
+
+function construirBloqueJornada(jornada){
+  var cont='<div class="op-inicio-card op-inicio-jornada"><div class="op-inicio-titulo">🕐 Mi Jornada</div>';
+  if(!jornada||!jornada.entrada){
+    cont+='<div class="op-jornada-vacio">Aún no registras tu entrada de hoy.</div><button class="btn-primary" id="op-jornada-ir" style="margin-top:.75rem;width:100%;">Ir a Asistencia</button>';
+  } else {
+    var horaEntrada=new Date(jornada.entrada.registrado_en).toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',hour12:true});
+    var estadoTxt=jornada.enTurno?'🟢 En turno':'⚪ Jornada terminada';
+    cont+='<div class="op-jornada-fila"><span>Entrada</span><strong>'+horaEntrada+'</strong></div>';
+    cont+='<div class="op-jornada-fila"><span>Estado</span><strong>'+estadoTxt+'</strong></div>';
+    if(jornada.enTurno){
+      cont+='<div class="op-jornada-fila"><span>Tiempo en turno</span><strong id="op-jornada-transcurrido">'+formatearDuracion(Date.now()-new Date(jornada.entrada.registrado_en).getTime())+'</strong></div>';
+    } else if(jornada.salida){
+      var horaSalida=new Date(jornada.salida.registrado_en).toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',hour12:true});
+      cont+='<div class="op-jornada-fila"><span>Salida</span><strong>'+horaSalida+'</strong></div>';
+      cont+='<div class="op-jornada-fila"><span>Jornada total</span><strong>'+formatearDuracion(new Date(jornada.salida.registrado_en)-new Date(jornada.entrada.registrado_en))+'</strong></div>';
+    }
+    cont+='<button class="btn-back" id="op-jornada-ir" style="margin-top:.75rem;width:100%;">Ir a Asistencia</button>';
+  }
+  cont+='</div>';
+  return cont;
+}
+
+function construirBloqueLaborDelDia(destacada,hoy,horasExtraPorClave,componentesPorFormula){
+  var cont='<div class="op-inicio-card op-inicio-labor"><div class="op-inicio-titulo">🌟 Labor del Día</div>';
+  if(!destacada){
+    cont+='<div class="op-jornada-vacio">No tienes tareas asignadas por ahora.<br/>El encargado te asignará labores aquí.</div>';
+  } else {
+    cont+=construirTarjetaTarea(destacada,hoy,horasExtraPorClave,componentesPorFormula,{sinBotones:true});
+    cont+='<button class="btn-primary op-btn-iniciar-labor" id="op-labor-iniciar" data-oid="'+destacada.id+'" data-pendiente="'+(destacada.estado==='pendiente'?'1':'0')+'">▶ '+(destacada.estado==='en_proceso'?'CONTINUAR LABOR':'INICIAR LABOR')+'</button>';
+  }
+  cont+='</div>';
+  return cont;
+}
+
+function construirBloqueRendimientoProvisional(score){
+  var cont='<div class="op-inicio-card op-inicio-rendimiento"><div class="op-inicio-titulo">📈 Rendimiento del mes</div>';
+  if(!score){
+    cont+='<div class="op-jornada-vacio">No se pudo calcular tu rendimiento en este momento.</div>';
+  } else {
+    var color=score.final>=8?'var(--verde-mid)':score.final>=6?'var(--tierra)':'var(--rojo)';
+    var pct=(score.final/10)*100;
+    cont+='<div style="text-align:center;">'+
+      '<div style="font-size:1.8rem;font-weight:800;color:'+color+';">'+score.final.toFixed(1)+'<span style="font-size:1rem;color:var(--gris-3);"> / 10</span></div>'+
+      '<div style="background:var(--gris-1);border-radius:20px;height:10px;margin:.6rem 0;overflow:hidden;"><div style="background:'+color+';height:100%;width:'+pct+'%;border-radius:20px;"></div></div>'+
+      '<div class="hint">Rendimiento del mes — se calcula con tu asistencia, tareas a tiempo, avance y comportamiento.</div>'+
+      '</div>'+
+      '<button class="btn-back" id="op-rendimiento-ver" style="margin-top:.75rem;width:100%;">Ver detalle</button>';
+  }
+  cont+='</div>';
+  return cont;
+}
+
+function pintarInicio(jornada,datosTareas,score,esCache){
+  var body=document.getElementById('op-body');
+  var hoy=fechaHoyLocal();
+  var todas=(datosTareas&&datosTareas.todas)||[];
+  var horasExtraPorClave=(datosTareas&&datosTareas.horasExtraPorClave)||{};
+  var componentesPorFormula=(datosTareas&&datosTareas.componentesPorFormula)||{};
+  var destacada=elegirLaborDestacada(todas);
+  var proximas=todas.filter(function(t){return !ordenEsTiempo(t)&&(!destacada||t.id!==destacada.id);}).slice(0,5);
+
+  var horaAhora=new Date().getHours();
+  var saludo=horaAhora<12?'Buenos días':(horaAhora<19?'Buenas tardes':'Buenas noches');
+  var frase=FRASES_BIENVENIDA[Math.floor(Math.random()*FRASES_BIENVENIDA.length)];
+  var avatarHtml=usuario.avatarUrl
+    ? '<img src="'+usuario.avatarUrl+'" class="op-inicio-avatar" alt="Tu Mootsilito">'
+    : '<div class="op-inicio-avatar-fallback">'+MOOTSILITO_FALLBACK_IC+'</div>';
+  // Estructura preparada para los assets oficiales (paisaje de campo + Mootsilito) que aún no existen:
+  // la "escena" es solo un espacio/fondo provisional (degradado), sin ilustración nueva, listo para
+  // sustituirse por la ambientación oficial sin tener que rehacer Inicio.
+  var bienvenidaHtml='<div class="op-inicio-card op-inicio-bienvenida">'+
+    '<div class="op-inicio-bienvenida-escena"><div class="op-inicio-bienvenida-mootsilito-wrap">'+avatarHtml+'</div></div>'+
+    '<div class="op-inicio-bienvenida-texto"><div class="op-inicio-saludo">'+saludo+', '+usuario.nombre+'</div><div class="op-inicio-frase">'+frase+'</div></div>'+
+    '</div>';
+
+  var jornadaHtml=construirBloqueJornada(jornada);
+  var laborHtml=construirBloqueLaborDelDia(destacada,hoy,horasExtraPorClave,componentesPorFormula);
+
+  var accesosHtml='<div class="op-inicio-card op-inicio-accesos"><div class="op-inicio-titulo">Acciones rápidas</div><div class="op-accesos-grid">'+
+    '<button class="op-acceso-item" id="op-acceso-tareas"><span class="op-acceso-ic">📋</span><span>Mis tareas</span></button>'+
+    '<button class="op-acceso-item" id="op-acceso-historial"><span class="op-acceso-ic">📊</span><span>Historial</span></button>'+
+    '<button class="op-acceso-item" id="op-acceso-pagos"><span class="op-acceso-ic">💰</span><span>Pagos</span></button>'+
+    '<button class="op-acceso-item" id="op-acceso-solicitudes"><span class="op-acceso-ic">📨</span><span>Solicitudes</span></button>'+
+    '</div></div>';
+
+  var proximasHtml='<div class="op-inicio-card op-inicio-proximas"><div class="op-inicio-titulo">Próximas tareas</div>'+
+    (proximas.length?proximas.map(construirFilaProximaTarea).join(''):'<div class="empty" style="padding:.5rem 0;">No tienes más tareas programadas por ahora.</div>')+
+    '</div>';
+
+  var rendimientoHtml=construirBloqueRendimientoProvisional(score);
+
+  var prefijo=esCache?'<p class="hint" style="text-align:center;margin-bottom:.75rem;">📡 Sin señal — mostrando tu información guardada.</p>':'';
+
+  body.innerHTML=prefijo+'<div class="op-inicio">'+bienvenidaHtml+jornadaHtml+laborHtml+accesosHtml+proximasHtml+rendimientoHtml+'</div>';
+
+  var btnJornadaIr=document.getElementById('op-jornada-ir'); if(btnJornadaIr) btnJornadaIr.addEventListener('click',function(){tabOperario('asistencia');});
+  var btnTareas=document.getElementById('op-acceso-tareas'); if(btnTareas) btnTareas.addEventListener('click',function(){tabOperario('tareas');});
+  var btnPagos=document.getElementById('op-acceso-pagos'); if(btnPagos) btnPagos.addEventListener('click',function(){tabOperario('pagos');});
+  var btnHist=document.getElementById('op-acceso-historial'); if(btnHist) btnHist.addEventListener('click',function(){pararJornadaTimer();cargarTareas('terminadas');});
+  var btnSol=document.getElementById('op-acceso-solicitudes'); if(btnSol) btnSol.addEventListener('click',function(){pararJornadaTimer();renderSolicitudesMenu();});
+  var btnRend=document.getElementById('op-rendimiento-ver'); if(btnRend) btnRend.addEventListener('click',function(){pararJornadaTimer();cargarTareas('rendimiento');});
+  var btnIniciar=document.getElementById('op-labor-iniciar');
+  if(btnIniciar) btnIniciar.addEventListener('click',function(){
+    pararJornadaTimer();
+    iniciarLaborDestacada(this.dataset.oid,this.dataset.pendiente==='1');
+  });
+
+  pararJornadaTimer();
+  if(jornada&&jornada.enTurno&&jornada.entrada){
+    actualizarContadorJornada(jornada.entrada.registrado_en);
+    jornadaTimer=setInterval(function(){actualizarContadorJornada(jornada.entrada.registrado_en);},30000);
+  }
+}
+
 function irInicioOperario(){
   pararRiegoTimer();
+  pararJornadaTimer();
   ['inicio','asistencia','tareas','pagos','perfil'].forEach(function(t){var el=document.getElementById('op-nav-'+t);if(el)el.classList.remove('active');});
   var elInicio=document.getElementById('op-nav-inicio'); if(elInicio) elInicio.classList.add('active');
   var body=document.getElementById('op-body');
-  var frase=FRASES_BIENVENIDA[Math.floor(Math.random()*FRASES_BIENVENIDA.length)];
-  var avatarHtml = usuario.avatarUrl
-    ? '<div style="width:100%;max-width:320px;display:flex;align-items:center;justify-content:center;margin-bottom:.5rem;"><img src="'+usuario.avatarUrl+'" style="width:100%;max-height:48vh;object-fit:contain;" alt="Tu Mootsilito"></div>'
-    : '<div style="width:120px;height:120px;border-radius:50%;background:var(--verde-tenue);display:flex;align-items:center;justify-content:center;font-size:3.2rem;margin-bottom:1rem;">🥑</div>';
-  body.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem 1rem;text-align:center;min-height:60vh;">'+avatarHtml+'<div style="font-size:1.15rem;font-weight:800;color:var(--verde);">¡Bienvenido, '+usuario.nombre+'!</div><div style="font-size:.78rem;color:var(--gris-3);margin-top:.15rem;">'+frase+'</div><div style="font-size:.82rem;color:var(--gris-3);margin-top:.5rem;">¿Qué vamos a hacer hoy? Elige una opción arriba 👆</div></div>';
+  body.innerHTML='<div class="op-inicio"><div class="loading">Cargando...</div></div>';
+  var hoyD=new Date();
+  var primerDiaMes=new Date(hoyD.getFullYear(),hoyD.getMonth(),1).toISOString().slice(0,10);
+  var hoy=fechaHoyLocal();
+  Promise.all([
+    obtenerJornadaHoy(),
+    obtenerDatosTareasOperario(),
+    calcularScoreOperario(usuario.id,primerDiaMes,hoy)
+  ]).then(function(r){
+    pintarInicio(r[0],r[1],r[2],false);
+  }).catch(function(err){
+    var cache=null;
+    try{cache=JSON.parse(localStorage.getItem('mootsil_tareas_cache_'+usuario.id)||'null');}catch(e){}
+    var datosCache=cache?{todas:cache.todas||[],horasExtraPorClave:cache.horasExtraPorClave||{},componentesPorFormula:cache.componentesPorFormula||{}}:{todas:[],horasExtraPorClave:{},componentesPorFormula:{}};
+    pintarInicio(null,datosCache,null,true);
+  });
 }
 
 function actualizarBadgeOperario(){
@@ -6936,6 +7159,7 @@ function actualizarAvatarHeader(){
   var img=document.getElementById('op-header-avatar');
   var fb=document.getElementById('op-header-avatar-fallback');
   if(!img||!fb) return;
+  fb.textContent=MOOTSILITO_FALLBACK_IC;
   if(usuario&&usuario.avatarUrl){
     img.src=usuario.avatarUrl;
     img.style.display='';
@@ -7867,15 +8091,9 @@ function pararRiegoTimer(){if(riegoTimer){clearInterval(riegoTimer);riegoTimer=n
 
 var SUBTAB_TAREAS_ACTUAL='porhacer';
 
-function cargarTareas(subtab){
-  if(subtab) SUBTAB_TAREAS_ACTUAL=subtab;
-  pararRiegoTimer();
-  riegoSincronizar();
-  if(navigator.onLine) sincronizarEvidenciasPendientes().then(sincronizarColaGeneral);
-  var body=document.getElementById('op-body');
-  body.innerHTML=barraSubtabsTareas()+'<div id="tareas-contenido"><div class="loading">Cargando tus tareas...</div></div>';
+function obtenerDatosTareasOperario(){
   var hoy=fechaHoyLocal();
-  Promise.all([
+  return Promise.all([
     from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_cantidad_insumo,unidad_insumo,requiere_tiempo,requiere_formula),subtipo:subtipos_labor(nombre,requiere_tiempo),activo_rancho:activos_rancho(nombre,imagen_url),formula:formulas_aplicacion(nombre,via,categoria)').eq('operario_id',usuario.id).in('estado',['pendiente','en_proceso']).order('fecha_asignacion',{ascending:true}).get(),
     from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo),subtipo:subtipos_labor(nombre,requiere_tiempo),activo_rancho:activos_rancho(nombre,imagen_url)').eq('operario_id',usuario.id).eq('fecha_asignacion',hoy).order('creado_en',{ascending:false}).get(),
     from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo),subtipo:subtipos_labor(nombre,requiere_tiempo),activo_rancho:activos_rancho(nombre,imagen_url)').eq('operario_id',usuario.id).eq('estado','completada').order('fecha_asignacion',{ascending:false}).limit(60).get(),
@@ -7897,9 +8115,22 @@ function cargarTareas(subtab){
       (regs||[]).forEach(function(r){evidenciaPorOrden[r.orden_id]=!!r.foto_url;});
       var componentesPorFormula={};
       compRows.forEach(function(c){(componentesPorFormula[c.formula_id]=componentesPorFormula[c.formula_id]||[]).push(c);});
+      var resultado={todas:todas,hoyOrdenes:hoyOrdenes,completadas:completadas,evidenciaPorOrden:evidenciaPorOrden,componentesPorFormula:componentesPorFormula,horasExtraPorClave:horasExtraPorClave};
       try{localStorage.setItem('mootsil_tareas_cache_'+usuario.id,JSON.stringify({todas:todas,hoyOrdenes:hoyOrdenes,completadas:completadas,evidenciaPorOrden:evidenciaPorOrden,componentesPorFormula:componentesPorFormula,horasExtraPorClave:horasExtraPorClave,ts:Date.now()}));}catch(e){}
-      pintarTareas(todas,hoyOrdenes,false,completadas,evidenciaPorOrden,componentesPorFormula,horasExtraPorClave);
+      return resultado;
     });
+  });
+}
+
+function cargarTareas(subtab){
+  if(subtab) SUBTAB_TAREAS_ACTUAL=subtab;
+  pararRiegoTimer();
+  riegoSincronizar();
+  if(navigator.onLine) sincronizarEvidenciasPendientes().then(sincronizarColaGeneral);
+  var body=document.getElementById('op-body');
+  body.innerHTML=barraSubtabsTareas()+'<div id="tareas-contenido"><div class="loading">Cargando tus tareas...</div></div>';
+  obtenerDatosTareasOperario().then(function(d){
+    pintarTareas(d.todas,d.hoyOrdenes,false,d.completadas,d.evidenciaPorOrden,d.componentesPorFormula,d.horasExtraPorClave);
   }).catch(function(err){
     var cache=null;
     try{cache=JSON.parse(localStorage.getItem('mootsil_tareas_cache_'+usuario.id)||'null');}catch(e){}
@@ -7916,6 +8147,66 @@ function barraSubtabsTareas(){
   return '<div style="display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap;">'+tabs.map(function(t){
     return '<button type="button" class="rep-view-btn'+(SUBTAB_TAREAS_ACTUAL===t[0]?' active':'')+'" data-subtab="'+t[0]+'" onclick="cargarTareas(\''+t[0]+'\')">'+t[1]+'</button>';
   }).join('')+'</div>';
+}
+
+function construirTarjetaTarea(t,hoy,horasExtraPorClave,componentesPorFormula,opts){
+  horasExtraPorClave=horasExtraPorClave||{}; componentesPorFormula=componentesPorFormula||{};
+  var botones=(opts&&opts.sinBotones)?'':('<div style="margin-top:.75rem;display:flex;gap:8px;">'+(t.estado==='pendiente'?'<button class="btn-sm btn-iniciar" data-ini="'+t.id+'">▶ Iniciar</button>':'')+(t.estado==='en_proceso'?'<button class="btn-sm btn-completar" data-eje="'+t.id+'">✅ Registrar avance</button>':'')+'</div>');
+  if(t.activo_rancho_id){
+    var an=t.activo_rancho?t.activo_rancho.nombre:'Herramienta';
+    var atrasadaM=t.fecha_asignacion<hoy;
+    return '<div class="tarea-card" style="'+(atrasadaM?'border-left-color:var(--rojo);':'border-left-color:var(--tierra);')+'"><div class="tarea-title">🔧 Mantenimiento — '+an+(atrasadaM?' <span style="color:var(--rojo);font-size:.72rem;font-weight:700;">⚠️ Desde '+t.fecha_asignacion+'</span>':'')+'</div><div class="tarea-meta">'+(t.notas_encargado||'Dale mantenimiento y confirma cuando termines.')+'</div>'+botones+'</div>';
+  }
+  if(!t.tabla_id){
+    var atrasadaG=t.fecha_asignacion<hoy;
+    var horasExtraG=t.es_hora_extra?horasExtraPorClave[t.fecha_asignacion+'|'+t.tipo_labor_id]:null;
+    var etiquetaTipoG=t.es_hora_extra?' <span style="color:var(--tierra);font-size:.7rem;font-weight:700;background:var(--tierra-tenue);padding:2px 8px;border-radius:10px;">⏰ Hora Extra'+(horasExtraG?(' · '+numFmt(horasExtraG.horas)+'h autorizadas'):'')+'</span>':' <span style="color:var(--verde-mid);font-size:.7rem;font-weight:700;background:var(--verde-tenue);padding:2px 8px;border-radius:10px;">🧑‍🌾 Labores</span>';
+    return '<div class="tarea-card" style="'+(atrasadaG?'border-left-color:var(--rojo);':(t.es_hora_extra?'border-left-color:var(--tierra);':''))+'"><div class="tarea-title">'+(ICONOS[t.tipo_labor.nombre]||'🔧')+' '+t.tipo_labor.nombre+(t.subtipo?' · '+t.subtipo.nombre:'')+etiquetaTipoG+(atrasadaG?' <span style="color:var(--rojo);font-size:.72rem;font-weight:700;">⚠️ Desde '+t.fecha_asignacion+'</span>':'')+'</div><div class="tarea-meta">📋 Actividad general (sin tabla)'+(t.notas_encargado?'<br/>📝 '+t.notas_encargado:'')+'</div>'+botones+'</div>';
+  }
+  var p=cats.plantaciones.find(function(x){return x.id===t.tabla.plantacion_id;});
+  var esAplic=!!(t.tipo_labor&&t.tipo_labor.requiere_formula&&t.formula_id);
+  var ic=esAplic?(VIA_ICONOS[t.formula?t.formula.via:'']||'🧪'):(ICONOS[t.tipo_labor.nombre]||'🔧');
+  var tituloLabor=esAplic?(t.formula?t.formula.nombre:t.tipo_labor.nombre):(t.tipo_labor.nombre+(t.subtipo?' · '+t.subtipo.nombre:''));
+  var esFiltrosT=!!(t.subtipo&&t.subtipo.nombre==='Limpieza Filtros');
+  var su=(t.surcos_asignados&&t.surcos_asignados.length)?t.surcos_asignados.join(', '):'Todos';
+  var surcosLineaTxt=esFiltrosT?'':('🔢 Surcos: '+su);
+  var atrasada=t.fecha_asignacion<hoy;
+  var horasExtra=t.es_hora_extra?horasExtraPorClave[t.fecha_asignacion+'|'+t.tipo_labor_id]:null;
+  var etiquetaTipo=t.es_hora_extra?' <span style="color:var(--tierra);font-size:.7rem;font-weight:700;background:var(--tierra-tenue);padding:2px 8px;border-radius:10px;">⏰ Hora Extra'+(horasExtra?(' · '+numFmt(horasExtra.horas)+'h autorizadas'):'')+'</span>':' <span style="color:var(--verde-mid);font-size:.7rem;font-weight:700;background:var(--verde-tenue);padding:2px 8px;border-radius:10px;">🧑‍🌾 Labores</span>';
+  var progresoTxt='', etiquetaEstado='';
+  if(t.estado==='en_proceso'){
+    var tieneAvance=t.surcos_completados&&t.surcos_completados.length>0;
+    var totalRef=(t.surcos_asignados&&t.surcos_asignados.length)?t.surcos_asignados.length:(t.tabla.cantidad_surcos||0);
+    if(tieneAvance){
+      progresoTxt='<br/>🔶 Avance: '+t.surcos_completados.length+'/'+totalRef+' surcos';
+      etiquetaEstado=' <span style="color:var(--tierra);font-size:.7rem;font-weight:700;background:var(--tierra-tenue);padding:2px 8px;border-radius:10px;">🔶 No concluida</span>';
+    } else {
+      etiquetaEstado=' <span style="color:var(--verde-mid);font-size:.7rem;font-weight:700;background:var(--verde-tenue);padding:2px 8px;border-radius:10px;">🆕 Iniciada, sin avance</span>';
+    }
+  }
+  var aplicInfoHtml='';
+  if(esAplic){
+    var compList=componentesPorFormula[t.formula_id]||[];
+    var factor=t.factor_escala||1;
+    var productosHtml=compList.length?compList.map(function(c){
+      return '<div style="display:flex;justify-content:space-between;font-size:.78rem;padding:.15rem 0;"><span>'+(c.item?c.item.nombre:'')+'</span><strong>'+fmtAmigable(c.cantidad_base*factor,c.item?c.item.unidad:'')+'</strong></div>';
+    }).join(''):'';
+    var unidadTarjeta=unidadPlanAplic(t);
+    var tambosTxt=(t.bomba_usada!=='inyeccion'&&t.tambos_planeados)?(' · '+(unidadTarjeta.esBombas?'🎒':'🛢️')+' '+(t.tambos_usados||0)+'/'+t.tambos_planeados+' '+unidadTarjeta.plural):'';
+    aplicInfoHtml='<div style="margin-top:.5rem;padding-top:.5rem;border-top:1px dashed var(--gris-2);font-size:.8rem;">'+(t.formula&&t.formula.categoria?'<span style="color:var(--gris-3);">'+(CATEGORIA_ICONOS[t.formula.categoria]||'')+' '+t.formula.categoria+'</span><br/>':'')+'⚙️ '+(BOMBA_ICONOS[t.bomba_usada]||'')+' '+(BOMBA_LABELS[t.bomba_usada]||t.bomba_usada||'')+' · 🧴 '+numFmt(t.volumen_aplicado_litros||0)+' L'+tambosTxt+(productosHtml?'<div style="margin-top:.35rem;"><strong style="font-size:.72rem;color:var(--gris-3);text-transform:uppercase;letter-spacing:.03em;">Productos a usar</strong>'+productosHtml+'</div>':'')+'</div>';
+  }
+  return '<div class="tarea-card" style="'+(atrasada?'border-left-color:var(--rojo);':(t.es_hora_extra?'border-left-color:var(--tierra);':''))+'"><div class="tarea-title">'+ic+' '+tituloLabor+etiquetaTipo+etiquetaEstado+(atrasada?' <span style="color:var(--rojo);font-size:.72rem;font-weight:700;">⚠️ Desde '+t.fecha_asignacion+'</span>':'')+'</div><div class="tarea-meta">📍 '+(p?p.nombre:'')+' · '+t.tabla.nombre+(surcosLineaTxt?('<br/>'+surcosLineaTxt):'')+progresoTxt+(t.notas_encargado?'<br/>📝 '+t.notas_encargado:'')+'</div>'+aplicInfoHtml+botones+'</div>';
+}
+
+function marcarOrdenEnProceso(oid){
+  if(navigator.onLine){
+    from('ordenes_trabajo').eq('id',oid).update({estado:'en_proceso'}).catch(function(){
+      riegoEncolar(oid,{estado:'en_proceso'});
+      showToast('📡 Sin señal — se guardó en tu celular y se subirá solo.');
+    });
+  } else {
+    riegoEncolar(oid,{estado:'en_proceso'});
+  }
 }
 
 function pintarTareas(todas,hoyOrdenes,esCache,completadas,evidenciaPorOrden,componentesPorFormula,horasExtraPorClave){
@@ -7936,53 +8227,7 @@ function pintarTareas(todas,hoyOrdenes,esCache,completadas,evidenciaPorOrden,com
     var porHacer=tareasTodas.filter(function(t){return t.estado==='pendiente';});
     var enProceso=tareasTodas.filter(function(t){return t.estado==='en_proceso';});
     var completadasNormales=completadas.filter(function(o){return !ordenEsTiempo(o);});
-
-    function tarjetaTarea(t){
-      if(t.activo_rancho_id){
-        var an=t.activo_rancho?t.activo_rancho.nombre:'Herramienta';
-        var atrasadaM=t.fecha_asignacion<hoy;
-        return '<div class="tarea-card" style="'+(atrasadaM?'border-left-color:var(--rojo);':'border-left-color:var(--tierra);')+'"><div class="tarea-title">🔧 Mantenimiento — '+an+(atrasadaM?' <span style="color:var(--rojo);font-size:.72rem;font-weight:700;">⚠️ Desde '+t.fecha_asignacion+'</span>':'')+'</div><div class="tarea-meta">'+(t.notas_encargado||'Dale mantenimiento y confirma cuando termines.')+'</div><div style="margin-top:.75rem;display:flex;gap:8px;">'+(t.estado==='pendiente'?'<button class="btn-sm btn-iniciar" data-ini="'+t.id+'">▶ Iniciar</button>':'')+(t.estado==='en_proceso'?'<button class="btn-sm btn-completar" data-eje="'+t.id+'">✅ Registrar avance</button>':'')+'</div></div>';
-      }
-      if(!t.tabla_id){
-        var atrasadaG=t.fecha_asignacion<hoy;
-        var horasExtraG=t.es_hora_extra?horasExtraPorClave[t.fecha_asignacion+'|'+t.tipo_labor_id]:null;
-        var etiquetaTipoG=t.es_hora_extra?' <span style="color:var(--tierra);font-size:.7rem;font-weight:700;background:var(--tierra-tenue);padding:2px 8px;border-radius:10px;">⏰ Hora Extra'+(horasExtraG?(' · '+numFmt(horasExtraG.horas)+'h autorizadas'):'')+'</span>':' <span style="color:var(--verde-mid);font-size:.7rem;font-weight:700;background:var(--verde-tenue);padding:2px 8px;border-radius:10px;">🧑‍🌾 Labores</span>';
-        return '<div class="tarea-card" style="'+(atrasadaG?'border-left-color:var(--rojo);':(t.es_hora_extra?'border-left-color:var(--tierra);':''))+'"><div class="tarea-title">'+(ICONOS[t.tipo_labor.nombre]||'🔧')+' '+t.tipo_labor.nombre+(t.subtipo?' · '+t.subtipo.nombre:'')+etiquetaTipoG+(atrasadaG?' <span style="color:var(--rojo);font-size:.72rem;font-weight:700;">⚠️ Desde '+t.fecha_asignacion+'</span>':'')+'</div><div class="tarea-meta">📋 Actividad general (sin tabla)'+(t.notas_encargado?'<br/>📝 '+t.notas_encargado:'')+'</div><div style="margin-top:.75rem;display:flex;gap:8px;">'+(t.estado==='pendiente'?'<button class="btn-sm btn-iniciar" data-ini="'+t.id+'">▶ Iniciar</button>':'')+(t.estado==='en_proceso'?'<button class="btn-sm btn-completar" data-eje="'+t.id+'">✅ Registrar avance</button>':'')+'</div></div>';
-      }
-      var p=cats.plantaciones.find(function(x){return x.id===t.tabla.plantacion_id;});
-      var esAplic=!!(t.tipo_labor&&t.tipo_labor.requiere_formula&&t.formula_id);
-      var ic=esAplic?(VIA_ICONOS[t.formula?t.formula.via:'']||'🧪'):(ICONOS[t.tipo_labor.nombre]||'🔧');
-      var tituloLabor=esAplic?(t.formula?t.formula.nombre:t.tipo_labor.nombre):(t.tipo_labor.nombre+(t.subtipo?' · '+t.subtipo.nombre:''));
-      var esFiltrosT=!!(t.subtipo&&t.subtipo.nombre==='Limpieza Filtros');
-      var su=(t.surcos_asignados&&t.surcos_asignados.length)?t.surcos_asignados.join(', '):'Todos';
-      var surcosLineaTxt=esFiltrosT?'':('🔢 Surcos: '+su);
-      var atrasada=t.fecha_asignacion<hoy;
-      var horasExtra=t.es_hora_extra?horasExtraPorClave[t.fecha_asignacion+'|'+t.tipo_labor_id]:null;
-      var etiquetaTipo=t.es_hora_extra?' <span style="color:var(--tierra);font-size:.7rem;font-weight:700;background:var(--tierra-tenue);padding:2px 8px;border-radius:10px;">⏰ Hora Extra'+(horasExtra?(' · '+numFmt(horasExtra.horas)+'h autorizadas'):'')+'</span>':' <span style="color:var(--verde-mid);font-size:.7rem;font-weight:700;background:var(--verde-tenue);padding:2px 8px;border-radius:10px;">🧑‍🌾 Labores</span>';
-      var progresoTxt='', etiquetaEstado='';
-      if(t.estado==='en_proceso'){
-        var tieneAvance=t.surcos_completados&&t.surcos_completados.length>0;
-        var totalRef=(t.surcos_asignados&&t.surcos_asignados.length)?t.surcos_asignados.length:(t.tabla.cantidad_surcos||0);
-        if(tieneAvance){
-          progresoTxt='<br/>🔶 Avance: '+t.surcos_completados.length+'/'+totalRef+' surcos';
-          etiquetaEstado=' <span style="color:var(--tierra);font-size:.7rem;font-weight:700;background:var(--tierra-tenue);padding:2px 8px;border-radius:10px;">🔶 No concluida</span>';
-        } else {
-          etiquetaEstado=' <span style="color:var(--verde-mid);font-size:.7rem;font-weight:700;background:var(--verde-tenue);padding:2px 8px;border-radius:10px;">🆕 Iniciada, sin avance</span>';
-        }
-      }
-      var aplicInfoHtml='';
-      if(esAplic){
-        var compList=componentesPorFormula[t.formula_id]||[];
-        var factor=t.factor_escala||1;
-        var productosHtml=compList.length?compList.map(function(c){
-          return '<div style="display:flex;justify-content:space-between;font-size:.78rem;padding:.15rem 0;"><span>'+(c.item?c.item.nombre:'')+'</span><strong>'+fmtAmigable(c.cantidad_base*factor,c.item?c.item.unidad:'')+'</strong></div>';
-        }).join(''):'';
-        var unidadTarjeta=unidadPlanAplic(t);
-        var tambosTxt=(t.bomba_usada!=='inyeccion'&&t.tambos_planeados)?(' · '+(unidadTarjeta.esBombas?'🎒':'🛢️')+' '+(t.tambos_usados||0)+'/'+t.tambos_planeados+' '+unidadTarjeta.plural):'';
-        aplicInfoHtml='<div style="margin-top:.5rem;padding-top:.5rem;border-top:1px dashed var(--gris-2);font-size:.8rem;">'+(t.formula&&t.formula.categoria?'<span style="color:var(--gris-3);">'+(CATEGORIA_ICONOS[t.formula.categoria]||'')+' '+t.formula.categoria+'</span><br/>':'')+'⚙️ '+(BOMBA_ICONOS[t.bomba_usada]||'')+' '+(BOMBA_LABELS[t.bomba_usada]||t.bomba_usada||'')+' · 🧴 '+numFmt(t.volumen_aplicado_litros||0)+' L'+tambosTxt+(productosHtml?'<div style="margin-top:.35rem;"><strong style="font-size:.72rem;color:var(--gris-3);text-transform:uppercase;letter-spacing:.03em;">Productos a usar</strong>'+productosHtml+'</div>':'')+'</div>';
-      }
-      return '<div class="tarea-card" style="'+(atrasada?'border-left-color:var(--rojo);':(t.es_hora_extra?'border-left-color:var(--tierra);':''))+'"><div class="tarea-title">'+ic+' '+tituloLabor+etiquetaTipo+etiquetaEstado+(atrasada?' <span style="color:var(--rojo);font-size:.72rem;font-weight:700;">⚠️ Desde '+t.fecha_asignacion+'</span>':'')+'</div><div class="tarea-meta">📍 '+(p?p.nombre:'')+' · '+t.tabla.nombre+(surcosLineaTxt?('<br/>'+surcosLineaTxt):'')+progresoTxt+(t.notas_encargado?'<br/>📝 '+t.notas_encargado:'')+'</div>'+aplicInfoHtml+'<div style="margin-top:.75rem;display:flex;gap:8px;">'+(t.estado==='pendiente'?'<button class="btn-sm btn-iniciar" data-ini="'+t.id+'">▶ Iniciar</button>':'')+(t.estado==='en_proceso'?'<button class="btn-sm btn-completar" data-eje="'+t.id+'">✅ Registrar avance</button>':'')+'</div></div>';
-    }
+    function tarjetaTarea(t){ return construirTarjetaTarea(t,hoy,horasExtraPorClave,componentesPorFormula); }
 
     var html='';
     if(SUBTAB_TAREAS_ACTUAL==='porhacer'){
@@ -8018,14 +8263,7 @@ function pintarTareas(todas,hoyOrdenes,esCache,completadas,evidenciaPorOrden,com
       var t=todas.find(function(x){return x.id===oid;});
       if(t) t.estado='en_proceso';
       pintarTareas(todas,hoyOrdenes,false,completadas,evidenciaPorOrden,componentesPorFormula);
-      if(navigator.onLine){
-        from('ordenes_trabajo').eq('id',oid).update({estado:'en_proceso'}).catch(function(){
-          riegoEncolar(oid,{estado:'en_proceso'});
-          showToast('📡 Sin señal — se guardó en tu celular y se subirá solo.');
-        });
-      } else {
-        riegoEncolar(oid,{estado:'en_proceso'});
-      }
+      marcarOrdenEnProceso(oid);
     });});
     cont.querySelectorAll('[data-eje]').forEach(function(b){b.addEventListener('click',function(){iniciarEjecucion(this.dataset.eje);});});
   }catch(err){
