@@ -104,6 +104,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 @media (min-width:1100px){
   .op-inicio{max-width:1150px;margin:0 auto;grid-template-columns:1fr 1.3fr;gap:1.5rem;padding:1.5rem;}
 }
+/* Fase 3 — Reportar/Incidencias (8-0 a 8-5): clases exclusivas .rpt-*, no comparten nombre con nada de Encargado */
+.rpt-ev-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:.5rem;}
+.rpt-ev-item{position:relative;width:64px;height:64px;}
+.rpt-ev-thumb{width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--gris-2);display:flex;align-items:center;justify-content:center;font-size:1.4rem;background:var(--gris-1);}
+.rpt-ev-quitar{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--rojo);color:#fff;border:none;font-size:.7rem;font-weight:700;cursor:pointer;line-height:1;}
+.rpt-galeria{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:.75rem;}
+.rpt-galeria-item{width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid var(--gris-2);background:#000;}
+.rpt-historial{background:var(--blanco);border-radius:var(--radio);padding:.9rem 1rem;margin-bottom:.75rem;}
+.rpt-hist-item{display:flex;gap:.6rem;padding:.4rem 0;}
+.rpt-hist-dot{width:10px;height:10px;border-radius:50%;margin-top:.3rem;flex-shrink:0;}
+.rpt-hist-body{flex:1;}
+.rpt-comentarios{margin-bottom:.5rem;}
+.rpt-comentario{background:var(--blanco);border-radius:var(--radio-sm);padding:.7rem .85rem;margin-bottom:.5rem;}
 .orden-card{background:var(--blanco);border-radius:var(--radio);padding:1rem;margin-bottom:.75rem;border-left:4px solid var(--gris-2);}
 .orden-card.pendiente{border-left-color:var(--amarillo);}
 .orden-card.en_proceso{border-left-color:var(--verde-claro);}
@@ -297,7 +310,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="op-header-top">
       <div class="op-header-id"><h1>Mootsil | Labores</h1><div class="op-header-sub" id="op-nombre">Colaborador</div></div>
       <div class="op-header-actions">
-        <button class="op-btn-reportar" onclick="renderAlarmasMenu()" title="Reportar">
+        <button class="op-btn-reportar" onclick="renderCentroReportes()" title="Reportar">
           <span class="op-btn-reportar-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"><path d="M12 4v1.2M6.5 6.5l.9.9M17.5 6.5l-.9.9M4 11.5h1.3M18.7 11.5h1.3"/><path d="M7 17.5c0-3.9 2.2-7 5-7s5 3.1 5 7H7z" fill="#fff" stroke="none"/><rect x="6.3" y="17.5" width="11.4" height="2.3" rx="1" fill="#fff" stroke="none"/></svg></span>
           <span class="op-btn-reportar-lbl">Reportar</span>
         </button>
@@ -429,6 +442,26 @@ var pin='', usuario=null;
 // Se reemplazará por el Catálogo Oficial de Mootsilitos cuando esté disponible; mientras tanto no debe
 // haber más de un emoji de respaldo distinto en la app.
 var MOOTSILITO_FALLBACK_IC='🧑‍🌾';
+// Fase 3 — Reportar/Incidencias: fuente única de labels de categoría y estado (evita duplicar mapas
+// como pasaba antes con ALARMA_LABELS vs iconos/nombres en Encargado).
+var REPORTE_CATEGORIA_META={
+  infraestructura:{ic:'🏗️',lbl:'Infraestructura',ubicacion:true},
+  fuga_derrame:{ic:'💧',lbl:'Fuga o Derrame',ubicacion:true},
+  plagas:{ic:'🐛',lbl:'Plagas o enfermedad',ubicacion:true},
+  equipo_herramienta:{ic:'🔧',lbl:'Daño a equipo o herramienta'},
+  otro:{ic:'❓',lbl:'Otro'},
+  accidente:{ic:'🤕',lbl:'Accidente'},
+  emergencia:{ic:'🆘',lbl:'Emergencia'},
+  plantacion:{ic:'🌱',lbl:'Plantación (histórico)'}
+};
+var REPORTE_CATEGORIA_SELECCIONABLES=['infraestructura','fuga_derrame','plagas','equipo_herramienta','otro'];
+var ESTADO_REPORTE_LABELS={
+  pendiente:{lbl:'Pendiente',color:'var(--amarillo)'},
+  en_revision:{lbl:'En revisión',color:'#2980b9'},
+  programada:{lbl:'Atención programada',color:'var(--tierra)'},
+  atendida:{lbl:'Atendido / Resuelto',color:'var(--verde-mid)'},
+  rechazada:{lbl:'Rechazado',color:'var(--rojo)'}
+};
 var cats={plantaciones:[],tablas:[],tiposLabor:[],subtiposLabor:[],operarios:[],inventario:[],cosechadores:[],eventuales:[],equipoDeCampo:[],proveedores:[]};
 var ordenEjecutando=null, pasoEjec=1;
 var capturaEjec={surcos:[],cantidad:0,foto:false,herramientaLimpia:false,requiereLimpieza:false,epp:{}};
@@ -517,6 +550,110 @@ function listarEvidenciasPendientes(){
     });
   });
 }
+// Fase 3 — Reportar/Incidencias: cola offline dedicada, separada de riegoColaOffline y de mootsil_evidencias
+// (esa es la de ejecución de labor / registros_labor, en la lista de "no tocar").
+var REPORTAR_COLA_KEY='mootsil_reportar_cola';
+var reportarColaOffline=JSON.parse(localStorage.getItem(REPORTAR_COLA_KEY)||'[]');
+var _reportarDB=null;
+function abrirDBReportarEvidencias(){
+  if(_reportarDB) return Promise.resolve(_reportarDB);
+  return new Promise(function(resolve,reject){
+    var req=indexedDB.open('mootsil_reportar_evidencias',1);
+    req.onupgradeneeded=function(e){
+      var db=e.target.result;
+      if(!db.objectStoreNames.contains('pendientes')) db.createObjectStore('pendientes',{keyPath:'id'});
+    };
+    req.onsuccess=function(e){_reportarDB=e.target.result;resolve(_reportarDB);};
+    req.onerror=function(e){reject(e.target.error);};
+  });
+}
+function reportarGuardarEvidenciaLocal(reporteLocalId,blob,mime,tipo){
+  var id='revp_'+Date.now()+'_'+Math.round(Math.random()*99999);
+  return abrirDBReportarEvidencias().then(function(db){
+    return new Promise(function(resolve,reject){
+      var tx=db.transaction('pendientes','readwrite');
+      tx.objectStore('pendientes').put({id:id,reporteLocalId:reporteLocalId,blob:blob,mime:mime,tipo:tipo,creado_en:Date.now()});
+      tx.oncomplete=function(){resolve(id);};
+      tx.onerror=function(e){reject(e.target.error);};
+    });
+  });
+}
+function reportarListarEvidenciasLocales(){
+  return abrirDBReportarEvidencias().then(function(db){
+    return new Promise(function(resolve){
+      var tx=db.transaction('pendientes','readonly');
+      var req=tx.objectStore('pendientes').getAll();
+      req.onsuccess=function(){resolve(req.result||[]);};
+      req.onerror=function(){resolve([]);};
+    });
+  });
+}
+function reportarBorrarEvidenciaLocal(id){
+  return abrirDBReportarEvidencias().then(function(db){
+    var tx=db.transaction('pendientes','readwrite');
+    tx.objectStore('pendientes').delete(id);
+  }).catch(function(){});
+}
+function reportarEncolar(payload,evidencias,notifTitle,notifCuerpo){
+  var localId='rep_'+Date.now()+'_'+Math.round(Math.random()*99999);
+  var guardarTodas=(evidencias||[]).reduce(function(p,it){
+    return p.then(function(){return reportarGuardarEvidenciaLocal(localId,it.file,it.mime,it.tipo);});
+  },Promise.resolve());
+  return guardarTodas.then(function(){
+    reportarColaOffline.push({localId:localId,payload:payload,notifTitle:notifTitle,notifCuerpo:notifCuerpo,creado_en:Date.now()});
+    localStorage.setItem(REPORTAR_COLA_KEY,JSON.stringify(reportarColaOffline));
+    return localId;
+  });
+}
+function reportarEncolarEvidencia(alertaId,it){
+  return reportarGuardarEvidenciaLocal('alerta:'+alertaId,it.file,it.mime,it.tipo);
+}
+function reportarSincronizar(){
+  if(!reportarColaOffline.length) return Promise.resolve();
+  var pend=reportarColaOffline.slice(); reportarColaOffline=[];
+  localStorage.setItem(REPORTAR_COLA_KEY,'[]');
+  return pend.reduce(function(p,item){
+    return p.then(function(){
+      return from('alertas_campo').insert(item.payload).then(function(rows){
+        var nuevo=rows&&rows[0];
+        if(!nuevo) throw new Error('sin respuesta');
+        return from('alertas_campo_historial').insert({alerta_id:nuevo.id,estado:'pendiente',comentario:'Reportado (sincronizado desde cola offline)',usuario_id:item.payload.usuario_id}).then(function(){
+          return reportarListarEvidenciasLocales();
+        }).then(function(locales){
+          var mias=locales.filter(function(l){return l.reporteLocalId===item.localId;});
+          return mias.reduce(function(p2,l){
+            return p2.then(function(){
+              return subirEvidenciaArchivo(l.blob,l.tipo).then(function(res){
+                return from('alertas_campo_evidencias').insert({alerta_id:nuevo.id,url:res.url,tipo:res.tipo,mime_type:l.mime,tamano_bytes:l.blob.size});
+              }).then(function(){return reportarBorrarEvidenciaLocal(l.id);});
+            });
+          },Promise.resolve());
+        }).then(function(){
+          return from('notificaciones').insert({titulo:item.notifTitle||'🚨 Reporte sincronizado',cuerpo:(item.notifCuerpo||'Reporte sincronizado')+' (guardado sin señal, ya enviado)',icono:'🚨',leida:false,para_rol:'encargado'});
+        });
+      }).catch(function(){
+        // si vuelve a fallar el insert del reporte, se re-encola tal cual (las evidencias ya están a salvo en IndexedDB)
+        reportarColaOffline.push(item);
+        localStorage.setItem(REPORTAR_COLA_KEY,JSON.stringify(reportarColaOffline));
+      });
+    });
+  },Promise.resolve());
+}
+function reportarSincronizarEvidenciasSueltas(){
+  return reportarListarEvidenciasLocales().then(function(locales){
+    var sueltas=locales.filter(function(l){return typeof l.reporteLocalId==='string'&&l.reporteLocalId.indexOf('alerta:')===0;});
+    return sueltas.reduce(function(p,l){
+      var alertaId=l.reporteLocalId.slice(7);
+      return p.then(function(){
+        return subirEvidenciaArchivo(l.blob,l.tipo).then(function(res){
+          return from('alertas_campo_evidencias').insert({alerta_id:alertaId,url:res.url,tipo:res.tipo,mime_type:l.mime,tamano_bytes:l.blob.size});
+        }).then(function(){return reportarBorrarEvidenciaLocal(l.id);}).catch(function(){});
+      });
+    },Promise.resolve());
+  });
+}
+window.addEventListener('online',function(){reportarSincronizar().then(reportarSincronizarEvidenciasSueltas);});
+
 var camStream=null, camFacing='environment', mediaRecorder=null, grabando=false, videoChunks=[];
 
 function showToast(msg){
@@ -4134,34 +4271,73 @@ function guardarAplicacion(){
 
 function renderAlarmasRevision(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo">🚨 Alarmas de campo</div><div class="loading">Cargando...</div>';
+  body.innerHTML='<div class="seccion-titulo">🚨 Reportes de campo</div><div class="loading">Cargando...</div>';
   Promise.all([
-    from('alertas_campo').select('*,usuario:usuarios(nombre),tabla:tablas(nombre,plantacion_id)').order('creado_en',{ascending:false}).limit(50).get(),
-    from('alertas_recomendaciones').select('*,autor:usuarios!creado_por(nombre)').get()
+    from('alertas_campo').select('*,usuario:usuarios(nombre),tabla:tablas(nombre,plantacion_id),activo:activos_rancho(nombre)').order('creado_en',{ascending:false}).limit(50).get(),
+    from('alertas_recomendaciones').select('*,autor:usuarios!creado_por(nombre)').get(),
+    from('alertas_campo_evidencias').select('alerta_id,url,tipo').get()
   ]).then(function(r){
-    var rows=r[0]||[], recoms=r[1]||[];
-    if(!rows.length){body.innerHTML='<div class="seccion-titulo">🚨 Alarmas de campo</div><div class="empty">Sin reportes todavía.</div>';return;}
-    var iconos={plantacion:'🌱',plagas:'🐛',infraestructura:'🏗️',accidente:'🤕',emergencia:'🆘'};
-    var nombres={plantacion:'Plantación',plagas:'Plagas',infraestructura:'Infraestructura',accidente:'Accidente',emergencia:'Emergencia'};
+    var rows=r[0]||[], recoms=r[1]||[], evidAll=r[2]||[];
+    if(!rows.length){body.innerHTML='<div class="seccion-titulo">🚨 Reportes de campo</div><div class="empty">Sin reportes todavía.</div>';return;}
     var esIngeniero=usuario.rol==='ingeniero'||usuario.rol==='admin';
-    var html='<div class="seccion-titulo">🚨 Alarmas de campo</div>';
+    var html='<div class="seccion-titulo">🚨 Reportes de campo</div>';
     html+=rows.map(function(a){
+      var meta=REPORTE_CATEGORIA_META[a.categoria]||{ic:'🚨',lbl:a.categoria};
       var p=a.tabla?cats.plantaciones.find(function(x){return x.id===a.tabla.plantacion_id;}):null;
       var ubicacion=(p||a.tabla)?('📍 '+(p?p.nombre:'')+(a.tabla?' · '+a.tabla.nombre:'')):'';
       var f=new Date(a.creado_en).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'numeric',minute:'2-digit',hour12:true});
       var esEmerg=a.categoria==='emergencia';
+      var estLbl=ESTADO_REPORTE_LABELS[a.estado]||{lbl:a.estado,color:'var(--gris-3)'};
       var misRecoms=recoms.filter(function(r2){return r2.alerta_id===a.id;});
       var recomHtml=misRecoms.length?('<div style="margin-top:.4rem;border-top:1px dashed var(--gris-2);padding-top:.4rem;">'+misRecoms.map(function(r2){return '<div style="font-size:.78rem;color:var(--verde-mid);">💡 '+(r2.tipo==='aplicacion'?'Se creó una aplicación':(r2.texto||''))+' — '+(r2.autor?r2.autor.nombre:'')+'</div>';}).join('')+'</div>'):'';
-      var botonRecom=(esIngeniero&&a.categoria!=='emergencia'&&a.tabla_id)?'<div style="margin-top:.5rem;"><button type="button" class="btn-sm btn-completar" data-recomendar="'+a.id+'" data-tabla="'+a.tabla_id+'">💡 Recomendar solución</button></div>':'';
-      return '<div class="orden-card" style="'+(esEmerg?'border-left-color:var(--rojo);':'')+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(iconos[a.categoria]||'🚨')+' '+(nombres[a.categoria]||a.categoria)+'</strong><span style="font-size:.72rem;color:var(--gris-3);">'+f+'</span></div>'+(ubicacion?'<div class="orden-meta" style="font-weight:700;">'+ubicacion+'</div>':'')+'<div class="orden-meta">👤 '+(a.usuario?a.usuario.nombre:'')+'</div>'+(a.descripcion?'<div class="orden-meta" style="margin-top:.2rem;">📝 '+a.descripcion+'</div>':'')+(a.evidencia_url?'<div style="margin-top:.4rem;"><a href="'+a.evidencia_url+'" target="_blank"><img src="'+a.evidencia_url+'" style="max-width:140px;max-height:140px;border-radius:8px;border:1px solid var(--gris-2);"></a></div>':'')+recomHtml+botonRecom+'</div>';
+      var botonRecom=(esIngeniero&&a.categoria!=='emergencia'&&a.tabla_id)?'<button type="button" class="btn-sm btn-completar" data-recomendar="'+a.id+'" data-tabla="'+a.tabla_id+'">💡 Recomendar solución</button>':'';
+      var miEvid=evidAll.filter(function(e){return e.alerta_id===a.id;});
+      var evidThumb=miEvid.length?('<div style="margin-top:.4rem;display:flex;gap:6px;flex-wrap:wrap;">'+miEvid.slice(0,3).map(function(e){return e.tipo==='video'?'<div style="width:44px;height:44px;border-radius:8px;background:var(--gris-1);display:flex;align-items:center;justify-content:center;font-size:1.1rem;">🎬</div>':'<img src="'+e.url+'" style="width:44px;height:44px;object-fit:cover;border-radius:8px;border:1px solid var(--gris-2);">';}).join('')+(miEvid.length>3?'<span class="orden-meta" style="align-self:center;">+'+(miEvid.length-3)+'</span>':'')+'</div>'):'';
+      var acciones=(!esEmerg&&a.estado!=='atendida'&&a.estado!=='rechazada')?('<div style="display:flex;gap:8px;margin-top:.6rem;flex-wrap:wrap;">'+
+        '<button class="btn-sm btn-completar" data-atender="'+a.id+'">✅ Marcar atendida</button>'+
+        '<button class="btn-sm btn-cancelar" data-rechazar="'+a.id+'">❌ Rechazar</button>'+
+        botonRecom+
+      '</div>'):(botonRecom?('<div style="margin-top:.6rem;">'+botonRecom+'</div>'):'');
+      return '<div class="orden-card" style="'+(esEmerg?'border-left-color:var(--rojo);':'')+'cursor:pointer;" data-ver="'+a.id+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+meta.ic+' '+meta.lbl+'</strong><span style="font-size:.72rem;font-weight:700;color:'+(esEmerg?'var(--rojo)':estLbl.color)+';">'+f+(esEmerg?'':' · '+estLbl.lbl)+'</span></div>'+(ubicacion?'<div class="orden-meta" style="font-weight:700;">'+ubicacion+'</div>':'')+'<div class="orden-meta">👤 '+(a.usuario?a.usuario.nombre:'')+(a.activo?' · 🔧 '+a.activo.nombre:'')+'</div>'+(a.descripcion?'<div class="orden-meta" style="margin-top:.2rem;">📝 '+a.descripcion+'</div>':'')+evidThumb+recomHtml+acciones+'</div>';
     }).join('');
     body.innerHTML=html;
+    body.querySelectorAll('[data-ver]').forEach(function(el){
+      el.addEventListener('click',function(e){
+        if(e.target.closest('button')) return;
+        renderDetalleReporte(this.dataset.ver);
+      });
+    });
     body.querySelectorAll('[data-recomendar]').forEach(function(btn){
-      btn.addEventListener('click',function(){
+      btn.addEventListener('click',function(e){
+        e.stopPropagation();
         renderRecomendarAlarma(this.dataset.recomendar,this.dataset.tabla);
       });
     });
+    body.querySelectorAll('[data-atender]').forEach(function(btn){
+      btn.addEventListener('click',function(e){e.stopPropagation();resolverReporteEstado(this.dataset.atender,'atendida',renderAlarmasRevision);});
+    });
+    body.querySelectorAll('[data-rechazar]').forEach(function(btn){
+      btn.addEventListener('click',function(e){e.stopPropagation();resolverReporteEstado(this.dataset.rechazar,'rechazada',renderAlarmasRevision);});
+    });
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function resolverReporteEstado(id,nuevoEstado,volverFn){
+  var comentario=prompt(nuevoEstado==='atendida'?'¿Algún comentario para el colaborador? (opcional)':nuevoEstado==='rechazada'?'¿Por qué se rechaza? (se le va a mostrar)':'Comentario (opcional)');
+  if(comentario===null) return;
+  from('alertas_campo').select('*').eq('id',id).get().then(function(rows){
+    var a=rows&&rows[0];
+    var cambios={estado:nuevoEstado};
+    if(nuevoEstado==='atendida'||nuevoEstado==='rechazada'){cambios.atendido_por=usuario.id;cambios.atendido_en=new Date().toISOString();if(comentario)cambios.respuesta=comentario;}
+    return from('alertas_campo').eq('id',id).update(cambios).then(function(){
+      return from('alertas_campo_historial').insert({alerta_id:id,estado:nuevoEstado,comentario:comentario||null,usuario_id:usuario.id});
+    }).then(function(){
+      if(a) return from('notificaciones').insert({titulo:'📄 Actualización de tu reporte',cuerpo:'Tu reporte cambió a: '+(ESTADO_REPORTE_LABELS[nuevoEstado]?ESTADO_REPORTE_LABELS[nuevoEstado].lbl:nuevoEstado)+(comentario?' — '+comentario:''),icono:'📄',leida:false,para_rol:'operario',para_usuario:a.usuario_id});
+    });
+  }).then(function(){
+    showToast(nuevoEstado==='atendida'?'✅ Marcada como atendida':nuevoEstado==='rechazada'?'❌ Rechazada':'Actualizado');
+    (volverFn||renderAlarmasRevision)();
+  }).catch(function(e){alert('Error: '+e.message);});
 }
 
 function renderRecomendarAlarma(alertaId,tablaId){
@@ -5918,13 +6094,15 @@ function renderSolicitudesOperarioRevision(){
     var resueltos=rows.filter(function(s){return s.estado!=='pendiente';});
     var estLbl={pendiente:'⏳ Pendiente',atendida:'✅ Atendida',rechazada:'❌ Rechazada'};
     var estColor={pendiente:'var(--tierra)',atendida:'var(--verde-mid)',rechazada:'var(--rojo)'};
-    var tipoLbl={prestamo:'💰 Préstamo',herramienta:'⚠️ Herramienta',otro:'💬 Otro'};
+    var tipoLbl={prestamo:'💰 Préstamo',herramienta:'⚠️ Herramienta',otro:'💬 Otro',mantenimiento:'🔧 Mantenimiento',insumo:'📦 Insumo'};
     function tarjeta(s){
       var partesMsg=s.mensaje.split('\n');
       var textoMsg=partesMsg[0];
       var fotoMsg=partesMsg[1]&&partesMsg[1].indexOf('http')===0?partesMsg[1]:null;
+      var evidenciaUrl=s.evidencia_url||fotoMsg;
+      var urgenciaTxt=s.urgencia?(' · Urgencia: '+s.urgencia.charAt(0).toUpperCase()+s.urgencia.slice(1)):'';
       var ac=s.estado==='pendiente'?'<div style="display:flex;gap:8px;margin-top:.6rem;flex-wrap:wrap;">'+(s.tipo==='prestamo'?'<button class="btn-sm btn-completar" data-aprob-prestamo="'+s.id+'" data-op="'+s.operario_id+'" data-monto="'+s.monto_solicitado+'" data-motivo="'+s.mensaje.replace(/"/g,'&quot;')+'">✅ Aprobar y registrar</button>':'<button class="btn-sm btn-completar" data-atender="'+s.id+'">✅ Marcar atendida</button>')+'<button class="btn-sm btn-cancelar" data-rechazar="'+s.id+'">❌ Rechazar</button></div>':'';
-      return '<div class="orden-card" style="border-left-color:'+estColor[s.estado]+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(tipoLbl[s.tipo]||s.tipo)+(s.activo_rancho?' — '+s.activo_rancho.nombre:'')+' · '+(s.operario?s.operario.nombre:'')+'</strong><span style="font-size:.72rem;font-weight:700;color:'+estColor[s.estado]+';">'+estLbl[s.estado]+'</span></div><div class="orden-meta">'+(s.monto_solicitado?'$'+parseFloat(s.monto_solicitado).toFixed(2)+' · ':'')+textoMsg+(fotoMsg?'<br/><a href="'+fotoMsg+'" target="_blank" style="color:var(--verde-mid);font-weight:700;">📎 Ver foto</a>':'')+(s.respuesta?'<br/>📩 '+s.respuesta:'')+'</div>'+ac+'</div>';
+      return '<div class="orden-card" style="border-left-color:'+estColor[s.estado]+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(tipoLbl[s.tipo]||s.tipo)+(s.activo_rancho?' — '+s.activo_rancho.nombre:'')+' · '+(s.operario?s.operario.nombre:'')+'</strong><span style="font-size:.72rem;font-weight:700;color:'+estColor[s.estado]+';">'+estLbl[s.estado]+'</span></div><div class="orden-meta">'+(s.monto_solicitado?'$'+parseFloat(s.monto_solicitado).toFixed(2)+' · ':'')+textoMsg+urgenciaTxt+(evidenciaUrl?'<br/><a href="'+evidenciaUrl+'" target="_blank" style="color:var(--verde-mid);font-weight:700;">📎 Ver evidencia</a>':'')+(s.respuesta?'<br/>📩 '+s.respuesta:'')+'</div>'+ac+'</div>';
     }
     var html=headerHtml+'<div class="seccion-titulo" style="margin-top:0;">'+(pend.length?'<span style="font-size:.75rem;color:var(--rojo);font-weight:700;">('+pend.length+' pendientes)</span>':'Solicitudes')+'</div>';
     if(pend.length) html+=pend.map(tarjeta).join('');
@@ -5996,102 +6174,314 @@ function resolverPermiso(id,estado,conGoce){
   }).catch(function(e){alert('Error: '+e.message);});
 }
 
-function renderAlarmasMenu(){
+// ===== Fase 3 — Reportar/Incidencias =====
+// Widget de evidencia múltiple compartido por 8-1/8-2/8-3 (hasta 5 archivos, JPG/PNG/MP4, máx. 20MB c/u)
+var REP_MAX_ARCHIVOS=5, REP_MAX_BYTES=20*1024*1024;
+var REP_TIPOS_MIME={'image/jpeg':'imagen','image/png':'imagen','video/mp4':'video'};
+var repEvidenciaSeleccion=[];
+function repEvidenciaReset(){repEvidenciaSeleccion=[];}
+function repEvidenciaWidgetHtml(prefix){
+  return '<div class="form-group"><label>Evidencia (opcional, hasta 5 archivos — JPG, PNG o MP4, máx. 20 MB c/u)</label>'+
+    '<div style="display:flex;gap:8px;">'+
+    '<button type="button" onclick="document.getElementById(\''+prefix+'-ev-cam\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📷 Cámara</button>'+
+    '<button type="button" onclick="document.getElementById(\''+prefix+'-ev-gal\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);background:var(--gris-1);cursor:pointer;">🖼️ Galería / Video</button>'+
+    '</div><div id="'+prefix+'-ev-list" class="rpt-ev-grid"></div>'+
+    '<input type="file" id="'+prefix+'-ev-cam" accept="image/jpeg,image/png,video/mp4" capture="environment" style="display:none">'+
+    '<input type="file" id="'+prefix+'-ev-gal" accept="image/jpeg,image/png,video/mp4" multiple style="display:none">'+
+    '</div>';
+}
+function repEvidenciaRender(prefix){
+  var cont=document.getElementById(prefix+'-ev-list');
+  if(!cont) return;
+  cont.innerHTML=repEvidenciaSeleccion.map(function(it,idx){
+    var thumb=it.tipo==='video'?'<div class="rpt-ev-thumb">🎬</div>':'<img class="rpt-ev-thumb" src="'+it.previewUrl+'">';
+    return '<div class="rpt-ev-item">'+thumb+'<button type="button" class="rpt-ev-quitar" data-idx="'+idx+'">✕</button></div>';
+  }).join('');
+  cont.querySelectorAll('.rpt-ev-quitar').forEach(function(b){
+    b.addEventListener('click',function(){repEvidenciaSeleccion.splice(parseInt(this.dataset.idx,10),1);repEvidenciaRender(prefix);});
+  });
+}
+function repEvidenciaAgregarArchivos(files,prefix){
+  var rechazados=[];
+  Array.prototype.slice.call(files).forEach(function(f){
+    if(repEvidenciaSeleccion.length>=REP_MAX_ARCHIVOS){rechazados.push(f.name+' (máximo 5 archivos)');return;}
+    var tipo=REP_TIPOS_MIME[f.type];
+    if(!tipo){rechazados.push(f.name+' (formato no soportado — usa JPG, PNG o MP4)');return;}
+    if(f.size>REP_MAX_BYTES){rechazados.push(f.name+' (supera 20 MB)');return;}
+    repEvidenciaSeleccion.push({file:f,tipo:tipo,mime:f.type,previewUrl:tipo==='imagen'?URL.createObjectURL(f):null});
+  });
+  repEvidenciaRender(prefix);
+  if(rechazados.length) alert('No se agregaron algunos archivos:\n'+rechazados.join('\n'));
+}
+function repEvidenciaWirearInputs(prefix){
+  document.getElementById(prefix+'-ev-cam').addEventListener('change',function(e){repEvidenciaAgregarArchivos(e.target.files,prefix);e.target.value='';});
+  document.getElementById(prefix+'-ev-gal').addEventListener('change',function(e){repEvidenciaAgregarArchivos(e.target.files,prefix);e.target.value='';});
+}
+// Widget de evidencia única (Solicitudes → Insumos, solo foto, no galería)
+var repEvidenciaUnicaBlob=null;
+function repEvidenciaUnicaReset(){repEvidenciaUnicaBlob=null;}
+function repEvidenciaUnicaWidgetHtml(prefix){
+  return '<div class="form-group"><label>Evidencia (opcional)</label><div style="display:flex;gap:8px;">'+
+    '<button type="button" onclick="document.getElementById(\''+prefix+'-evu-cam\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📷 Cámara</button>'+
+    '<button type="button" onclick="document.getElementById(\''+prefix+'-evu-gal\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);background:var(--gris-1);cursor:pointer;">🖼️ Galería</button>'+
+    '</div><div id="'+prefix+'-evu-status" style="margin-top:.4rem;"></div>'+
+    '<input type="file" id="'+prefix+'-evu-cam" accept="image/*" capture="environment" style="display:none">'+
+    '<input type="file" id="'+prefix+'-evu-gal" accept="image/*" style="display:none">'+
+    '</div>';
+}
+function repEvidenciaUnicaWirear(prefix){
+  function capturar(e){
+    var f=e.target.files&&e.target.files[0];
+    if(!f) return;
+    repEvidenciaUnicaBlob=f;
+    var ind=document.getElementById(prefix+'-evu-status');
+    if(ind){var url=URL.createObjectURL(f);ind.innerHTML='✅ Foto lista<br><img src="'+url+'" style="max-width:100px;max-height:100px;border-radius:8px;border:1px solid var(--gris-2);margin-top:.3rem;">';}
+  }
+  document.getElementById(prefix+'-evu-cam').addEventListener('change',capturar);
+  document.getElementById(prefix+'-evu-gal').addEventListener('change',capturar);
+}
+
+// Subida unificada a Storage (reemplaza las 2 implementaciones duplicadas que existían) + registro en alertas_campo_evidencias
+function subirEvidenciaArchivo(file,tipo){
+  var ext=(file.name&&file.name.lastIndexOf('.')>=0)?file.name.slice(file.name.lastIndexOf('.')):(tipo==='video'?'.mp4':'.jpg');
+  var fname='reporte_'+Date.now()+'_'+Math.round(Math.random()*99999)+ext;
+  return fetch(URL_SB+'/storage/v1/object/evidencias/'+fname,{method:'POST',headers:{'apikey':KEY_SB,'Authorization':'Bearer '+KEY_SB,'Content-Type':file.type||'application/octet-stream','x-upsert':'true'},body:file}).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return {url:URL_SB+'/storage/v1/object/public/evidencias/'+fname,tipo:tipo,mime_type:file.type,tamano_bytes:file.size};
+  });
+}
+function subirEvidenciasReporte(alertaId){
+  var pend=repEvidenciaSeleccion.slice();
+  return pend.reduce(function(p,it){
+    return p.then(function(){
+      if(!navigator.onLine) return reportarEncolarEvidencia(alertaId,it);
+      return subirEvidenciaArchivo(it.file,it.tipo).then(function(res){
+        return from('alertas_campo_evidencias').insert({alerta_id:alertaId,url:res.url,tipo:res.tipo,mime_type:res.mime_type,tamano_bytes:res.tamano_bytes});
+      }).catch(function(){return reportarEncolarEvidencia(alertaId,it);});
+    });
+  },Promise.resolve());
+}
+
+// Envío unificado de un reporte a alertas_campo (online) o a la cola offline (sin señal) — usado por 8-1/8-2/8-3
+function repEnviarReporte(payload,notifTitle,notifCuerpo){
+  if(!navigator.onLine){
+    return reportarEncolar(payload,repEvidenciaSeleccion,notifTitle,notifCuerpo).then(function(){return {offline:true};});
+  }
+  return from('alertas_campo').insert(payload).then(function(rows){
+    var nuevo=rows&&rows[0];
+    if(!nuevo) throw new Error('Sin respuesta del servidor');
+    return from('alertas_campo_historial').insert({alerta_id:nuevo.id,estado:'pendiente',comentario:'Reportado',usuario_id:payload.usuario_id}).then(function(){
+      return subirEvidenciasReporte(nuevo.id);
+    }).then(function(){
+      return from('notificaciones').insert({titulo:notifTitle,cuerpo:notifCuerpo,icono:'🚨',leida:false,para_rol:'encargado'});
+    }).then(function(){return {offline:false,id:nuevo.id};});
+  }).catch(function(e){
+    if(!navigator.onLine){
+      return reportarEncolar(payload,repEvidenciaSeleccion,notifTitle,notifCuerpo).then(function(){return {offline:true};});
+    }
+    throw e;
+  });
+}
+
+function repEsColaborador(){
+  return usuario.rol==='operario'||usuario.rol==='cosechador'||usuario.rol==='galerista'||usuario.rol==='labores_eventual';
+}
+
+// 8-0 — Centro de Reportes
+function renderCentroReportes(){
   var body=document.getElementById('op-body');
   document.querySelectorAll('.op-bottom-nav .op-nav-item').forEach(function(t){t.classList.remove('active');});
-  body.innerHTML='<div class="seccion-titulo">🚨 Alarmas</div><p class="hint" style="margin-bottom:1rem;">Reporta lo que encuentres en campo. Se avisa de inmediato al encargado.</p><div style="display:flex;flex-direction:column;gap:.75rem;">'+
-  '<div class="tarea-card" style="cursor:pointer;border-left-color:var(--verde-mid);" onclick="renderAlarmaForm(\'plantacion\')"><div class="tarea-title">🌱 Plantación</div><div class="tarea-meta">Fugas, daños, riego, tutoreo...</div></div>'+
-  '<div class="tarea-card" style="cursor:pointer;border-left-color:var(--tierra);" onclick="renderAlarmaForm(\'plagas\')"><div class="tarea-title">🐛 Plagas</div><div class="tarea-meta">Hormigas, trips, otras plagas</div></div>'+
-  '<div class="tarea-card" style="cursor:pointer;border-left-color:var(--gris-3);" onclick="renderAlarmaForm(\'infraestructura\')"><div class="tarea-title">🏗️ Infraestructura</div><div class="tarea-meta">Macrotúneles, pozo, equipos...</div></div>'+
-  '<div class="tarea-card" style="cursor:pointer;border-left-color:var(--tierra);" onclick="renderAlarmaForm(\'accidente\')"><div class="tarea-title">🤕 Accidente</div><div class="tarea-meta">Reporta un accidente de un compañero o tuyo</div></div>'+
-  '<div class="tarea-card" style="cursor:pointer;border-left-color:var(--rojo);background:var(--rojo-tenue);" onclick="renderEmergencia()"><div class="tarea-title" style="color:var(--rojo);">🆘 Emergencia</div><div class="tarea-meta">Llamar a Policía / Bomberos / Ambulancia</div></div>'+
-  '</div><button class="btn-back" style="margin-top:1.25rem;" onclick="tabOperario(\'inicio\')">← Volver</button>';
+  body.innerHTML='<div class="seccion-titulo">🚨 Centro de Reportes</div><div class="loading">Cargando...</div>';
+  from('alertas_campo').select('*').eq('usuario_id',usuario.id).order('creado_en',{ascending:false}).limit(20).get().then(function(rows){
+    var relevantes=(rows||[]).filter(function(r){return r.categoria!=='emergencia';});
+    var resumen={pendiente:0,en_revision:0,programada:0,atendida:0,rechazada:0};
+    relevantes.forEach(function(r){ if(resumen.hasOwnProperty(r.estado)) resumen[r.estado]++; });
+    var resumenHtml='<div class="stats-row" style="grid-template-columns:repeat(5,1fr);">'+
+      Object.keys(ESTADO_REPORTE_LABELS).map(function(k){
+        return '<div class="stat-card"><div class="stat-num" style="color:'+ESTADO_REPORTE_LABELS[k].color+';font-size:1.2rem;">'+resumen[k]+'</div><div class="stat-lbl">'+ESTADO_REPORTE_LABELS[k].lbl+'</div></div>';
+      }).join('')+'</div>';
+    var recientesHtml=relevantes.slice(0,5).map(function(r){
+      var meta=REPORTE_CATEGORIA_META[r.categoria]||{ic:'🚨',lbl:r.categoria};
+      var f=new Date(r.creado_en).toLocaleDateString('es-MX',{day:'2-digit',month:'short'});
+      var estLbl=ESTADO_REPORTE_LABELS[r.estado]||{lbl:r.estado,color:'var(--gris-3)'};
+      return '<div class="orden-card" style="cursor:pointer;" data-ver="'+r.id+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.87rem;">'+meta.ic+' '+meta.lbl+'</strong><span style="font-size:.72rem;font-weight:700;color:'+estLbl.color+';">'+estLbl.lbl+'</span></div><div class="orden-meta">'+f+(r.descripcion?' · '+r.descripcion.slice(0,50):'')+'</div></div>';
+    }).join('');
+    var accesosHtml='<div class="op-inicio-card"><div class="op-inicio-titulo">Reportes rápidos</div><div class="op-accesos-grid">'+
+      '<button class="op-acceso-item" id="cr-acc-incidencia"><span class="op-acceso-ic">📝</span><span>Incidencia</span></button>'+
+      '<button class="op-acceso-item" id="cr-acc-mantenimiento"><span class="op-acceso-ic">🔧</span><span>Mantenimiento</span></button>'+
+      '<button class="op-acceso-item" id="cr-acc-riego"><span class="op-acceso-ic">💧</span><span>Riego</span></button>'+
+      '<button class="op-acceso-item" id="cr-acc-insumos"><span class="op-acceso-ic">📦</span><span>Insumos</span></button>'+
+      '<button class="op-acceso-item" id="cr-acc-sugerencia"><span class="op-acceso-ic">💡</span><span>Sugerencia</span></button>'+
+      '</div></div>';
+    body.innerHTML='<div class="seccion-titulo">🚨 Centro de Reportes</div>'+
+      '<p class="hint" style="margin-bottom:.75rem;">Reporta lo que encuentres en campo. Se avisa de inmediato al encargado.</p>'+
+      resumenHtml+
+      '<div class="tarea-card" style="cursor:pointer;border-left-color:var(--rojo);background:var(--rojo-tenue);margin-top:.75rem;" onclick="renderAccidenteSeguridad()"><div class="tarea-title" style="color:var(--rojo);">🤕 Accidente / Emergencia</div><div class="tarea-meta">Reporta un accidente o avisa una emergencia</div></div>'+
+      accesosHtml+
+      '<div class="seccion-titulo" style="margin-top:1rem;display:flex;justify-content:space-between;align-items:center;">Reportes recientes<button type="button" onclick="renderMisReportes()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">Ver todos →</button></div>'+
+      (recientesHtml||'<div class="empty">Aún no has hecho ningún reporte.</div>')+
+      '<button class="btn-back" style="margin-top:1rem;" onclick="tabOperario(\'inicio\')">← Volver</button>';
+    body.querySelectorAll('[data-ver]').forEach(function(el){el.addEventListener('click',function(){renderDetalleReporte(this.dataset.ver);});});
+    document.getElementById('cr-acc-incidencia').addEventListener('click',function(){renderNuevoReporteIncidencia();});
+    document.getElementById('cr-acc-mantenimiento').addEventListener('click',function(){renderSolicitudMantenimiento();});
+    document.getElementById('cr-acc-riego').addEventListener('click',function(){renderNuevoReporteIncidencia('fuga_derrame');});
+    document.getElementById('cr-acc-insumos').addEventListener('click',function(){renderSolicitudInsumo();});
+    document.getElementById('cr-acc-sugerencia').addEventListener('click',function(){renderSolicitudOtro('sugerencia');});
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
-var ALARMA_LABELS={plantacion:'🌱 Plantación',plagas:'🐛 Plagas',infraestructura:'🏗️ Infraestructura',accidente:'🤕 Accidente'};
-
-var alarmaEvidenciaBlob=null;
-
-function capturarEvidenciaAlarma(e){
-  var f=e.target.files&&e.target.files[0];
-  if(!f) return;
-  alarmaEvidenciaBlob=f;
-  var ind=document.getElementById('al-ev-status');
-  if(ind){
-    var url=URL.createObjectURL(f);
-    ind.innerHTML='✅ Foto lista<br><img src="'+url+'" style="max-width:120px;max-height:120px;border-radius:8px;margin-top:.4rem;border:1px solid var(--gris-2);">';
-  }
-}
-
-function renderAlarmaForm(categoria){
+// 8-1 — Nuevo reporte de incidencia
+function renderNuevoReporteIncidencia(categoriaPreseleccionada){
   var body=document.getElementById('op-body');
-  var necesitaUbicacion = categoria!=='accidente';
+  repEvidenciaReset();
+  var opciones=REPORTE_CATEGORIA_SELECCIONABLES.map(function(k){
+    var m=REPORTE_CATEGORIA_META[k];
+    return '<option value="'+k+'"'+(categoriaPreseleccionada===k?' selected':'')+'>'+m.ic+' '+m.lbl+'</option>';
+  }).join('');
   var pO=cats.plantaciones.map(function(p){return '<option value="'+p.id+'">'+p.nombre+'</option>';}).join('');
-  alarmaEvidenciaBlob=null;
-  body.innerHTML='<div class="seccion-titulo">'+ALARMA_LABELS[categoria]+'</div><div class="form-card">'+
-  (necesitaUbicacion?'<div class="form-group"><label>Plantación</label><select id="al-pl"><option value="">Selecciona...</option>'+pO+'</select></div><div class="form-group"><label>Tabla</label><select id="al-tb"><option value="">Selecciona plantación primero</option></select></div>':'')+
-  '<div class="form-group"><label>¿Qué encontraste?</label><textarea id="al-desc" rows="4" placeholder="Ej. Encontré fuga en surco 30 / Surcos 1-20 con hormigas / Surco 24 línea de tutoreo trozada" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div>'+
-  '<div class="form-group"><label>Foto (muy recomendada)</label><div style="display:flex;gap:8px;"><button type="button" onclick="document.getElementById(\'al-ev-cam\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📷 Cámara</button><button type="button" onclick="document.getElementById(\'al-ev-gal\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);background:var(--gris-1);cursor:pointer;">🖼️ Galería</button></div><div id="al-ev-status" class="hint" style="margin-top:.4rem;"></div></div>'+
-  '<button class="btn-primary" id="al-enviar">🚨 Enviar reporte</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAlarmasMenu()">← Volver a Alarmas</button><input type="file" id="al-ev-cam" accept="image/*" capture="environment" style="display:none" onchange="capturarEvidenciaAlarma(event)"><input type="file" id="al-ev-gal" accept="image/*" style="display:none" onchange="capturarEvidenciaAlarma(event)">';
-  if(necesitaUbicacion){
-    document.getElementById('al-pl').addEventListener('change',function(){
+  body.innerHTML='<div class="seccion-titulo">📝 Nuevo reporte de incidencia</div><div class="form-card">'+
+    '<div class="form-group"><label>Tipo de incidencia</label><select id="nri-cat">'+opciones+'</select></div>'+
+    '<div id="nri-ubicacion"></div>'+
+    '<div class="form-group"><label>¿Qué encontraste?</label><textarea id="nri-desc" rows="4" placeholder="Describe la incidencia..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div>'+
+    '<div class="form-group"><label>Prioridad</label><div style="display:flex;gap:8px;">'+
+      ['baja','media','alta'].map(function(p){return '<button type="button" class="op-chip nri-prio'+(p==='media'?' sel':'')+'" data-p="'+p+'">'+p.charAt(0).toUpperCase()+p.slice(1)+'</button>';}).join('')+
+    '</div></div>'+
+    repEvidenciaWidgetHtml('nri')+
+    '<button class="btn-primary" id="nri-enviar">🚨 Enviar reporte</button></div>'+
+    '<button class="btn-back" style="margin-top:1rem;" onclick="renderCentroReportes()">← Volver al Centro de Reportes</button>';
+  repEvidenciaWirearInputs('nri');
+  var prioridadSel='media';
+  body.querySelectorAll('.nri-prio').forEach(function(b){
+    b.addEventListener('click',function(){
+      body.querySelectorAll('.nri-prio').forEach(function(x){x.classList.remove('sel');});
+      this.classList.add('sel'); prioridadSel=this.dataset.p;
+    });
+  });
+  function pintarUbicacion(cat){
+    var cont=document.getElementById('nri-ubicacion');
+    var meta=REPORTE_CATEGORIA_META[cat];
+    if(!meta||!meta.ubicacion){cont.innerHTML='';return;}
+    cont.innerHTML='<div class="form-group"><label>Plantación</label><select id="nri-pl"><option value="">Selecciona...</option>'+pO+'</select></div><div class="form-group"><label>Tabla</label><select id="nri-tb"><option value="">Selecciona plantación primero</option></select></div>';
+    document.getElementById('nri-pl').addEventListener('change',function(){
       var tabs=cats.tablas.filter(function(t){return t.plantacion_id===this.value;}.bind(this));
-      document.getElementById('al-tb').innerHTML='<option value="">Selecciona...</option>'+tabs.map(function(t){return '<option value="'+t.id+'">'+t.nombre+'</option>';}).join('');
+      document.getElementById('nri-tb').innerHTML='<option value="">Selecciona...</option>'+tabs.map(function(t){return '<option value="'+t.id+'">'+t.nombre+'</option>';}).join('');
     });
   }
-  document.getElementById('al-enviar').addEventListener('click',function(){
-    var desc=document.getElementById('al-desc').value.trim();
+  document.getElementById('nri-cat').addEventListener('change',function(){
+    if(this.value==='equipo_herramienta'){ renderDanioEquipo(null,null); return; }
+    pintarUbicacion(this.value);
+  });
+  if(categoriaPreseleccionada && categoriaPreseleccionada!=='equipo_herramienta') pintarUbicacion(categoriaPreseleccionada);
+  document.getElementById('nri-enviar').addEventListener('click',function(){
+    var cat=document.getElementById('nri-cat').value;
+    if(cat==='equipo_herramienta'){renderDanioEquipo(null,null);return;}
+    var desc=document.getElementById('nri-desc').value.trim();
     if(!desc){alert('Describe lo que encontraste.');return;}
-    var plId=necesitaUbicacion?(document.getElementById('al-pl').value||null):null;
-    var tbId=necesitaUbicacion?(document.getElementById('al-tb').value||null):null;
-    if(necesitaUbicacion&&(!plId||!tbId)){alert('Selecciona la plantación y la tabla para poder dar seguimiento.');return;}
-    var p=plId?cats.plantaciones.find(function(x){return x.id===plId;}):null;
-    var t=tbId?cats.tablas.find(function(x){return x.id===tbId;}):null;
-    var ubicacionTxt=(p&&t)?(' · 📍 '+p.nombre+' · '+t.nombre):'';
+    var meta=REPORTE_CATEGORIA_META[cat];
+    var plId=null,tbId=null;
+    if(meta.ubicacion){
+      plId=document.getElementById('nri-pl')?document.getElementById('nri-pl').value||null:null;
+      tbId=document.getElementById('nri-tb')?document.getElementById('nri-tb').value||null:null;
+      if(!plId||!tbId){alert('Selecciona la plantación y la tabla para poder dar seguimiento.');return;}
+    }
     var btn=this; btn.disabled=true; btn.textContent='Enviando...';
-    var subirFoto = alarmaEvidenciaBlob ? subirComprobantePermiso(alarmaEvidenciaBlob).catch(function(){return null;}) : Promise.resolve(null);
-    subirFoto.then(function(url){
-      return from('alertas_campo').insert({usuario_id:usuario.id,categoria:categoria,descripcion:desc,plantacion_id:plId,tabla_id:tbId,evidencia_url:url});
-    }).then(function(){
-      return from('notificaciones').insert({titulo:'🚨 '+ALARMA_LABELS[categoria],cuerpo:usuario.nombre+' reportó: '+desc+ubicacionTxt+(alarmaEvidenciaBlob?' 📷':''),icono:'🚨',leida:false,para_rol:'encargado'});
-    }).then(function(){
-      alert('✅ Reporte enviado. El encargado ya fue notificado.');
-      renderAlarmasMenu();
+    var payload={usuario_id:usuario.id,categoria:cat,descripcion:desc,plantacion_id:plId,tabla_id:tbId,prioridad:prioridadSel};
+    repEnviarReporte(payload,'🚨 '+meta.lbl,usuario.nombre+' reportó: '+desc).then(function(r){
+      if(r.offline){ alert('📡 Sin señal — tu reporte se guardó en el celular y se enviará solo al recuperar internet.'); }
+      else { showToast('✅ Reporte enviado. El encargado ya fue notificado.'); }
+      tabOperario('inicio');
     }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='🚨 Enviar reporte';});
   });
 }
 
 var EMERGENCIA_TIPOS={medica:'🩺 Médica',seguridad:'🚨 Seguridad',incendio:'🔥 Incendio',otra:'⚠️ Otra'};
 
-function renderEmergencia(){
-  var body=document.getElementById('op-body');
-  var tiles=Object.keys(EMERGENCIA_TIPOS).map(function(k){
-    return '<div class="labor-tile" data-tipo="'+k+'"><div class="labor-tile-lbl" style="font-size:.85rem;">'+EMERGENCIA_TIPOS[k]+'</div></div>';
-  }).join('');
-  body.innerHTML='<div class="seccion-titulo" style="color:var(--rojo);">🆘 Emergencia</div><p class="hint" style="margin-bottom:1rem;">Esto avisa de inmediato a dueño, encargado y admin — ellos hacen la llamada a las autoridades. No marca ningún número por ti.</p><div class="labor-grid" style="grid-template-columns:repeat(2,1fr);">'+tiles+'</div><div id="emerg-detalle" style="display:none;margin-top:1rem;"><div class="form-card"><div class="form-group"><label>¿Qué pasó? (opcional)</label><textarea id="emerg-desc" rows="3" placeholder="Ej. Compañero con piquete de avispa, cerca de Tabla 2" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="emerg-enviar" style="background:var(--rojo);">🆘 Avisar AHORA</button></div></div><button class="btn-back" style="margin-top:1.25rem;" onclick="renderAlarmasMenu()">← Volver a Alarmas</button>';
-  var tipoSel=null;
-  body.querySelectorAll('[data-tipo]').forEach(function(el){
-    el.addEventListener('click',function(){
-      tipoSel=this.dataset.tipo;
-      body.querySelectorAll('[data-tipo]').forEach(function(x){x.classList.remove('labor-tile-otra');});
-      this.classList.add('labor-tile-otra');
-      document.getElementById('emerg-detalle').style.display='block';
-    });
-  });
-  document.getElementById('emerg-enviar').addEventListener('click',function(){
-    if(!tipoSel){alert('Selecciona qué tipo de emergencia es.');return;}
-    if(!confirm('¿Confirmas que es una emergencia real?\n\nSe avisará de inmediato a dueño, encargado y admin.')) return;
-    var desc=document.getElementById('emerg-desc').value.trim()||null;
-    notificarEmergencia(tipoSel,desc);
+// Lógica de datos de la emergencia — sin cambios respecto a como funcionaba antes (solo se movió aquí
+// para que 8-2 pueda usarla sin la pantalla de confirmación de pantalla completa que tenía renderEmergencia()).
+function notificarEmergencia(tipo,desc){
+  return from('alertas_campo').insert({usuario_id:usuario.id,categoria:'emergencia',descripcion:(EMERGENCIA_TIPOS[tipo]||tipo)+(desc?' — '+desc:'')}).catch(function(){}).then(function(){
+    return from('notificaciones').insert({titulo:'🆘 EMERGENCIA — '+(EMERGENCIA_TIPOS[tipo]||tipo),cuerpo:usuario.nombre+' reportó una emergencia'+(desc?': '+desc:'')+'. ¡Llama ya!',icono:'🆘',leida:false,para_rol:'encargado'});
   });
 }
 
-function notificarEmergencia(tipo,desc){
-  from('alertas_campo').insert({usuario_id:usuario.id,categoria:'emergencia',descripcion:(EMERGENCIA_TIPOS[tipo]||tipo)+(desc?' — '+desc:'')}).catch(function(){});
-  from('notificaciones').insert({titulo:'🆘 EMERGENCIA — '+(EMERGENCIA_TIPOS[tipo]||tipo),cuerpo:usuario.nombre+' reportó una emergencia'+(desc?': '+desc:'')+'. ¡Llama ya!',icono:'🆘',leida:false,para_rol:'encargado'}).then(function(){
-    var body=document.getElementById('op-body');
-    body.innerHTML='<div style="text-align:center;padding:2.5rem 1rem;"><div style="font-size:3rem;margin-bottom:1rem;">🆘</div><div style="font-size:1.1rem;font-weight:800;color:var(--rojo);">Se avisó a dueño, encargado y admin</div><div class="hint" style="margin-top:.5rem;">Mantente en un lugar seguro. Te contactarán de inmediato.</div><button class="btn-primary" style="margin-top:1.5rem;" onclick="tabOperario(\'inicio\')">Entendido</button></div>';
-  }).catch(function(e){alert('Error: '+e.message);});
+// 8-2 — Accidente / Seguridad: el botón de emergencia es una acción inmediata que NO bloquea ni cancela
+// el reporte detallado de abajo — ambos son independientes (Corrección v3.4 del plan).
+var accSeguridadEmergenciaDisparada=false;
+function renderAccidenteSeguridad(){
+  var body=document.getElementById('op-body');
+  repEvidenciaReset();
+  accSeguridadEmergenciaDisparada=false;
+  var tiles=Object.keys(EMERGENCIA_TIPOS).map(function(k){
+    return '<div class="labor-tile" data-tipo="'+k+'"><div class="labor-tile-lbl" style="font-size:.85rem;">'+EMERGENCIA_TIPOS[k]+'</div></div>';
+  }).join('');
+  var pO=cats.plantaciones.map(function(p){return '<option value="'+p.id+'">'+p.nombre+'</option>';}).join('');
+  body.innerHTML='<div class="seccion-titulo" style="color:var(--rojo);">🤕 Accidente / Seguridad</div>'+
+    '<div class="form-card" style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);">'+
+      '<div style="font-weight:800;color:var(--rojo);margin-bottom:.5rem;">🆘 ¿Es una emergencia AHORA?</div>'+
+      '<p class="hint" style="margin-bottom:.75rem;">Esto avisa de inmediato a dueño, encargado y admin — ellos hacen la llamada a las autoridades. No cancela ni reemplaza el reporte detallado de abajo — puedes usar ambos.</p>'+
+      '<div class="labor-grid" style="grid-template-columns:repeat(2,1fr);" id="acc-emerg-tiles">'+tiles+'</div>'+
+      '<div id="acc-emerg-detalle" style="display:none;margin-top:1rem;"><div class="form-group"><label>¿Qué pasó? (opcional)</label><textarea id="acc-emerg-desc" rows="2" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="acc-emerg-enviar" style="background:var(--rojo);">🆘 Avisar AHORA</button></div>'+
+      '<div id="acc-emerg-confirmado" style="display:none;margin-top:.75rem;font-weight:700;color:var(--rojo);">✅ Ya se avisó a dueño, encargado y admin.</div>'+
+    '</div>'+
+    '<div class="form-card"><div style="font-weight:700;margin-bottom:.6rem;">📝 Reporte detallado del accidente</div>'+
+      '<div class="form-group"><label>Tipo de accidente / situación</label><input type="text" id="acc-tipo" placeholder="Ej. Caída, corte, golpe, picadura..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></div>'+
+      '<div class="form-group"><label>Plantación (opcional)</label><select id="acc-pl"><option value="">Selecciona...</option>'+pO+'</select></div>'+
+      '<div class="form-group"><label>Tabla (opcional)</label><select id="acc-tb"><option value="">Selecciona plantación primero</option></select></div>'+
+      '<div class="form-group"><label>Descripción</label><textarea id="acc-desc" rows="4" placeholder="Describe qué pasó..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div>'+
+      '<div class="form-group"><label>Nivel de gravedad</label><div style="display:flex;gap:8px;">'+
+        ['baja','media','alta'].map(function(p){return '<button type="button" class="op-chip acc-grav" data-g="'+p+'">'+p.charAt(0).toUpperCase()+p.slice(1)+'</button>';}).join('')+
+      '</div></div>'+
+      repEvidenciaWidgetHtml('acc')+
+      '<button class="btn-primary" id="acc-enviar">📝 Enviar reporte detallado</button>'+
+    '</div>'+
+    '<button class="btn-back" style="margin-top:1rem;" onclick="renderCentroReportes()">← Volver al Centro de Reportes</button>';
+  repEvidenciaWirearInputs('acc');
+  document.getElementById('acc-pl').addEventListener('change',function(){
+    var tabs=cats.tablas.filter(function(t){return t.plantacion_id===this.value;}.bind(this));
+    document.getElementById('acc-tb').innerHTML='<option value="">Selecciona...</option>'+tabs.map(function(t){return '<option value="'+t.id+'">'+t.nombre+'</option>';}).join('');
+  });
+  var tipoEmergSel=null;
+  body.querySelectorAll('#acc-emerg-tiles [data-tipo]').forEach(function(el){
+    el.addEventListener('click',function(){
+      tipoEmergSel=this.dataset.tipo;
+      body.querySelectorAll('#acc-emerg-tiles [data-tipo]').forEach(function(x){x.classList.remove('labor-tile-otra');});
+      this.classList.add('labor-tile-otra');
+      document.getElementById('acc-emerg-detalle').style.display='block';
+    });
+  });
+  document.getElementById('acc-emerg-enviar').addEventListener('click',function(){
+    if(!tipoEmergSel){alert('Selecciona qué tipo de emergencia es.');return;}
+    if(!confirm('¿Confirmas que es una emergencia real?\n\nSe avisará de inmediato a dueño, encargado y admin.')) return;
+    var desc=document.getElementById('acc-emerg-desc').value.trim()||null;
+    var btn=this; btn.disabled=true; btn.textContent='Avisando...';
+    notificarEmergencia(tipoEmergSel,desc).then(function(){
+      accSeguridadEmergenciaDisparada=true;
+      document.getElementById('acc-emerg-tiles').style.display='none';
+      document.getElementById('acc-emerg-detalle').style.display='none';
+      document.getElementById('acc-emerg-confirmado').style.display='block';
+    }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='🆘 Avisar AHORA';});
+  });
+  var gravedadSel=null;
+  body.querySelectorAll('.acc-grav').forEach(function(b){
+    b.addEventListener('click',function(){
+      body.querySelectorAll('.acc-grav').forEach(function(x){x.classList.remove('sel');});
+      this.classList.add('sel'); gravedadSel=this.dataset.g;
+    });
+  });
+  document.getElementById('acc-enviar').addEventListener('click',function(){
+    var tipoTxt=document.getElementById('acc-tipo').value.trim();
+    var desc=document.getElementById('acc-desc').value.trim();
+    if(!tipoTxt||!desc){alert('Describe el tipo de accidente y qué pasó.');return;}
+    var plId=document.getElementById('acc-pl').value||null;
+    var tbId=document.getElementById('acc-tb').value||null;
+    var btn=this; btn.disabled=true; btn.textContent='Enviando...';
+    var payload={usuario_id:usuario.id,categoria:'accidente',descripcion:tipoTxt+' — '+desc,plantacion_id:plId,tabla_id:tbId,nivel_gravedad:gravedadSel,emergencia_relacionada:accSeguridadEmergenciaDisparada};
+    repEnviarReporte(payload,'🤕 Accidente reportado',usuario.nombre+' reportó un accidente: '+tipoTxt).then(function(r){
+      if(r.offline){ alert('📡 Sin señal — tu reporte se guardó en el celular y se enviará solo al recuperar internet.'); }
+      else { showToast('✅ Reporte enviado. El encargado ya fue notificado.'); }
+      tabOperario('inicio');
+    }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='📝 Enviar reporte detallado';});
+  });
 }
 
 function renderMisHerramientas(){
@@ -6122,7 +6512,7 @@ function renderMisHerramientas(){
     body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderPerfilOperario()">← Volver a Perfil</button>';
     body.querySelectorAll('.mh-reportar').forEach(function(btn){
       btn.addEventListener('click',function(){
-        renderReportarHerramienta(this.dataset.id,this.dataset.nombre);
+        renderDanioEquipo(this.dataset.id,this.dataset.nombre);
       });
     });
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
@@ -6154,36 +6544,253 @@ function renderMisContratos(){
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
-function renderReportarHerramienta(activoId,nombre){
+// 8-3 — Daño a equipo o herramienta (unificado: reemplaza renderReportarHerramienta y ya no escribe en
+// solicitudes_operario, sino en alertas_campo con categoria='equipo_herramienta'). Dos entradas: con
+// activo preseleccionado (desde Perfil→Mis herramientas) o con buscador abierto (desde 8-1).
+function renderDanioEquipo(activoId,nombrePreseleccionado){
   var body=document.getElementById('op-body');
-  body.innerHTML='<div class="seccion-titulo">⚠️ Reportar '+nombre+'</div><div class="form-card"><div class="form-group"><label>¿Qué le pasa?</label><select id="rh-tipo"><option value="Desgastada por uso normal">Desgastada por uso normal</option><option value="Rota/dañada">Rota / dañada</option><option value="Perdida">Perdida</option><option value="Otro">Otro</option></select></div><div class="form-group"><label>Cuéntanos más (opcional)</label><textarea id="rh-detalle" rows="4" placeholder="Describe qué pasó..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><div class="form-group"><label>Foto (opcional, ayuda mucho)</label><div style="display:flex;gap:8px;"><button type="button" onclick="document.getElementById(\'rh-imagen-cam\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📷 Cámara</button><button type="button" onclick="document.getElementById(\'rh-imagen-gal\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);background:var(--gris-1);cursor:pointer;">🖼️ Galería</button></div><div id="rh-imagen-status" style="margin-top:.5rem;"></div><input type="hidden" id="rh-imagen"><input type="file" id="rh-imagen-cam" accept="image/*" capture="environment" style="display:none"><input type="file" id="rh-imagen-gal" accept="image/*" style="display:none"></div><button class="btn-primary" id="rh-enviar">Enviar reporte</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderMisHerramientas()">← Volver a mis herramientas</button>';
-  function subirImagenReporte(inputId){
-    var f=document.getElementById(inputId).files&&document.getElementById(inputId).files[0];
-    if(!f) return;
-    var status=document.getElementById('rh-imagen-status');
-    status.innerHTML='<span class="hint">Subiendo foto...</span>';
-    var fname='reporte_herr_'+Date.now()+'_'+Math.round(Math.random()*9999)+'.jpg';
-    fetch(URL_SB+'/storage/v1/object/evidencias/'+fname,{method:'POST',headers:{'apikey':KEY_SB,'Authorization':'Bearer '+KEY_SB,'Content-Type':f.type||'image/jpeg','x-upsert':'true'},body:f}).then(function(r){
-      if(!r.ok) throw new Error('HTTP '+r.status);
-      var url=URL_SB+'/storage/v1/object/public/evidencias/'+fname;
-      document.getElementById('rh-imagen').value=url;
-      status.innerHTML='<img src="'+url+'" style="max-width:100px;max-height:100px;border-radius:8px;border:1px solid var(--gris-2);">';
-    }).catch(function(e){status.innerHTML='<span style="color:var(--rojo);">No se pudo subir: '+e.message+'</span>';});
-  }
-  document.getElementById('rh-imagen-cam').addEventListener('change',function(){subirImagenReporte('rh-imagen-cam');});
-  document.getElementById('rh-imagen-gal').addEventListener('change',function(){subirImagenReporte('rh-imagen-gal');});
-  document.getElementById('rh-enviar').addEventListener('click',function(){
-    var tipoProblema=document.getElementById('rh-tipo').value;
-    var detalle=document.getElementById('rh-detalle').value.trim();
-    var imagenUrl=document.getElementById('rh-imagen').value||null;
-    var mensaje=tipoProblema+(detalle?': '+detalle:'')+(imagenUrl?' 📎':'');
+  repEvidenciaReset();
+  body.innerHTML='<div class="seccion-titulo">🔧 Daño a equipo o herramienta</div><div class="loading">Cargando...</div>';
+  from('activos_rancho').select('*').eq('asignado_a',usuario.id).eq('activo',true).get().then(function(rows){
+    rows=rows||[];
+    var selHtml;
+    if(activoId){
+      selHtml='<input type="hidden" id="de-activo" value="'+activoId+'"><div class="form-group"><label>Equipo</label><div class="tarea-card" style="margin:0;"><strong>'+(nombrePreseleccionado||'')+'</strong></div></div>';
+    } else {
+      selHtml='<div class="form-group"><label>¿Qué equipo o herramienta es?</label><select id="de-activo"><option value="">Selecciona...</option>'+
+        rows.map(function(a){return '<option value="'+a.id+'">'+a.nombre+'</option>';}).join('')+
+        '<option value="__otro__">Otro / no está en la lista</option></select></div>'+
+        '<div class="form-group" id="de-otro-wrap" style="display:none;"><label>¿Cuál?</label><input type="text" id="de-otro-nombre" placeholder="Describe el equipo/herramienta" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></div>';
+    }
+    var activoSel=activoId?rows.find(function(a){return a.id===activoId;}):null;
+    var detallesActivo=activoSel?('<div class="orden-meta" style="margin-bottom:.75rem;">'+(activoSel.categoria?activoSel.categoria+' · ':'')+(activoSel.fecha_ultimo_mantenimiento?('Último mantenimiento: '+new Date(activoSel.fecha_ultimo_mantenimiento+'T00:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'})):'Sin mantenimiento registrado aún')+'</div>'):'';
+    body.innerHTML='<div class="seccion-titulo">🔧 Daño a equipo o herramienta</div><div class="form-card">'+
+      selHtml+detallesActivo+
+      '<div class="form-group"><label>Tipo de problema</label><select id="de-tipo"><option value="Desgastada por uso normal">Desgastada por uso normal</option><option value="Rota / dañada">Rota / dañada</option><option value="Perdida">Perdida</option><option value="Falla mecánica/eléctrica">Falla mecánica/eléctrica</option><option value="Otro">Otro</option></select></div>'+
+      '<div class="form-group"><label>Descripción</label><textarea id="de-desc" rows="4" placeholder="Describe qué pasó..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div>'+
+      repEvidenciaWidgetHtml('de')+
+      '<div class="form-group"><label>¿Aún puede utilizarse?</label><div style="display:flex;gap:8px;">'+
+        '<button type="button" class="op-chip de-util" data-v="si">Sí</button>'+
+        '<button type="button" class="op-chip de-util" data-v="no">No</button>'+
+      '</div></div>'+
+      '<div id="de-advertencia" style="display:none;background:var(--rojo-tenue);color:var(--rojo);border-radius:var(--radio-sm);padding:.75rem;font-size:.82rem;font-weight:700;margin-top:.5rem;">⚠️ No sigas usando este equipo/herramienta — puede ser peligroso. Avísale a tu encargado antes de continuar.</div>'+
+      '<button class="btn-primary" id="de-enviar">Enviar reporte</button></div>'+
+      '<button class="btn-back" style="margin-top:1rem;" onclick="tabOperario(\'inicio\')">← Volver</button>';
+    repEvidenciaWirearInputs('de');
+    if(!activoId){
+      document.getElementById('de-activo').addEventListener('change',function(){
+        document.getElementById('de-otro-wrap').style.display=(this.value==='__otro__')?'block':'none';
+      });
+    }
+    var utilizableSel=null;
+    body.querySelectorAll('.de-util').forEach(function(b){
+      b.addEventListener('click',function(){
+        body.querySelectorAll('.de-util').forEach(function(x){x.classList.remove('sel');});
+        this.classList.add('sel'); utilizableSel=this.dataset.v;
+        document.getElementById('de-advertencia').style.display=(utilizableSel==='no')?'block':'none';
+      });
+    });
+    document.getElementById('de-enviar').addEventListener('click',function(){
+      var activoSelVal=document.getElementById('de-activo').value;
+      if(!activoSelVal){alert('Selecciona el equipo o herramienta.');return;}
+      var activoIdFinal=(activoSelVal==='__otro__')?null:activoSelVal;
+      var nombreOtro=(activoSelVal==='__otro__')?(document.getElementById('de-otro-nombre').value||'').trim():null;
+      if(activoSelVal==='__otro__'&&!nombreOtro){alert('Describe qué equipo/herramienta es.');return;}
+      var tipoProblema=document.getElementById('de-tipo').value;
+      var desc=document.getElementById('de-desc').value.trim();
+      if(!desc){alert('Describe qué pasó.');return;}
+      if(!utilizableSel){alert('Indica si el equipo aún puede utilizarse.');return;}
+      var nombreFinal=activoIdFinal?((rows.find(function(a){return a.id===activoIdFinal;})||{}).nombre):nombreOtro;
+      var btn=this; btn.disabled=true; btn.textContent='Enviando...';
+      var payload={usuario_id:usuario.id,categoria:'equipo_herramienta',descripcion:tipoProblema+': '+desc+(nombreOtro?' (equipo: '+nombreOtro+')':''),activo_rancho_id:activoIdFinal,aun_utilizable:(utilizableSel==='si')};
+      repEnviarReporte(payload,'⚠️ Daño a equipo/herramienta',usuario.nombre+' reportó "'+(nombreFinal||'equipo')+'": '+tipoProblema).then(function(r){
+        if(r.offline){ alert('📡 Sin señal — tu reporte se guardó en el celular y se enviará solo al recuperar internet.'); }
+        else { showToast('✅ Reporte enviado. El encargado ya fue notificado.'); }
+        tabOperario('inicio');
+      }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Enviar reporte';});
+    });
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+// 8-4 — Mis reportes
+function renderMisReportes(){
+  var body=document.getElementById('op-body');
+  body.innerHTML='<div class="seccion-titulo">📋 Mis reportes</div><div class="loading">Cargando...</div>';
+  from('alertas_campo').select('*').eq('usuario_id',usuario.id).order('creado_en',{ascending:false}).get().then(function(rows){
+    rows=(rows||[]).filter(function(r){return r.categoria!=='emergencia';});
+    if(!rows.length){body.innerHTML='<div class="seccion-titulo">📋 Mis reportes</div><div class="empty">Aún no has hecho ningún reporte.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderCentroReportes()">← Volver al Centro de Reportes</button>';return;}
+    var html='<div class="seccion-titulo">📋 Mis reportes</div>'+rows.map(function(r){
+      var meta=REPORTE_CATEGORIA_META[r.categoria]||{ic:'🚨',lbl:r.categoria};
+      var f=new Date(r.creado_en).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
+      var estLbl=ESTADO_REPORTE_LABELS[r.estado]||{lbl:r.estado,color:'var(--gris-3)'};
+      return '<div class="orden-card" style="cursor:pointer;" data-ver="'+r.id+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.87rem;">'+meta.ic+' '+meta.lbl+'</strong><span style="font-size:.72rem;font-weight:700;color:'+estLbl.color+';">'+estLbl.lbl+'</span></div><div class="orden-meta">'+f+(r.descripcion?' · '+r.descripcion.slice(0,60):'')+'</div></div>';
+    }).join('');
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderCentroReportes()">← Volver al Centro de Reportes</button>';
+    body.querySelectorAll('[data-ver]').forEach(function(el){el.addEventListener('click',function(){renderDetalleReporte(this.dataset.ver);});});
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+// 8-5 — Detalle del reporte (compartida entre colaborador y Encargado/Admin/Ingeniero)
+function renderDetalleReporte(id){
+  var esColab=repEsColaborador();
+  var bodyId=esColab?'op-body':'enc-body';
+  var body=document.getElementById(bodyId);
+  var volverFn=esColab?'renderMisReportes()':'renderAlarmasRevision()';
+  body.innerHTML='<div class="seccion-titulo">📄 Detalle del reporte</div><div class="loading">Cargando...</div>';
+  Promise.all([
+    from('alertas_campo').select('*,usuario:usuarios(nombre),tabla:tablas(nombre,plantacion_id),activo:activos_rancho(nombre)').eq('id',id).get(),
+    from('alertas_campo_historial').select('*,usuario:usuarios(nombre)').eq('alerta_id',id).order('creado_en',{ascending:true}).get(),
+    from('alertas_campo_comentarios').select('*,usuario:usuarios(nombre)').eq('alerta_id',id).order('creado_en',{ascending:true}).get(),
+    from('alertas_campo_evidencias').select('*').eq('alerta_id',id).order('creado_en',{ascending:true}).get()
+  ]).then(function(r){
+    var a=r[0]&&r[0][0]; var historial=r[1]||[]; var comentarios=r[2]||[]; var evidencias=r[3]||[];
+    if(!a){body.innerHTML='<div class="empty">No se encontró el reporte.</div><button class="btn-back" style="margin-top:1rem;" onclick="'+volverFn+'">← Volver</button>';return;}
+    var meta=REPORTE_CATEGORIA_META[a.categoria]||{ic:'🚨',lbl:a.categoria};
+    var estLbl=ESTADO_REPORTE_LABELS[a.estado]||{lbl:a.estado,color:'var(--gris-3)'};
+    var p=a.tabla?cats.plantaciones.find(function(x){return x.id===a.tabla.plantacion_id;}):null;
+    var ubicacion=(p||a.tabla)?('📍 '+(p?p.nombre:'')+(a.tabla?' · '+a.tabla.nombre:'')):'';
+    var f=new Date(a.creado_en).toLocaleString('es-MX',{day:'2-digit',month:'short',year:'numeric',hour:'numeric',minute:'2-digit',hour12:true});
+
+    var galeriaHtml=evidencias.length?('<div class="rpt-galeria">'+evidencias.map(function(e){
+      return e.tipo==='video'?('<video class="rpt-galeria-item" controls src="'+e.url+'"></video>'):('<a href="'+e.url+'" target="_blank"><img class="rpt-galeria-item" src="'+e.url+'"></a>');
+    }).join('')+'</div>'):'';
+
+    var camposExtra='';
+    if(a.activo) camposExtra+='<div class="orden-meta">🔧 Equipo: '+a.activo.nombre+'</div>';
+    if(a.prioridad) camposExtra+='<div class="orden-meta">⚡ Prioridad: '+a.prioridad+'</div>';
+    if(a.nivel_gravedad) camposExtra+='<div class="orden-meta">🚑 Gravedad: '+a.nivel_gravedad+'</div>';
+    if(a.aun_utilizable!==null&&a.aun_utilizable!==undefined) camposExtra+='<div class="orden-meta">'+(a.aun_utilizable?'✅ Aún puede utilizarse':'⛔ Ya no puede utilizarse')+'</div>';
+    if(a.emergencia_relacionada) camposExtra+='<div class="orden-meta" style="color:var(--rojo);font-weight:700;">🆘 Se activó la emergencia durante este reporte</div>';
+
+    var historialHtml=historial.map(function(h){
+      var hl=ESTADO_REPORTE_LABELS[h.estado]||{lbl:h.estado,color:'var(--gris-3)'};
+      var hf=new Date(h.creado_en).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'numeric',minute:'2-digit',hour12:true});
+      return '<div class="rpt-hist-item"><div class="rpt-hist-dot" style="background:'+hl.color+';"></div><div class="rpt-hist-body"><strong style="font-size:.82rem;color:'+hl.color+';">'+hl.lbl+'</strong><div class="orden-meta">'+hf+' · '+(h.usuario?h.usuario.nombre:'')+(h.comentario?'<br/>'+h.comentario:'')+'</div></div></div>';
+    }).join('');
+
+    var accionesEncargado='';
+    if(!esColab && a.categoria!=='emergencia' && a.estado!=='atendida' && a.estado!=='rechazada'){
+      accionesEncargado='<div class="form-card"><div class="form-group"><label>Cambiar estado</label><select id="dr-estado-nuevo">'+
+        Object.keys(ESTADO_REPORTE_LABELS).map(function(k){return '<option value="'+k+'"'+(k===a.estado?' selected':'')+'>'+ESTADO_REPORTE_LABELS[k].lbl+'</option>';}).join('')+
+      '</select></div><div class="form-group"><label>Comentario (opcional)</label><textarea id="dr-estado-comentario" rows="2" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="dr-estado-guardar">Guardar cambio de estado</button></div>';
+    }
+
+    var comentariosHtml=comentarios.map(function(c){
+      var cf=new Date(c.creado_en).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'numeric',minute:'2-digit',hour12:true});
+      return '<div class="rpt-comentario"><strong style="font-size:.8rem;">'+(c.usuario?c.usuario.nombre:'')+'</strong><span class="orden-meta" style="margin-left:.4rem;">'+cf+'</span><div style="font-size:.85rem;margin-top:.2rem;">'+c.comentario+'</div></div>';
+    }).join('');
+
+    body.innerHTML='<div class="seccion-titulo">'+meta.ic+' '+meta.lbl+'</div>'+
+      '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.95rem;">'+meta.ic+' '+meta.lbl+'</strong><span style="font-size:.75rem;font-weight:700;color:'+estLbl.color+';">'+estLbl.lbl+'</span></div>'+
+      '<div class="orden-meta">'+f+' · 👤 '+(a.usuario?a.usuario.nombre:'')+'</div>'+
+      (ubicacion?'<div class="orden-meta" style="font-weight:700;">'+ubicacion+'</div>':'')+
+      (a.descripcion?'<div class="orden-meta" style="margin-top:.3rem;">📝 '+a.descripcion+'</div>':'')+
+      camposExtra+
+      (a.respuesta?'<div class="orden-meta" style="margin-top:.3rem;">📩 Respuesta: '+a.respuesta+'</div>':'')+
+      '</div>'+
+      (galeriaHtml?'<div class="seccion-titulo" style="font-size:.85rem;margin-top:1rem;">📎 Evidencia</div>'+galeriaHtml:'')+
+      accionesEncargado+
+      '<div class="seccion-titulo" style="font-size:.85rem;margin-top:1rem;">🕒 Historial de seguimiento</div>'+
+      '<div class="rpt-historial">'+historialHtml+'</div>'+
+      '<div class="seccion-titulo" style="font-size:.85rem;margin-top:1rem;">💬 Comentarios</div>'+
+      '<div class="rpt-comentarios">'+(comentariosHtml||'<div class="empty">Sin comentarios todavía.</div>')+'</div>'+
+      '<div class="form-card" style="margin-top:.5rem;"><textarea id="dr-comentario-nuevo" rows="2" placeholder="Escribe un comentario..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea><button class="btn-primary" id="dr-comentario-enviar">Enviar comentario</button></div>'+
+      '<button class="btn-back" style="margin-top:1rem;" onclick="'+volverFn+'">← Volver</button>';
+
+    document.getElementById('dr-comentario-enviar').addEventListener('click',function(){
+      var texto=(document.getElementById('dr-comentario-nuevo').value||'').trim();
+      if(!texto){alert('Escribe un comentario.');return;}
+      var btn=this; btn.disabled=true;
+      from('alertas_campo_comentarios').insert({alerta_id:id,usuario_id:usuario.id,comentario:texto}).then(function(){
+        renderDetalleReporte(id);
+      }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;});
+    });
+
+    var estadoBtn=document.getElementById('dr-estado-guardar');
+    if(estadoBtn){
+      estadoBtn.addEventListener('click',function(){
+        var nuevoEstado=document.getElementById('dr-estado-nuevo').value;
+        var comentario=(document.getElementById('dr-estado-comentario').value||'').trim()||null;
+        var btn=this; btn.disabled=true;
+        var cambios={estado:nuevoEstado};
+        if(nuevoEstado==='atendida'||nuevoEstado==='rechazada'){cambios.atendido_por=usuario.id;cambios.atendido_en=new Date().toISOString();if(comentario)cambios.respuesta=comentario;}
+        from('alertas_campo').eq('id',id).update(cambios).then(function(){
+          return from('alertas_campo_historial').insert({alerta_id:id,estado:nuevoEstado,comentario:comentario,usuario_id:usuario.id});
+        }).then(function(){
+          return from('notificaciones').insert({titulo:'📄 Actualización de tu reporte',cuerpo:'Tu reporte cambió a: '+(ESTADO_REPORTE_LABELS[nuevoEstado]?ESTADO_REPORTE_LABELS[nuevoEstado].lbl:nuevoEstado)+(comentario?' — '+comentario:''),icono:'📄',leida:false,para_rol:'operario',para_usuario:a.usuario_id});
+        }).then(function(){
+          showToast('✅ Estado actualizado');
+          renderDetalleReporte(id);
+        }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;});
+      });
+    }
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+// Acceso rápido 8-0 → Mantenimiento: solicitud voluntaria, distinta de 8-3 (falla) — reutiliza solicitudes_operario
+function renderSolicitudMantenimiento(){
+  var body=document.getElementById('op-body');
+  body.innerHTML='<div class="seccion-titulo">🔧 Solicitar mantenimiento</div><div class="loading">Cargando...</div>';
+  from('activos_rancho').select('*').eq('asignado_a',usuario.id).eq('activo',true).get().then(function(rows){
+    rows=rows||[];
+    body.innerHTML='<div class="seccion-titulo">🔧 Solicitar mantenimiento</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Pide revisión o mantenimiento de un equipo, aunque todavía no le toque su mantenimiento programado. Si el equipo ya falló o se dañó, usa "Daño a equipo o herramienta" en vez de esto.</p>'+
+    '<div class="form-group"><label>Equipo o herramienta</label><select id="sm-activo"><option value="">Selecciona...</option>'+rows.map(function(a){return '<option value="'+a.id+'">'+a.nombre+'</option>';}).join('')+'</select></div>'+
+    '<div class="form-group"><label>¿Qué necesita?</label><textarea id="sm-mensaje" rows="4" placeholder="Ej. Ya le toca afinación, hace ruido raro, quiero que lo revisen..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div>'+
+    '<button class="btn-primary" id="sm-enviar">Enviar solicitud</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderCentroReportes()">← Volver al Centro de Reportes</button>';
+    document.getElementById('sm-enviar').addEventListener('click',function(){
+      var activoId=document.getElementById('sm-activo').value;
+      var mensaje=(document.getElementById('sm-mensaje').value||'').trim();
+      if(!activoId){alert('Selecciona el equipo o herramienta.');return;}
+      if(!mensaje){alert('Describe qué necesita.');return;}
+      var nombreActivo=(rows.find(function(a){return a.id===activoId;})||{}).nombre||'';
+      var btn=this; btn.disabled=true; btn.textContent='Enviando...';
+      from('solicitudes_operario').insert({operario_id:usuario.id,tipo:'mantenimiento',activo_rancho_id:activoId,mensaje:mensaje,estado:'pendiente'}).then(function(){
+        return from('notificaciones').insert({titulo:'🔧 Solicitud de mantenimiento',cuerpo:usuario.nombre+' pide revisión de "'+nombreActivo+'": '+mensaje,icono:'🔧',leida:false,para_rol:'encargado'});
+      }).then(function(){
+        showToast('✅ Solicitud enviada');
+        renderCentroReportes();
+      }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Enviar solicitud';});
+    });
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+// Acceso rápido 8-0 → Insumos: implementado ya en esta fase — solicitudes_operario.tipo='insumo' (aditivo)
+function renderSolicitudInsumo(){
+  var body=document.getElementById('op-body');
+  repEvidenciaUnicaReset();
+  body.innerHTML='<div class="seccion-titulo">📦 Solicitar insumo</div><div class="form-card">'+
+    '<div class="form-group"><label>Insumo o material requerido</label><input type="text" id="si-insumo" placeholder="Ej. Guantes, fertilizante X, costales..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></div>'+
+    '<div class="form-group"><label>Cantidad aproximada (opcional)</label><input type="text" id="si-cantidad" placeholder="Ej. 2 costales, 5 pares..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></div>'+
+    '<div class="form-group"><label>¿Para qué labor o tabla es? (opcional)</label><input type="text" id="si-motivo" placeholder="Ej. Tabla 5, aplicación de foliar..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></div>'+
+    '<div class="form-group"><label>Urgencia</label><div style="display:flex;gap:8px;">'+
+      ['baja','media','alta'].map(function(p){return '<button type="button" class="op-chip si-urg" data-u="'+p+'">'+p.charAt(0).toUpperCase()+p.slice(1)+'</button>';}).join('')+
+    '</div></div>'+
+    repEvidenciaUnicaWidgetHtml('si')+
+    '<button class="btn-primary" id="si-enviar">Enviar solicitud</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderCentroReportes()">← Volver al Centro de Reportes</button>';
+  repEvidenciaUnicaWirear('si');
+  var urgenciaSel=null;
+  document.querySelectorAll('.si-urg').forEach(function(b){
+    b.addEventListener('click',function(){
+      document.querySelectorAll('.si-urg').forEach(function(x){x.classList.remove('sel');});
+      this.classList.add('sel'); urgenciaSel=this.dataset.u;
+    });
+  });
+  document.getElementById('si-enviar').addEventListener('click',function(){
+    var insumo=(document.getElementById('si-insumo').value||'').trim();
+    if(!insumo){alert('Describe qué insumo o material necesitas.');return;}
+    var cantidad=(document.getElementById('si-cantidad').value||'').trim();
+    var motivo=(document.getElementById('si-motivo').value||'').trim();
+    var mensaje=insumo+(cantidad?' · Cantidad: '+cantidad:'')+(motivo?' · Para: '+motivo:'');
     var btn=this; btn.disabled=true; btn.textContent='Enviando...';
-    from('solicitudes_operario').insert({operario_id:usuario.id,tipo:'herramienta',activo_rancho_id:activoId,mensaje:mensaje+(imagenUrl?'\n'+imagenUrl:''),estado:'pendiente'}).then(function(){
-      return from('notificaciones').insert({titulo:'⚠️ Reporte de herramienta',cuerpo:usuario.nombre+' reportó "'+nombre+'": '+tipoProblema,icono:'⚠️',leida:false,para_rol:'encargado'});
+    var subir=repEvidenciaUnicaBlob?subirEvidenciaArchivo(repEvidenciaUnicaBlob,'imagen').then(function(res){return res.url;}).catch(function(){return null;}):Promise.resolve(null);
+    subir.then(function(evidUrl){
+      return from('solicitudes_operario').insert({operario_id:usuario.id,tipo:'insumo',mensaje:mensaje,urgencia:urgenciaSel,evidencia_url:evidUrl,estado:'pendiente'});
     }).then(function(){
-      showToast('✅ Reporte enviado');
-      renderMisHerramientas();
-    }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Enviar reporte';});
+      return from('notificaciones').insert({titulo:'📦 Solicitud de insumo',cuerpo:usuario.nombre+' solicita: '+insumo,icono:'📦',leida:false,para_rol:'encargado'});
+    }).then(function(){
+      showToast('✅ Solicitud enviada');
+      renderCentroReportes();
+    }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Enviar solicitud';});
   });
 }
 function renderPerfilOperario(){
@@ -7700,19 +8307,20 @@ function renderSolicitarPrestamo(){
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
-function renderSolicitudOtro(){
+function renderSolicitudOtro(contexto){
+  var esSugerencia=contexto==='sugerencia';
   var body=document.getElementById('op-body');
-  body.innerHTML='<div class="seccion-titulo">💬 Otro asunto</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Para cualquier tema que no sea permiso ni préstamo — administración lo va a revisar directamente.</p><div class="form-group"><label>Cuéntanos qué necesitas</label><textarea id="so-mensaje" rows="5" placeholder="Escribe tu mensaje aquí..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="so-enviar">Enviar solicitud</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderSolicitudesMenu()">← Volver a Solicitudes</button>';
+  body.innerHTML='<div class="seccion-titulo">'+(esSugerencia?'💡 Sugerencia':'💬 Otro asunto')+'</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">'+(esSugerencia?'Comparte una idea o sugerencia — administración la va a revisar.':'Para cualquier tema que no sea permiso ni préstamo — administración lo va a revisar directamente.')+'</p><div class="form-group"><label>Cuéntanos qué necesitas</label><textarea id="so-mensaje" rows="5" placeholder="Escribe tu mensaje aquí..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="so-enviar">Enviar '+(esSugerencia?'sugerencia':'solicitud')+'</button></div><button class="btn-back" style="margin-top:1rem;" onclick="'+(esSugerencia?'renderCentroReportes()':'renderSolicitudesMenu()')+'">← Volver</button>';
   document.getElementById('so-enviar').addEventListener('click',function(){
     var mensaje=(document.getElementById('so-mensaje').value||'').trim();
     if(!mensaje){alert('Escribe tu mensaje.');return;}
     var btn=this; btn.disabled=true; btn.textContent='Enviando...';
-    from('solicitudes_operario').insert({operario_id:usuario.id,tipo:'otro',mensaje:mensaje,estado:'pendiente'}).then(function(){
-      return from('notificaciones').insert({titulo:'💬 Nueva solicitud',cuerpo:usuario.nombre+': '+mensaje,icono:'💬',leida:false,para_rol:'encargado'});
+    from('solicitudes_operario').insert({operario_id:usuario.id,tipo:'otro',mensaje:(esSugerencia?'[Sugerencia] ':'')+mensaje,estado:'pendiente'}).then(function(){
+      return from('notificaciones').insert({titulo:esSugerencia?'💡 Nueva sugerencia':'💬 Nueva solicitud',cuerpo:usuario.nombre+': '+mensaje,icono:esSugerencia?'💡':'💬',leida:false,para_rol:'encargado'});
     }).then(function(){
-      showToast('✅ Solicitud enviada');
-      renderSolicitudesMenu();
-    }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Enviar solicitud';});
+      showToast(esSugerencia?'✅ Sugerencia enviada':'✅ Solicitud enviada');
+      if(esSugerencia) renderCentroReportes(); else renderSolicitudesMenu();
+    }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Enviar '+(esSugerencia?'sugerencia':'solicitud');});
   });
 }
 
@@ -7723,7 +8331,8 @@ function renderMisSolicitudes(){
     from('solicitudes_operario').select('*').eq('operario_id',usuario.id).order('creado_en',{ascending:false}).get(),
     from('permisos').select('*').eq('usuario_id',usuario.id).order('creado_en',{ascending:false}).get()
   ]).then(function(r){
-    var generales=(r[0]||[]).map(function(s){return {tipo:s.tipo,estado:s.estado,texto:(s.tipo==='prestamo'?'💰 Préstamo · $'+parseFloat(s.monto_solicitado||0).toFixed(2):'💬 '+s.mensaje.slice(0,60)),respuesta:s.respuesta,fecha:s.creado_en};}),
+    var solicitudTipoIc={herramienta:'⚠️ ',otro:'💬 ',mantenimiento:'🔧 ',insumo:'📦 '},
+        generales=(r[0]||[]).map(function(s){return {tipo:s.tipo,estado:s.estado,texto:(s.tipo==='prestamo'?'💰 Préstamo · $'+parseFloat(s.monto_solicitado||0).toFixed(2):(solicitudTipoIc[s.tipo]||'💬 ')+s.mensaje.slice(0,60)),respuesta:s.respuesta,fecha:s.creado_en};}),
         permisos=(r[1]||[]).map(function(p){return {tipo:'permiso',estado:p.estado,texto:(p.tipo==='medico'?'🩺 Permiso médico':'👤 Permiso personal')+' · '+p.fecha_inicio,respuesta:null,fecha:p.creado_en};});
     var todas=generales.concat(permisos).sort(function(a,b){return new Date(b.fecha)-new Date(a.fecha);});
     if(!todas.length){body.innerHTML='<div class="seccion-titulo">📋 Mis solicitudes</div><div class="empty">Aún no has enviado ninguna solicitud.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderSolicitudesMenu()">← Volver a Solicitudes</button>';return;}
