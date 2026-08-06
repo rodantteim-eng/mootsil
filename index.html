@@ -349,7 +349,7 @@ function from(table) {
 var pin='', usuario=null;
 var cats={plantaciones:[],tablas:[],tiposLabor:[],subtiposLabor:[],operarios:[],inventario:[],cosechadores:[],eventuales:[],equipoDeCampo:[],proveedores:[]};
 var ordenEjecutando=null, pasoEjec=1;
-var capturaEjec={surcos:[],cantidad:0,foto:false,herramientaLimpia:false,epp:{}};
+var capturaEjec={surcos:[],cantidad:0,foto:false,herramientaLimpia:false,requiereLimpieza:false,epp:{}};
 var formSurcos=[];
 var ROLES={admin:'Admin',encargado:'Encargado',operario:'Labores',ingeniero:'Ingeniero','dueño':'Dueño',inversionista:'Inversionista',cosechador:'Cosechador',galerista:'Galerista',labores_eventual:'Labores Eventual'};
 var ROLES_COLABORADOR={operario:'Colaborador',cosechador:'Colaborador de cosecha',galerista:'Colaborador de galera',labores_eventual:'Colaborador eventual'};
@@ -6112,8 +6112,13 @@ function renderPerfilOperario(){
       var antTxt = meses<1?'menos de 1 mes':meses<12?(meses+' mes'+(meses>1?'es':'')):(Math.floor(meses/12)+' año'+(Math.floor(meses/12)>1?'s':'')+(meses%12?' y '+(meses%12)+' mes'+(meses%12>1?'es':''):''));
       antiguedadTxt='<br/>📅 Con nosotros desde '+dIngreso.toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'})+' ('+antTxt+')';
     }
+    var cumpleTxt='';
+    if(u.fecha_nacimiento){
+      var dNac=new Date(u.fecha_nacimiento+'T00:00:00');
+      cumpleTxt='<br/>🎂 Cumpleaños: '+dNac.toLocaleDateString('es-MX',{day:'numeric',month:'long'});
+    }
     body.innerHTML='<div class="seccion-titulo">Perfil</div>'+
-    '<div class="tarea-card"><div class="tarea-title">👤 '+usuario.nombre+'</div><div class="tarea-meta">'+asignacionLbl+antiguedadTxt+'</div></div>'+
+    '<div class="tarea-card"><div class="tarea-title">👤 '+usuario.nombre+'</div><div class="tarea-meta">'+asignacionLbl+antiguedadTxt+cumpleTxt+'</div></div>'+
     '<div class="tarea-card" style="cursor:pointer;margin-top:.6rem;" onclick="renderCambiarMiPin()"><div class="tarea-title">🔒 Cambiar mi PIN</div><div class="tarea-meta">Actualiza tu código de acceso</div></div>'+
     '<div class="tarea-card" style="cursor:pointer;margin-top:.6rem;" onclick="renderMisHerramientas()"><div class="tarea-title">🔧 Mis herramientas y equipo</div><div class="tarea-meta">Consulta lo que tienes asignado y su historial</div></div>'+
     '<div class="seccion-titulo" style="margin-top:1rem;font-size:.85rem;">📞 Contacto</div>'+
@@ -6757,6 +6762,9 @@ function renderEjecAplicacion(planta,tabla){
   var body=document.getElementById('op-body');
   var o=ordenEjecutando;
   var f=o.formula||{};
+  // Riego, Foliar y Drench usan bomba/mochila y deben limpiarse al terminar.
+  // Manual se aplica directo a mano, sin equipo — no exige la casilla de limpieza.
+  capturaEjec.requiereLimpieza=!!(f&&f.via&&f.via!=='Manual');
   var bar='<div class="steps-bar">'+[1,2,3,4].map(function(i){return '<div class="step-seg '+(i<pasoEjec?'done':i===pasoEjec?'active':'')+'"></div>';}).join('')+'</div>';
   var EPP_ITEMS=[['guantes','🧤 Guantes'],['cubrebocas','😷 Cubrebocas / mascarilla'],['lentes','🥽 Lentes de protección'],['mangalarga','👕 Ropa de manga larga']];
   if(pasoEjec===1){
@@ -6822,7 +6830,7 @@ function renderEjecAplicacion(planta,tabla){
     });
   } else {
     var evid=capturaEjec.foto?'<div style="padding:.75rem;background:var(--verde-tenue);border-radius:var(--radio);color:var(--verde);font-size:.85rem;text-align:center;margin-bottom:1rem;">✅ Evidencia capturada</div>':'';
-    var herrChkAplic='<label style="display:flex;align-items:center;gap:.6rem;padding:.75rem;background:var(--gris-1);border-radius:var(--radio);margin-top:.75rem;cursor:pointer;"><input type="checkbox" id="chk-herramienta" '+(capturaEjec.herramientaLimpia?'checked':'')+' style="width:22px;height:22px;flex-shrink:0;"><span style="font-size:.85rem;">🧹 Ya limpié y guardé mi equipo de aplicación (bomba/mochila) en su lugar</span></label>';
+    var herrChkAplic=capturaEjec.requiereLimpieza?'<label style="display:flex;align-items:center;gap:.6rem;padding:.75rem;background:var(--gris-1);border-radius:var(--radio);margin-top:.75rem;cursor:pointer;"><input type="checkbox" id="chk-herramienta" '+(capturaEjec.herramientaLimpia?'checked':'')+' style="width:22px;height:22px;flex-shrink:0;"><span style="font-size:.85rem;">🧹 Ya limpié y guardé mi equipo de aplicación (bomba/mochila) en su lugar</span></label>':'';
     body.innerHTML=bar+'<div class="step-label">Paso 4 de 4</div><div class="step-title">Evidencia (obligatoria)</div><div style="display:flex;gap:8px;margin-bottom:1rem;"><button onclick="abrirCamaraApp()" style="flex:1;padding:1rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio);background:var(--verde-tenue);color:var(--verde);font-size:.9rem;font-weight:600;cursor:pointer;">📷 Cámara</button><button onclick="abrirGaleria()" style="flex:1;padding:1rem;border:1.5px solid var(--gris-2);border-radius:var(--radio);background:var(--gris-1);font-size:.9rem;cursor:pointer;">🖼️ Galería</button></div>'+evid+'<div class="resumen-card" style="margin-top:.5rem;"><div class="resumen-row"><span class="resumen-key">Fórmula</span><span class="resumen-val">'+(f.nombre||'')+'</span></div><div class="resumen-row"><span class="resumen-key">Área</span><span class="resumen-val">'+(planta?planta.nombre:'')+' · '+tabla.nombre+'</span></div></div>'+herrChkAplic+'<div class="nav-row"><button class="btn-back" onclick="pasoEjec--;renderEjec()">← Atrás</button><button class="btn-next" onclick="guardarEjec()" style="background:var(--tierra)">✅ Guardar</button></div>';
     var herrChkAplicEl=document.getElementById('chk-herramienta');
     if(herrChkAplicEl) herrChkAplicEl.addEventListener('change',function(){capturaEjec.herramientaLimpia=this.checked;});
@@ -8201,7 +8209,7 @@ function sonarAlarmaRiego(){
 
 function iniciarEjecucion(oid){
   from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_cantidad_insumo,unidad_insumo,requiere_formula),subtipo:subtipos_labor(nombre),activo_rancho:activos_rancho(nombre,imagen_url,descripcion)').eq('id',oid).single().then(function(o){
-    ordenEjecutando=o; pasoEjec=1; capturaEjec={surcos:[],cantidad:0,foto:false,herramientaLimpia:false,epp:{},tambosEsteAvance:1};
+    ordenEjecutando=o; pasoEjec=1; capturaEjec={surcos:[],cantidad:0,foto:false,herramientaLimpia:false,requiereLimpieza:false,epp:{},tambosEsteAvance:1};
     if(o.activo_rancho_id){renderEjecMantenimiento();return;}
     if(!o.tabla_id){renderEjecGeneral();return;}
     if(o.tipo_labor&&o.tipo_labor.requiere_formula&&o.formula_id){
@@ -8234,20 +8242,14 @@ function renderEjecFiltros(){
   var o=ordenEjecutando, tabla=o.tabla;
   var planta=cats.plantaciones.find(function(p){return p.id===tabla.plantacion_id;});
   var evid=capturaEjec.foto?'<div style="padding:.75rem;background:var(--verde-tenue);border-radius:var(--radio);color:var(--verde);font-size:.85rem;text-align:center;margin-bottom:1rem;">✅ Evidencia capturada</div>':'';
-  var herrChk='<label style="display:flex;align-items:center;gap:.6rem;padding:.75rem;background:var(--gris-1);border-radius:var(--radio);margin-top:.75rem;cursor:pointer;"><input type="checkbox" id="chk-herramienta" '+(capturaEjec.herramientaLimpia?'checked':'')+' style="width:22px;height:22px;flex-shrink:0;"><span style="font-size:.85rem;">🧹 Ya limpié y guardé mis herramientas en su lugar</span></label>';
-  body.innerHTML='<div class="step-label">🧹 Limpieza de Filtros</div><div class="step-title">'+tabla.nombre+'</div><p class="hint" style="margin-bottom:1rem">📍 '+(planta?planta.nombre:'')+' · '+tabla.nombre+' · confirma que ya diste mantenimiento a los filtros de esta tabla.</p><div style="display:flex;gap:8px;margin-bottom:1rem;"><button onclick="abrirCamaraApp()" style="flex:1;padding:1rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio);background:var(--verde-tenue);color:var(--verde);font-size:.9rem;font-weight:600;cursor:pointer;">📷 Cámara</button><button onclick="abrirGaleria()" style="flex:1;padding:1rem;border:1.5px solid var(--gris-2);border-radius:var(--radio);background:var(--gris-1);font-size:.9rem;cursor:pointer;">🖼️ Galería</button></div>'+evid+'<input type="file" id="inp-ev" accept="image/*,video/*" style="display:none" onchange="capturaEjec.foto=true;renderEjecFiltros();">'+herrChk+(o.notas_encargado?'<p class="hint" style="margin-top:.75rem;">📝 '+o.notas_encargado+'</p>':'')+'<div class="nav-row"><button class="btn-back" onclick="ordenEjecutando=null;cargarTareas()">← Cancelar</button><button class="btn-next" onclick="guardarEjec()" style="background:var(--tierra)">✅ Marcar terminado</button></div>';
-  var herrChkEl=document.getElementById('chk-herramienta');
-  if(herrChkEl) herrChkEl.addEventListener('change',function(){capturaEjec.herramientaLimpia=this.checked;});
+  body.innerHTML='<div class="step-label">🧹 Limpieza de Filtros</div><div class="step-title">'+tabla.nombre+'</div><p class="hint" style="margin-bottom:1rem">📍 '+(planta?planta.nombre:'')+' · '+tabla.nombre+' · confirma que ya diste mantenimiento a los filtros de esta tabla.</p><div style="display:flex;gap:8px;margin-bottom:1rem;"><button onclick="abrirCamaraApp()" style="flex:1;padding:1rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio);background:var(--verde-tenue);color:var(--verde);font-size:.9rem;font-weight:600;cursor:pointer;">📷 Cámara</button><button onclick="abrirGaleria()" style="flex:1;padding:1rem;border:1.5px solid var(--gris-2);border-radius:var(--radio);background:var(--gris-1);font-size:.9rem;cursor:pointer;">🖼️ Galería</button></div>'+evid+'<input type="file" id="inp-ev" accept="image/*,video/*" style="display:none" onchange="capturaEjec.foto=true;renderEjecFiltros();">'+(o.notas_encargado?'<p class="hint" style="margin-top:.75rem;">📝 '+o.notas_encargado+'</p>':'')+'<div class="nav-row"><button class="btn-back" onclick="ordenEjecutando=null;cargarTareas()">← Cancelar</button><button class="btn-next" onclick="guardarEjec()" style="background:var(--tierra)">✅ Marcar terminado</button></div>';
 }
 
 function renderEjecGeneral(){
   var body=document.getElementById('op-body');
   var o=ordenEjecutando;
   var evid=capturaEjec.foto?'<div style="padding:.75rem;background:var(--verde-tenue);border-radius:var(--radio);color:var(--verde);font-size:.85rem;text-align:center;margin-bottom:1rem;">✅ Evidencia capturada</div>':'';
-  var herrChk='<label style="display:flex;align-items:center;gap:.6rem;padding:.75rem;background:var(--gris-1);border-radius:var(--radio);margin-top:.75rem;cursor:pointer;"><input type="checkbox" id="chk-herramienta" '+(capturaEjec.herramientaLimpia?'checked':'')+' style="width:22px;height:22px;flex-shrink:0;"><span style="font-size:.85rem;">🧹 Ya limpié y guardé mis herramientas en su lugar</span></label>';
-  body.innerHTML='<div class="step-label">📋 Actividad general</div><div class="step-title">'+o.tipo_labor.nombre+(o.subtipo?' · '+o.subtipo.nombre:'')+'</div><p class="hint" style="margin-bottom:1rem">Esta actividad no está ligada a ninguna plantación ni tabla. Confirma que ya la terminaste.</p><div style="display:flex;gap:8px;margin-bottom:1rem;"><button onclick="abrirCamaraApp()" style="flex:1;padding:1rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio);background:var(--verde-tenue);color:var(--verde);font-size:.9rem;font-weight:600;cursor:pointer;">📷 Cámara</button><button onclick="abrirGaleria()" style="flex:1;padding:1rem;border:1.5px solid var(--gris-2);border-radius:var(--radio);background:var(--gris-1);font-size:.9rem;cursor:pointer;">🖼️ Galería</button></div>'+evid+'<input type="file" id="inp-ev" accept="image/*,video/*" style="display:none" onchange="capturaEjec.foto=true;renderEjecGeneral();">'+herrChk+(o.notas_encargado?'<p class="hint" style="margin-top:.75rem;">📝 '+o.notas_encargado+'</p>':'')+'<div class="nav-row"><button class="btn-back" onclick="ordenEjecutando=null;cargarTareas()">← Cancelar</button><button class="btn-next" onclick="guardarEjec()" style="background:var(--tierra)">✅ Marcar terminado</button></div>';
-  var herrChkEl=document.getElementById('chk-herramienta');
-  if(herrChkEl) herrChkEl.addEventListener('change',function(){capturaEjec.herramientaLimpia=this.checked;});
+  body.innerHTML='<div class="step-label">📋 Actividad general</div><div class="step-title">'+o.tipo_labor.nombre+(o.subtipo?' · '+o.subtipo.nombre:'')+'</div><p class="hint" style="margin-bottom:1rem">Esta actividad no está ligada a ninguna plantación ni tabla. Confirma que ya la terminaste.</p><div style="display:flex;gap:8px;margin-bottom:1rem;"><button onclick="abrirCamaraApp()" style="flex:1;padding:1rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio);background:var(--verde-tenue);color:var(--verde);font-size:.9rem;font-weight:600;cursor:pointer;">📷 Cámara</button><button onclick="abrirGaleria()" style="flex:1;padding:1rem;border:1.5px solid var(--gris-2);border-radius:var(--radio);background:var(--gris-1);font-size:.9rem;cursor:pointer;">🖼️ Galería</button></div>'+evid+'<input type="file" id="inp-ev" accept="image/*,video/*" style="display:none" onchange="capturaEjec.foto=true;renderEjecGeneral();">'+(o.notas_encargado?'<p class="hint" style="margin-top:.75rem;">📝 '+o.notas_encargado+'</p>':'')+'<div class="nav-row"><button class="btn-back" onclick="ordenEjecutando=null;cargarTareas()">← Cancelar</button><button class="btn-next" onclick="guardarEjec()" style="background:var(--tierra)">✅ Marcar terminado</button></div>';
 }
 
 function renderEjec(){
@@ -8275,10 +8277,7 @@ function renderEjec(){
   } else {
     var cant=labor.requiere_cantidad_insumo?'<div class="resumen-row"><span class="resumen-key">Cantidad</span><span class="resumen-val">'+capturaEjec.cantidad+' '+(labor.unidad_insumo||'litros')+'</span></div>':'';
     var evid=capturaEjec.foto?'<div style="padding:.75rem;background:var(--verde-tenue);border-radius:var(--radio);color:var(--verde);font-size:.85rem;text-align:center;margin-bottom:1rem;">✅ Evidencia capturada</div>':'';
-    var herrChk='<label style="display:flex;align-items:center;gap:.6rem;padding:.75rem;background:var(--gris-1);border-radius:var(--radio);margin-top:.75rem;cursor:pointer;"><input type="checkbox" id="chk-herramienta" '+(capturaEjec.herramientaLimpia?'checked':'')+' style="width:22px;height:22px;flex-shrink:0;"><span style="font-size:.85rem;">🧹 Ya limpié y guardé mis herramientas en su lugar</span></label>';
-    body.innerHTML=bar+'<div class="step-label">Último paso</div><div class="step-title">Evidencia (obligatoria)</div><div style="display:flex;gap:8px;margin-bottom:1rem;"><div style="display:flex;gap:8px;margin-bottom:1rem;"><button onclick="abrirCamaraApp()" style="flex:1;padding:1rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio);background:var(--verde-tenue);color:var(--verde);font-size:.9rem;font-weight:600;cursor:pointer;">📷 Cámara</button><button onclick="abrirGaleria()" style="flex:1;padding:1rem;border:1.5px solid var(--gris-2);border-radius:var(--radio);background:var(--gris-1);font-size:.9rem;cursor:pointer;">🖼️ Galería</button></div></div>'+evid+'<input type="file" id="inp-ev" accept="image/*,video/*" style="display:none" onchange="capturaEjec.foto=true;renderEjec();"><div class="resumen-card" style="margin-top:.5rem;"><div class="resumen-row"><span class="resumen-key">Labor</span><span class="resumen-val">'+labor.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Área</span><span class="resumen-val">'+(planta?planta.nombre:'')+' · '+tabla.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Surcos</span><span class="resumen-val">'+capturaEjec.surcos.join(', ')+'</span></div>'+cant+'</div>'+herrChk+'<div class="nav-row"><button class="btn-back" onclick="pasoEjec--;renderEjec()">← Atrás</button><button class="btn-next" onclick="guardarEjec()" style="background:var(--tierra)">✅ Guardar</button></div>';
-    var herrChkEl=document.getElementById('chk-herramienta');
-    if(herrChkEl) herrChkEl.addEventListener('change',function(){capturaEjec.herramientaLimpia=this.checked;});
+    body.innerHTML=bar+'<div class="step-label">Último paso</div><div class="step-title">Evidencia (obligatoria)</div><div style="display:flex;gap:8px;margin-bottom:1rem;"><div style="display:flex;gap:8px;margin-bottom:1rem;"><button onclick="abrirCamaraApp()" style="flex:1;padding:1rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio);background:var(--verde-tenue);color:var(--verde);font-size:.9rem;font-weight:600;cursor:pointer;">📷 Cámara</button><button onclick="abrirGaleria()" style="flex:1;padding:1rem;border:1.5px solid var(--gris-2);border-radius:var(--radio);background:var(--gris-1);font-size:.9rem;cursor:pointer;">🖼️ Galería</button></div></div>'+evid+'<input type="file" id="inp-ev" accept="image/*,video/*" style="display:none" onchange="capturaEjec.foto=true;renderEjec();"><div class="resumen-card" style="margin-top:.5rem;"><div class="resumen-row"><span class="resumen-key">Labor</span><span class="resumen-val">'+labor.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Área</span><span class="resumen-val">'+(planta?planta.nombre:'')+' · '+tabla.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Surcos</span><span class="resumen-val">'+capturaEjec.surcos.join(', ')+'</span></div>'+cant+'</div><div class="nav-row"><button class="btn-back" onclick="pasoEjec--;renderEjec()">← Atrás</button><button class="btn-next" onclick="guardarEjec()" style="background:var(--tierra)">✅ Guardar</button></div>';
   }
 }
 
@@ -8298,8 +8297,8 @@ function guardarEjec(){
     alert('Debes tomar una foto o video de evidencia antes de concluir la labor.');
     return;
   }
-  if(!capturaEjec.herramientaLimpia){
-    alert('Marca la casilla confirmando que limpiaste y guardaste tus herramientas.');
+  if(capturaEjec.requiereLimpieza&&!capturaEjec.herramientaLimpia){
+    alert('Marca la casilla confirmando que limpiaste y guardaste tu equipo.');
     return;
   }
   if(capturaEjec.foto&&capturaEjec.fotoBlob&&!capturaEjec.fotoUrl){
@@ -8659,11 +8658,12 @@ function guardarNuevoUsuario(){
 function renderEditarUsuario(id,nombre,rol,certAmbas){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="loading">Cargando...</div>';
-  from('usuarios').select('avatar_url,sueldo_base,fecha_ingreso').eq('id',id).get().then(function(rows){
+  from('usuarios').select('avatar_url,sueldo_base,fecha_ingreso,fecha_nacimiento').eq('id',id).get().then(function(rows){
     var avatarUrl=(rows&&rows[0]&&rows[0].avatar_url)||'';
     var sueldoBase=(rows&&rows[0]&&rows[0].sueldo_base)||'';
     var fechaIngreso=(rows&&rows[0]&&rows[0].fecha_ingreso)||'';
-    body.innerHTML='<div class="form-card"><h3>Editar usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="eu-n" value="'+nombre+'"/></div><div class="form-group"><label>Rol</label><select id="eu-r"><option value="operario"'+(rol==='operario'?' selected':'')+'>Labores</option><option value="labores_eventual"'+(rol==='labores_eventual'?' selected':'')+'>Labores Eventual</option><option value="encargado"'+(rol==='encargado'?' selected':'')+'>Encargado</option><option value="ingeniero"'+(rol==='ingeniero'?' selected':'')+'>Ingeniero</option><option value="cosechador"'+(rol==='cosechador'?' selected':'')+'>Cosechador</option><option value="galerista"'+(rol==='galerista'?' selected':'')+'>Galerista</option><option value="dueño"'+(rol==='dueño'?' selected':'')+'>Dueño</option><option value="inversionista"'+(rol==='inversionista'?' selected':'')+'>Inversionista</option><option value="admin"'+(rol==='admin'?' selected':'')+'>Admin</option></select></div><div class="form-group"><label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:.85rem;"><input type="checkbox" id="eu-cert" '+(certAmbas?'checked':'')+' style="width:18px;height:18px;"> Certificado para Labores y Cosecha (ambas)</label></div><div class="form-group"><label>Fecha de ingreso</label><input type="date" id="eu-fi" value="'+fechaIngreso+'"></div><div class="form-group"><label>Sueldo base diario ($)</label><input type="number" id="eu-sueldo" min="0" step="1" value="'+sueldoBase+'" placeholder="Ej. 350"></div><div class="form-group"><label>URL de su Mootsilito personalizado (opcional)</label><input type="text" id="eu-avatar" value="'+avatarUrl.replace(/"/g,'&quot;')+'" placeholder="Ej. https://tusitio.pages.dev/avatares/lalo.png"><p class="hint">Sube la imagen a tu repo (junto a index.html) y pega aquí el link completo.</p></div><div class="nav-row"><button class="btn-back" onclick="renderAltasBajas()">← Cancelar</button><button class="btn-next" onclick="guardarEditarUsuario(\''+id+'\')">Guardar</button></div></div>';
+    var fechaNacimiento=(rows&&rows[0]&&rows[0].fecha_nacimiento)||'';
+    body.innerHTML='<div class="form-card"><h3>Editar usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="eu-n" value="'+nombre+'"/></div><div class="form-group"><label>Rol</label><select id="eu-r"><option value="operario"'+(rol==='operario'?' selected':'')+'>Labores</option><option value="labores_eventual"'+(rol==='labores_eventual'?' selected':'')+'>Labores Eventual</option><option value="encargado"'+(rol==='encargado'?' selected':'')+'>Encargado</option><option value="ingeniero"'+(rol==='ingeniero'?' selected':'')+'>Ingeniero</option><option value="cosechador"'+(rol==='cosechador'?' selected':'')+'>Cosechador</option><option value="galerista"'+(rol==='galerista'?' selected':'')+'>Galerista</option><option value="dueño"'+(rol==='dueño'?' selected':'')+'>Dueño</option><option value="inversionista"'+(rol==='inversionista'?' selected':'')+'>Inversionista</option><option value="admin"'+(rol==='admin'?' selected':'')+'>Admin</option></select></div><div class="form-group"><label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:.85rem;"><input type="checkbox" id="eu-cert" '+(certAmbas?'checked':'')+' style="width:18px;height:18px;"> Certificado para Labores y Cosecha (ambas)</label></div><div class="form-group"><label>Fecha de ingreso</label><input type="date" id="eu-fi" value="'+fechaIngreso+'"></div><div class="form-group"><label>Fecha de nacimiento</label><input type="date" id="eu-fn" value="'+fechaNacimiento+'"></div><div class="form-group"><label>Sueldo base diario ($)</label><input type="number" id="eu-sueldo" min="0" step="1" value="'+sueldoBase+'" placeholder="Ej. 350"></div><div class="form-group"><label>URL de su Mootsilito personalizado (opcional)</label><input type="text" id="eu-avatar" value="'+avatarUrl.replace(/"/g,'&quot;')+'" placeholder="Ej. https://tusitio.pages.dev/avatares/lalo.png"><p class="hint">Sube la imagen a tu repo (junto a index.html) y pega aquí el link completo.</p></div><div class="nav-row"><button class="btn-back" onclick="renderAltasBajas()">← Cancelar</button><button class="btn-next" onclick="guardarEditarUsuario(\''+id+'\')">Guardar</button></div></div>';
   });
 }
 
@@ -8673,8 +8673,9 @@ function guardarEditarUsuario(id){
   var avatarUrl=document.getElementById('eu-avatar').value.trim()||null;
   var sueldoBase=parseFloat(document.getElementById('eu-sueldo').value)||null;
   var fechaIngreso=document.getElementById('eu-fi').value||null;
+  var fechaNacimiento=document.getElementById('eu-fn').value||null;
   if(!nn){alert('El nombre es obligatorio.');return;}
-  from('usuarios').eq('id',id).update({nombre:nn,rol:nr,certificado_ambas:certAmbas,avatar_url:avatarUrl,sueldo_base:sueldoBase,fecha_ingreso:fechaIngreso}).then(function(){cargarCatalogos().then(function(){renderAltasBajas();});});
+  from('usuarios').eq('id',id).update({nombre:nn,rol:nr,certificado_ambas:certAmbas,avatar_url:avatarUrl,sueldo_base:sueldoBase,fecha_ingreso:fechaIngreso,fecha_nacimiento:fechaNacimiento}).then(function(){cargarCatalogos().then(function(){renderAltasBajas();});});
 }
 
 function renderCambiarPin(id,nombre){
