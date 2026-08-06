@@ -2476,7 +2476,7 @@ function renderInventarioEditar(itemId){
   });
 }
 
-var VIA_ICONOS={'Riego':'💧','Foliar':'🌿','Drench':'🧪'};
+var VIA_ICONOS={'Riego':'💧','Foliar':'🌿','Drench':'🧪','Manual':'🖐️'};
 var CATEGORIA_ICONOS={'Nutrición':'🌱','Plaga':'🐛','Estimulación':'⚡','Combinada':'🧬','Herbicida':'🍂'};
 var BOMBA_ICONOS={'inyeccion':'🛢️','motor':'⚙️','manual':'🤲'};
 var BOMBA_LABELS={'inyeccion':'Bomba Inyección','motor':'Bomba Motor','manual':'Bomba Manual'};
@@ -3223,7 +3223,7 @@ function renderFormulaPasoTabla(){
 
 function renderFormulaPasoVia(){
   var body=document.getElementById('enc-body');
-  var tiles=['Riego','Foliar','Drench'].map(function(v){
+  var tiles=['Riego','Foliar','Drench','Manual'].map(function(v){
     return '<div class="labor-tile'+(formulaVia===v?' labor-tile-otra':'')+'" data-via="'+v+'"><div class="labor-tile-ic">'+VIA_ICONOS[v]+'</div><div class="labor-tile-lbl">'+v+'</div></div>';
   }).join('');
   var pasoLbl=formulaEditandoCatalogo?'Paso 1 de 6':'Paso 3 de 8';
