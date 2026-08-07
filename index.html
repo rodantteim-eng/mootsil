@@ -1011,11 +1011,24 @@ function renderTablero(){
   });
 }
 
-function progresoSurcosOrden(o){
+// Fase L1 — cálculo único de surcos (antes reimplementado 5 veces: progresoSurcosOrden,
+// acSurcosAsignados, inline en renderEjecAplicacion, calcularProgresoSurcos, e inline en
+// ejecutarGuardadoFinal). No lee variables globales — recibe explícitamente los surcos "nuevos" de
+// esta sesión para poder usarse igual desde el lado operario (capturaEjec.surcos) y desde el lado
+// encargado (ADMIN_COMPLETAR_SURCOS).
+function calcularSurcosOrden(o,surcosNuevos){
   var totalAsignados = (o.surcos_asignados&&o.surcos_asignados.length) ? o.surcos_asignados.map(String) : (o.tabla&&o.tabla.cantidad_surcos ? Array.from({length:o.tabla.cantidad_surcos},function(_,i){return String(i+1);}) : []);
-  var completados = (o.surcos_completados||[]).map(String);
-  var faltan = totalAsignados.filter(function(s){return completados.indexOf(s)===-1;});
-  return {totalAsignados:totalAsignados, completados:completados, faltan:faltan, completo: totalAsignados.length>0 && faltan.length===0};
+  var yaCompletados = (o.surcos_completados||[]).map(String);
+  var nuevos = (surcosNuevos||[]).map(String);
+  var union = Array.from(new Set(yaCompletados.concat(nuevos)));
+  var faltan = totalAsignados.filter(function(s){return union.indexOf(s)===-1;});
+  return {totalAsignados:totalAsignados, union:union, faltan:faltan, completo: totalAsignados.length>0 && faltan.length===0};
+}
+function progresoSurcosOrden(o){
+  // Envoltura que conserva exactamente la forma de retorno original (clave "completados", sin
+  // surcos nuevos de sesión) para no tener que tocar sus 6 sitios de llamada existentes.
+  var r=calcularSurcosOrden(o,[]);
+  return {totalAsignados:r.totalAsignados, completados:r.union, faltan:r.faltan, completo:r.completo};
 }
 
 function cardHtml(o){
@@ -1072,8 +1085,7 @@ function renderAdminCompletar(ordenId,volverFn){
 }
 
 function acSurcosAsignados(o){
-  var tieneSurcosDef=o.tabla&&o.tabla.cantidad_surcos>0;
-  return (o.surcos_asignados&&o.surcos_asignados.length)?o.surcos_asignados.map(String):(tieneSurcosDef?Array.from({length:o.tabla.cantidad_surcos},function(_,i){return String(i+1);}):[]);
+  return calcularSurcosOrden(o,[]).totalAsignados;
 }
 
 function acPintarGrid(){
@@ -1166,11 +1178,11 @@ function guardarAdminCompletar(){
   var esGeneral=!o.tabla_id&&!o.activo_rancho_id&&!esAplic;
   var esSimple=esMantenimiento||esFiltros||esGeneral;
   var tieneSurcosDef=o.tabla&&o.tabla.cantidad_surcos>0;
-  var totalAsignados=acSurcosAsignados(o);
-  var yaCompletados=(o.surcos_completados||[]).map(String);
   var nuevosSurcos=ADMIN_COMPLETAR_SURCOS.map(String);
-  var union=Array.from(new Set(yaCompletados.concat(nuevosSurcos)));
-  var faltan=totalAsignados.filter(function(s){return union.indexOf(s)===-1;});
+  var rSurcos=calcularSurcosOrden(o,nuevosSurcos);
+  var totalAsignados=rSurcos.totalAsignados;
+  var union=rSurcos.union;
+  var faltan=rSurcos.faltan;
   var progresoCompleto = esSimple ? true : (totalAsignados.length>0 ? faltan.length===0 : false);
 
   var tambosPlan=o.tambos_planeados||1;
@@ -1193,7 +1205,9 @@ function guardarAdminCompletar(){
 
   btn.disabled=true; btn.textContent='Guardando...';
 
-  var nuevoEstado = (progresoCompleto || o.es_hora_extra) ? 'completada' : 'en_proceso';
+  // Fase L1 — misma corrección de hora extra que en ejecutarGuardadoFinal: ya no se fuerza
+  // 'completada' solo por ser hora extra; se cierra únicamente cuando el avance realmente está completo.
+  var nuevoEstado = progresoCompleto ? 'completada' : 'en_proceso';
   var sobranteNoUsado = (esAplic&&nuevoEstado==='completada') ? Math.max(0,tambosPlan-tambosUsadosNuevo) : 0;
 
   var updatePayload = esSimple ? {estado:nuevoEstado} : (esAplic ? {estado:nuevoEstado, tambos_usados:tambosUsadosNuevo} : {estado:nuevoEstado, surcos_completados:union});
@@ -1203,7 +1217,9 @@ function guardarAdminCompletar(){
   var cantEl=document.getElementById('ac-cant');
   var cantidadUsada = (!esSimple&&!esAplic&&lb.requiere_cantidad_insumo&&cantEl) ? (parseFloat(cantEl.value)||null) : (esAplic?o.volumen_aplicado_litros:null);
 
-  var reg={usuario_id:o.operario_id||usuario.id,tabla_id:o.tabla_id||null,tipo_labor_id:o.tipo_labor_id,subtipo_labor_id:o.subtipo_labor_id||null,surcos_trabajados:esSimple?[]:nuevosSurcos,cantidad_insumo:cantidadUsada,foto_url:null,capturado_en:new Date().toISOString(),notas:'Registrado por el encargado desde el tablero',orden_id:o.id};
+  // epp_confirmado queda null: nadie confirmó EPP en persona cuando el encargado registra el avance
+  // desde el Tablero — no se simula una confirmación que no ocurrió.
+  var reg={usuario_id:o.operario_id||usuario.id,tabla_id:o.tabla_id||null,tipo_labor_id:o.tipo_labor_id,subtipo_labor_id:o.subtipo_labor_id||null,surcos_trabajados:esSimple?[]:nuevosSurcos,cantidad_insumo:cantidadUsada,foto_url:null,capturado_en:new Date().toISOString(),notas:'Registrado por el encargado desde el tablero',orden_id:o.id,epp_confirmado:null};
 
   function restaurarBoton(){ if(btn){btn.disabled=false;btn.textContent=esSimple?'✅ Marcar como terminada':'💾 Guardar avance';} }
 
@@ -1223,26 +1239,7 @@ function guardarAdminCompletar(){
   }
 
   if(esAplic&&(tambosADeducir>0||sobranteNoUsado>0)){
-    var comps=o.componentesFormula||[];
-    var deducir = tambosADeducir>0 ? Promise.all(comps.map(function(c){
-      var item=cats.inventario.find(function(x){return x.id===c.item_id;});
-      var stockActual=item?item.stock_actual:0;
-      var cant=c.cantidad_base*(o.factor_escala||1)*tambosADeducir;
-      var nuevoStock=stockActual-cant;
-      return from('movimientos_inventario').insert({item_id:c.item_id,tipo:'salida',cantidad:cant,motivo:'Aplicación (tambo extra no planeado, registrado por el encargado): '+(o.formula?o.formula.nombre:''),referencia_orden_id:o.id,usuario_id:usuario.id,stock_anterior:stockActual,stock_posterior:nuevoStock}).then(function(){
-        return from('inventario_items').eq('id',c.item_id).update({stock_actual:nuevoStock});
-      });
-    })) : Promise.resolve();
-    var devolver = sobranteNoUsado>0 ? Promise.all(comps.map(function(c){
-      var item=cats.inventario.find(function(x){return x.id===c.item_id;});
-      var stockActual=item?item.stock_actual:0;
-      var cant=c.cantidad_base*(o.factor_escala||1)*sobranteNoUsado;
-      var nuevoStock=stockActual+cant;
-      return from('movimientos_inventario').insert({item_id:c.item_id,tipo:'entrada',cantidad:cant,motivo:'Devolución automática (registrado por el encargado): mezcla(s) planeada(s) no usada(s) en '+(o.formula?o.formula.nombre:''),referencia_orden_id:o.id,usuario_id:usuario.id,stock_anterior:stockActual,stock_posterior:nuevoStock}).then(function(){
-        return from('inventario_items').eq('id',c.item_id).update({stock_actual:nuevoStock});
-      });
-    })) : Promise.resolve();
-    Promise.all([deducir,devolver]).then(finalizar).catch(function(e){alert('Error actualizando inventario: '+e.message);restaurarBoton();});
+    ajustarInventarioPorTambos(o,tambosADeducir,sobranteNoUsado,true).then(finalizar).catch(function(e){alert('Error actualizando inventario: '+e.message);restaurarBoton();});
   } else {
     finalizar();
   }
@@ -7540,7 +7537,7 @@ function renderEjecAplicacion(planta,tabla){
       });
     });
   } else if(pasoEjec===3){
-    var totalAsigApl=(o.surcos_asignados&&o.surcos_asignados.length)?o.surcos_asignados.map(String):(tabla&&tabla.cantidad_surcos?Array.from({length:tabla.cantidad_surcos},function(_,i){return String(i+1);}):[]);
+    var totalAsigApl=calcularSurcosOrden(o,[]).totalAsignados;
     var yaComplApl=(o.surcos_completados||[]).map(String);
     var esInyeccionEjec=o.bomba_usada==='inyeccion';
     var unidadEjec=unidadPlanAplic(o);
@@ -9284,12 +9281,32 @@ function guardarEjec(){
 }
 
 function calcularProgresoSurcos(o){
-  var totalAsignados = (o.surcos_asignados&&o.surcos_asignados.length) ? o.surcos_asignados.map(String) : (o.tabla&&o.tabla.cantidad_surcos ? Array.from({length:o.tabla.cantidad_surcos},function(_,i){return String(i+1);}) : []);
-  var yaCompletados = (o.surcos_completados||[]).map(String);
-  var nuevos = (capturaEjec.surcos||[]).map(String);
-  var union = Array.from(new Set(yaCompletados.concat(nuevos)));
-  var faltan = totalAsignados.filter(function(s){return union.indexOf(s)===-1;});
-  return {totalAsignados:totalAsignados,union:union,faltan:faltan,completo: totalAsignados.length>0 && faltan.length===0};
+  return calcularSurcosOrden(o,capturaEjec.surcos);
+}
+// Fase L1 — descuento/devolución de inventario por tambo extra o sobrante, unificado (antes
+// reimplementado casi idéntico en guardarAdminCompletar y en ejecutarGuardadoFinal).
+function ajustarInventarioPorTambos(o,tambosADeducir,sobranteNoUsado,registradoPorEncargado){
+  var comps=o.componentesFormula||[];
+  var sufijo=registradoPorEncargado?' (registrado por el encargado)':'';
+  var deducir=(tambosADeducir>0)?Promise.all(comps.map(function(c){
+    var item=cats.inventario.find(function(x){return x.id===c.item_id;});
+    var stockActual=item?item.stock_actual:0;
+    var cant=c.cantidad_base*(o.factor_escala||1)*tambosADeducir;
+    var nuevoStock=stockActual-cant;
+    return from('movimientos_inventario').insert({item_id:c.item_id,tipo:'salida',cantidad:cant,motivo:'Aplicación (tambo extra no planeado'+sufijo+'): '+(o.formula?o.formula.nombre:''),referencia_orden_id:o.id,usuario_id:usuario.id,stock_anterior:stockActual,stock_posterior:nuevoStock}).then(function(){
+      return from('inventario_items').eq('id',c.item_id).update({stock_actual:nuevoStock});
+    });
+  })):Promise.resolve();
+  var devolver=(sobranteNoUsado>0)?Promise.all(comps.map(function(c){
+    var item=cats.inventario.find(function(x){return x.id===c.item_id;});
+    var stockActual=item?item.stock_actual:0;
+    var cant=c.cantidad_base*(o.factor_escala||1)*sobranteNoUsado;
+    var nuevoStock=stockActual+cant;
+    return from('movimientos_inventario').insert({item_id:c.item_id,tipo:'entrada',cantidad:cant,motivo:'Devolución automática'+sufijo+': mezcla(s) planeada(s) no usada(s) en '+(o.formula?o.formula.nombre:''),referencia_orden_id:o.id,usuario_id:usuario.id,stock_anterior:stockActual,stock_posterior:nuevoStock}).then(function(){
+      return from('inventario_items').eq('id',c.item_id).update({stock_actual:nuevoStock});
+    });
+  })):Promise.resolve();
+  return Promise.all([deducir,devolver]);
 }
 
 function ejecutarGuardadoFinal(o){
@@ -9298,10 +9315,20 @@ function ejecutarGuardadoFinal(o){
   var esFiltros=!!(o.subtipo&&o.subtipo.nombre==='Limpieza Filtros');
   var esGeneral=!o.tabla_id&&!o.activo_rancho_id;
   var tieneSurcosDef=o.tabla&&o.tabla.cantidad_surcos>0;
-  var totalSurcosTabla=(o.tabla&&o.tabla.cantidad_surcos)?Array.from({length:o.tabla.cantidad_surcos},function(_,i){return String(i+1);}):[];
+  var totalSurcosTabla=calcularSurcosOrden(o,[]).totalAsignados;
   var progreso = (esMantenimiento||esGeneral||(esAplic&&!tieneSurcosDef)) ? {completo:true,union:capturaEjec.surcos||[],faltan:[],totalAsignados:capturaEjec.surcos||[]} : (esFiltros ? {completo:true,union:totalSurcosTabla,faltan:[],totalAsignados:totalSurcosTabla} : calcularProgresoSurcos(o));
+  // Fase L1 — corrección hora extra: antes, o.es_hora_extra por sí solo forzaba 'completada' aunque
+  // faltaran surcos, cerrando la orden para siempre sin ninguna continuación real (el aviso "el resto
+  // queda para otro turno" no se sostenía en los datos). Ahora una orden de hora extra se cierra con
+  // la MISMA regla que cualquier otra: solo si realmente está completa. Si queda incompleta, permanece
+  // 'en_proceso' y reaparece para continuarla — igual que cualquier labor normal reanudada.
+  // Precisión de Hugo: esto NO es una nueva autorización de hora extra ni la extiende — solo evita el
+  // falso cierre. o.es_hora_extra ya fue decidido una única vez por el encargado al crear/editar la
+  // orden (es_hora_extra es una propiedad fija de LA ORDEN, no algo que este cierre otorgue o renueve);
+  // esta función nunca lee ni escribe horas_extra_asignadas, así que no hay ningún camino nuevo por el
+  // que reabrir esta orden pueda interpretarse como una autorización fresca para otro día/periodo.
   var horaExtraSinTerminar = !!o.es_hora_extra && !progreso.completo;
-  var nuevoEstado = (progreso.completo || o.es_hora_extra) ? 'completada' : 'en_proceso';
+  var nuevoEstado = progreso.completo ? 'completada' : 'en_proceso';
   var tambosPlan = o.tambos_planeados||1;
   var tambosUsadosPrevios = o.tambos_usados||0;
   var tambosEsteAvance = esAplic ? (capturaEjec.tambosEsteAvance||0) : 0;
@@ -9312,7 +9339,7 @@ function ejecutarGuardadoFinal(o){
   var sobranteNoUsado = (esAplic&&nuevoEstado==='completada') ? Math.max(0,tambosPlan-tambosUsadosNuevo) : 0;
   var updatePayload = esMantenimiento ? {estado:nuevoEstado, herramienta_limpia:capturaEjec.herramientaLimpia||false} : (esAplic ? {estado:nuevoEstado, surcos_completados:progreso.union, tambos_usados:tambosUsadosNuevo, herramienta_limpia:capturaEjec.herramientaLimpia||false} : {estado:nuevoEstado, surcos_completados:progreso.union, herramienta_limpia:capturaEjec.herramientaLimpia||false});
   if(nuevoEstado==='completada') updatePayload.completado_en=new Date().toISOString();
-  var reg={usuario_id:usuario.id,tabla_id:o.tabla_id,tipo_labor_id:o.tipo_labor_id,subtipo_labor_id:o.subtipo_labor_id||null,surcos_trabajados:capturaEjec.surcos,cantidad_insumo:esAplic?o.volumen_aplicado_litros:(capturaEjec.cantidad||null),foto_url:capturaEjec.fotoUrl||null,capturado_en:new Date().toISOString(),orden_id:o.id};
+  var reg={usuario_id:usuario.id,tabla_id:o.tabla_id,tipo_labor_id:o.tipo_labor_id,subtipo_labor_id:o.subtipo_labor_id||null,surcos_trabajados:capturaEjec.surcos,cantidad_insumo:esAplic?o.volumen_aplicado_litros:(capturaEjec.cantidad||null),foto_url:capturaEjec.fotoUrl||null,capturado_en:new Date().toISOString(),orden_id:o.id,epp_confirmado:esAplic?Object.assign({},capturaEjec.epp,{confirmado_en:new Date().toISOString()}):null};
   var fotoQuedoLocal = capturaEjec.fotoUrl && capturaEjec.fotoUrl.indexOf('offline:')===0;
 
   function guardarLocalYSalir(avisoTambo){
@@ -9327,34 +9354,20 @@ function ejecutarGuardadoFinal(o){
     guardarLocalYSalir(esAplic&&tambosADeducir>0);
     return;
   }
-  var deducirTambosExtra = (esAplic&&tambosADeducir>0) ? Promise.all((o.componentesFormula||[]).map(function(c){
-    var item=cats.inventario.find(function(x){return x.id===c.item_id;});
-    var stockActual=item?item.stock_actual:0;
-    var cant=c.cantidad_base*(o.factor_escala||1)*tambosADeducir;
-    var nuevoStock=stockActual-cant;
-    return from('movimientos_inventario').insert({item_id:c.item_id,tipo:'salida',cantidad:cant,motivo:'Aplicación (tambo extra no planeado): '+(o.formula?o.formula.nombre:''),referencia_orden_id:o.id,usuario_id:usuario.id,stock_anterior:stockActual,stock_posterior:nuevoStock}).then(function(){
-      return from('inventario_items').eq('id',c.item_id).update({stock_actual:nuevoStock});
-    });
-  })) : Promise.resolve();
-  var devolverSobrante = (esAplic&&sobranteNoUsado>0) ? Promise.all((o.componentesFormula||[]).map(function(c){
-    var item=cats.inventario.find(function(x){return x.id===c.item_id;});
-    var stockActual=item?item.stock_actual:0;
-    var cant=c.cantidad_base*(o.factor_escala||1)*sobranteNoUsado;
-    var nuevoStock=stockActual+cant;
-    return from('movimientos_inventario').insert({item_id:c.item_id,tipo:'entrada',cantidad:cant,motivo:'Devolución automática: mezcla(s) planeada(s) no usada(s) en '+(o.formula?o.formula.nombre:''),referencia_orden_id:o.id,usuario_id:usuario.id,stock_anterior:stockActual,stock_posterior:nuevoStock}).then(function(){
-      return from('inventario_items').eq('id',c.item_id).update({stock_actual:nuevoStock});
-    });
-  })) : Promise.resolve();
-  Promise.all([deducirTambosExtra,devolverSobrante]).then(function(){
+  var ajusteInventario = (esAplic&&(tambosADeducir>0||sobranteNoUsado>0)) ? ajustarInventarioPorTambos(o,tambosADeducir,sobranteNoUsado,false) : Promise.resolve();
+  ajusteInventario.then(function(){
     return from('registros_labor').insert(reg);
   }).then(function(){
     return from('ordenes_trabajo').eq('id',o.id).update(updatePayload);
   }).then(function(){
     if(nuevoEstado==='completada'&&o.activo_rancho_id) from('activos_rancho').eq('id',o.activo_rancho_id).update({fecha_ultimo_mantenimiento:fechaHoyLocal()}).catch(function(){});
     var lb=cats.tiposLabor.find(function(l){return l.id===o.tipo_labor_id;}), tb=cats.tablas.find(function(t){return t.id===o.tabla_id;});
+    // Fase L1: ya no existe el caso "hora extra que cierra incompleta" (ver corrección arriba), así que
+    // el detalle de surcos faltantes usa siempre el mismo texto honesto que una orden normal — la orden
+    // sigue abierta y reaparecerá, no hace falta un aviso especial de "otro turno".
     var verbo = progreso.completo ? 'completó' : (horaExtraSinTerminar ? 'cumplió su hora extra trabajando' : 'avanzó en');
     showToast('✅ '+usuario.nombre+' '+verbo+' '+(lb?lb.nombre:'')+' en '+(tb?tb.nombre:''));
-    var detalle=esAplic?('Fórmula: '+(o.formula?o.formula.nombre:'')+' · Surcos: '+progreso.union.length+'/'+progreso.totalAsignados.length+(progreso.completo?'':(horaExtraSinTerminar?' · El resto queda para otro turno':' · Faltan: '+progreso.faltan.join(', ')))):('Surcos: '+capturaEjec.surcos.join(', ')+(progreso.completo?'':(horaExtraSinTerminar?' · El resto queda para otro turno':' · Faltan: '+progreso.faltan.join(', '))));
+    var detalle=esAplic?('Fórmula: '+(o.formula?o.formula.nombre:'')+' · Surcos: '+progreso.union.length+'/'+progreso.totalAsignados.length+(progreso.completo?'':' · Faltan: '+progreso.faltan.join(', '))):('Surcos: '+capturaEjec.surcos.join(', ')+(progreso.completo?'':' · Faltan: '+progreso.faltan.join(', ')));
     var unidadAviso=esAplic?unidadPlanAplic(o):{plural:'tambos',singular:'tambo'};
     var avisoOverage = (esAplic&&tambosADeducir>0) ? from('notificaciones').insert({titulo:'⚠️ Se usaron más '+unidadAviso.plural+' de las planeadas',cuerpo:usuario.nombre+' ya lleva '+tambosUsadosNuevo+' '+unidadAviso.singular+'(s) en '+(lb?lb.nombre:'')+' · '+(tb?tb.nombre:'')+', pero solo se planearon '+tambosPlan+'. Se descontó el extra del inventario automáticamente.',icono:'⚠️',leida:false,para_rol:'encargado'}) : Promise.resolve();
     var avisoSobrante = (esAplic&&sobranteNoUsado>0) ? from('notificaciones').insert({titulo:'↩️ Insumo no usado devuelto al inventario',cuerpo:'Se planearon '+tambosPlan+' '+unidadAviso.singular+'(s) para '+(lb?lb.nombre:'')+' · '+(tb?tb.nombre:'')+', pero solo se usaron '+tambosUsadosNuevo+'. La diferencia ('+sobranteNoUsado+') se devolvió automáticamente al inventario.',icono:'↩️',leida:false,para_rol:'encargado'}) : Promise.resolve();
