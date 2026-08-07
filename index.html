@@ -655,6 +655,10 @@ function reportarSincronizarEvidenciasSueltas(){
 window.addEventListener('online',function(){reportarSincronizar().then(reportarSincronizarEvidenciasSueltas);});
 
 var camStream=null, camFacing='environment', mediaRecorder=null, grabando=false, videoChunks=[];
+// Destino de la captura de #cam-overlay: 'ejec' (labores — comportamiento original, sin cambios) o
+// 'reporte' (Fase 3 — Reportar/Incidencias). abrirCamaraApp() sin argumentos sigue comportándose
+// exactamente igual que antes (todas las pantallas de labores la llaman así).
+var camDestino='ejec', camReportarPrefix=null;
 
 function showToast(msg){
   var t=document.getElementById('toast');
@@ -6181,12 +6185,14 @@ var REP_TIPOS_MIME={'image/jpeg':'imagen','image/png':'imagen','video/mp4':'vide
 var repEvidenciaSeleccion=[];
 function repEvidenciaReset(){repEvidenciaSeleccion=[];}
 function repEvidenciaWidgetHtml(prefix){
+  // "Cámara" abre la cámara en vivo dentro de la app (#cam-overlay, misma infraestructura que usa
+  // Labores) — captura nueva en el momento. "Galería / Video" sigue usando <input type="file"> para
+  // elegir un archivo ya existente (JPG, PNG o MP4). Son dos comportamientos distintos a propósito.
   return '<div class="form-group"><label>Evidencia (opcional, hasta 5 archivos — JPG, PNG o MP4, máx. 20 MB c/u)</label>'+
     '<div style="display:flex;gap:8px;">'+
-    '<button type="button" onclick="document.getElementById(\''+prefix+'-ev-cam\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📷 Cámara</button>'+
+    '<button type="button" onclick="abrirCamaraApp(\'reporte\',\''+prefix+'\')" style="flex:1;padding:.75rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📷 Cámara</button>'+
     '<button type="button" onclick="document.getElementById(\''+prefix+'-ev-gal\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);background:var(--gris-1);cursor:pointer;">🖼️ Galería / Video</button>'+
     '</div><div id="'+prefix+'-ev-list" class="rpt-ev-grid"></div>'+
-    '<input type="file" id="'+prefix+'-ev-cam" accept="image/jpeg,image/png,video/mp4" capture="environment" style="display:none">'+
     '<input type="file" id="'+prefix+'-ev-gal" accept="image/jpeg,image/png,video/mp4" multiple style="display:none">'+
     '</div>';
 }
@@ -6213,8 +6219,15 @@ function repEvidenciaAgregarArchivos(files,prefix){
   repEvidenciaRender(prefix);
   if(rechazados.length) alert('No se agregaron algunos archivos:\n'+rechazados.join('\n'));
 }
+// Recibe la fotografía capturada por la cámara en vivo (#cam-overlay → tomarFoto()) y la mete al MISMO
+// arreglo/flujo que usa la Galería — misma validación de tamaño/tipo, mismo límite de 5, misma cola
+// offline y sincronización. No es una segunda lógica de almacenamiento, solo otro "productor" de File.
+function repEvidenciaAgregarDesdeCamara(blob,prefix){
+  if(!blob){alert('No se pudo capturar la fotografía. Intenta de nuevo o usa Galería / Video.');return;}
+  var file=new File([blob],'camara_'+Date.now()+'.jpg',{type:'image/jpeg'});
+  repEvidenciaAgregarArchivos([file],prefix);
+}
 function repEvidenciaWirearInputs(prefix){
-  document.getElementById(prefix+'-ev-cam').addEventListener('change',function(e){repEvidenciaAgregarArchivos(e.target.files,prefix);e.target.value='';});
   document.getElementById(prefix+'-ev-gal').addEventListener('change',function(e){repEvidenciaAgregarArchivos(e.target.files,prefix);e.target.value='';});
 }
 // Widget de evidencia única (Solicitudes → Insumos, solo foto, no galería)
@@ -9633,8 +9646,18 @@ function altaUsuario(id){from('usuarios').eq('id',id).update({activo:true}).then
 function usarCamara(){document.getElementById('cam-input').click();}
 function abrirGaleria(){document.getElementById('gal-input').click();}
 
-function abrirCamaraApp(){
+function abrirCamaraApp(destino,prefix){
+  // destino/prefix son opcionales — si no se pasan, el comportamiento es EXACTAMENTE el mismo que
+  // tenía antes (usado tal cual por todas las pantallas de Labores). destino='reporte' es el caso
+  // nuevo, usado por Reportar/Incidencias (8-1/8-2/8-3) para que "Cámara" capture en vivo en vez de
+  // solo abrir el selector de galería.
+  camDestino=destino||'ejec';
+  camReportarPrefix=prefix||null;
   var overlay=document.getElementById('cam-overlay');
+  var btnVideo=document.getElementById('btn-video');
+  // En modo Reportar solo se permite foto (así lo pidió el alcance de Fase 3) — se oculta el botón de
+  // grabar video de la cámara en vivo; para video, Reportar sigue usando "Galería / Video".
+  if(btnVideo) btnVideo.style.display=(camDestino==='reporte')?'none':'';
   overlay.style.display='flex';
   navigator.mediaDevices.getUserMedia({video:{facingMode:camFacing},audio:false}).then(function(stream){
     camStream=stream;
@@ -9642,7 +9665,11 @@ function abrirCamaraApp(){
     video.srcObject=stream;
   }).catch(function(e){
     overlay.style.display='none';
-    alert('No se pudo acceder a la camara. Usa Galeria.');
+    if(camDestino==='reporte'){
+      alert('No se pudo acceder a la cámara (revisa los permisos de tu navegador). Puedes seguir agregando tu evidencia con "Galería / Video".');
+    } else {
+      alert('No se pudo acceder a la camara. Usa Galeria.');
+    }
   });
 }
 
@@ -9699,6 +9726,11 @@ function tomarFoto(){
   canvas.height=video.videoHeight;
   canvas.getContext('2d').drawImage(video,0,0);
   canvas.toBlob(function(blob){
+    if(camDestino==='reporte'){
+      repEvidenciaAgregarDesdeCamara(blob,camReportarPrefix);
+      cerrarCamara();
+      return;
+    }
     capturaEjec.foto=true;
     capturaEjec.fotoBlob=blob;
     capturaEjec.fotoUrl=null;
