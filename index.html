@@ -6371,7 +6371,14 @@ function renderNuevoReporteIncidencia(categoriaPreseleccionada){
     if(this.value==='equipo_herramienta'){ renderDanioEquipo(null,null); return; }
     pintarUbicacion(this.value);
   });
-  if(categoriaPreseleccionada && categoriaPreseleccionada!=='equipo_herramienta') pintarUbicacion(categoriaPreseleccionada);
+  // BUGFIX producción: el <select> siempre tiene un valor inicial (el preseleccionado, o si no
+  // se pasó ninguno, el primer <option> por comportamiento estándar del navegador — normalmente
+  // "Infraestructura"). Antes solo se pintaba Ubicación cuando categoriaPreseleccionada venía
+  // explícita (ej. desde el acceso rápido de Riego), así que al entrar por "Incidencia" sin
+  // preselección, la sección Ubicación nunca se dibujaba y el usuario quedaba bloqueado al enviar
+  // porque la validación sí la exige. Ahora se pinta según el valor real inicial del select.
+  var catInicial=document.getElementById('nri-cat').value;
+  if(catInicial && catInicial!=='equipo_herramienta') pintarUbicacion(catInicial);
   document.getElementById('nri-enviar').addEventListener('click',function(){
     var cat=document.getElementById('nri-cat').value;
     if(cat==='equipo_herramienta'){renderDanioEquipo(null,null);return;}
