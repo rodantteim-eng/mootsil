@@ -159,6 +159,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .surcos-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:.4rem;}
 .surco-btn{padding:.5rem 0;border-radius:6px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.8rem;font-weight:700;cursor:pointer;text-align:center;}
 .surco-btn.sel{border-color:var(--verde-mid);background:var(--verde-tenue);color:var(--verde);}
+/* Fase L3 — tercer estado visual: surcos "en esta ejecución" (entre el inicio de la ejecución y
+   el último surco tocado), distinto de completado (verde) y pendiente (gris por defecto). */
+.surco-btn.actual{border-color:var(--tierra);background:var(--tierra-tenue);color:var(--tierra);}
 .op-chip{padding:6px 16px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.85rem;cursor:pointer;color:var(--negro);font-weight:600;}
 .op-chip.sel{background:var(--verde-tenue);border-color:var(--verde-mid);color:var(--verde);}
 .fcomp-item-opcion:hover,.fcomp-item-opcion:active{background:var(--gris-1);}
@@ -1031,6 +1034,25 @@ function progresoSurcosOrden(o){
   return {totalAsignados:r.totalAsignados, completados:r.union, faltan:r.faltan, completo:r.completo};
 }
 
+// Fase L3 — modelo único "tocar el último surco alcanzado + autorango" para las 3 pantallas que
+// capturan avance por surcos (renderEjec, renderEjecAplicacion, acPintarGrid/pintarAdminCompletar).
+// calcularInicioEjecucion: primer surco pendiente, en el mismo orden en que aparece en
+// totalAsignados — es "dónde arranca" la ejecución de hoy. null si ya no queda nada pendiente.
+function calcularInicioEjecucion(o){
+  var r=calcularSurcosOrden(o,[]);
+  return r.faltan.length ? r.faltan[0] : null;
+}
+// calcularRangoAutomatico: rango contiguo entre inicio y tocado, por POSICIÓN dentro de
+// totalAsignados (no por valor numérico) — funciona igual si los surcos asignados son un rango
+// contiguo (1-41) o una lista con huecos (ej. [1,2,3,10,11,12]).
+function calcularRangoAutomatico(totalAsignados,inicio,tocado){
+  if(inicio==null||tocado==null) return [];
+  var iIni=totalAsignados.indexOf(String(inicio));
+  var iFin=totalAsignados.indexOf(String(tocado));
+  if(iIni===-1||iFin===-1||iFin<iIni) return [];
+  return totalAsignados.slice(iIni,iFin+1);
+}
+
 function cardHtml(o){
   var p=o.tabla?cats.plantaciones.find(function(x){return x.id===o.tabla.plantacion_id;}):null;
   var ic=o.activo_rancho_id?'🔧':(ICONOS[o.tipo_labor.nombre]||'🔧');
@@ -1059,6 +1081,9 @@ function cambiarEstado(id,estado){
 }
 
 var ADMIN_COMPLETAR_ORDEN=null, ADMIN_COMPLETAR_SURCOS=[], ADMIN_COMPLETAR_VOLVER=null;
+// Fase L3 — último surco tocado por el encargado en esta pantalla (modelo único de autorango,
+// mismo patrón que capturaEjec.surcoTocado del lado operario).
+var ADMIN_COMPLETAR_SURCO_TOCADO=null;
 var GESTION_HORAS_EXTRA_VOLVER=null;
 
 function renderAdminCompletar(ordenId,volverFn){
@@ -1074,11 +1099,11 @@ function renderAdminCompletar(ordenId,volverFn){
       ]).then(function(r){
         o.formula=r[0]&&r[0][0];
         o.componentesFormula=r[1]||[];
-        ADMIN_COMPLETAR_ORDEN=o; ADMIN_COMPLETAR_SURCOS=[];
+        ADMIN_COMPLETAR_ORDEN=o; ADMIN_COMPLETAR_SURCOS=[]; ADMIN_COMPLETAR_SURCO_TOCADO=null;
         pintarAdminCompletar();
       }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
     } else {
-      ADMIN_COMPLETAR_ORDEN=o; ADMIN_COMPLETAR_SURCOS=[];
+      ADMIN_COMPLETAR_ORDEN=o; ADMIN_COMPLETAR_SURCOS=[]; ADMIN_COMPLETAR_SURCO_TOCADO=null;
       pintarAdminCompletar();
     }
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
@@ -1088,37 +1113,29 @@ function acSurcosAsignados(o){
   return calcularSurcosOrden(o,[]).totalAsignados;
 }
 
+// Fase L3 — modelo único: el encargado toca el último surco alcanzado por el operario; el resto
+// del rango (desde el inicio de esta ejecución) se marca en automático. Reemplaza la selección
+// libre + "Todos los que faltan"/"Limpiar" que tenía antes.
 function acPintarGrid(){
   var o=ADMIN_COMPLETAR_ORDEN;
   var totalAsignados=acSurcosAsignados(o);
+  var inicioEj=calcularInicioEjecucion(o);
+  ADMIN_COMPLETAR_SURCOS=calcularRangoAutomatico(totalAsignados,inicioEj,ADMIN_COMPLETAR_SURCO_TOCADO);
   var yaCompletados=(o.surcos_completados||[]).map(String);
   var grid=document.getElementById('ac-surcos');
   if(!grid) return;
   grid.innerHTML=totalAsignados.map(function(n){
     var completo=yaCompletados.indexOf(n)>-1;
-    var sel=completo||ADMIN_COMPLETAR_SURCOS.indexOf(n)>-1;
-    return '<button type="button" class="surco-btn'+(sel?' sel':'')+'" data-n="'+n+'"'+(completo?' disabled style="opacity:.55;cursor:not-allowed;"':'')+'>'+n+'</button>';
+    var enEjecucion=!completo&&ADMIN_COMPLETAR_SURCOS.indexOf(n)>-1;
+    var cls=completo?' sel':(enEjecucion?' actual':'');
+    return '<button type="button" class="surco-btn'+cls+'" data-n="'+n+'"'+(completo?' disabled style="opacity:.55;cursor:not-allowed;"':'')+'>'+n+(completo?' ✓':'')+'</button>';
   }).join('');
   grid.querySelectorAll('.surco-btn:not([disabled])').forEach(function(b){
     b.addEventListener('click',function(){
-      var n=this.dataset.n;
-      var idx=ADMIN_COMPLETAR_SURCOS.indexOf(n);
-      if(idx>-1){ADMIN_COMPLETAR_SURCOS.splice(idx,1);this.classList.remove('sel');}
-      else{ADMIN_COMPLETAR_SURCOS.push(n);this.classList.add('sel');}
+      ADMIN_COMPLETAR_SURCO_TOCADO=this.dataset.n;
+      acPintarGrid();
     });
   });
-}
-
-function acSelTodos(){
-  var o=ADMIN_COMPLETAR_ORDEN;
-  var totalAsignados=acSurcosAsignados(o);
-  var yaCompletados=(o.surcos_completados||[]).map(String);
-  ADMIN_COMPLETAR_SURCOS=totalAsignados.filter(function(s){return yaCompletados.indexOf(s)===-1;});
-  acPintarGrid();
-}
-function acSelNinguno(){
-  ADMIN_COMPLETAR_SURCOS=[];
-  acPintarGrid();
 }
 
 function pintarAdminCompletar(){
@@ -1147,10 +1164,10 @@ function pintarAdminCompletar(){
     var sugerido=Math.max(0,tambosPlan-tambosUsadosPrevios);
     html+='<div class="form-group"><label>'+unidad.cuantos+' '+unidad.plural+' se aplicaron en este avance</label><input type="number" id="ac-tambos" min="0" step="0.5" value="'+sugerido+'"><p class="hint">Fórmula: '+(o.formula?o.formula.nombre:'')+' · Planeados: '+tambosPlan+' · Usados hasta ahora: '+tambosUsadosPrevios+'</p></div>';
     if(tieneSurcosDef){
-      html+='<div class="form-group"><label>Surcos cubiertos en este avance</label><div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;"><button type="button" onclick="acSelTodos()" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">Todos los que faltan</button><button type="button" onclick="acSelNinguno()" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.78rem;cursor:pointer;">Limpiar</button></div><div class="surcos-grid" id="ac-surcos"></div><p class="hint">Los ya marcados (sombreados) siguen así. Toca los nuevos que se cubrieron.</p></div>';
+      html+='<div class="form-group"><label>Surcos cubiertos en este avance</label><div class="surcos-grid" id="ac-surcos"></div><p class="hint">Toca el último surco que el operario alcanzó. Los surcos anteriores (sombreados) ya quedan marcados como completados en automático.</p></div>';
     }
   } else if(!esSimple){
-    html+='<div class="form-group"><label>Surcos cubiertos en este avance</label><div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;"><button type="button" onclick="acSelTodos()" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">Todos los que faltan</button><button type="button" onclick="acSelNinguno()" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.78rem;cursor:pointer;">Limpiar</button></div><div class="surcos-grid" id="ac-surcos"></div><p class="hint">Los ya marcados (sombreados) siguen así. Toca los nuevos que se cubrieron.</p></div>';
+    html+='<div class="form-group"><label>Surcos cubiertos en este avance</label><div class="surcos-grid" id="ac-surcos"></div><p class="hint">Toca el último surco que el operario alcanzó. Los surcos anteriores (sombreados) ya quedan marcados como completados en automático.</p></div>';
     if(lb.requiere_cantidad_insumo){
       html+='<div class="form-group"><label>Cantidad usada ('+(lb.unidad_insumo||'')+')</label><input type="number" id="ac-cant" min="0" value="'+(o.cantidad_insumo_esperada!=null?o.cantidad_insumo_esperada:'')+'"></div>';
     }
@@ -7537,27 +7554,32 @@ function renderEjecAplicacion(planta,tabla){
       });
     });
   } else if(pasoEjec===3){
+    // Fase L3 — modelo único: tocar el último surco alcanzado; el resto del rango (desde el
+    // inicio de esta ejecución) se marca en automático. Reemplaza la selección libre +
+    // "Todos los que faltan"/"Limpiar" que tenía antes. surcos_completados ya llega reconstruido
+    // (histórico bloqueado con ✓, igual que antes — eso no era el bug, ver renderEjec paso 1).
     var totalAsigApl=calcularSurcosOrden(o,[]).totalAsignados;
     var yaComplApl=(o.surcos_completados||[]).map(String);
+    var inicioEjApl=calcularInicioEjecucion(o);
+    // rangoActualApl se compara contra totalAsigApl (strings, vienen de calcularSurcosOrden) para
+    // pintar el estado "en esta ejecución"; capturaEjec.surcos guarda NÚMEROS (igual que siempre
+    // en este flujo — registros_labor.surcos_trabajados es int4[]) para no cambiar el tipo de dato
+    // que se envía a Supabase en el guardado.
+    var rangoActualApl=calcularRangoAutomatico(totalAsigApl,inicioEjApl,capturaEjec.surcoTocado);
+    capturaEjec.surcos=rangoActualApl.map(Number);
     var esInyeccionEjec=o.bomba_usada==='inyeccion';
     var unidadEjec=unidadPlanAplic(o);
     var tambosInputHtml=esInyeccionEjec?'':'<div class="form-group"><label>¿'+unidadEjec.cuantos+' '+unidadEjec.plural+' preparaste para este avance?</label><input type="number" id="ejec-tambos-input" min="1" step="1" value="'+(capturaEjec.tambosEsteAvance||1)+'"><p class="hint">Cuenta solo '+unidadEjec.art+' '+unidadEjec.plural+' de hoy, no '+unidadEjec.art+' de avances anteriores.</p></div>';
-    body.innerHTML=bar+'<div class="step-label">Paso 3 de 4</div><div class="step-title">Surcos cubiertos'+(yaComplApl.length?' ('+yaComplApl.length+'/'+totalAsigApl.length+' ya registrados)':'')+'</div>'+tambosInputHtml+'<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;"><button type="button" id="ejec-sel-todos" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">Todos los que faltan</button><button type="button" id="ejec-sel-ninguno" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.78rem;cursor:pointer;">Limpiar</button></div><div class="surcos-grid" style="grid-template-columns:repeat(4,1fr);">'+totalAsigApl.map(function(num){
+    body.innerHTML=bar+'<div class="step-label">Paso 3 de 4</div><div class="step-title">Surcos cubiertos'+(yaComplApl.length?' ('+yaComplApl.length+'/'+totalAsigApl.length+' ya registrados)':'')+'</div>'+tambosInputHtml+'<div class="surcos-grid" style="grid-template-columns:repeat(4,1fr);">'+totalAsigApl.map(function(num){
       var completado=yaComplApl.indexOf(num)>-1;
       if(completado) return '<button class="surco-btn sel" disabled style="opacity:.55;">'+num+' ✓</button>';
-      return '<button class="surco-btn '+(capturaEjec.surcos.indexOf(parseInt(num))>-1?'sel':'')+'" data-s="'+num+'">'+num+'</button>';
-    }).join('')+'</div><p class="hint">Toca los surcos que cubriste en este avance. Los ya marcados en avances anteriores aparecen bloqueados con ✓.</p><div class="nav-row"><button class="btn-back" onclick="pasoEjec--;renderEjec()">← Atrás</button><button class="btn-next" id="ejec-p3-siguiente" onclick="if(!capturarAvanceAplicEjec())return;pasoEjec++;renderEjec();">Siguiente →</button></div>';
-    body.querySelectorAll('[data-s]').forEach(function(b){b.addEventListener('click',function(){var num=parseInt(this.dataset.s);var idx=capturaEjec.surcos.indexOf(num);if(idx>-1){capturaEjec.surcos.splice(idx,1);this.classList.remove('sel');}else{capturaEjec.surcos.push(num);this.classList.add('sel');}});});
-    var btnTodos=document.getElementById('ejec-sel-todos');
-    if(btnTodos) btnTodos.addEventListener('click',function(){
-      capturaEjec.surcos=[];
-      body.querySelectorAll('[data-s]').forEach(function(b){capturaEjec.surcos.push(parseInt(b.dataset.s));b.classList.add('sel');});
-    });
-    var btnNinguno=document.getElementById('ejec-sel-ninguno');
-    if(btnNinguno) btnNinguno.addEventListener('click',function(){
-      capturaEjec.surcos=[];
-      body.querySelectorAll('[data-s]').forEach(function(b){b.classList.remove('sel');});
-    });
+      var enEjecucion=rangoActualApl.indexOf(num)>-1;
+      return '<button class="surco-btn '+(enEjecucion?'actual':'')+'" data-s="'+num+'">'+num+'</button>';
+    }).join('')+'</div><p class="hint">Toca el último surco que cubriste en este avance. Los surcos anteriores (desde donde empezaste hoy) se marcan en automático.</p><div class="nav-row"><button class="btn-back" onclick="pasoEjec--;renderEjec()">← Atrás</button><button class="btn-next" id="ejec-p3-siguiente" '+(capturaEjec.surcos.length?'':'disabled')+' onclick="if(!capturarAvanceAplicEjec())return;pasoEjec++;renderEjec();">Siguiente →</button></div>';
+    body.querySelectorAll('[data-s]').forEach(function(b){b.addEventListener('click',function(){
+      capturaEjec.surcoTocado=this.dataset.s;
+      renderEjecAplicacion(planta,tabla);
+    });});
   } else {
     var evid=capturaEjec.foto?'<div style="padding:.75rem;background:var(--verde-tenue);border-radius:var(--radio);color:var(--verde);font-size:.85rem;text-align:center;margin-bottom:1rem;">✅ Evidencia capturada</div>':'';
     var herrChkAplic=capturaEjec.requiereLimpieza?'<label style="display:flex;align-items:center;gap:.6rem;padding:.75rem;background:var(--gris-1);border-radius:var(--radio);margin-top:.75rem;cursor:pointer;"><input type="checkbox" id="chk-herramienta" '+(capturaEjec.herramientaLimpia?'checked':'')+' style="width:22px;height:22px;flex-shrink:0;"><span style="font-size:.85rem;">🧹 Ya limpié y guardé mi equipo de aplicación (bomba/mochila) en su lugar</span></label>':'';
@@ -9147,24 +9169,69 @@ function sonarAlarmaRiego(){
   if(navigator.vibrate) navigator.vibrate([350,120,350,120,350]);
 }
 
+// Fase L3 — reconstrucción del estado efectivo LOCAL de una orden (servidor/caché + avances
+// pendientes de sincronizar de esa misma orden), únicamente para decidir qué pintar en pantalla.
+// Nunca escribe nada, nunca toca colaOffline/riegoColaOffline, nunca marca nada como sincronizado.
+function buscarOrdenEnCacheTareas(oid){
+  var cache=null;
+  try{cache=JSON.parse(localStorage.getItem('mootsil_tareas_cache_'+usuario.id)||'null');}catch(e){}
+  if(!cache||!cache.todas) return null;
+  // Solo "todas" trae los joins completos que esta pantalla necesita (tabla.cantidad_surcos,
+  // tipo_labor.requiere_formula, formula embebida) — hoyOrdenes/completadas son formas más
+  // delgadas, pensadas para otras vistas, y cualquier orden pendiente/en_proceso reanudable ya
+  // está en "todas" (esa consulta no filtra por fecha).
+  var o=cache.todas.find(function(x){return x.id===oid;});
+  if(!o) return null;
+  o=Object.assign({},o); // copia — nunca se escribe de vuelta al objeto cacheado
+  if(o.formula_id&&cache.componentesPorFormula&&cache.componentesPorFormula[o.formula_id]){
+    o.componentesFormula=cache.componentesPorFormula[o.formula_id];
+  }
+  return o;
+}
+function surcosPendientesLocales(oid){
+  return colaOffline.filter(function(r){return r.orden_id===oid;}).reduce(function(acc,r){return acc.concat(r.surcos_trabajados||[]);},[]);
+}
+function fusionarSurcosLocales(o){
+  var pendientes=surcosPendientesLocales(o.id);
+  if(!pendientes.length) return o;
+  var r=calcularSurcosOrden(o,pendientes); // misma función de L1, mismo Set() sin duplicados
+  return Object.assign({},o,{surcos_completados:r.union});
+}
+function prepararEjecucion(o,esOffline){
+  ordenEjecutando=o; pasoEjec=1; capturaEjec={surcos:[],cantidad:0,foto:false,herramientaLimpia:false,requiereLimpieza:false,epp:{},tambosEsteAvance:1,surcoTocado:null};
+  if(o.activo_rancho_id){renderEjecMantenimiento();return;}
+  if(!o.tabla_id){renderEjecGeneral();return;}
+  if(o.tipo_labor&&o.tipo_labor.requiere_formula&&o.formula_id){
+    if(esOffline){
+      // o.formula y o.componentesFormula ya vienen del caché de tareas (buscarOrdenEnCacheTareas)
+      // — sin conexión no se puede pedir de nuevo a Supabase. Única pérdida conocida: el caché de
+      // componentesFormula no trae imagen_url (cosmético, no bloquea el flujo).
+      renderEjec();
+      return;
+    }
+    Promise.all([
+      from('formulas_aplicacion').select('*').eq('id',o.formula_id).get(),
+      from('formula_componentes').select('*,item:inventario_items!item_id(nombre,unidad,imagen_url)').eq('formula_id',o.formula_id).get()
+    ]).then(function(r){
+      ordenEjecutando.formula=r[0]&&r[0][0];
+      ordenEjecutando.componentesFormula=r[1]||[];
+      renderEjec();
+    }).catch(function(e){alert('No se pudo cargar la fórmula de esta aplicación.\n\nError: '+e.message);});
+  } else {
+    renderEjec();
+  }
+}
 function iniciarEjecucion(oid){
   from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_cantidad_insumo,unidad_insumo,requiere_formula),subtipo:subtipos_labor(nombre),activo_rancho:activos_rancho(nombre,imagen_url,descripcion)').eq('id',oid).single().then(function(o){
-    ordenEjecutando=o; pasoEjec=1; capturaEjec={surcos:[],cantidad:0,foto:false,herramientaLimpia:false,requiereLimpieza:false,epp:{},tambosEsteAvance:1};
-    if(o.activo_rancho_id){renderEjecMantenimiento();return;}
-    if(!o.tabla_id){renderEjecGeneral();return;}
-    if(o.tipo_labor&&o.tipo_labor.requiere_formula&&o.formula_id){
-      Promise.all([
-        from('formulas_aplicacion').select('*').eq('id',o.formula_id).get(),
-        from('formula_componentes').select('*,item:inventario_items!item_id(nombre,unidad,imagen_url)').eq('formula_id',o.formula_id).get()
-      ]).then(function(r){
-        ordenEjecutando.formula=r[0]&&r[0][0];
-        ordenEjecutando.componentesFormula=r[1]||[];
-        renderEjec();
-      }).catch(function(e){alert('No se pudo cargar la fórmula de esta aplicación.\n\nError: '+e.message);});
-    } else {
-      renderEjec();
-    }
-  }).catch(function(e){alert('No se pudo abrir esta tarea.\n\nError: '+e.message);});
+    prepararEjecucion(fusionarSurcosLocales(o),false);
+  }).catch(function(e){
+    // Fase L3 — antes, sin conexión, esto simplemente fallaba con un alert: no era posible
+    // reabrir ninguna orden offline. Ahora cae al caché de tareas ya existente, y fusiona
+    // cualquier avance local pendiente de sincronizar de esa misma orden.
+    var o=buscarOrdenEnCacheTareas(oid);
+    if(!o){alert('No se pudo abrir esta tarea.\n\nError: '+e.message);return;}
+    prepararEjecucion(fusionarSurcosLocales(o),true);
+  });
 }
 
 function renderEjecMantenimiento(){
@@ -9202,16 +9269,29 @@ function renderEjec(){
   var bar='<div class="steps-bar">'+[1,2,3].slice(0,tot).map(function(i){return '<div class="step-seg '+(i<pasoEjec?'done':i===pasoEjec?'active':'')+'"></div>';}).join('')+'</div>';
 
   if(pasoEjec===1){
-    var n=tabla.cantidad_surcos||12, asig=ordenEjecutando.surcos_asignados||[];
-    var lista=asig.length?asig:Array.from({length:n},function(_,i){return i+1;});
-    var html=bar+'<div class="step-label">Paso 1 de '+tot+'</div><div class="step-title">Surcos trabajados</div><p class="hint" style="margin-bottom:.75rem">📍 '+(planta?planta.nombre:'')+' · '+tabla.nombre+'</p>';
-    html+='<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;"><button onclick="selTodosOp()" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">Todos</button><button onclick="selNingunoOp()" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.78rem;cursor:pointer;">Limpiar</button></div>';
-    html+='<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;"><span style="font-size:.78rem;color:var(--gris-3)">Del surco</span><input type="number" id="op-ri" min="1" style="width:48px;padding:3px 6px;border:1.5px solid var(--gris-2);border-radius:6px;font-size:.85rem;" placeholder="1"><span style="font-size:.78rem;color:var(--gris-3)">al</span><input type="number" id="op-rf" min="1" style="width:48px;padding:3px 6px;border:1.5px solid var(--gris-2);border-radius:6px;font-size:.85rem;"><button onclick="aplicarRangoOp()" style="padding:4px 10px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.78rem;cursor:pointer;">Aplicar</button></div>';
+    // Fase L3 — corrige el bug (esta grilla nunca leía o.surcos_completados) y adopta el modelo
+    // único: tocar el último surco alcanzado; el resto del rango (desde el inicio de esta
+    // ejecución) se marca en automático. Mismo patrón que renderEjecAplicacion paso 3 y
+    // acPintarGrid (encargado) — ver calcularInicioEjecucion/calcularRangoAutomatico.
+    var totalAsig=calcularSurcosOrden(ordenEjecutando,[]).totalAsignados;
+    var yaComplOp=(ordenEjecutando.surcos_completados||[]).map(String);
+    var inicioEjOp=calcularInicioEjecucion(ordenEjecutando);
+    var rangoActualOp=calcularRangoAutomatico(totalAsig,inicioEjOp,capturaEjec.surcoTocado);
+    capturaEjec.surcos=rangoActualOp.map(Number); // registros_labor.surcos_trabajados es int4[]
+    var html=bar+'<div class="step-label">Paso 1 de '+tot+'</div><div class="step-title">Surcos trabajados'+(yaComplOp.length?' ('+yaComplOp.length+'/'+totalAsig.length+' ya registrados)':'')+'</div><p class="hint" style="margin-bottom:.75rem">📍 '+(planta?planta.nombre:'')+' · '+tabla.nombre+'</p>';
     html+='<div class="surcos-grid" style="grid-template-columns:repeat(4,1fr);">';
-    lista.forEach(function(num){html+='<button class="surco-btn '+(capturaEjec.surcos.indexOf(num)>-1?'sel':'')+'" data-s="'+num+'">'+num+'</button>';});
-    html+='</div><p class="hint">Toca los surcos trabajados.</p><div class="nav-row"><button class="btn-back" onclick="ordenEjecutando=null;cargarTareas()">← Cancelar</button><button class="btn-next" id="esig" '+(capturaEjec.surcos.length?'':'disabled')+' onclick="pasoEjec++;renderEjec()">Siguiente →</button></div>';
+    totalAsig.forEach(function(num){
+      var completado=yaComplOp.indexOf(num)>-1;
+      if(completado){html+='<button class="surco-btn sel" disabled style="opacity:.55;">'+num+' ✓</button>';return;}
+      var enEjecucion=rangoActualOp.indexOf(num)>-1;
+      html+='<button class="surco-btn '+(enEjecucion?'actual':'')+'" data-s="'+num+'">'+num+'</button>';
+    });
+    html+='</div><p class="hint">Toca el último surco que trabajaste hoy. Los surcos anteriores (desde donde empezaste hoy) se marcan en automático.</p><div class="nav-row"><button class="btn-back" onclick="ordenEjecutando=null;cargarTareas()">← Cancelar</button><button class="btn-next" id="esig" '+(capturaEjec.surcos.length?'':'disabled')+' onclick="pasoEjec++;renderEjec()">Siguiente →</button></div>';
     body.innerHTML=html;
-    body.querySelectorAll('[data-s]').forEach(function(b){b.addEventListener('click',function(){var num=parseInt(this.dataset.s);var idx=capturaEjec.surcos.indexOf(num);if(idx>-1){capturaEjec.surcos.splice(idx,1);this.classList.remove('sel');}else{capturaEjec.surcos.push(num);this.classList.add('sel');}document.getElementById('esig').disabled=!capturaEjec.surcos.length;});});
+    body.querySelectorAll('[data-s]').forEach(function(b){b.addEventListener('click',function(){
+      capturaEjec.surcoTocado=this.dataset.s;
+      renderEjec();
+    });});
   } else if(pasoEjec===2&&labor.requiere_cantidad_insumo){
     body.innerHTML=bar+'<div class="step-label">Paso 2 de '+tot+'</div><div class="step-title">Cantidad aplicada</div><div class="cantidad-row"><button class="cant-btn" onclick="capturaEjec.cantidad=Math.max(0,capturaEjec.cantidad-1);document.getElementById(\'cv\').textContent=capturaEjec.cantidad;">−</button><div><div class="cant-val" id="cv">'+capturaEjec.cantidad+'</div><div class="cant-unit">'+(labor.unidad_insumo||'litros')+'</div></div><button class="cant-btn" onclick="capturaEjec.cantidad++;document.getElementById(\'cv\').textContent=capturaEjec.cantidad;">+</button></div><div class="nav-row"><button class="btn-back" onclick="pasoEjec--;renderEjec()">← Atrás</button><button class="btn-next" onclick="pasoEjec++;renderEjec()">Siguiente →</button></div>';
   } else {
@@ -9219,16 +9299,6 @@ function renderEjec(){
     var evid=capturaEjec.foto?'<div style="padding:.75rem;background:var(--verde-tenue);border-radius:var(--radio);color:var(--verde);font-size:.85rem;text-align:center;margin-bottom:1rem;">✅ Evidencia capturada</div>':'';
     body.innerHTML=bar+'<div class="step-label">Último paso</div><div class="step-title">Evidencia (obligatoria)</div><div style="display:flex;gap:8px;margin-bottom:1rem;"><div style="display:flex;gap:8px;margin-bottom:1rem;"><button onclick="abrirCamaraApp()" style="flex:1;padding:1rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio);background:var(--verde-tenue);color:var(--verde);font-size:.9rem;font-weight:600;cursor:pointer;">📷 Cámara</button><button onclick="abrirGaleria()" style="flex:1;padding:1rem;border:1.5px solid var(--gris-2);border-radius:var(--radio);background:var(--gris-1);font-size:.9rem;cursor:pointer;">🖼️ Galería</button></div></div>'+evid+'<input type="file" id="inp-ev" accept="image/*,video/*" style="display:none" onchange="capturaEjec.foto=true;renderEjec();"><div class="resumen-card" style="margin-top:.5rem;"><div class="resumen-row"><span class="resumen-key">Labor</span><span class="resumen-val">'+labor.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Área</span><span class="resumen-val">'+(planta?planta.nombre:'')+' · '+tabla.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Surcos</span><span class="resumen-val">'+capturaEjec.surcos.join(', ')+'</span></div>'+cant+'</div><div class="nav-row"><button class="btn-back" onclick="pasoEjec--;renderEjec()">← Atrás</button><button class="btn-next" onclick="guardarEjec()" style="background:var(--tierra)">✅ Guardar</button></div>';
   }
-}
-
-function selTodosOp(){capturaEjec.surcos=[];document.querySelectorAll('[data-s]').forEach(function(b){capturaEjec.surcos.push(parseInt(b.dataset.s));b.classList.add('sel');});var s=document.getElementById('esig');if(s)s.disabled=false;}
-function selNingunoOp(){capturaEjec.surcos=[];document.querySelectorAll('[data-s]').forEach(function(b){b.classList.remove('sel');});var s=document.getElementById('esig');if(s)s.disabled=true;}
-function aplicarRangoOp(){
-  var ini=parseInt(document.getElementById('op-ri').value)||1;
-  var fin=parseInt(document.getElementById('op-rf').value)||1;
-  capturaEjec.surcos=[];
-  document.querySelectorAll('[data-s]').forEach(function(b){b.classList.remove('sel');var n=parseInt(b.dataset.s);if(n>=ini&&n<=fin){capturaEjec.surcos.push(n);b.classList.add('sel');}});
-  var s=document.getElementById('esig');if(s)s.disabled=!capturaEjec.surcos.length;
 }
 
 function guardarEjec(){
