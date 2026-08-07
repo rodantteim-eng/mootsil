@@ -117,6 +117,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .rpt-hist-body{flex:1;}
 .rpt-comentarios{margin-bottom:.5rem;}
 .rpt-comentario{background:var(--blanco);border-radius:var(--radio-sm);padding:.7rem .85rem;margin-bottom:.5rem;}
+/* 8-0 Centro de Reportes — resumen de 5 estados: en celular, repeat(5,1fr) desborda porque cada
+   columna 1fr hereda un ancho mínimo igual al min-content de su contenido (palabras como
+   "PROGRAMADA"/"RECHAZADO"), y 5 de esos mínimos sumados superan los 390px, empujando toda la
+   página a scroll horizontal. Se corrige con minmax(0,1fr) (las columnas sí pueden encogerse) y,
+   en celular, se reparte en 2 filas equilibradas (3+2) usando una rejilla de 6 columnas con spans —
+   fila 1: 3 tarjetas de 2/6 (tercios iguales); fila 2: 2 tarjetas de 3/6 (mitades iguales). En
+   tablet/laptop (mismo punto de quiebre que ya usa el resto de la app, 768px) vuelve a una sola fila.
+   Selector compuesto ".stats-row.rpt-resumen-grid" (mayor especificidad que ".stats-row" sola) para
+   sobreescribir de forma confiable el grid-template-columns:repeat(3,1fr) por defecto de la clase
+   compartida, sin tener que tocar esa regla base ni afectar sus otros 3 usos en la app. */
+.stats-row.rpt-resumen-grid{grid-template-columns:repeat(6,minmax(0,1fr));row-gap:8px;}
+.stats-row.rpt-resumen-grid>*:nth-child(1),.stats-row.rpt-resumen-grid>*:nth-child(2),.stats-row.rpt-resumen-grid>*:nth-child(3){grid-column:span 2;}
+.stats-row.rpt-resumen-grid>*:nth-child(4),.stats-row.rpt-resumen-grid>*:nth-child(5){grid-column:span 3;}
+@media (min-width:768px){
+  .stats-row.rpt-resumen-grid{grid-template-columns:repeat(5,minmax(0,1fr));}
+  .stats-row.rpt-resumen-grid>*:nth-child(1),.stats-row.rpt-resumen-grid>*:nth-child(2),.stats-row.rpt-resumen-grid>*:nth-child(3),.stats-row.rpt-resumen-grid>*:nth-child(4),.stats-row.rpt-resumen-grid>*:nth-child(5){grid-column:auto;}
+}
 .orden-card{background:var(--blanco);border-radius:var(--radio);padding:1rem;margin-bottom:.75rem;border-left:4px solid var(--gris-2);}
 .orden-card.pendiente{border-left-color:var(--amarillo);}
 .orden-card.en_proceso{border-left-color:var(--verde-claro);}
@@ -6309,7 +6326,7 @@ function renderCentroReportes(){
     var relevantes=(rows||[]).filter(function(r){return r.categoria!=='emergencia';});
     var resumen={pendiente:0,en_revision:0,programada:0,atendida:0,rechazada:0};
     relevantes.forEach(function(r){ if(resumen.hasOwnProperty(r.estado)) resumen[r.estado]++; });
-    var resumenHtml='<div class="stats-row" style="grid-template-columns:repeat(5,1fr);">'+
+    var resumenHtml='<div class="stats-row rpt-resumen-grid">'+
       Object.keys(ESTADO_REPORTE_LABELS).map(function(k){
         return '<div class="stat-card"><div class="stat-num" style="color:'+ESTADO_REPORTE_LABELS[k].color+';font-size:1.2rem;">'+resumen[k]+'</div><div class="stat-lbl">'+ESTADO_REPORTE_LABELS[k].lbl+'</div></div>';
       }).join('')+'</div>';
