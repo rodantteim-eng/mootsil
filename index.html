@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<title>Mootsil · Labores</title>
+<title>Mootsil · Tablero del Rancho · C002</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
@@ -303,6 +303,56 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .rg-empty{text-align:center;color:var(--gris-3);padding:1.2rem;font-size:.8rem;}
 @media(max-width:900px){.rg-kpis{grid-template-columns:repeat(2,minmax(0,1fr));}.rg-tablas{grid-template-columns:repeat(2,minmax(0,1fr));}.rg-row{grid-template-columns:1fr 1fr 1fr;}.rg-hide-sm{display:none;}}
 @media(max-width:520px){.rg-kpis{grid-template-columns:1fr 1fr}.rg-tablas{grid-template-columns:1fr}.rg-row{grid-template-columns:1fr 1fr}.rg-head{display:block}.rg-actions{margin-top:.7rem}}
+
+
+/* C002 — Tablero Dueño | Estructura visual aprobada + Riego
+   Capa visual aditiva. No modifica SQL/RLS ni el motor de órdenes. */
+:root{
+  --m2-green:#165c43;--m2-green-dark:#0d4935;--m2-green-soft:#eaf4ef;
+  --m2-orange:#ef8c1c;--m2-orange-soft:#fff0dd;--m2-purple:#70328a;--m2-purple-soft:#f3e9f7;
+  --m2-blue:#2b73d2;--m2-blue-soft:#eaf2ff;--m2-pink:#d91f72;--m2-pink-soft:#fde8f1;
+  --m2-cream:#f7f5ee;--m2-ink:#22312a;--m2-muted:#728078;--m2-line:#e3e7e2;
+}
+#screen-encargado.dueno-ui{background:var(--m2-cream);min-height:100vh;display:block;position:relative;}
+#screen-encargado.dueno-ui>.app-header,#screen-encargado.dueno-ui>.tabs{display:none!important;}
+.dueno-sidebar{position:fixed;left:0;top:0;bottom:0;width:238px;background:linear-gradient(180deg,var(--m2-green) 0%,var(--m2-green-dark) 100%);color:#fff;z-index:210;display:flex;flex-direction:column;box-shadow:4px 0 18px rgba(13,73,53,.12);}
+.dueno-brand{padding:22px 20px 18px;border-bottom:1px solid rgba(255,255,255,.11);}
+.dueno-brand-title{font-size:1.35rem;font-weight:800;letter-spacing:-.03em;display:flex;align-items:center;gap:8px;}
+.dueno-brand-sub{font-size:.72rem;opacity:.72;margin-top:3px;font-weight:600;}
+.dueno-nav{padding:14px 10px;overflow-y:auto;flex:1;}
+.dueno-nav-label{font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;opacity:.48;padding:11px 12px 7px;}
+.dueno-nav-btn{width:100%;border:0;background:transparent;color:rgba(255,255,255,.82);border-radius:11px;display:flex;align-items:center;gap:11px;padding:10px 12px;margin:2px 0;font-family:inherit;font-size:.82rem;font-weight:650;cursor:pointer;text-align:left;}
+.dueno-nav-btn:hover{background:rgba(255,255,255,.08);color:#fff}.dueno-nav-btn.active{background:rgba(255,255,255,.16);color:#fff;box-shadow:inset 3px 0 0 var(--m2-orange);}
+.dueno-nav-ic{width:22px;text-align:center;font-size:1rem}.dueno-nav-badge{margin-left:auto;background:var(--m2-orange);color:#fff;min-width:18px;height:18px;padding:0 5px;border-radius:10px;display:none;align-items:center;justify-content:center;font-size:.61rem;font-weight:800;}
+.dueno-sidebar-foot{padding:14px 16px 18px;border-top:1px solid rgba(255,255,255,.11);font-size:.67rem;line-height:1.55;color:rgba(255,255,255,.66);}
+.dueno-topbar{position:fixed;left:238px;right:0;top:0;height:96px;background:#fff;z-index:205;border-bottom:1px solid var(--m2-line);display:grid;grid-template-columns:minmax(190px,1fr) minmax(320px,1.7fr) minmax(220px,1fr);align-items:stretch;box-shadow:0 3px 15px rgba(20,60,40,.05);}
+.dueno-top-user{display:flex;align-items:center;gap:12px;padding:14px 22px;min-width:0;}
+.dueno-avatar{width:48px;height:48px;border-radius:50%;background:var(--m2-green-soft);display:flex;align-items:center;justify-content:center;font-size:1.45rem;border:2px solid #fff;box-shadow:0 0 0 2px #d8e9e0;}
+.dueno-user-name{font-weight:800;color:var(--m2-green-dark);font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dueno-user-role{font-size:.7rem;color:var(--m2-muted);margin-top:2px;}
+.dueno-rancho-band{display:flex;align-items:center;justify-content:center;min-width:0;padding:9px 14px;}
+.dueno-rancho-band-inner{height:66px;width:100%;max-width:590px;border-radius:13px;overflow:hidden;background:linear-gradient(90deg,var(--m2-orange) 0 56%,var(--m2-purple) 56% 100%);display:flex;align-items:center;justify-content:center;position:relative;box-shadow:0 4px 12px rgba(80,50,30,.10);}
+.dueno-rancho-band-inner img{width:100%;height:100%;object-fit:cover;display:block}.dueno-rancho-fallback{color:#fff;font-size:1.18rem;font-weight:900;letter-spacing:-.02em;text-align:center}.dueno-rancho-fallback small{display:block;font-size:.73rem;letter-spacing:.02em;margin-top:2px;opacity:.9}
+.dueno-top-actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;padding:12px 20px;}
+.dueno-top-action{border:1px solid var(--m2-line);background:#fff;color:var(--m2-green-dark);height:39px;border-radius:20px;padding:0 12px;font-size:.72rem;font-weight:750;cursor:pointer;white-space:nowrap}.dueno-top-action.danger{border-color:#f1c6c0;color:#b83a2d;background:#fff8f7}.dueno-top-action.primary{border-color:var(--m2-green);color:#fff;background:var(--m2-green)}
+.dueno-online{width:9px;height:9px;border-radius:50%;background:#31a86a;display:inline-block;margin-right:5px;box-shadow:0 0 0 3px #e4f7ec;}
+#screen-encargado.dueno-ui>.app-body{margin-left:238px;padding:118px 24px 34px;background:var(--m2-cream);min-height:100vh;overflow:visible;}
+#screen-encargado.dueno-ui .loading{color:var(--m2-muted)}
+/* Refresco visual de componentes heredados dentro del tablero dueño */
+#screen-encargado.dueno-ui .orden-card,#screen-encargado.dueno-ui .form-card,#screen-encargado.dueno-ui .resumen-card,#screen-encargado.dueno-ui .stat-card{border:1px solid var(--m2-line);box-shadow:0 5px 18px rgba(30,70,50,.05);border-radius:13px;}
+#screen-encargado.dueno-ui .rep-view-btn{background:#fff;border-color:var(--m2-line);color:var(--m2-green-dark)}#screen-encargado.dueno-ui .rep-view-btn.active{background:var(--m2-green);border-color:var(--m2-green);color:#fff}
+/* C002 Riego */
+.m2-page{max-width:1450px;margin:0 auto;color:var(--m2-ink)}
+.m2-page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:16px}.m2-eyebrow{font-size:.68rem;color:var(--m2-orange);font-weight:900;text-transform:uppercase;letter-spacing:.11em;margin-bottom:4px}.m2-title{font-size:1.55rem;line-height:1.1;font-weight:900;color:var(--m2-green-dark);letter-spacing:-.035em}.m2-subtitle{font-size:.78rem;color:var(--m2-muted);margin-top:5px}.m2-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.m2-btn{border:1px solid var(--m2-line);background:#fff;color:var(--m2-green-dark);border-radius:10px;padding:.62rem .85rem;font-size:.73rem;font-weight:800;cursor:pointer}.m2-btn:hover{box-shadow:0 4px 14px rgba(20,70,45,.08)}.m2-btn.primary{background:var(--m2-green);border-color:var(--m2-green);color:#fff}.m2-btn.purple{background:var(--m2-purple);border-color:var(--m2-purple);color:#fff}
+.m2-period{display:flex;gap:6px;margin-bottom:14px}.m2-period button{border:1px solid var(--m2-line);background:#fff;border-radius:18px;padding:.42rem .8rem;font-size:.7rem;font-weight:800;color:var(--m2-muted);cursor:pointer}.m2-period button.active{background:var(--m2-green-dark);color:#fff;border-color:var(--m2-green-dark)}
+.m2-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:11px;margin-bottom:14px}.m2-kpi{background:#fff;border:1px solid var(--m2-line);border-radius:14px;padding:14px 15px 13px;box-shadow:0 5px 18px rgba(20,70,45,.045);position:relative;overflow:hidden;min-height:105px}.m2-kpi:before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--m2-green)}.m2-kpi.orange:before{background:var(--m2-orange)}.m2-kpi.blue:before{background:var(--m2-blue)}.m2-kpi.purple:before{background:var(--m2-purple)}.m2-kpi.pink:before{background:var(--m2-pink)}.m2-kpi-top{display:flex;align-items:center;justify-content:space-between;gap:6px}.m2-kpi-label{font-size:.66rem;color:var(--m2-muted);font-weight:850;text-transform:uppercase;letter-spacing:.045em}.m2-kpi-icon{width:28px;height:28px;border-radius:9px;background:var(--m2-green-soft);display:flex;align-items:center;justify-content:center}.m2-kpi-num{font-size:1.65rem;font-weight:900;color:var(--m2-green-dark);margin-top:6px;line-height:1}.m2-kpi-note{font-size:.68rem;color:var(--m2-muted);margin-top:6px}
+.m2-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(280px,.78fr);gap:13px;margin-bottom:14px}.m2-card{background:#fff;border:1px solid var(--m2-line);border-radius:14px;padding:14px 15px;box-shadow:0 5px 18px rgba(20,70,45,.045)}.m2-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px}.m2-card-title{font-size:.79rem;font-weight:900;color:var(--m2-green-dark);text-transform:uppercase;letter-spacing:.035em}.m2-card-meta{font-size:.68rem;color:var(--m2-muted)}
+.m2-plant{margin-top:9px}.m2-plant:first-child{margin-top:0}.m2-plant-head{font-size:.7rem;font-weight:900;color:var(--m2-green-dark);margin-bottom:7px;display:flex;align-items:center;gap:6px}.m2-plant-head:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--m2-orange)}.m2-table-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.m2-table{border:1px solid var(--m2-line);background:#fbfcfa;border-radius:11px;padding:10px;min-height:98px;position:relative}.m2-table.state-en_proceso{border-color:#b9d6fb;background:#f5f9ff}.m2-table.state-pendiente{border-color:#f2d4a8;background:#fffaf2}.m2-table.state-completada{border-color:#badfce;background:#f5fbf7}.m2-table-title{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:.74rem;font-weight:900}.m2-state-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;background:#ccd4cf}.state-en_proceso .m2-state-dot{background:var(--m2-blue)}.state-pendiente .m2-state-dot{background:var(--m2-orange)}.state-completada .m2-state-dot{background:#2f9a62}.m2-state-label{font-size:.6rem;color:var(--m2-muted);font-weight:800}.m2-table-info{font-size:.65rem;color:var(--m2-muted);line-height:1.5;margin-top:6px}.m2-progress{height:5px;background:#e7ece8;border-radius:5px;overflow:hidden;margin-top:7px}.m2-progress span{height:100%;display:block;background:var(--m2-green);border-radius:5px}.state-en_proceso .m2-progress span{background:var(--m2-blue)}.state-pendiente .m2-progress span{background:var(--m2-orange)}
+.m2-attention{display:flex;flex-direction:column;gap:8px}.m2-alert{border:1px solid var(--m2-line);border-radius:11px;padding:10px 11px;background:#fff;display:flex;gap:9px;align-items:flex-start}.m2-alert.red{border-color:#efc6c0;background:#fff8f7}.m2-alert.orange{border-color:#f1d1a3;background:#fffaf2}.m2-alert.green{border-color:#bcdcca;background:#f6fbf8}.m2-alert-ic{width:28px;height:28px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:var(--m2-orange-soft);flex:0 0 auto}.m2-alert.red .m2-alert-ic{background:#fde7e3}.m2-alert.green .m2-alert-ic{background:var(--m2-green-soft)}.m2-alert-title{font-size:.69rem;font-weight:900;color:var(--m2-ink)}.m2-alert-text{font-size:.64rem;color:var(--m2-muted);line-height:1.45;margin-top:2px}.m2-alert-action{border:0;background:none;color:var(--m2-purple);font-size:.63rem;font-weight:850;padding:3px 0 0;cursor:pointer}
+.m2-ops{background:#fff;border:1px solid var(--m2-line);border-radius:14px;overflow:hidden;box-shadow:0 5px 18px rgba(20,70,45,.045)}.m2-ops-head{padding:13px 15px;border-bottom:1px solid var(--m2-line);display:flex;align-items:center;justify-content:space-between;gap:10px}.m2-ops-table{width:100%;border-collapse:collapse;font-size:.69rem}.m2-ops-table th{text-align:left;color:var(--m2-muted);font-size:.61rem;text-transform:uppercase;letter-spacing:.045em;padding:9px 11px;background:#fafbf9;border-bottom:1px solid var(--m2-line)}.m2-ops-table td{padding:10px 11px;border-bottom:1px solid #edf0ec;vertical-align:middle}.m2-ops-table tr:last-child td{border-bottom:0}.m2-op-main{font-weight:850;color:var(--m2-ink)}.m2-op-sub{color:var(--m2-muted);font-size:.62rem;margin-top:2px}.m2-chip{display:inline-flex;align-items:center;border-radius:13px;padding:.23rem .52rem;font-size:.59rem;font-weight:900;white-space:nowrap}.m2-chip.pendiente{background:var(--m2-orange-soft);color:#b66a0d}.m2-chip.en_proceso{background:var(--m2-blue-soft);color:#245fae}.m2-chip.completada{background:var(--m2-green-soft);color:#287a50}.m2-empty{padding:26px;text-align:center;color:var(--m2-muted);font-size:.75rem}
+.m2-module-tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}.m2-module-tab{border:1px solid var(--m2-line);background:#fff;border-radius:10px;padding:.55rem .75rem;font-size:.69rem;font-weight:850;color:var(--m2-muted);cursor:pointer}.m2-module-tab.active{background:var(--m2-green-dark);border-color:var(--m2-green-dark);color:#fff}.m2-module-tab.riego.active{background:var(--m2-blue);border-color:var(--m2-blue)}
+@media(max-width:1180px){.dueno-topbar{grid-template-columns:1fr 1.4fr 1fr}.m2-kpis{grid-template-columns:repeat(3,1fr)}.m2-table-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:900px){.dueno-sidebar{width:76px}.dueno-brand{padding:18px 9px}.dueno-brand-title{justify-content:center;font-size:0}.dueno-brand-title:before{content:"🌿";font-size:1.35rem}.dueno-brand-sub,.dueno-nav-label,.dueno-nav-btn span:not(.dueno-nav-ic):not(.dueno-nav-badge),.dueno-sidebar-foot{display:none}.dueno-nav-btn{justify-content:center;padding:11px 7px}.dueno-nav-ic{font-size:1.15rem}.dueno-topbar{left:76px;grid-template-columns:1fr 1.2fr}.dueno-rancho-band{display:none}#screen-encargado.dueno-ui>.app-body{margin-left:76px;padding:115px 14px 25px}.m2-grid{grid-template-columns:1fr}.m2-kpis{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:650px){.dueno-top-user{padding:10px}.dueno-top-actions{padding:10px;gap:4px}.dueno-top-action{padding:0 8px}.dueno-top-action .txt{display:none}.m2-page-head{align-items:flex-start;flex-direction:column}.m2-actions{justify-content:flex-start}.m2-kpis{grid-template-columns:1fr 1fr}.m2-table-grid{grid-template-columns:1fr}.m2-ops{overflow-x:auto}.m2-ops-table{min-width:720px}}
 
 </style>
 </head>
@@ -765,6 +815,7 @@ function entrarSegunRol(){
   } else {
     document.getElementById('enc-nombre').textContent=usuario.nombre+' · '+usuario.rol;
     mostrar('screen-encargado');
+    if(usuario.rol==='dueño') activarVistaDueno();
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='dueño') document.getElementById('tab-tablero').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='dueño') document.getElementById('tab-asignar').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='dueño') document.getElementById('tab-cosecha').style.display='';
@@ -833,6 +884,7 @@ function cargarCatalogos(){
 function tabEncargado(tab){
   ['tablero','asignar','notif','permisos','alarmas','admin','reporte','inventario','aplicaciones','riego','cosecha','labores','validar','config'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.classList.remove('active');});
   var el=document.getElementById('tab-'+tab); if(el) el.classList.add('active');
+  actualizarDuenoNav(tab);
   if(tab==='tablero') renderTablero();
   else if(tab==='asignar') renderAsignarEstatus();
   else if(tab==='notif') renderNotifs('enc-body');
@@ -848,6 +900,37 @@ function tabEncargado(tab){
   else if(tab==='validar') renderValidar();
   else if(tab==='config') renderConfig();
 }
+
+
+function activarVistaDueno(){
+  var screen=document.getElementById('screen-encargado');
+  if(!screen||!usuario||usuario.rol!=='dueño') return;
+  screen.classList.add('dueno-ui');
+  if(document.getElementById('dueno-sidebar')){actualizarDuenoNav('tablero');return;}
+  var aside=document.createElement('aside');aside.id='dueno-sidebar';aside.className='dueno-sidebar';
+  aside.innerHTML='<div class="dueno-brand"><div class="dueno-brand-title">🌿 <span>Mootsil</span></div><div class="dueno-brand-sub">TABLERO DEL RANCHO</div></div>'+
+    '<nav class="dueno-nav">'+
+    '<div class="dueno-nav-label">Dirección</div>'+duenoNavBtn('tablero','⌂','Inicio')+
+    '<div class="dueno-nav-label">Operación</div>'+duenoNavBtn('asignar','🧰','Labores')+duenoNavBtn('aplicaciones','🧪','Aplicaciones')+duenoNavBtn('riego','💧','Riego')+duenoNavBtn('cosecha','🫐','Cosecha')+
+    '<div class="dueno-nav-label">Control</div>'+duenoNavBtn('reporte','▥','Reportes')+duenoNavBtn('inventario','▣','Inventario')+duenoNavBtn('admin','⚙','Administración')+duenoNavBtn('notif','🔔','Avisos','dueno-badge-avisos')+
+    '</nav><div class="dueno-sidebar-foot">Mootsil · Rancho Sagrado Corazón<br><span id="dueno-sync-label">● En línea · Sincronizado</span></div>';
+  var top=document.createElement('header');top.id='dueno-topbar';top.className='dueno-topbar';
+  top.innerHTML='<div class="dueno-top-user"><div class="dueno-avatar">👤</div><div style="min-width:0"><div class="dueno-user-name" id="dueno-user-name"></div><div class="dueno-user-role">Dueño · Control general del rancho</div></div></div>'+
+    '<div class="dueno-rancho-band"><div class="dueno-rancho-band-inner"><img id="dueno-franja-img" alt="Rancho Sagrado Corazón · Zarzamora" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'block\'"><div class="dueno-rancho-fallback" style="display:none">Rancho Sagrado Corazón<small>ZARZAMORA</small></div></div></div>'+
+    '<div class="dueno-top-actions"><button class="dueno-top-action danger" onclick="renderCentroReportes()">🚨 <span class="txt">Reportar</span></button><button class="dueno-top-action" onclick="tabEncargado(\'notif\')">🔔 <span class="txt">Avisos</span></button><button class="dueno-top-action" onclick="renderCambiarMiPin()">🔒 <span class="txt">PIN</span></button><button class="dueno-top-action primary" onclick="salir()">Salir</button></div>';
+  screen.insertBefore(aside,screen.firstChild);screen.insertBefore(top,screen.firstChild);
+  var nm=document.getElementById('dueno-user-name');if(nm)nm.textContent=usuario.nombre||'Dueño';
+  var fr=document.getElementById('dueno-franja-img');if(fr)fr.src=FRANJA_RANCHO_URI;
+  actualizarDuenoNav('tablero');
+  window.addEventListener('online',actualizarDuenoConexion);window.addEventListener('offline',actualizarDuenoConexion);actualizarDuenoConexion();
+}
+function duenoNavBtn(tab,ic,lbl,badgeId){return '<button type="button" class="dueno-nav-btn" data-dueno-tab="'+tab+'" onclick="tabEncargado(\''+tab+'\')"><span class="dueno-nav-ic">'+ic+'</span><span>'+lbl+'</span>'+(badgeId?'<span class="dueno-nav-badge" id="'+badgeId+'">0</span>':'')+'</button>';}
+function actualizarDuenoNav(tab){
+  if(!document.getElementById('dueno-sidebar'))return;
+  document.querySelectorAll('[data-dueno-tab]').forEach(function(b){b.classList.toggle('active',b.dataset.duenoTab===tab);});
+}
+function actualizarDuenoConexion(){var el=document.getElementById('dueno-sync-label');if(el)el.innerHTML=navigator.onLine?'● En línea · Sincronizado':'● Sin señal · Modo offline';}
+function duenoModulo(tab){tabEncargado(tab);}
 
 
 var RIEGO_CONTROL_FILTRO='hoy';
@@ -866,7 +949,7 @@ function renderRiegoControl(){
   var hoy=fechaHoyLocal();
   var inicioSem=inicioDeSemana(new Date());
   var finSem=new Date(inicioSem);finSem.setDate(inicioSem.getDate()+6);
-  var semIni=inicioSem.toISOString().slice(0,10), semFin=finSem.toISOString().slice(0,10);
+  var semIni=inicioSem.toISOString().slice(0,10),semFin=finSem.toISOString().slice(0,10);
   var hace30=new Date(Date.now()-30*86400000).toISOString().slice(0,10);
   Promise.all([
     from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_tiempo),subtipo:subtipos_labor(nombre,requiere_tiempo)').gte('fecha_asignacion',hace30).order('fecha_asignacion',{ascending:false}).get(),
@@ -874,50 +957,56 @@ function renderRiegoControl(){
     from('riego_semanal_excepciones').select('tabla_id').eq('semana_inicio',semIni).get()
   ]).then(function(r){
     var ordenes=(r[0]||[]).filter(function(o){return ordenEsTiempo(o);});
-    var formulas=r[1]||[], excepciones=r[2]||[];
-    var rangoIni=RIEGO_CONTROL_FILTRO==='semana'?semIni:hoy, rangoFin=RIEGO_CONTROL_FILTRO==='semana'?semFin:hoy;
+    var formulas=r[1]||[],excepciones=r[2]||[];
+    var rangoIni=RIEGO_CONTROL_FILTRO==='semana'?semIni:hoy,rangoFin=RIEGO_CONTROL_FILTRO==='semana'?semFin:hoy;
     var visibles=ordenes.filter(function(o){return o.fecha_asignacion>=rangoIni&&o.fecha_asignacion<=rangoFin&&o.estado!=='cancelada';});
-    var pendientes=visibles.filter(function(o){return o.estado==='pendiente';});
-    var proceso=visibles.filter(function(o){return o.estado==='en_proceso';});
-    var completas=visibles.filter(function(o){return o.estado==='completada';});
+    var pendientes=visibles.filter(function(o){return o.estado==='pendiente';}),proceso=visibles.filter(function(o){return o.estado==='en_proceso';}),completas=visibles.filter(function(o){return o.estado==='completada';});
     var minutosProg=visibles.reduce(function(a,o){return a+(Number(o.duracion_minutos)||0);},0);
-    var tablasAtendidas={}; completas.forEach(function(o){if(o.tabla_id)tablasAtendidas[o.tabla_id]=true;});
-    var ftab={}; formulas.forEach(function(f){ftab[f.tabla_id]=true;}); var etab={}; excepciones.forEach(function(e){etab[e.tabla_id]=true;});
-    var sinCobertura=(cats.tablas||[]).filter(function(t){return !ftab[t.id]&&!etab[t.id];}).length;
-    function fmtMin(m){var h=Math.floor(m/60), mm=m%60;return h?(h+' h '+mm+' min'):(mm+' min');}
-    var html='<div class="rg-shell"><div class="rg-head"><div><h2>💧 Riego</h2><p>Control operativo por plantación y tabla · '+(RIEGO_CONTROL_FILTRO==='semana'?'Semana '+numeroSemanaISO(inicioSem):'Hoy, '+fechaLarga(hoy))+'</p></div><div class="rg-actions"><button class="rg-btn" id="rg-cobertura">Cobertura semanal</button><button class="rg-btn primary" id="rg-programar">＋ Programar riego</button></div></div>';
-    html+='<div style="display:flex;gap:6px;"><button class="rep-view-btn'+(RIEGO_CONTROL_FILTRO==='hoy'?' active':'')+'" data-rg-periodo="hoy">Hoy</button><button class="rep-view-btn'+(RIEGO_CONTROL_FILTRO==='semana'?' active':'')+'" data-rg-periodo="semana">Semana</button></div>';
-    html+='<div class="rg-kpis"><div class="rg-kpi"><div class="rg-kpi-lbl">Tablas programadas</div><div class="rg-kpi-num">'+Object.keys(visibles.reduce(function(a,o){if(o.tabla_id)a[o.tabla_id]=1;return a;},{})).length+'</div><div class="rg-kpi-sub">'+visibles.length+' órdenes de riego</div></div><div class="rg-kpi"><div class="rg-kpi-lbl">En proceso</div><div class="rg-kpi-num" style="color:#2980b9">'+proceso.length+'</div><div class="rg-kpi-sub">Riegos activos</div></div><div class="rg-kpi"><div class="rg-kpi-lbl">Completadas</div><div class="rg-kpi-num">'+completas.length+'</div><div class="rg-kpi-sub">'+Object.keys(tablasAtendidas).length+' tablas atendidas</div></div><div class="rg-kpi"><div class="rg-kpi-lbl">Tiempo programado</div><div class="rg-kpi-num" style="font-size:1.2rem">'+fmtMin(minutosProg)+'</div><div class="rg-kpi-sub">Acumulado del periodo</div></div></div>';
-    if(sinCobertura) html+='<div class="rg-alert">⚠️ <strong>'+sinCobertura+' tabla(s)</strong> no tienen aplicación vía riego programada ni excepción registrada esta semana. <button class="rg-btn" id="rg-alert-cobertura" style="margin-left:8px;">Revisar</button></div>';
-    html+='<div class="rg-panel"><div class="rg-panel-title"><span>ESTADO POR PLANTACIÓN Y TABLA</span><span style="font-weight:500;color:var(--gris-3)">'+(cats.tablas||[]).length+' tablas</span></div>';
+    var progTablas={};visibles.forEach(function(o){if(o.tabla_id)progTablas[o.tabla_id]=1;});
+    var atendidas={};completas.forEach(function(o){if(o.tabla_id)atendidas[o.tabla_id]=1;});
+    var responsables={};visibles.forEach(function(o){if(o.operario&&o.operario.nombre)responsables[o.operario.nombre]=1;});
+    var ftab={};formulas.forEach(function(f){ftab[f.tabla_id]=1;});var etab={};excepciones.forEach(function(e){etab[e.tabla_id]=1;});
+    var sinCobertura=(cats.tablas||[]).filter(function(t){return !ftab[t.id]&&!etab[t.id];});
+    function fmtMin(m){m=Number(m)||0;var h=Math.floor(m/60),mm=m%60;return h?(h+' h '+(mm?mm+' min':'')):(mm+' min');}
+    function pctEstado(os){if(!os.length)return 0;var tot=os.reduce(function(a,o){return a+(Number(o.duracion_minutos)||0);},0);var comp=os.filter(function(o){return o.estado==='completada';}).reduce(function(a,o){return a+(Number(o.duracion_minutos)||0);},0);if(os.some(function(o){return o.estado==='en_proceso';})&&comp<tot)comp+=Math.round((tot-comp)*.45);return tot?Math.min(100,Math.round(comp*100/tot)):0;}
+    var html='<div class="m2-page">'+
+      '<div class="m2-page-head"><div><div class="m2-eyebrow">Operación · Agua y nutrición</div><div class="m2-title">Riego</div><div class="m2-subtitle">Control por plantación y tabla · '+(RIEGO_CONTROL_FILTRO==='semana'?'Semana '+numeroSemanaISO(inicioSem):fechaLarga(hoy))+'</div></div><div class="m2-actions"><button class="m2-btn" id="rg-cobertura">Cobertura semanal</button><button class="m2-btn primary" id="rg-programar">＋ Programar riego</button></div></div>'+
+      '<div class="m2-module-tabs"><button class="m2-module-tab" onclick="duenoModulo(\'asignar\')">🧰 Labores</button><button class="m2-module-tab" onclick="duenoModulo(\'aplicaciones\')">🧪 Aplicaciones</button><button class="m2-module-tab riego active">💧 Riego</button><button class="m2-module-tab" onclick="duenoModulo(\'cosecha\')">🫐 Cosecha</button></div>'+
+      '<div class="m2-period"><button class="'+(RIEGO_CONTROL_FILTRO==='hoy'?'active':'')+'" data-rg-periodo="hoy">Hoy</button><button class="'+(RIEGO_CONTROL_FILTRO==='semana'?'active':'')+'" data-rg-periodo="semana">Semana</button></div>'+
+      '<div class="m2-kpis">'+
+        '<div class="m2-kpi blue"><div class="m2-kpi-top"><div class="m2-kpi-label">Tablas programadas</div><div class="m2-kpi-icon">💧</div></div><div class="m2-kpi-num">'+Object.keys(progTablas).length+'</div><div class="m2-kpi-note">'+visibles.length+' órdenes en el periodo</div></div>'+
+        '<div class="m2-kpi orange"><div class="m2-kpi-top"><div class="m2-kpi-label">Pendientes</div><div class="m2-kpi-icon" style="background:var(--m2-orange-soft)">⏳</div></div><div class="m2-kpi-num">'+pendientes.length+'</div><div class="m2-kpi-note">Por iniciar</div></div>'+
+        '<div class="m2-kpi blue"><div class="m2-kpi-top"><div class="m2-kpi-label">En proceso</div><div class="m2-kpi-icon" style="background:var(--m2-blue-soft)">▶</div></div><div class="m2-kpi-num">'+proceso.length+'</div><div class="m2-kpi-note">Riegos activos</div></div>'+
+        '<div class="m2-kpi"><div class="m2-kpi-top"><div class="m2-kpi-label">Completadas</div><div class="m2-kpi-icon">✓</div></div><div class="m2-kpi-num">'+completas.length+'</div><div class="m2-kpi-note">'+Object.keys(atendidas).length+' tablas atendidas</div></div>'+
+        '<div class="m2-kpi purple"><div class="m2-kpi-top"><div class="m2-kpi-label">Tiempo programado</div><div class="m2-kpi-icon" style="background:var(--m2-purple-soft)">◷</div></div><div class="m2-kpi-num" style="font-size:1.25rem;margin-top:12px">'+fmtMin(minutosProg)+'</div><div class="m2-kpi-note">'+Object.keys(responsables).length+' responsable(s)</div></div>'+
+      '</div>'+
+      '<div class="m2-grid"><section class="m2-card"><div class="m2-card-head"><div class="m2-card-title">Estado del Rancho · Riego</div><div class="m2-card-meta">'+(cats.tablas||[]).length+' tablas</div></div>';
     (cats.plantaciones||[]).forEach(function(p){
-      var ts=(cats.tablas||[]).filter(function(t){return t.plantacion_id===p.id;}); if(!ts.length)return;
-      html+='<div class="rg-planta"><div class="rg-planta-name">'+p.nombre.toUpperCase()+'</div><div class="rg-tablas">';
+      var ts=(cats.tablas||[]).filter(function(t){return t.plantacion_id===p.id;});if(!ts.length)return;
+      html+='<div class="m2-plant"><div class="m2-plant-head">'+String(p.nombre||'').toUpperCase()+'</div><div class="m2-table-grid">';
       ts.forEach(function(t){
         var os=visibles.filter(function(o){return o.tabla_id===t.id;});
         var ep=os.some(function(o){return o.estado==='en_proceso';})?'en_proceso':os.some(function(o){return o.estado==='pendiente';})?'pendiente':os.some(function(o){return o.estado==='completada';})?'completada':'sin_riego';
         var lbl=ep==='en_proceso'?'En proceso':ep==='pendiente'?'Programada':ep==='completada'?'Terminada':'Sin riego';
-        var mins=os.reduce(function(a,o){return a+(Number(o.duracion_minutos)||0);},0);
-        var ops=Array.from(new Set(os.map(function(o){return o.operario&&o.operario.nombre?o.operario.nombre:'';}).filter(Boolean)));
-        html+='<div class="rg-tabla"><div class="rg-tabla-top"><span><span class="rg-dot '+ep+'"></span> '+t.nombre+'</span><span style="font-size:.65rem;color:var(--gris-3)">'+lbl+'</span></div><div class="rg-tabla-meta">'+(mins?('⏱ '+fmtMin(mins)):'Sin tiempo asignado')+(ops.length?('<br>👤 '+ops.join(', ')):'')+'</div></div>';
-      });
-      html+='</div></div>';
+        var mins=os.reduce(function(a,o){return a+(Number(o.duracion_minutos)||0);},0);var ops=Array.from(new Set(os.map(function(o){return o.operario&&o.operario.nombre?o.operario.nombre:'';}).filter(Boolean)));var pct=pctEstado(os);
+        html+='<div class="m2-table state-'+ep+'"><div class="m2-table-title"><span><span class="m2-state-dot"></span>'+t.nombre+'</span><span class="m2-state-label">'+lbl+'</span></div><div class="m2-table-info">'+(mins?'◷ '+fmtMin(mins):'Sin tiempo programado')+(ops.length?'<br>👤 '+ops.join(', '):'')+'</div><div class="m2-progress"><span style="width:'+pct+'%"></span></div></div>';
+      });html+='</div></div>';
     });
-    html+='</div><div class="rg-panel"><div class="rg-panel-title"><span>OPERACIÓN DE RIEGO</span><span>'+visibles.length+' registros</span></div><div class="rg-list">';
-    if(!visibles.length) html+='<div class="rg-empty">No hay riegos '+(RIEGO_CONTROL_FILTRO==='hoy'?'programados para hoy.':'en esta semana.')+'</div>';
-    visibles.slice().sort(function(a,b){var eo={en_proceso:0,pendiente:1,completada:2};return (eo[a.estado]??9)-(eo[b.estado]??9);}).forEach(function(o){
-      var p=o.tabla?cats.plantaciones.find(function(x){return x.id===o.tabla.plantacion_id;}):null;
-      var st=o.estado==='en_proceso'?'En proceso':o.estado==='completada'?'Completada':'Pendiente';
-      html+='<div class="rg-row"><div><strong>'+(p?p.nombre:'')+' · '+(o.tabla?o.tabla.nombre:'')+'</strong><div class="muted">'+(o.subtipo&&o.subtipo.nombre?o.subtipo.nombre:'Riego')+'</div></div><div>👤 '+(o.operario?o.operario.nombre:'Sin asignar')+'</div><div>📅 '+(o.fecha_asignacion||'—')+'</div><div>⏱ '+(o.duracion_minutos||0)+' min</div><div><span class="rg-badge '+o.estado+'">'+st+'</span></div><div class="rg-hide-sm"><button class="rg-btn" data-rg-ver="'+o.id+'">Ver</button></div></div>';
-    });
-    html+='</div></div></div>';
-    body.innerHTML=html;
+    html+='</section><aside class="m2-card"><div class="m2-card-head"><div class="m2-card-title">Atención requerida</div><div class="m2-card-meta">'+(sinCobertura.length+pendientes.length)+'</div></div><div class="m2-attention">';
+    if(sinCobertura.length)html+='<div class="m2-alert red"><div class="m2-alert-ic">⚠</div><div><div class="m2-alert-title">'+sinCobertura.length+' tabla(s) sin cobertura semanal</div><div class="m2-alert-text">No tienen aplicación vía riego ni excepción registrada esta semana.</div><button class="m2-alert-action" id="rg-alert-cobertura">Revisar cobertura →</button></div></div>';
+    if(pendientes.length)html+='<div class="m2-alert orange"><div class="m2-alert-ic">⏳</div><div><div class="m2-alert-title">'+pendientes.length+' riego(s) por iniciar</div><div class="m2-alert-text">Programados dentro del periodo seleccionado.</div></div></div>';
+    if(proceso.length)html+='<div class="m2-alert"><div class="m2-alert-ic" style="background:var(--m2-blue-soft)">▶</div><div><div class="m2-alert-title">'+proceso.length+' riego(s) en proceso</div><div class="m2-alert-text">Seguimiento activo por tiempo y tabla.</div></div></div>';
+    if(!sinCobertura.length&&!pendientes.length&&!proceso.length)html+='<div class="m2-alert green"><div class="m2-alert-ic">✓</div><div><div class="m2-alert-title">Sin alertas de riego</div><div class="m2-alert-text">No hay pendientes críticos en el periodo seleccionado.</div></div></div>';
+    html+='</div></aside></div><section class="m2-ops"><div class="m2-ops-head"><div><div class="m2-card-title">Operación de Riego</div><div class="m2-card-meta">Responsable, tabla, duración y estado</div></div><div class="m2-card-meta">'+visibles.length+' registro(s)</div></div>';
+    if(!visibles.length){html+='<div class="m2-empty">No hay riegos '+(RIEGO_CONTROL_FILTRO==='hoy'?'programados para hoy.':'programados esta semana.')+'</div>';}else{
+      html+='<table class="m2-ops-table"><thead><tr><th>Plantación / Tabla</th><th>Tipo</th><th>Responsable</th><th>Fecha</th><th>Duración</th><th>Estado</th><th></th></tr></thead><tbody>';
+      visibles.slice().sort(function(a,b){var eo={en_proceso:0,pendiente:1,completada:2};return (eo[a.estado]??9)-(eo[b.estado]??9);}).forEach(function(o){var p=o.tabla?cats.plantaciones.find(function(x){return x.id===o.tabla.plantacion_id;}):null;var st=o.estado==='en_proceso'?'En proceso':o.estado==='completada'?'Completada':'Pendiente';html+='<tr><td><div class="m2-op-main">'+(p?p.nombre:'')+' · '+(o.tabla?o.tabla.nombre:'')+'</div></td><td>'+(o.subtipo&&o.subtipo.nombre?o.subtipo.nombre:'Riego')+'</td><td>'+(o.operario?o.operario.nombre:'Sin asignar')+'</td><td>'+(o.fecha_asignacion||'—')+'</td><td>'+(o.duracion_minutos||0)+' min</td><td><span class="m2-chip '+o.estado+'">'+st+'</span></td><td><button class="m2-btn" data-rg-ver="'+o.id+'">Ver</button></td></tr>';});html+='</tbody></table>';
+    }
+    html+='</section></div>';body.innerHTML=html;
     body.querySelectorAll('[data-rg-periodo]').forEach(function(b){b.addEventListener('click',function(){RIEGO_CONTROL_FILTRO=this.dataset.rgPeriodo;renderRiegoControl();});});
-    document.getElementById('rg-programar').addEventListener('click',abrirProgramacionRiego);
-    document.getElementById('rg-cobertura').addEventListener('click',function(){renderRiegoSemanal();});
-    var ac=document.getElementById('rg-alert-cobertura');if(ac)ac.addEventListener('click',function(){renderRiegoSemanal();});
-    body.querySelectorAll('[data-rg-ver]').forEach(function(b){b.addEventListener('click',function(){var o=ordenes.find(function(x){return x.id===b.dataset.rgVer;});if(!o)return;var p=o.tabla?cats.plantaciones.find(function(x){return x.id===o.tabla.plantacion_id;}):null;alert('Riego · '+(p?p.nombre+' · ':'')+(o.tabla?o.tabla.nombre:'')+'\nResponsable: '+(o.operario?o.operario.nombre:'Sin asignar')+'\nEstado: '+o.estado+'\nDuración: '+(o.duracion_minutos||0)+' min\nFecha: '+(o.fecha_asignacion||'—'));});});
-  }).catch(function(e){body.innerHTML='<div class="empty">⚠️ No se pudo cargar Riego.<br><span class="hint">'+e.message+'</span><br><button class="btn-sm btn-completar" onclick="renderRiegoControl()" style="margin-top:.7rem;">Reintentar</button></div>';});
+    var pbtn=document.getElementById('rg-programar');if(pbtn)pbtn.addEventListener('click',abrirProgramacionRiego);var cbtn=document.getElementById('rg-cobertura');if(cbtn)cbtn.addEventListener('click',renderRiegoSemanal);var ac=document.getElementById('rg-alert-cobertura');if(ac)ac.addEventListener('click',renderRiegoSemanal);
+    body.querySelectorAll('[data-rg-ver]').forEach(function(b){b.addEventListener('click',function(){var id=this.dataset.rgVer,o=ordenes.find(function(x){return String(x.id)===String(id);});if(!o)return;var p=o.tabla?cats.plantaciones.find(function(x){return x.id===o.tabla.plantacion_id;}):null;alert('Riego · '+(p?p.nombre+' · ':'')+(o.tabla?o.tabla.nombre:'')+'\nResponsable: '+(o.operario?o.operario.nombre:'Sin asignar')+'\nEstado: '+o.estado+'\nDuración: '+(o.duracion_minutos||0)+' min\nFecha: '+(o.fecha_asignacion||'—'));});});
+  }).catch(function(e){body.innerHTML='<div class="m2-page"><div class="m2-card"><div class="m2-empty">⚠️ No se pudo cargar Riego.<br><span style="font-size:.68rem">'+e.message+'</span><br><button class="m2-btn primary" onclick="renderRiegoControl()" style="margin-top:10px">Reintentar</button></div></div></div>';});
 }
 
 function renderSolicitudesLabor(){
