@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<title>Mootsil · Tablero del Rancho · C013</title>
+<title>Mootsil · Tablero del Rancho · C014</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
@@ -440,6 +440,38 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .rg10-cint-card.sel{border-color:#7b3b93;background:#f6eef8;color:#64237e}
 @media(max-width:850px){.rg10-activities-grid{grid-template-columns:1fr}.rg10-cint-select{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:520px){.rg10-cint-select{grid-template-columns:1fr}}
+
+
+/* C014 — Calendario operativo semanal de Riego */
+.rg14-calendar{background:#fff;border:1px solid var(--m2-line);border-radius:14px;padding:14px 15px;margin-bottom:14px;box-shadow:0 5px 18px rgba(20,70,45,.04)}
+.rg14-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.rg14-nav,.rg14-tabs{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.rg14-nav button,.rg14-tabs button{border:1px solid var(--m2-line);background:#fff;color:var(--m2-green-dark);border-radius:18px;padding:7px 10px;font-size:.64rem;font-weight:850;cursor:pointer}
+.rg14-nav .active,.rg14-tabs .active{background:var(--m2-green-dark);border-color:var(--m2-green-dark);color:#fff}
+.rg14-tabs{margin-bottom:10px}
+.rg14-scroll{overflow-x:auto}
+.rg14-grid{width:100%;min-width:1080px;border-collapse:separate;border-spacing:0;font-size:.64rem}
+.rg14-grid th,.rg14-grid td{border-right:1px solid #edf0ed;border-bottom:1px solid #edf0ed;vertical-align:top}
+.rg14-grid th{background:#f5f7f4;padding:9px 7px;text-align:center;color:var(--m2-green-dark);font-weight:900}
+.rg14-grid th:first-child,.rg14-grid td:first-child{position:sticky;left:0;z-index:2}
+.rg14-grid th:first-child{z-index:3;text-align:left}
+.rg14-grid td:first-child{background:#fff;padding:10px;font-weight:900;color:var(--m2-green-dark);min-width:145px}
+.rg14-group.erandy td{background:#155f43!important;color:#fff!important;font-weight:900;padding:7px 10px}
+.rg14-group.jade td{background:#6f2589!important;color:#fff!important;font-weight:900;padding:7px 10px}
+.rg14-cell{min-height:74px;padding:7px;background:#fff}
+.rg14-cell.empty{background:#fafbfa;color:#9ca59f}
+.rg14-cell.pending{background:#fff9e8}
+.rg14-cell.progress{background:#eef7ff}
+.rg14-cell.done{background:#eef8f1}
+.rg14-cell.missed{background:#fff0ed}
+.rg14-entry{border:1px solid rgba(0,0,0,.07);border-radius:8px;background:rgba(255,255,255,.76);padding:5px 6px;margin-bottom:5px}
+.rg14-entry:last-child{margin-bottom:0}
+.rg14-main{font-weight:900;color:var(--m2-green-dark)}
+.rg14-meta{color:var(--m2-muted);line-height:1.35;margin-top:2px}
+.rg14-status{font-size:.58rem;font-weight:900;text-transform:uppercase;margin-top:4px}
+.rg14-status.pending{color:#b17b00}.rg14-status.progress{color:#267fae}.rg14-status.done{color:#23864c}.rg14-status.missed{color:#c74636}
+.rg14-kpi-note{font-size:.63rem;color:var(--m2-muted);margin-top:5px}
+@media(max-width:760px){.rg14-calendar{padding:10px}.rg14-grid{min-width:980px}}
 
 </style>
 </head>
@@ -1021,6 +1053,8 @@ function duenoModulo(tab){tabEncargado(tab);}
 
 
 var RIEGO_CONTROL_FILTRO='hoy';
+var RIEGO_CAL_SEMANA_OFFSET=0;
+var RIEGO_CAL_TIPO='hidratacion';
 var RIEGO_PLAN_MODO='dia';
 var RIEGO_PLAN_DIAS={};
 var RIEGO_PLAN_TABLAS={};
@@ -1189,10 +1223,31 @@ function renderRiegoControl(){
 
     var actividadesHtml='<section class="rg10-activities"><div class="rg10-activities-head"><div><div class="m2-card-title">Actividades de Riego</div><div class="m2-card-meta">Programa y controla por separado hidratación, filtros y cintillas.</div></div></div><div class="rg10-activities-grid"><div class="rg10-activity hidratacion"><div class="rg10-activity-title">💧 Hidratación</div><div class="rg10-activity-text">Tiempo por tabla, cronómetro, alarma 5 min antes y cierre offline.</div><button class="rg10-activity-btn" id="rg10-hidratacion">Programar riego</button></div><div class="rg10-activity filtros"><div class="rg10-activity-title">🧹 Filtros</div><div class="rg10-activity-text">Un filtro por tabla. Limpieza y mantenimiento con incidencias. Referencia: 1 vez por semana.</div><button class="rg10-activity-btn" id="rg10-filtros">Programar limpieza</button></div><div class="rg10-activity cintillas"><div class="rg10-activity-title">💦 Cintilla | Manguera</div><div class="rg10-activity-text">Limpieza por tabla. Al cierre se confirma tabla completa o hasta qué surco llegó. Referencia: cada 15 días.</div><button class="rg10-activity-btn" id="rg10-cintillas">Programar limpieza</button></div></div></section>';
 
-    var vencidas=visibles.filter(function(o){return o.estado==='pendiente'&&o.fecha_asignacion<hoy;});var html='<div class="m2-page"><div class="m2-page-head"><div><div class="m2-eyebrow">Operación · Agua</div><div class="m2-title">Riego</div><div class="m2-subtitle" style="font-weight:850;color:var(--m2-blue);margin-top:3px">Vista actual · Hidratación</div><div class="m2-subtitle"><strong>Semana '+numeroSemanaISO(new Date(hoy+'T12:00:00'))+'</strong> · Control de las 7 tablas · '+(RIEGO_CONTROL_FILTRO==='semana'?(semIni+' al '+semFin):fechaLarga(hoy))+'</div></div><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><div class="m2-actions"></div><div data-rg-weather class="rg3-weather"></div></div></div>'+actividadesHtml+'<div class="m2-period"><button class="'+(RIEGO_CONTROL_FILTRO==='hoy'?'active':'')+'" data-rg-periodo="hoy">Riego de hoy</button><button class="'+(RIEGO_CONTROL_FILTRO==='semana'?'active':'')+'" data-rg-periodo="semana">Riego semanal</button></div><div class="rg3-status-legend"><span><i class="rg3-legend-dot" style="background:#d6dad7"></i>Sin programación</span><span><i class="rg3-legend-dot" style="background:#e1a21a"></i>Pendiente</span><span><i class="rg3-legend-dot" style="background:#2384c6"></i>En riego</span><span><i class="rg3-legend-dot" style="background:#21864a"></i>Regada</span><span><i class="rg3-legend-dot" style="background:#d54134"></i>No regada</span></div><div class="m2-kpis"><div class="m2-kpi blue"><div class="m2-kpi-label">Tablas programadas</div><div class="m2-kpi-num">'+Object.keys(prog).length+'</div><div class="m2-kpi-note">de 7 tablas</div></div><div class="m2-kpi orange"><div class="m2-kpi-label">Pendientes</div><div class="m2-kpi-num">'+pendientes.length+'</div><div class="m2-kpi-note">por iniciar</div></div><div class="m2-kpi blue"><div class="m2-kpi-label">En proceso</div><div class="m2-kpi-num">'+proceso.length+'</div><div class="m2-kpi-note">riego activo</div></div><div class="m2-kpi"><div class="m2-kpi-label">Regadas</div><div class="m2-kpi-num">'+Object.keys(completas.reduce(function(a,o){a[o.tabla_id]=1;return a;},{})).length+'</div><div class="m2-kpi-note">tablas completadas</div></div><div class="m2-kpi purple"><div class="m2-kpi-label">Tiempo programado</div><div class="m2-kpi-num" style="font-size:1.25rem">'+fmtMin(minutos)+'</div><div class="m2-kpi-note">hidratación</div></div></div><div class="m2-grid"><section class="m2-card"><div class="m2-card-head"><div class="m2-card-title">Riego de las 7 tablas</div><div class="m2-card-meta">Erandy 1–4 · Jade 1–3</div></div>'+tablesHtml+'</section><aside class="m2-card"><div class="m2-card-head"><div class="m2-card-title">Atención requerida</div><div class="m2-card-meta">'+vencidas.length+'</div></div><div class="m2-attention">'+(vencidas.length?vencidas.map(function(o){var t=oficiales.find(function(x){return String(x.id)===String(o.tabla_id);});return '<div class="m2-alert red"><div class="m2-alert-ic">!</div><div><div class="m2-alert-title">'+(t?riegoNombreTabla(t):'Tabla')+' no regada</div><div class="m2-alert-text">Estaba programada para '+o.fecha_asignacion+'.</div><button class="m2-alert-action" data-rg-edit="'+o.id+'">Reprogramar →</button></div></div>';}).join(''):'<div class="m2-alert green"><div class="m2-alert-ic">✓</div><div><div class="m2-alert-title">Sin riegos vencidos</div><div class="m2-alert-text">No hay tablas programadas pendientes de días anteriores.</div></div></div>')+'</div></aside></div>';var operacionSemana=ordenes.filter(function(o){return o.estado!=='cancelada'&&o.fecha_asignacion>=opSemIni&&o.fecha_asignacion<=opSemFin;});
+    
+    var calIni=riegoCalendarioInicioV14(),calFechas=[];
+    for(var cfi=0;cfi<7;cfi++)calFechas.push(riegoFechaMasDias(calIni,cfi));
+    var calHtml='<section class="rg14-calendar"><div class="rg14-head"><div><div class="m2-card-title">Calendario de actividades</div><div class="m2-card-meta">Semana '+riegoSemanaNumero(calIni)+' · cada tabla conserva todas sus programaciones por fecha</div></div><div class="rg14-nav"><button data-rg14-week="-1">← Anterior</button><button class="active">Semana '+riegoSemanaNumero(calIni)+'</button><button data-rg14-week="1">Siguiente →</button></div></div>';
+    calHtml+='<div class="rg14-tabs"><button class="'+(RIEGO_CAL_TIPO==='hidratacion'?'active':'')+'" data-rg14-type="hidratacion">Hidratación</button><button class="'+(RIEGO_CAL_TIPO==='filtros'?'active':'')+'" data-rg14-type="filtros">Filtros</button><button class="'+(RIEGO_CAL_TIPO==='cintillas'?'active':'')+'" data-rg14-type="cintillas">Cintilla | Manguera</button></div>';
+    calHtml+='<div class="rg14-scroll"><table class="rg14-grid"><thead><tr><th>Plantación / Tabla</th>';
+    calFechas.forEach(function(f){calHtml+='<th>'+riegoDiaNombre(f)+'<br><span style="font-weight:700;color:var(--m2-muted)">'+f.slice(8,10)+'</span></th>';});
+    calHtml+='</tr></thead><tbody>';
+    ['Erandy','Jade'].forEach(function(nombre){
+      var p=(cats.plantaciones||[]).find(function(x){return riegoNormalizarTextoV1(x.nombre)===riegoNormalizarTextoV1(nombre);});
+      if(!p)return;
+      var tabs=(oficiales||[]).filter(function(t){return String(t.plantacion_id)===String(p.id);});
+      calHtml+='<tr class="rg14-group '+nombre.toLowerCase()+'"><td colspan="8">PLANTACIÓN '+nombre.toUpperCase()+'</td></tr>';
+      tabs.forEach(function(t){
+        calHtml+='<tr><td>'+t.nombre+'</td>';
+        calFechas.forEach(function(f){calHtml+='<td>'+riegoCalendarioCeldaV14(ordenes,f,t.id,RIEGO_CAL_TIPO)+'</td>';});
+        calHtml+='</tr>';
+      });
+    });
+    calHtml+='</tbody></table></div></section>';
+
+var vencidas=ordenes.filter(function(o){return o.estado!=='cancelada'&&o.estado==='pendiente'&&o.fecha_asignacion<hoy;});var html='<div class="m2-page"><div class="m2-page-head"><div><div class="m2-eyebrow">Operación · Agua</div><div class="m2-title">Riego</div><div class="m2-subtitle" style="font-weight:850;color:var(--m2-blue);margin-top:3px">Vista actual · Hidratación</div><div class="m2-subtitle"><strong>Semana '+numeroSemanaISO(new Date(hoy+'T12:00:00'))+'</strong> · Control de las 7 tablas · '+(RIEGO_CONTROL_FILTRO==='semana'?(semIni+' al '+semFin):fechaLarga(hoy))+'</div></div><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><div class="m2-actions"></div><div data-rg-weather class="rg3-weather"></div></div></div>'+actividadesHtml+calHtml+'<div class="m2-grid"><div></div><aside class="m2-card"><div class="m2-card-head"><div class="m2-card-title">Atención requerida</div><div class="m2-card-meta">'+vencidas.length+'</div></div><div class="m2-attention">'+(vencidas.length?vencidas.map(function(o){var t=oficiales.find(function(x){return String(x.id)===String(o.tabla_id);});return '<div class="m2-alert red"><div class="m2-alert-ic">!</div><div><div class="m2-alert-title">'+(t?riegoNombreTabla(t):'Tabla')+' no regada</div><div class="m2-alert-text">Estaba programada para '+o.fecha_asignacion+'.</div><button class="m2-alert-action" data-rg-edit="'+o.id+'">Reprogramar →</button></div></div>';}).join(''):'<div class="m2-alert green"><div class="m2-alert-ic">✓</div><div><div class="m2-alert-title">Sin riegos vencidos</div><div class="m2-alert-text">No hay tablas programadas pendientes de días anteriores.</div></div></div>')+'</div></aside></div>';var operacionSemana=ordenes.filter(function(o){return o.estado!=='cancelada'&&o.fecha_asignacion>=opSemIni&&o.fecha_asignacion<=opSemFin;});
     html+='<section class="m2-ops"><div class="m2-ops-head"><div><div class="m2-card-title">Reporte de Riego</div><div class="m2-card-meta">Consulta diaria o semanal de actividades, responsables, resultados e incidencias.</div></div><div class="rg8-week-nav"><button type="button" data-rg-opweek="-1">← Anterior</button><button type="button" class="active">Semana '+riegoSemanaNumero(opSemIni)+'</button><button type="button" data-rg-opweek="1">Siguiente →</button><span class="m2-card-meta">'+operacionSemana.length+' registro(s)</span></div></div>';
     if(!operacionSemana.length){
-      html+='<div class="m2-empty">No hay riegos programados en la Semana '+riegoSemanaNumero(opSemIni)+'.</div>';
+      html+='<div class="m2-empty">No hay actividades de Riego registradas en la Semana '+riegoSemanaNumero(opSemIni)+'.</div>';
     }else{
       html+='<table class="m2-ops-table"><thead><tr><th>Actividad</th><th>Plantación / Tabla</th><th>Responsable</th><th>Semana</th><th>Fecha</th><th>Resultado</th><th>Acción</th></tr></thead><tbody>';
       operacionSemana.slice().sort(function(a,b){return a.fecha_asignacion.localeCompare(b.fecha_asignacion);}).forEach(function(o){
@@ -1202,7 +1257,7 @@ function renderRiegoControl(){
       });
       html+='</tbody></table>';
     }
-    html+='</section></div>';body.innerHTML=html;cargarClimaRiego();body.querySelectorAll('[data-rg-periodo]').forEach(function(b){b.addEventListener('click',function(){RIEGO_CONTROL_FILTRO=this.dataset.rgPeriodo;renderRiegoControl();});});body.querySelectorAll('[data-rg-progv]').forEach(function(b){b.addEventListener('click',function(){RIEGO_PROGRAMACION_VISTA=this.dataset.rgProgv;renderRiegoControl();});});(document.getElementById('rg-programar')||{addEventListener:function(){}}).addEventListener('click',abrirProgramacionRiego);(document.getElementById('rg10-hidratacion')||{addEventListener:function(){}}).addEventListener('click',abrirProgramacionRiego);(document.getElementById('rg10-filtros')||{addEventListener:function(){}}).addEventListener('click',abrirAsignacionFiltrosDesdeRiegoV1);(document.getElementById('rg10-cintillas')||{addEventListener:function(){}}).addEventListener('click',abrirAsignacionCintillasDesdeRiegoV1);body.querySelectorAll('[data-rg-editday]').forEach(function(b){b.addEventListener('click',function(){editarProgramacionRiegoFechaV1(this.dataset.rgEditday);});});body.querySelectorAll('[data-rg-edit]').forEach(function(b){b.addEventListener('click',function(){editarRiegoOrdenV1(this.dataset.rgEdit);});});body.querySelectorAll('[data-rg-delete]').forEach(function(b){b.addEventListener('click',function(){eliminarRiegoOrdenV1(this.dataset.rgDelete);});});body.querySelectorAll('[data-rg-opweek]').forEach(function(b){b.addEventListener('click',function(){riegoCambiarOperacionSemana(Number(this.dataset.rgOpweek)||0);});});
+    html+='</section></div>';body.innerHTML=html;cargarClimaRiego();body.querySelectorAll('[data-rg-periodo]').forEach(function(b){b.addEventListener('click',function(){RIEGO_CONTROL_FILTRO=this.dataset.rgPeriodo;renderRiegoControl();});});body.querySelectorAll('[data-rg-progv]').forEach(function(b){b.addEventListener('click',function(){RIEGO_PROGRAMACION_VISTA=this.dataset.rgProgv;renderRiegoControl();});});(document.getElementById('rg-programar')||{addEventListener:function(){}}).addEventListener('click',abrirProgramacionRiego);(document.getElementById('rg10-hidratacion')||{addEventListener:function(){}}).addEventListener('click',abrirProgramacionRiego);(document.getElementById('rg10-filtros')||{addEventListener:function(){}}).addEventListener('click',abrirAsignacionFiltrosDesdeRiegoV1);(document.getElementById('rg10-cintillas')||{addEventListener:function(){}}).addEventListener('click',abrirAsignacionCintillasDesdeRiegoV1);body.querySelectorAll('[data-rg-editday]').forEach(function(b){b.addEventListener('click',function(){editarProgramacionRiegoFechaV1(this.dataset.rgEditday);});});body.querySelectorAll('[data-rg-edit]').forEach(function(b){b.addEventListener('click',function(){editarRiegoOrdenV1(this.dataset.rgEdit);});});body.querySelectorAll('[data-rg-delete]').forEach(function(b){b.addEventListener('click',function(){eliminarRiegoOrdenV1(this.dataset.rgDelete);});});body.querySelectorAll('[data-rg-opweek]').forEach(function(b){b.addEventListener('click',function(){riegoCambiarOperacionSemana(Number(this.dataset.rgOpweek)||0);});});body.querySelectorAll('[data-rg14-week]').forEach(function(b){b.addEventListener('click',function(){RIEGO_CAL_SEMANA_OFFSET+=Number(this.dataset.rg14Week)||0;renderRiegoControl();});});body.querySelectorAll('[data-rg14-type]').forEach(function(b){b.addEventListener('click',function(){RIEGO_CAL_TIPO=this.dataset.rg14Type;renderRiegoControl();});});body.querySelectorAll('[data-rg14-order]').forEach(function(b){b.addEventListener('click',function(){var id=this.dataset.rg14Order;var o=(window.RIEGO_CONTROL_ORDENES||[]).find(function(x){return String(x.id)===String(id);});if(o&&riegoTipoV14(o)==='hidratacion')editarRiegoOrdenV1(id);});});
   }).catch(function(e){body.innerHTML='<div class="m2-page"><div class="m2-card"><div class="m2-empty">⚠️ No se pudo cargar Riego.<br>'+e.message+'</div></div></div>';});
 }
 
@@ -10459,6 +10514,46 @@ var RIEGO_OPERACION_SEMANA_OFFSET=0;
 var RIEGO_PLAN_SEMANA={};
 var RIEGO_PLAN_DIA_ACTIVO=null;
 
+
+function riegoCalendarioInicioV14(){
+  return riegoFechaMasDias(riegoInicioSemanaStr(fechaHoyLocal()),RIEGO_CAL_SEMANA_OFFSET*7);
+}
+function riegoTipoV14(o){
+  if(riegoEsFiltroV13(o))return 'filtros';
+  if(riegoEsCintillaV13(o))return 'cintillas';
+  return 'hidratacion';
+}
+function riegoClaseV14(o){
+  if(!o)return 'empty';
+  if(o.estado==='completada')return 'done';
+  if(o.estado==='en_proceso')return 'progress';
+  if(o.estado==='pendiente'&&o.fecha_asignacion<fechaHoyLocal())return 'missed';
+  return 'pending';
+}
+function riegoEstadoV14(o){
+  if(!o)return 'Sin programación';
+  if(o.estado==='completada')return 'Completada';
+  if(o.estado==='en_proceso')return 'En proceso';
+  if(o.estado==='pendiente'&&o.fecha_asignacion<fechaHoyLocal())return 'No realizada';
+  return 'Pendiente';
+}
+function riegoCalendarioCeldaV14(ordenes,fecha,tablaId,tipo){
+  var os=(ordenes||[]).filter(function(o){
+    return o.estado!=='cancelada' &&
+      String(o.tabla_id)===String(tablaId) &&
+      o.fecha_asignacion===fecha &&
+      riegoTipoV14(o)===tipo;
+  });
+  if(!os.length)return '<div class="rg14-cell empty"><div class="rg14-meta">—</div><div class="rg14-status">Sin programación</div></div>';
+  var cls=riegoClaseV14(os[0]),html='<div class="rg14-cell '+cls+'">';
+  os.forEach(function(o){
+    var principal=tipo==='hidratacion'?((o.duracion_minutos||0)+' min'):(tipo==='filtros'?'Filtro':'Limpieza');
+    var resp=o.operario?o.operario.nombre:'Sin responsable';
+    html+='<div class="rg14-entry" data-rg14-order="'+o.id+'"><div class="rg14-main">'+principal+'</div><div class="rg14-meta">'+resp+'</div><div class="rg14-status '+riegoClaseV14(o)+'">'+riegoEstadoV14(o)+'</div></div>';
+  });
+  return html+'</div>';
+}
+
 function riegoOperacionSemanaBase(){
   var base=riegoInicioSemanaStr(fechaHoyLocal());
   return riegoFechaMasDias(base,RIEGO_OPERACION_SEMANA_OFFSET*7);
@@ -10653,7 +10748,7 @@ if('serviceWorker' in navigator){
 <input type="file" id="gal-input" accept="image/*,video/*" capture style="display:none" onchange="capturaEjec.foto=true;renderEjec();">
 <input type="file" id="perm-ev-input" accept="image/*" style="display:none" onchange="capturarEvidenciaPermiso(event)">
 <script>
-/* C013: corrige guardado de Filtros, visibilidad de Filtros/Cintilla en Reporte y múltiples colaboradores en Cintilla | Manguera. */
+/* C014: calendario semanal real de Riego por fecha/tabla/actividad; no sustituye días programados. */
 </script>
 </body>
 </html>
