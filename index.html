@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<title>Mootsil · Tablero del Rancho · C011</title>
+<title>Mootsil · Tablero del Rancho · C012</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
@@ -400,7 +400,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 @media(max-width:650px){.rg6-mini-btn{padding:7px 8px;font-size:.62rem}}
 
 
-/* C011 — simplificación visual de Riego + nuevo visual de filtros */
+/* C012 — simplificación visual de Riego + nuevo visual de filtros */
 
 /* C010 — módulo Riego integral: accesos visibles a Hidratación, Filtros y Cintillas */
 
@@ -1109,7 +1109,7 @@ function renderProgramacionRiegoV1(){
   body.querySelectorAll('[data-rg-dia]').forEach(function(b){b.addEventListener('click',function(){var f=this.dataset.rgDia;RIEGO_PLAN_DIAS[f]=!RIEGO_PLAN_DIAS[f];this.classList.toggle('active',!!RIEGO_PLAN_DIAS[f]);});});
   body.querySelectorAll('[data-rg-tabla]').forEach(function(c){c.addEventListener('change',function(){var cfg=RIEGO_PLAN_TABLAS[this.dataset.rgTabla]||{};cfg.sel=this.checked;RIEGO_PLAN_TABLAS[this.dataset.rgTabla]=cfg;});});
   body.querySelectorAll('[data-rg-min]').forEach(function(i){i.addEventListener('change',function(){var cfg=RIEGO_PLAN_TABLAS[this.dataset.rgMin]||{};cfg.min=Math.max(1,parseInt(this.value)||45);RIEGO_PLAN_TABLAS[this.dataset.rgMin]=cfg;});});
-  document.getElementById('rg-plan-guardar').addEventListener('click',guardarProgramacionRiegoV1);
+  (document.getElementById('rg-plan-guardar')||{addEventListener:function(){}}).addEventListener('click',guardarProgramacionRiegoV1);
 }
 function guardarProgramacionRiegoV1(){
   var btn=document.getElementById('rg-plan-guardar'),operario=document.getElementById('rg-plan-operario').value;RIEGO_PLAN_OPERARIO=operario;var ids=riegoLaborIds();
@@ -1135,7 +1135,7 @@ function editarProgramacionRiegoFechaV1(fecha){
   }).catch(function(e){alert('No se pudo cargar la programación: '+e.message);renderRiegoControl();});
 }
 function editarRiegoOrdenV1(id){
-  var body=document.getElementById('enc-body');from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(requiere_tiempo),subtipo:subtipos_labor(requiere_tiempo)').eq('id',id).get().then(function(rr){var o=rr&&rr[0];if(!o)return;if(o.estado==='completada'){alert('Una tabla ya completada conserva su registro real y no puede editarse.');return;}var ops=(cats.equipoDeCampo||[]).map(function(x){return '<option value="'+x.id+'" '+(String(x.id)===String(o.operario_id)?'selected':'')+'>'+x.nombre+'</option>';}).join('');var p=(cats.plantaciones||[]).find(function(x){return o.tabla&&x.id===o.tabla.plantacion_id;});body.innerHTML='<div class="rg3-scheduler"><div class="rg3-form-head"><div><div class="m2-eyebrow">Riego · Editar programación</div><div class="m2-title">'+(p?p.nombre+' · ':'')+(o.tabla?o.tabla.nombre:'')+'</div><div class="m2-subtitle">Puedes cambiar responsable, tiempo o fecha si aún no está completada.</div></div><button class="m2-btn" onclick="renderRiegoControl()">← Volver</button></div><div data-rg-weather class="rg3-weather"></div><div class="rg3-panel rg3-grid2"><div class="form-group"><label>Responsable</label><select id="rg-edit-op">'+ops+'</select></div><div class="form-group"><label>Minutos de hidratación</label><input type="number" id="rg-edit-min" min="1" max="360" value="'+(o.duracion_minutos||45)+'"></div><div class="form-group"><label>Fecha</label><input type="date" id="rg-edit-fecha" value="'+o.fecha_asignacion+'"></div><div class="form-group"><label>Estado</label><input disabled value="'+o.estado+'"></div></div><button class="m2-btn primary" id="rg-edit-save" style="padding:12px">Guardar cambios</button></div>';cargarClimaRiego();document.getElementById('rg-edit-save').addEventListener('click',function(){var upd={operario_id:document.getElementById('rg-edit-op').value,duracion_minutos:Math.max(1,parseInt(document.getElementById('rg-edit-min').value)||45),fecha_asignacion:document.getElementById('rg-edit-fecha').value};from('ordenes_trabajo').eq('id',id).update(upd).then(function(){showToast('✅ Riego actualizado');renderRiegoControl();}).catch(function(e){alert('Error: '+e.message);});});});
+  var body=document.getElementById('enc-body');from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(requiere_tiempo),subtipo:subtipos_labor(requiere_tiempo)').eq('id',id).get().then(function(rr){var o=rr&&rr[0];if(!o)return;if(o.estado==='completada'){alert('Una tabla ya completada conserva su registro real y no puede editarse.');return;}var ops=(cats.equipoDeCampo||[]).map(function(x){return '<option value="'+x.id+'" '+(String(x.id)===String(o.operario_id)?'selected':'')+'>'+x.nombre+'</option>';}).join('');var p=(cats.plantaciones||[]).find(function(x){return o.tabla&&x.id===o.tabla.plantacion_id;});body.innerHTML='<div class="rg3-scheduler"><div class="rg3-form-head"><div><div class="m2-eyebrow">Riego · Editar programación</div><div class="m2-title">'+(p?p.nombre+' · ':'')+(o.tabla?o.tabla.nombre:'')+'</div><div class="m2-subtitle">Puedes cambiar responsable, tiempo o fecha si aún no está completada.</div></div><button class="m2-btn" onclick="renderRiegoControl()">← Volver</button></div><div data-rg-weather class="rg3-weather"></div><div class="rg3-panel rg3-grid2"><div class="form-group"><label>Responsable</label><select id="rg-edit-op">'+ops+'</select></div><div class="form-group"><label>Minutos de hidratación</label><input type="number" id="rg-edit-min" min="1" max="360" value="'+(o.duracion_minutos||45)+'"></div><div class="form-group"><label>Fecha</label><input type="date" id="rg-edit-fecha" value="'+o.fecha_asignacion+'"></div><div class="form-group"><label>Estado</label><input disabled value="'+o.estado+'"></div></div><button class="m2-btn primary" id="rg-edit-save" style="padding:12px">Guardar cambios</button></div>';cargarClimaRiego();(document.getElementById('rg-edit-save')||{addEventListener:function(){}}).addEventListener('click',function(){var upd={operario_id:document.getElementById('rg-edit-op').value,duracion_minutos:Math.max(1,parseInt(document.getElementById('rg-edit-min').value)||45),fecha_asignacion:document.getElementById('rg-edit-fecha').value};from('ordenes_trabajo').eq('id',id).update(upd).then(function(){showToast('✅ Riego actualizado');renderRiegoControl();}).catch(function(e){alert('Error: '+e.message);});});});
 }
 
 // C006 — cálculo visual del avance y acciones rápidas del control de Riego.
@@ -1202,7 +1202,7 @@ function renderRiegoControl(){
       });
       html+='</tbody></table>';
     }
-    html+='</section></div>';body.innerHTML=html;cargarClimaRiego();body.querySelectorAll('[data-rg-periodo]').forEach(function(b){b.addEventListener('click',function(){RIEGO_CONTROL_FILTRO=this.dataset.rgPeriodo;renderRiegoControl();});});body.querySelectorAll('[data-rg-progv]').forEach(function(b){b.addEventListener('click',function(){RIEGO_PROGRAMACION_VISTA=this.dataset.rgProgv;renderRiegoControl();});});document.getElementById('rg-programar').addEventListener('click',abrirProgramacionRiego);document.getElementById('rg10-hidratacion').addEventListener('click',abrirProgramacionRiego);document.getElementById('rg10-filtros').addEventListener('click',abrirAsignacionFiltrosDesdeRiegoV1);document.getElementById('rg10-cintillas').addEventListener('click',abrirAsignacionCintillasDesdeRiegoV1);body.querySelectorAll('[data-rg-editday]').forEach(function(b){b.addEventListener('click',function(){editarProgramacionRiegoFechaV1(this.dataset.rgEditday);});});body.querySelectorAll('[data-rg-edit]').forEach(function(b){b.addEventListener('click',function(){editarRiegoOrdenV1(this.dataset.rgEdit);});});body.querySelectorAll('[data-rg-delete]').forEach(function(b){b.addEventListener('click',function(){eliminarRiegoOrdenV1(this.dataset.rgDelete);});});body.querySelectorAll('[data-rg-opweek]').forEach(function(b){b.addEventListener('click',function(){riegoCambiarOperacionSemana(Number(this.dataset.rgOpweek)||0);});});
+    html+='</section></div>';body.innerHTML=html;cargarClimaRiego();body.querySelectorAll('[data-rg-periodo]').forEach(function(b){b.addEventListener('click',function(){RIEGO_CONTROL_FILTRO=this.dataset.rgPeriodo;renderRiegoControl();});});body.querySelectorAll('[data-rg-progv]').forEach(function(b){b.addEventListener('click',function(){RIEGO_PROGRAMACION_VISTA=this.dataset.rgProgv;renderRiegoControl();});});(document.getElementById('rg-programar')||{addEventListener:function(){}}).addEventListener('click',abrirProgramacionRiego);(document.getElementById('rg10-hidratacion')||{addEventListener:function(){}}).addEventListener('click',abrirProgramacionRiego);(document.getElementById('rg10-filtros')||{addEventListener:function(){}}).addEventListener('click',abrirAsignacionFiltrosDesdeRiegoV1);(document.getElementById('rg10-cintillas')||{addEventListener:function(){}}).addEventListener('click',abrirAsignacionCintillasDesdeRiegoV1);body.querySelectorAll('[data-rg-editday]').forEach(function(b){b.addEventListener('click',function(){editarProgramacionRiegoFechaV1(this.dataset.rgEditday);});});body.querySelectorAll('[data-rg-edit]').forEach(function(b){b.addEventListener('click',function(){editarRiegoOrdenV1(this.dataset.rgEdit);});});body.querySelectorAll('[data-rg-delete]').forEach(function(b){b.addEventListener('click',function(){eliminarRiegoOrdenV1(this.dataset.rgDelete);});});body.querySelectorAll('[data-rg-opweek]').forEach(function(b){b.addEventListener('click',function(){riegoCambiarOperacionSemana(Number(this.dataset.rgOpweek)||0);});});
   }).catch(function(e){body.innerHTML='<div class="m2-page"><div class="m2-card"><div class="m2-empty">⚠️ No se pudo cargar Riego.<br>'+e.message+'</div></div></div>';});
 }
 
@@ -1574,8 +1574,8 @@ function pintarAdminCompletar(){
 
   if(!esSimple) acPintarGrid();
 
-  document.getElementById('ac-guardar').addEventListener('click',function(){guardarAdminCompletar();});
-  document.getElementById('ac-volver').addEventListener('click',function(){ADMIN_COMPLETAR_ORDEN=null;(ADMIN_COMPLETAR_VOLVER||renderTablero)();});
+  (document.getElementById('ac-guardar')||{addEventListener:function(){}}).addEventListener('click',function(){guardarAdminCompletar();});
+  (document.getElementById('ac-volver')||{addEventListener:function(){}}).addEventListener('click',function(){ADMIN_COMPLETAR_ORDEN=null;(ADMIN_COMPLETAR_VOLVER||renderTablero)();});
 }
 
 function guardarAdminCompletar(){
@@ -1911,7 +1911,7 @@ function renderGestionarLaborElegirOperario(modo,ordenId){
   var opO=cats.equipoDeCampo.map(function(o){return '<button type="button" class="op-chip" data-id="'+o.id+'">'+o.nombre+'</button>';}).join('');
   body.innerHTML='<div class="seccion-titulo">'+titulo+'</div><div class="form-card"><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div><button class="btn-primary" id="gl-op-continuar" style="margin-top:1rem;">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="pintarGestionLabor()">← Cancelar</button>';
   body.querySelectorAll('.op-chip').forEach(function(el){el.addEventListener('click',function(){seleccionUnica(this);});});
-  document.getElementById('gl-op-continuar').addEventListener('click',function(){
+  (document.getElementById('gl-op-continuar')||{addEventListener:function(){}}).addEventListener('click',function(){
     var sel=document.querySelector('.op-chip.sel');
     if(!sel){alert('Selecciona un operario.');return;}
     var opId=sel.dataset.id;
@@ -1984,7 +1984,7 @@ function renderEditarOrdenIndividual(ordenId){
       tSel.addEventListener('change',function(){if(!esFiltros)renderSurcosForm();});
     }
 
-    document.getElementById('eo-guardar').addEventListener('click',function(){
+    (document.getElementById('eo-guardar')||{addEventListener:function(){}}).addEventListener('click',function(){
       var btn=this;
       var tbId=noTabla?null:document.getElementById('eo-tb').value;
       if(!noTabla&&!tbId){alert('Selecciona una tabla.');return;}
@@ -2021,9 +2021,9 @@ function renderFormAsignar(){
     return '<div class="labor-tile" data-id="'+l.id+'" data-nombre="'+l.nombre+'"><div class="labor-tile-ic">'+(ICONOS[l.nombre]||'🔧')+'</div><div class="labor-tile-lbl">'+l.nombre+'</div></div>';
   }).join('');
   body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🧰 Selecciona la labor<button type="button" onclick="renderAsignarEstatus()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Labores</button></div><div style="display:flex;gap:8px;margin-bottom:1rem;"><button type="button" class="op-chip sel" id="modo-normal" data-modo="normal">🕐 Normal</button><button type="button" class="op-chip" id="modo-extra" data-modo="extra">⏰ Hora Extra</button></div><div class="form-group" id="labor-horas-wrap" style="display:none;"><label>¿Cuántas horas autorizas?</label><input type="number" id="labor-horas-input" min="0.5" step="0.5" value="2"><p class="hint">Se le pagará por este número de horas, aunque tarde más en escanear su salida.</p></div><div class="labor-grid">'+tiles+'<div class="labor-tile labor-tile-otra" id="labor-otra-tile"><div class="labor-tile-ic">➕</div><div class="labor-tile-lbl">Otra</div></div></div><div id="labor-otra-box" style="display:none;margin-top:.75rem;" class="form-card"><label style="display:block;font-size:.75rem;font-weight:600;color:var(--gris-3);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">Nombre de la labor</label><input type="text" id="labor-otra-input" placeholder="Ej. Fertirriego" style="width:100%;padding:.65rem .75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;background:var(--gris-1);margin-bottom:.6rem;"><label style="display:flex;align-items:center;gap:.5rem;padding:.5rem 0;cursor:pointer;font-size:.85rem;"><input type="checkbox" id="labor-otra-tabla" checked style="width:20px;height:20px;flex-shrink:0;"><span>Esta labor se hace en una plantación/tabla específica</span></label><p class="hint" style="margin-bottom:.6rem;">Desmarca esta casilla para actividades generales que no están ligadas a ninguna tabla (ej. acarreo de material, mandados, etc.)</p><label style="display:flex;align-items:center;gap:.5rem;padding:.5rem 0;cursor:pointer;font-size:.85rem;"><input type="checkbox" id="labor-otra-catalogo" style="width:20px;height:20px;flex-shrink:0;"><span>📌 Agregar esta labor al catálogo (aparecerá como botón para la próxima vez)</span></label><p class="hint" style="margin-bottom:.6rem;">Si no la marcas, se usa solo por esta vez y seguirás capturando su nombre aquí cada vez que la necesites — útil para actividades muy específicas que no se repiten.</p><button class="btn-primary" id="labor-otra-btn">Usar esta labor</button></div>';
-  document.getElementById('modo-normal').addEventListener('click',function(){modoAsignacionLabor='normal';this.classList.add('sel');document.getElementById('modo-extra').classList.remove('sel');document.getElementById('labor-horas-wrap').style.display='none';});
-  document.getElementById('modo-extra').addEventListener('click',function(){modoAsignacionLabor='extra';this.classList.add('sel');document.getElementById('modo-normal').classList.remove('sel');document.getElementById('labor-horas-wrap').style.display='';});
-  document.getElementById('labor-horas-input').addEventListener('input',function(){horasExtraAutorizadas=parseFloat(this.value)||2;});
+  (document.getElementById('modo-normal')||{addEventListener:function(){}}).addEventListener('click',function(){modoAsignacionLabor='normal';this.classList.add('sel');document.getElementById('modo-extra').classList.remove('sel');document.getElementById('labor-horas-wrap').style.display='none';});
+  (document.getElementById('modo-extra')||{addEventListener:function(){}}).addEventListener('click',function(){modoAsignacionLabor='extra';this.classList.add('sel');document.getElementById('modo-normal').classList.remove('sel');document.getElementById('labor-horas-wrap').style.display='';});
+  (document.getElementById('labor-horas-input')||{addEventListener:function(){}}).addEventListener('input',function(){horasExtraAutorizadas=parseFloat(this.value)||2;});
   body.querySelectorAll('.labor-tile[data-id]').forEach(function(el){
     el.addEventListener('click',function(){
       var lb=cats.tiposLabor.find(function(l){return l.id===this.dataset.id;}.bind(this));
@@ -2045,12 +2045,12 @@ function renderFormAsignar(){
       }
     });
   });
-  document.getElementById('labor-otra-tile').addEventListener('click',function(){
+  (document.getElementById('labor-otra-tile')||{addEventListener:function(){}}).addEventListener('click',function(){
     var box=document.getElementById('labor-otra-box');
     box.style.display=box.style.display==='none'?'':'none';
     if(box.style.display!=='none') document.getElementById('labor-otra-input').focus();
   });
-  document.getElementById('labor-otra-input').addEventListener('blur',function(){
+  (document.getElementById('labor-otra-input')||{addEventListener:function(){}}).addEventListener('blur',function(){
     var nombre=(this.value||'').trim();
     if(!nombre) return;
     var chkTabla=document.getElementById('labor-otra-tabla');
@@ -2061,7 +2061,7 @@ function renderFormAsignar(){
       if(rows&&rows[0]){ chkTabla.checked=rows[0].requiere_tabla!==false; chkCat.checked=!!rows[0].activo; }
     }).catch(function(){});
   });
-  document.getElementById('labor-otra-btn').addEventListener('click',function(){
+  (document.getElementById('labor-otra-btn')||{addEventListener:function(){}}).addEventListener('click',function(){
     var nombre=(document.getElementById('labor-otra-input').value||'').trim();
     if(!nombre){alert('Escribe el nombre de la labor.');return;}
     var requiereTablaNueva=!!document.getElementById('labor-otra-tabla').checked;
@@ -2127,13 +2127,13 @@ function renderFormAsignarPaso2(){
   formSurcos=[];
   var sbs=cats.subtiposLabor.filter(function(s){return s.tipo_labor_id===lb.id&&!s.requiere_tiempo;});
   if(sbs.length){document.getElementById('fsb').innerHTML='<option value="">Selecciona...</option>'+sbs.map(function(s){return '<option value="'+s.id+'">'+s.nombre+'</option>';}).join('');document.getElementById('fsg').style.display='';if(asignarLaborSubSel){document.getElementById('fsb').value=asignarLaborSubSel.id;}}
-  document.getElementById('fpl').addEventListener('change',function(){
+  (document.getElementById('fpl')||{addEventListener:function(){}}).addEventListener('change',function(){
     var ts=cats.tablas.filter(function(t){return t.plantacion_id===this.value;}.bind(this));
     document.getElementById('ftb').innerHTML='<option value="">Selecciona...</option>'+ts.map(function(t){return '<option value="'+t.id+'">'+t.nombre+'</option>';}).join('');
     renderSurcosForm();
     renderRiegoForm();
   });
-  document.getElementById('ftb').addEventListener('change',renderSurcosForm);
+  (document.getElementById('ftb')||{addEventListener:function(){}}).addEventListener('change',renderSurcosForm);
 }
 
 function renderRiegoForm(){
@@ -2203,7 +2203,7 @@ function renderAsigCintillasPlantacionesV1(){
     if(cintillasAsigTablas[id])delete cintillasAsigTablas[id];else cintillasAsigTablas[id]=true;
     renderAsigCintillasPlantacionesV1();
   });});
-  document.getElementById('cint-continuar').addEventListener('click',renderAsigCintillasDetalleV1);
+  (document.getElementById('cint-continuar')||{addEventListener:function(){}}).addEventListener('click',renderAsigCintillasDetalleV1);
 }
 function renderAsigCintillasDetalleV1(){
   var body=document.getElementById('enc-body');
@@ -2213,9 +2213,9 @@ function renderAsigCintillasDetalleV1(){
   var resumen=tablaIds.map(function(tid){var t=(cats.tablas||[]).find(function(x){return String(x.id)===String(tid);});return t?riegoNombreTabla(t):'';}).join('<br>');
   body.innerHTML='<div class="rg3-scheduler"><div class="rg3-form-head"><div><div class="m2-eyebrow">Riego · Limpieza de cintillas</div><div class="m2-title">Asignación</div><div class="m2-subtitle">El colaborador trabaja normalmente cama por cama y solo confirma el avance al cerrar.</div></div><button class="m2-btn" onclick="renderAsigCintillasPlantacionesV1()">← Volver a tablas</button></div><div data-rg-weather class="rg3-weather"></div><div class="rg3-panel rg3-grid2"><div><div class="form-group"><label>Responsable</label><select id="cint-op"><option value="">Seleccionar...</option>'+ops+'</select></div><div class="form-group"><label>Fecha</label><input type="date" id="cint-fecha" value="'+(cintillasAsigFecha||fechaHoyLocal())+'"></div><div class="form-group"><label>Notas (opcional)</label><input type="text" id="cint-notas" placeholder="Indicaciones para el trabajador..."></div></div><div><div style="font-weight:850;margin-bottom:7px">Tablas seleccionadas</div><div class="rg3-existing">'+resumen+'</div><div class="rg3-existing" style="margin-top:9px">⚠️ Al cierre: <strong>Tabla completa</strong> o <strong>hasta qué surco llegó</strong>. Puede reportar cintilla trozada, fuga, obstrucción, conexión dañada u otra incidencia.</div></div></div><div class="rg3-panel"><button class="m2-btn primary" id="cint-guardar" style="width:100%;padding:12px">Asignar limpieza de cintillas</button></div></div>';
   cargarClimaRiego();
-  document.getElementById('cint-op').addEventListener('change',function(){cintillasAsigOperario=this.value;});
-  document.getElementById('cint-fecha').addEventListener('change',function(){cintillasAsigFecha=this.value;});
-  document.getElementById('cint-guardar').addEventListener('click',guardarCintillasAsignacionV1);
+  (document.getElementById('cint-op')||{addEventListener:function(){}}).addEventListener('change',function(){cintillasAsigOperario=this.value;});
+  (document.getElementById('cint-fecha')||{addEventListener:function(){}}).addEventListener('change',function(){cintillasAsigFecha=this.value;});
+  (document.getElementById('cint-guardar')||{addEventListener:function(){}}).addEventListener('click',guardarCintillasAsignacionV1);
 }
 function guardarCintillasAsignacionV1(){
   var btn=document.getElementById('cint-guardar');
@@ -2296,7 +2296,7 @@ function renderAsigFiltrosPlantaciones(){
       renderAsigFiltrosPlantaciones();
     });
   });
-  document.getElementById('filtro-continuar').addEventListener('click',renderAsigFiltrosOperarios);
+  (document.getElementById('filtro-continuar')||{addEventListener:function(){}}).addEventListener('click',renderAsigFiltrosOperarios);
 }
 function renderAsigRiegoPlantaciones(){
   var body=document.getElementById('enc-body');
@@ -2334,7 +2334,7 @@ function renderAsigRiegoMinutos(tablaId,plantacionId){
   var t=cats.tablas.find(function(x){return x.id===tablaId;});
   var actual=riegoAsigMinutos[tablaId]||'';
   body.innerHTML='<div class="seccion-titulo">💧 '+t.nombre+' · Duración de riego</div><div class="riego-ejec-card"><input type="number" id="riego-min-input" min="0" value="'+actual+'" placeholder="0" style="width:100%;text-align:center;font-size:2.4rem;font-weight:800;color:var(--verde-mid);border:none;background:transparent;outline:none;"><p class="hint">minutos</p><button class="btn-primary" id="riego-min-guardar">Guardar y seguir</button>'+(actual?'<button class="btn-sm btn-cancelar" style="margin-top:.6rem;width:100%;" id="riego-min-quitar">Quitar esta tabla</button>':'')+'</div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigRiegoTablas(\''+plantacionId+'\')">← Volver a tablas</button>';
-  document.getElementById('riego-min-guardar').addEventListener('click',function(){
+  (document.getElementById('riego-min-guardar')||{addEventListener:function(){}}).addEventListener('click',function(){
     var v=parseInt(document.getElementById('riego-min-input').value)||0;
     if(v>0) riegoAsigMinutos[tablaId]=v; else delete riegoAsigMinutos[tablaId];
     renderAsigRiegoTablas(plantacionId);
@@ -2348,7 +2348,7 @@ function renderAsigRiegoOperarios(){
   var opO=cats.equipoDeCampo.map(function(o){return '<button type="button" class="op-chip'+(riegoAsigOperarios.indexOf(o.id)>-1?' sel':'')+'" data-id="'+o.id+'" onclick="toggleChip(this)">'+o.nombre+'</button>';}).join('');
   var resumen=Object.keys(riegoAsigMinutos).filter(function(k){return riegoAsigMinutos[k]>0;}).map(function(tid){var t=cats.tablas.find(function(x){return x.id===tid;});var p=t?cats.plantaciones.find(function(x){return x.id===t.plantacion_id;}):null;return t?(p?p.nombre+' · ':'')+t.nombre+' ('+riegoAsigMinutos[tid]+' min)':'';}).join(', ');
   body.innerHTML='<div class="seccion-titulo">💧 Riego · ¿Quién lo hace?</div><div class="form-card"><p class="hint" style="margin-bottom:.9rem;">Tablas: '+resumen+'</p><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1rem;">'+opO+'</div><button class="btn-primary" id="riego-op-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigRiegoPlantaciones()">← Volver a tablas</button>';
-  document.getElementById('riego-op-continuar').addEventListener('click',function(){
+  (document.getElementById('riego-op-continuar')||{addEventListener:function(){}}).addEventListener('click',function(){
     var opIds=Array.from(document.querySelectorAll('.op-chip.sel')).map(function(c){return c.dataset.id;});
     if(!opIds.length){alert('Selecciona al menos un operario.');return;}
     riegoAsigOperarios=opIds;
@@ -2359,7 +2359,7 @@ function renderAsigRiegoOperarios(){
 function renderAsigRiegoFecha(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo">💧 Riego · Fecha</div><div class="form-card"><div class="form-group"><label>Fecha de riego</label><input type="date" id="riego-fecha-input" value="'+(riegoAsigFecha||fechaHoyLocal())+'"></div><button class="btn-primary" id="riego-fecha-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigRiegoOperarios()">← Volver a operarios</button>';
-  document.getElementById('riego-fecha-continuar').addEventListener('click',function(){
+  (document.getElementById('riego-fecha-continuar')||{addEventListener:function(){}}).addEventListener('click',function(){
     riegoAsigFecha=document.getElementById('riego-fecha-input').value||fechaHoyLocal();
     renderAsigRiegoNotas();
   });
@@ -2370,7 +2370,7 @@ function renderAsigRiegoNotas(){
   var resumen=Object.keys(riegoAsigMinutos).filter(function(k){return riegoAsigMinutos[k]>0;}).map(function(tid){var t=cats.tablas.find(function(x){return x.id===tid;});var p=t?cats.plantaciones.find(function(x){return x.id===t.plantacion_id;}):null;return t?(p?p.nombre+' · ':'')+t.nombre+' · '+riegoAsigMinutos[tid]+' min':'';}).join('<br>');
   var opNombres=riegoAsigOperarios.map(function(id){var o=cats.equipoDeCampo.find(function(x){return x.id===id;});return o?o.nombre:'';}).join(', ');
   body.innerHTML='<div class="seccion-titulo">💧 Riego · Notas (opcional)</div><div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row"><span class="resumen-key">Tablas</span></div><div style="font-size:.82rem;padding:.35rem 0;">'+resumen+'</div><div class="resumen-row"><span class="resumen-key">Operarios</span><span class="resumen-val">'+opNombres+'</span></div><div class="resumen-row"><span class="resumen-key">Fecha</span><span class="resumen-val">'+riegoAsigFecha+'</span></div></div><div class="form-group"><input type="text" id="riego-notas-input" placeholder="Notas para el operario..."></div><button class="btn-primary" id="riego-finalizar">✅ Asignar riego</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigRiegoFecha()">← Volver a fecha</button>';
-  document.getElementById('riego-finalizar').addEventListener('click',guardarRiegoAsignacion);
+  (document.getElementById('riego-finalizar')||{addEventListener:function(){}}).addEventListener('click',guardarRiegoAsignacion);
 }
 
 function guardarRiegoAsignacion(){
@@ -2645,7 +2645,7 @@ function renderInventario(grupoInicial){
   if(!items.length){
     html+='<div class="empty">'+tituloGrupo+': aún no hay componentes registrados.'+(puedeEditar?'<br/>Toca "+ Componente" para agregar el primero.':'')+'</div>';
     body.innerHTML=html;
-    if(puedeEditar) document.getElementById('inv-nuevo-btn').addEventListener('click',function(){renderInventarioNuevo({grupo:grupoInicial});});
+    if(puedeEditar) (document.getElementById('inv-nuevo-btn')||{addEventListener:function(){}}).addEventListener('click',function(){renderInventarioNuevo({grupo:grupoInicial});});
     return;
   }
   var categoriasConDatos=Array.from(new Set(items.map(function(it){return it.categoria||'Otros';})));
@@ -2659,7 +2659,7 @@ function renderInventario(grupoInicial){
   html+='<div style="display:flex;gap:6px;margin-bottom:.75rem;flex-wrap:wrap;" id="inv-cat-chips">'+categorias.map(function(c,i){return '<button type="button" class="rep-view-btn'+(i===0?' active':'')+'" data-cat="'+c+'">'+c+'</button>';}).join('')+'</div>';
   html+='<div id="inv-filas"></div>';
   body.innerHTML=html;
-  if(puedeEditar) document.getElementById('inv-nuevo-btn').addEventListener('click',function(){renderInventarioNuevo({grupo:grupoInicial});});
+  if(puedeEditar) (document.getElementById('inv-nuevo-btn')||{addEventListener:function(){}}).addEventListener('click',function(){renderInventarioNuevo({grupo:grupoInicial});});
   var catActiva='Todos';
   function pintarFilas(filtro){
     var base=catActiva==='Todos'?items:items.filter(function(it){return (it.categoria||'Otros')===catActiva;});
@@ -2692,7 +2692,7 @@ function renderInventario(grupoInicial){
     });
   });
   pintarFilas('');
-  document.getElementById('inv-buscar').addEventListener('input',function(){pintarFilas(this.value);});
+  (document.getElementById('inv-buscar')||{addEventListener:function(){}}).addEventListener('input',function(){pintarFilas(this.value);});
 }
 
 function fechaHoyLocal(){return new Date().toLocaleDateString('en-CA',{timeZone:'America/Mexico_City'});}
@@ -2820,9 +2820,9 @@ function renderActivoNuevo(prefill){
       status.innerHTML='<img src="'+url+'" style="max-width:100px;max-height:100px;border-radius:8px;border:1px solid var(--gris-2);">';
     }).catch(function(e){status.innerHTML='<span class="hint" style="color:var(--rojo);">No se pudo subir: '+e.message+'</span>';});
   }
-  document.getElementById('ar-imagen-cam').addEventListener('change',function(){subirImagenActivo('ar-imagen-cam');});
-  document.getElementById('ar-imagen-gal').addEventListener('change',function(){subirImagenActivo('ar-imagen-gal');});
-  document.getElementById('ar-guardar').addEventListener('click',function(){
+  (document.getElementById('ar-imagen-cam')||{addEventListener:function(){}}).addEventListener('change',function(){subirImagenActivo('ar-imagen-cam');});
+  (document.getElementById('ar-imagen-gal')||{addEventListener:function(){}}).addEventListener('change',function(){subirImagenActivo('ar-imagen-gal');});
+  (document.getElementById('ar-guardar')||{addEventListener:function(){}}).addEventListener('click',function(){
     var nombre=document.getElementById('ar-nombre').value.trim();
     if(!nombre){alert('Escribe el nombre.');return;}
     var categoria=document.getElementById('ar-categoria').value;
@@ -2849,7 +2849,7 @@ function renderActivoDetalle(id){
     var opO=cats.operarios.concat(cats.cosechadores||[]).map(function(o){return '<option value="'+o.id+'"'+(it.asignado_a===o.id?' selected':'')+'>'+o.nombre+'</option>';}).join('');
     var imgHtml=it.imagen_url?'<img src="'+it.imagen_url+'" style="width:100%;max-width:220px;border-radius:12px;border:1px solid var(--gris-2);margin-bottom:.75rem;display:block;">':'';
     body.innerHTML='<div class="seccion-titulo">'+it.nombre+'</div>'+imgHtml+'<div class="form-card"><div class="form-group"><label>Nombre</label><input type="text" id="ad-nombre" value="'+it.nombre.replace(/"/g,'&quot;')+'"></div><div class="form-group"><label>Categoría</label><select id="ad-categoria"><option value="Herramienta"'+(it.categoria==='Herramienta'?' selected':'')+'>Herramienta</option><option value="Equipo"'+(it.categoria==='Equipo'?' selected':'')+'>Equipo</option><option value="Vehículo"'+(it.categoria==='Vehículo'?' selected':'')+'>Vehículo</option><option value="Otro"'+(it.categoria==='Otro'?' selected':'')+'>Otro</option></select></div><div class="form-group"><label>Estado</label><select id="ad-estado"><option value="disponible"'+(it.estado==='disponible'?' selected':'')+'>✅ Disponible</option><option value="asignado"'+(it.estado==='asignado'?' selected':'')+'>👷 Asignado</option><option value="mantenimiento"'+(it.estado==='mantenimiento'?' selected':'')+'>🔧 En mantenimiento</option><option value="baja"'+(it.estado==='baja'?' selected':'')+'>⛔ De baja</option></select></div><div class="form-group"><label>Asignada a</label><select id="ad-asignado"><option value="">Sin asignar</option>'+opO+'</select></div><div class="form-group"><label>Descripción</label><input type="text" id="ad-descripcion" value="'+(it.descripcion||'').replace(/"/g,'&quot;')+'"></div><div class="form-group"><label>Último mantenimiento</label><input type="date" id="ad-fecha-mant" value="'+(it.fecha_ultimo_mantenimiento||'')+'"></div><div class="form-group"><label>Frecuencia de mantenimiento (días)</label><input type="number" id="ad-frecuencia" min="1" value="'+(it.frecuencia_mantenimiento_dias||'')+'"></div><button class="btn-primary" id="ad-guardar">Guardar cambios</button></div><div class="form-card"><button type="button" id="ad-mant-hecho" style="width:100%;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-weight:700;font-size:.85rem;cursor:pointer;margin-bottom:.6rem;">✅ Marcar mantenimiento realizado hoy</button><button type="button" id="ad-eliminar" style="width:100%;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.85rem;cursor:pointer;">🗑️ Eliminar</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderActivosRancho(\''+tabOrigen+'\')">← Volver</button>';
-    document.getElementById('ad-guardar').addEventListener('click',function(){
+    (document.getElementById('ad-guardar')||{addEventListener:function(){}}).addEventListener('click',function(){
       var nombre=document.getElementById('ad-nombre').value.trim();
       var categoria=document.getElementById('ad-categoria').value;
       var estado=document.getElementById('ad-estado').value;
@@ -2862,14 +2862,14 @@ function renderActivoDetalle(id){
         renderActivosRancho(categoria==='Herramienta'?'Herramienta':'Equipo');
       }).catch(function(e){alert('Error: '+e.message);});
     });
-    document.getElementById('ad-mant-hecho').addEventListener('click',function(){
+    (document.getElementById('ad-mant-hecho')||{addEventListener:function(){}}).addEventListener('click',function(){
       var hoy=fechaHoyLocal();
       from('activos_rancho').eq('id',id).update({fecha_ultimo_mantenimiento:hoy,estado:it.asignado_a?'asignado':'disponible'}).then(function(){
         showToast('✅ Mantenimiento registrado');
         renderActivosRancho(tabOrigen);
       }).catch(function(e){alert('Error: '+e.message);});
     });
-    document.getElementById('ad-eliminar').addEventListener('click',function(){
+    (document.getElementById('ad-eliminar')||{addEventListener:function(){}}).addEventListener('click',function(){
       if(!confirm('¿Eliminar "'+it.nombre+'" del inventario de herramientas?')) return;
       from('activos_rancho').eq('id',id).update({activo:false}).then(function(){
         showToast('✅ Eliminado');
@@ -2896,13 +2896,13 @@ function renderInventarioNuevo(prefill){
     document.getElementById('inv-n-stock-paq-lbl').textContent=uc.toLowerCase();
     document.getElementById('inv-n-min-paq-lbl').textContent=uc.toLowerCase();
   }
-  document.getElementById('inv-n-unidad').addEventListener('change',refrescarEtiquetas);
-  document.getElementById('inv-n-unidad-compra').addEventListener('input',refrescarEtiquetas);
-  document.getElementById('inv-n-stock-paq').addEventListener('input',function(){
+  (document.getElementById('inv-n-unidad')||{addEventListener:function(){}}).addEventListener('change',refrescarEtiquetas);
+  (document.getElementById('inv-n-unidad-compra')||{addEventListener:function(){}}).addEventListener('input',refrescarEtiquetas);
+  (document.getElementById('inv-n-stock-paq')||{addEventListener:function(){}}).addEventListener('input',function(){
     var f=parseFloat(document.getElementById('inv-n-factor-compra').value)||0;
     if(f>0) document.getElementById('inv-n-stock').value=numFmt((parseFloat(this.value)||0)*f);
   });
-  document.getElementById('inv-n-min-paq').addEventListener('input',function(){
+  (document.getElementById('inv-n-min-paq')||{addEventListener:function(){}}).addEventListener('input',function(){
     var f=parseFloat(document.getElementById('inv-n-factor-compra').value)||0;
     if(f>0) document.getElementById('inv-n-min').value=numFmt((parseFloat(this.value)||0)*f);
   });
@@ -2943,9 +2943,9 @@ function renderInventarioNuevo(prefill){
       status.innerHTML='<img src="'+url+'" style="max-width:100px;max-height:100px;border-radius:8px;border:1px solid var(--gris-2);">';
     }).catch(function(e){status.innerHTML='<span class="hint" style="color:var(--rojo);">No se pudo subir la foto: '+e.message+'</span>';});
   }
-  document.getElementById('inv-n-imagen-cam').addEventListener('change',function(){subirImagenProducto('inv-n-imagen-cam');});
-  document.getElementById('inv-n-imagen-gal').addEventListener('change',function(){subirImagenProducto('inv-n-imagen-gal');});
-  document.getElementById('inv-n-guardar').addEventListener('click',function(){
+  (document.getElementById('inv-n-imagen-cam')||{addEventListener:function(){}}).addEventListener('change',function(){subirImagenProducto('inv-n-imagen-cam');});
+  (document.getElementById('inv-n-imagen-gal')||{addEventListener:function(){}}).addEventListener('change',function(){subirImagenProducto('inv-n-imagen-gal');});
+  (document.getElementById('inv-n-guardar')||{addEventListener:function(){}}).addEventListener('click',function(){
     var nombre=(document.getElementById('inv-n-nombre').value||'').trim();
     if(!nombre){alert('Escribe el nombre del componente.');return;}
     var unidad=document.getElementById('inv-n-unidad').value;
@@ -2987,7 +2987,7 @@ function renderInventarioItem(itemId){
     return;
   }
   body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">'+it.nombre+'<div><button type="button" id="inv-duplicar-btn" style="border:none;background:none;color:var(--tierra);font-size:.78rem;font-weight:600;cursor:pointer;margin-right:.75rem;">📋 Duplicar</button><button type="button" onclick="renderInventarioEditar(\''+itemId+'\')" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">✏️ Editar</button></div></div>'+imgHtml+'<div class="form-card"><div class="resumen-row"><span class="resumen-key">Stock actual</span><span class="resumen-val">'+numFmt(it.stock_actual)+' '+it.unidad+'</span></div><div class="resumen-row"><span class="resumen-key">Stock mínimo</span><span class="resumen-val">'+numFmt(it.stock_minimo)+' '+it.unidad+'</span></div>'+(tienePaquete?'<div class="resumen-row"><span class="resumen-key">Se compra normalmente en</span><span class="resumen-val">'+it.unidad_compra+' de '+numFmt(it.factor_compra)+' '+it.unidad+' c/u</span></div>':'')+(it.fecha_caducidad?'<div class="resumen-row"><span class="resumen-key">Caduca</span><span class="resumen-val">'+it.fecha_caducidad+'</span></div>':'')+'</div><div class="form-card"><div class="form-group"><label>¿Qué pasó?</label><div style="display:flex;flex-direction:column;gap:8px;" id="inv-mov-tipo-grp"><button type="button" class="op-chip sel" data-tipo="entrada" style="text-align:left;padding:.7rem .9rem;">✓ ➕ Entrada — llegó pedido/compra</button><button type="button" class="op-chip" data-tipo="salida" style="text-align:left;padding:.7rem .9rem;">➖ Salida — se usó o se perdió</button><button type="button" class="op-chip" data-tipo="ajuste" style="text-align:left;padding:.7rem .9rem;">✏️ Ajuste — corregir un conteo mal capturado</button></div><p class="hint" style="margin-top:.4rem;">La opción con ✓ es la que está activa ahora mismo.</p></div>'+(tienePaquete?'<div class="form-group"><label>¿Cómo lo vas a contar?</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip sel" id="inv-mov-modo-base" data-modo="base">✓ Por '+it.unidad+'</button><button type="button" class="op-chip" id="inv-mov-modo-paq" data-modo="paquete">Por '+it.unidad_compra+'</button></div></div><div class="form-group" id="inv-mov-tamano-wrap" style="display:none;"><label>Tamaño de este '+it.unidad_compra.toLowerCase()+' (esta vez)</label><input type="number" id="inv-mov-tamano" min="0" step="any" value="'+(it.factor_compra||'')+'"><p class="hint">Por si esta compra vino en un tamaño distinto al habitual (ej. hoy llegó de 10L en vez de los 20L de siempre) — no cambia lo que tienes configurado en el producto.</p></div>':'')+'<div class="form-group"><label id="inv-mov-cant-lbl">¿Cuánto? (en '+it.unidad+')</label><input type="number" id="inv-mov-cantidad" min="0" placeholder="0" step="any"><p class="hint" id="inv-mov-ejemplo">Ej: si llegaron 12 kg sueltos, escribe 12.</p></div><p class="hint" id="inv-mov-equiv" style="display:none;font-weight:700;color:var(--verde-mid);"></p><div class="form-group"><label>Nota (opcional)</label><input type="text" id="inv-mov-motivo" placeholder="Ej. Proveedor X, factura #123, o para qué se usó"></div><button class="btn-primary" id="inv-mov-guardar">Registrar</button></div><div id="inv-mov-historial"><div class="loading">Cargando movimientos...</div></div><button class="btn-back" style="margin-top:1rem;" onclick="renderInventario()">← Volver a inventario</button>';
-  document.getElementById('inv-duplicar-btn').addEventListener('click',function(){
+  (document.getElementById('inv-duplicar-btn')||{addEventListener:function(){}}).addEventListener('click',function(){
     renderInventarioNuevo({origen:it.nombre,unidad:it.unidad,unidad_compra:it.unidad_compra,factor_compra:it.factor_compra,stock_minimo:it.stock_minimo,categoria:it.categoria,grupo:it.grupo});
   });
   var modoCaptura='base', tipoMov='entrada';
@@ -3005,7 +3005,7 @@ function renderInventarioItem(itemId){
     var btnBase=document.getElementById('inv-mov-modo-base'), btnPaq=document.getElementById('inv-mov-modo-paq');
     btnBase.addEventListener('click',function(){modoCaptura='base';this.classList.add('sel');this.textContent='✓ Por '+it.unidad;btnPaq.classList.remove('sel');btnPaq.textContent='Por '+it.unidad_compra;tamanoWrap.style.display='none';actualizarEtiquetaMov();});
     btnPaq.addEventListener('click',function(){modoCaptura='paquete';this.classList.add('sel');this.textContent='✓ Por '+it.unidad_compra;btnBase.classList.remove('sel');btnBase.textContent='Por '+it.unidad;tamanoWrap.style.display='';actualizarEtiquetaMov();});
-    document.getElementById('inv-mov-tamano').addEventListener('input',calcularEquivalencia);
+    (document.getElementById('inv-mov-tamano')||{addEventListener:function(){}}).addEventListener('input',calcularEquivalencia);
   }
   function tamanoPaqueteActual(){
     var el=document.getElementById('inv-mov-tamano');
@@ -3024,8 +3024,8 @@ function renderInventarioItem(itemId){
       equivEl.textContent='= '+numFmt(cant*tamanoPaqueteActual())+' '+it.unidad+' en total';
     } else { equivEl.style.display='none'; }
   }
-  document.getElementById('inv-mov-cantidad').addEventListener('input',calcularEquivalencia);
-  document.getElementById('inv-mov-guardar').addEventListener('click',function(){
+  (document.getElementById('inv-mov-cantidad')||{addEventListener:function(){}}).addEventListener('input',calcularEquivalencia);
+  (document.getElementById('inv-mov-guardar')||{addEventListener:function(){}}).addEventListener('click',function(){
     var tipo=tipoMov;
     var cantInputRaw=document.getElementById('inv-mov-cantidad').value;
     var cantInput=parseFloat(cantInputRaw);
@@ -3117,9 +3117,9 @@ function renderInventarioEditar(itemId){
     document.getElementById('inv-e-unidad-lbl').textContent=u;
     document.getElementById('inv-e-min-paq-lbl').textContent=uc.toLowerCase();
   }
-  document.getElementById('inv-e-unidad').addEventListener('change',refrescarEtiquetasE);
-  document.getElementById('inv-e-unidad-compra').addEventListener('input',refrescarEtiquetasE);
-  document.getElementById('inv-e-min-paq').addEventListener('input',function(){
+  (document.getElementById('inv-e-unidad')||{addEventListener:function(){}}).addEventListener('change',refrescarEtiquetasE);
+  (document.getElementById('inv-e-unidad-compra')||{addEventListener:function(){}}).addEventListener('input',refrescarEtiquetasE);
+  (document.getElementById('inv-e-min-paq')||{addEventListener:function(){}}).addEventListener('input',function(){
     var f=parseFloat(document.getElementById('inv-e-factor-compra').value)||0;
     if(f>0) document.getElementById('inv-e-min').value=numFmt((parseFloat(this.value)||0)*f);
   });
@@ -3136,9 +3136,9 @@ function renderInventarioEditar(itemId){
       status.innerHTML='<img src="'+url+'" style="max-width:100px;max-height:100px;border-radius:8px;border:1px solid var(--gris-2);">';
     }).catch(function(e){status.innerHTML='<span class="hint" style="color:var(--rojo);">No se pudo subir la foto: '+e.message+'</span>';});
   }
-  document.getElementById('inv-e-imagen-cam').addEventListener('change',function(){subirImagenProductoEdit('inv-e-imagen-cam');});
-  document.getElementById('inv-e-imagen-gal').addEventListener('change',function(){subirImagenProductoEdit('inv-e-imagen-gal');});
-  document.getElementById('inv-e-guardar').addEventListener('click',function(){
+  (document.getElementById('inv-e-imagen-cam')||{addEventListener:function(){}}).addEventListener('change',function(){subirImagenProductoEdit('inv-e-imagen-cam');});
+  (document.getElementById('inv-e-imagen-gal')||{addEventListener:function(){}}).addEventListener('change',function(){subirImagenProductoEdit('inv-e-imagen-gal');});
+  (document.getElementById('inv-e-guardar')||{addEventListener:function(){}}).addEventListener('click',function(){
     var nombre=(document.getElementById('inv-e-nombre').value||'').trim();
     if(!nombre){alert('Escribe el nombre del componente.');return;}
     var unidad=document.getElementById('inv-e-unidad').value;
@@ -3156,7 +3156,7 @@ function renderInventarioEditar(itemId){
       renderInventarioItem(itemId);
     }).catch(function(e){alert('Error: '+e.message);});
   });
-  document.getElementById('inv-e-eliminar').addEventListener('click',function(){
+  (document.getElementById('inv-e-eliminar')||{addEventListener:function(){}}).addEventListener('click',function(){
     from('formula_componentes').select('formula_id,formula:formulas_aplicacion(nombre)').eq('item_id',itemId).get().then(function(usos){
       if(usos&&usos.length){
         var nombres=usos.map(function(u){return u.formula?u.formula.nombre:'';}).filter(Boolean).join(', ');
@@ -3250,9 +3250,9 @@ function renderSolicitarLabor(){
     var tabs=cats.tablas.filter(function(t){return t.plantacion_id===plId;});
     document.getElementById('sl-tablas').innerHTML=tabs.map(function(t){return '<button type="button" class="op-chip" data-id="'+t.id+'" onclick="toggleChip(this)">'+t.nombre+'</button>';}).join('');
   }
-  document.getElementById('sl-plantacion').addEventListener('change',pintarTablasSolicitud);
+  (document.getElementById('sl-plantacion')||{addEventListener:function(){}}).addEventListener('change',pintarTablasSolicitud);
   pintarTablasSolicitud();
-  document.getElementById('sl-guardar').addEventListener('click',function(){
+  (document.getElementById('sl-guardar')||{addEventListener:function(){}}).addEventListener('click',function(){
     var tablaIds=Array.from(document.querySelectorAll('#sl-tablas .op-chip.sel')).map(function(c){return c.dataset.id;});
     var desc=document.getElementById('sl-desc').value.trim();
     var fechaSug=document.getElementById('sl-fecha').value||null;
@@ -3608,9 +3608,9 @@ function renderDuplicarFormula(formulaId){
       var tabs=cats.tablas.filter(function(t){return t.plantacion_id===plId&&t.id!==f.tabla_id;});
       document.getElementById('dup-tablas').innerHTML=tabs.length?tabs.map(function(t){return '<button type="button" class="op-chip" data-id="'+t.id+'" onclick="toggleChip(this)">'+t.nombre+'</button>';}).join(''):'<p class="hint">No hay otras tablas en esta plantación.</p>';
     }
-    document.getElementById('dup-plantacion').addEventListener('change',pintarTablasDestino);
+    (document.getElementById('dup-plantacion')||{addEventListener:function(){}}).addEventListener('change',pintarTablasDestino);
     pintarTablasDestino();
-    document.getElementById('dup-guardar').addEventListener('click',function(){
+    (document.getElementById('dup-guardar')||{addEventListener:function(){}}).addEventListener('click',function(){
       var tablaIds=Array.from(document.querySelectorAll('#dup-tablas .op-chip.sel')).map(function(c){return c.dataset.id;});
       if(!tablaIds.length){alert('Selecciona al menos una tabla destino.');return;}
       var fechaNueva=document.getElementById('dup-fecha').value||f.fecha_programada;
@@ -3681,7 +3681,7 @@ function renderCambiarProductoFaltante(compId){
     }
     selNuevo.addEventListener('change',pintarUnidades);
     pintarUnidades();
-    document.getElementById('cp-guardar').addEventListener('click',function(){
+    (document.getElementById('cp-guardar')||{addEventListener:function(){}}).addEventListener('click',function(){
       var nuevoId=selNuevo.value;
       var cantidadEntrada=parseFloat(document.getElementById('cp-cantidad').value)||0;
       var unidadEntrada=selUnidad.value;
@@ -3759,8 +3759,8 @@ function cargarCatalogoLista(categoria,soloPlantillas){
     }
     lista.innerHTML='<div class="seccion-titulo" style="margin-top:0;display:flex;justify-content:space-between;align-items:center;gap:.5rem;">'+tituloLista+'<button type="button" id="cat-nueva" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap;">➕ Nueva</button></div><input type="text" id="cat-buscar" placeholder="🔍 Buscar por nombre..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;margin-bottom:.75rem;"><div id="cat-filas"></div>'+(soloPlantillas?'<button type="button" id="cat-vertodas" style="border:none;background:none;color:var(--verde-mid);font-weight:600;cursor:pointer;margin-top:.5rem;font-size:.8rem;">Ver todas las fórmulas de '+categoria+'</button>':'');
     pintarFilas('');
-    document.getElementById('cat-buscar').addEventListener('input',function(){pintarFilas(this.value);});
-    document.getElementById('cat-nueva').addEventListener('click',function(){renderNuevaFormulaCatalogo(categoria);});
+    (document.getElementById('cat-buscar')||{addEventListener:function(){}}).addEventListener('input',function(){pintarFilas(this.value);});
+    (document.getElementById('cat-nueva')||{addEventListener:function(){}}).addEventListener('click',function(){renderNuevaFormulaCatalogo(categoria);});
     var btnTodas=document.getElementById('cat-vertodas');
     if(btnTodas) btnTodas.addEventListener('click',function(){cargarCatalogoLista(categoria,false);});
   }).catch(function(e){lista.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
@@ -3785,9 +3785,9 @@ function renderCatalogoDetalle(formulaId){
     }).join(''):'<p class="hint">Esta fórmula no tiene componentes cargados.</p>';
     var volverCat=CATALOGO_TIPO_SEL?'cargarCatalogoLista(\''+CATALOGO_TIPO_SEL.categoria+'\','+(CATALOGO_TIPO_SEL.soloPlantillas?'true':'false')+')':'renderCatalogoFormulas()';
     body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📚 '+(VIA_ICONOS[f.via]||'')+' '+f.nombre+(f.es_plantilla?' 📌':'')+'<button type="button" onclick="'+volverCat+'" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Catálogo</button></div><div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row"><span class="resumen-key">Tipo</span><span class="resumen-val">'+(CATEGORIA_ICONOS[f.categoria]||'')+' '+f.categoria+(f.categoria==='Combinada'&&f.categorias_combinadas&&f.categorias_combinadas.length?' ('+f.categorias_combinadas.join(' + ')+')':'')+'</span></div><div class="resumen-row"><span class="resumen-key">Vía</span><span class="resumen-val">'+(VIA_ICONOS[f.via]||'')+' '+f.via+'</span></div><div class="resumen-row"><span class="resumen-key">Bombas compatibles</span><span class="resumen-val">'+bombasTxt+'</span></div><div class="resumen-row"><span class="resumen-key">Volumen base</span><span class="resumen-val">🛢️ '+numFmt(f.volumen_base_litros)+' L'+duracionTxt+'</span></div><div class="resumen-row"><span class="resumen-key">Observaciones / Notas</span><span class="resumen-val">'+(f.notas?f.notas:'<span style="color:var(--gris-3);">Sin notas — toca Editar para agregar</span>')+'</span></div><div class="resumen-row"><span class="resumen-key">Componentes (para '+numFmt(f.volumen_base_litros)+' L)</span></div>'+resumenComp+'</div><p class="hint" style="margin-bottom:1rem;">Esto es la receta guardada. "Editar" corrige esta misma fórmula del catálogo (nombre, componentes, notas, etc). "Usar esta plantilla" crea una copia nueva para asignarla a plantación/tabla sin tocar el original.</p><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn-primary" id="cat-editar" style="flex:1;min-width:150px;background:var(--tierra);">✏️ Editar esta fórmula</button><button class="btn-primary" id="cat-usar-plantilla" style="flex:1;min-width:150px;">🧬 Usar esta plantilla</button></div></div><button type="button" id="cat-eliminar" style="width:100%;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.85rem;cursor:pointer;margin-bottom:1rem;">🗑️ Eliminar esta fórmula del catálogo</button><button class="btn-back" style="margin-top:0;" onclick="'+volverCat+'">← Volver al catálogo</button>';
-    document.getElementById('cat-usar-plantilla').addEventListener('click',function(){cargarPlantillaCatalogo(formulaId);});
-    document.getElementById('cat-editar').addEventListener('click',function(){renderFormulaForm(formulaId,true);});
-    document.getElementById('cat-eliminar').addEventListener('click',function(){
+    (document.getElementById('cat-usar-plantilla')||{addEventListener:function(){}}).addEventListener('click',function(){cargarPlantillaCatalogo(formulaId);});
+    (document.getElementById('cat-editar')||{addEventListener:function(){}}).addEventListener('click',function(){renderFormulaForm(formulaId,true);});
+    (document.getElementById('cat-eliminar')||{addEventListener:function(){}}).addEventListener('click',function(){
       if(!confirm('¿Eliminar la fórmula "'+f.nombre+'" del catálogo? Esta acción no se puede deshacer. Si algún operario ya la tiene asignada, esa tarea también se cancelará.')) return;
       eliminarFormulaConCascada(formulaId,f.nombre).then(function(){
         if(CATALOGO_TIPO_SEL) renderCatalogoConCategoria(CATALOGO_TIPO_SEL.categoria,CATALOGO_TIPO_SEL.soloPlantillas);
@@ -3954,7 +3954,7 @@ function renderFormulaPasoCategoria(){
     this.classList.add('labor-tile-otra');
     document.getElementById('fc-combinada-box').style.display=(formulaCategoria==='Combinada')?'':'none';
   });});
-  document.getElementById('fc-continuar').addEventListener('click',function(){
+  (document.getElementById('fc-continuar')||{addEventListener:function(){}}).addEventListener('click',function(){
     if(!formulaCategoria){alert('Selecciona el tipo de fórmula.');return;}
     if(formulaCategoria==='Combinada'){
       formulaCategoriasCombinadas=Array.from(document.querySelectorAll('#fc-combinada-chips .op-chip.sel')).map(function(c){return c.dataset.comb;});
@@ -3979,7 +3979,7 @@ function renderFormulaPasoBombas(){
     this.classList.add('labor-tile-otra');
     document.getElementById('fm-bomba-extra').innerHTML=campoDuracionSurcos(this.dataset.bomba);
   });});
-  document.getElementById('fm-bomba-continuar').addEventListener('click',function(){
+  (document.getElementById('fm-bomba-continuar')||{addEventListener:function(){}}).addEventListener('click',function(){
     if(!formulaBombas.length){alert('Selecciona con qué se va a aplicar.');return;}
     var inputExtra=document.getElementById('fm-duracion-surcos-input');
     var bombaSel=formulaBombas[0];
@@ -4006,7 +4006,7 @@ function campoDuracionSurcos(bomba){
 function renderFormulaPasoFecha(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo">Paso 6 de 9 · Fecha de aplicación</div><div class="form-card"><div class="form-group"><label>¿Cuándo se tiene que aplicar?</label><input type="date" id="fm-fecha-input" value="'+(window._formulaFechaExistente||fechaHoyLocal())+'"></div><p class="hint">Con esta fecha revisamos si el inventario alcanza a tiempo para hacer el pedido.</p><button class="btn-primary" id="fm-fecha-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoBombas()">← Volver a bombas</button>';
-  document.getElementById('fm-fecha-continuar').addEventListener('click',function(){
+  (document.getElementById('fm-fecha-continuar')||{addEventListener:function(){}}).addEventListener('click',function(){
     window._formulaFechaExistente=document.getElementById('fm-fecha-input').value||fechaHoyLocal();
     if(formulaVolverAResumen){formulaVolverAResumen=false;renderFormulaPasoNotas();}
     else if(formulaModoCatalogoDirecto){
@@ -4022,7 +4022,7 @@ function renderFormulaPasoNombre(){
   var pasoLbl=formulaEditandoCatalogo?'Paso 4 de 6':'Paso 7 de 9';
   var backBtn=formulaEditandoCatalogo?'<button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoBombas()">← Volver a bombas</button>':'<button class="btn-back" style="margin-top:1rem;" onclick="renderFormulaPasoFecha()">← Volver a fecha</button>';
   body.innerHTML='<div class="seccion-titulo">'+pasoLbl+' · Nombra la fórmula</div><div class="form-card"><div class="form-group"><label>Nombre</label><input type="text" id="fm-nombre-input" placeholder="Ej. Aplicación contra trips, Sazonada de planta..." value="'+(nombreActual||'').replace(/"/g,'&quot;')+'"></div><div class="form-group"><label>Volumen base</label><div style="display:flex;align-items:center;gap:10px;background:var(--gris-1);border-radius:var(--radio-sm);padding:.65rem .9rem;"><span style="font-size:1.5rem;">🛢️</span><strong>200 litros</strong><span class="hint" style="margin:0;">(tambo de referencia del ingeniero)</span></div></div><button class="btn-primary" id="fm-nombre-continuar">Continuar →</button></div>'+backBtn;
-  document.getElementById('fm-nombre-continuar').addEventListener('click',function(){
+  (document.getElementById('fm-nombre-continuar')||{addEventListener:function(){}}).addEventListener('click',function(){
     var n=(document.getElementById('fm-nombre-input').value||'').trim();
     if(!n){alert('Escribe el nombre de la fórmula.');return;}
     window._formulaNombreExistente=n;
@@ -4035,7 +4035,7 @@ function renderFormulaPasoComponentes(){
   var pasoLbl=formulaEditandoCatalogo?'Paso 5 de 6':'Paso 8 de 9';
   body.innerHTML='<div class="seccion-titulo">'+pasoLbl+' · Componentes</div><div id="fm-comp-list"></div><button type="button" onclick="agregarFormulaComponenteRow()" style="padding:6px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">+ Agregar componente</button><button class="btn-primary" id="fm-comp-continuar" style="margin-top:1.25rem;">Continuar →</button><button class="btn-back" style="margin-top:.75rem;" onclick="renderFormulaPasoNombre()">← Volver a nombre</button>';
   if(!formulaCompRows.length) agregarFormulaComponenteRow(); else pintarFormulaCompList();
-  document.getElementById('fm-comp-continuar').addEventListener('click',function(){
+  (document.getElementById('fm-comp-continuar')||{addEventListener:function(){}}).addEventListener('click',function(){
     var filasIncompletas=formulaCompRows.filter(function(r){return (r.cantidad>0&&!r.item_id)||(r.item_id&&!(r.cantidad>0));});
     if(filasIncompletas.length){
       alert('Falta completar '+filasIncompletas.length+' componente(s): toca el buscador y elige el producto de la lista (no basta con escribir el nombre) y pon una cantidad mayor a 0.');
@@ -4263,7 +4263,7 @@ function pintarFormulaPasoNotas(persistidos){
   }
   var filasUbicFecha=formulaEditandoCatalogo?'':('<div class="resumen-row" data-editar="ubicacion" style="cursor:pointer;"><span class="resumen-key">Ubicación ✏️</span><span class="resumen-val">📍 '+(p?p.nombre:'')+' · '+(t?t.nombre:'')+'</span></div><div class="resumen-row" data-editar="fecha" style="cursor:pointer;"><span class="resumen-key">Fecha de aplicación ✏️</span><span class="resumen-val">'+fechaTxt+'</span></div>');
   body.innerHTML='<div class="seccion-titulo">'+(formulaEditandoCatalogo?'Paso 6 de 6':'Paso 9 de 9')+' · Notas y confirmar</div>'+alertaHtml+(window._formulaCreadorExistente?'<p class="hint" style="margin-bottom:.75rem;">👤 Formulada por: <strong>'+window._formulaCreadorExistente+'</strong></p>':'')+'<div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row" data-editar="nombre" style="cursor:pointer;"><span class="resumen-key">Nombre ✏️</span><span class="resumen-val">'+window._formulaNombreExistente+'</span></div>'+filasUbicFecha+'<div class="resumen-row" data-editar="via" style="cursor:pointer;"><span class="resumen-key">Vía ✏️</span><span class="resumen-val">'+VIA_ICONOS[formulaVia]+' '+formulaVia+'</span></div><div class="resumen-row" data-editar="tipo" style="cursor:pointer;"><span class="resumen-key">Tipo ✏️</span><span class="resumen-val">'+CATEGORIA_ICONOS[formulaCategoria]+' '+formulaCategoria+(formulaCategoria==='Combinada'&&formulaCategoriasCombinadas.length?' ('+formulaCategoriasCombinadas.join(' + ')+')':'')+'</span></div><div class="resumen-row" data-editar="bomba" style="cursor:pointer;"><span class="resumen-key">Bomba ✏️</span><span class="resumen-val">'+bombasTxt+'</span></div><div class="resumen-row" data-editar="componentes" style="cursor:pointer;"><span class="resumen-key">Componentes ✏️</span></div><div style="font-size:.82rem;padding:.35rem 0;">'+resumenComp+'</div></div><p class="hint" style="margin-bottom:1rem;">Toca cualquier renglón de arriba para editarlo directo. ℹ️ Guardar esta fórmula <strong>no descuenta inventario todavía</strong> — solo es la receta planeada. El descuento real se hará cuando la asignes a un operario, en el módulo de Aplicaciones.</p><div class="form-group"><label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:.85rem;"><input type="checkbox" id="fm-plantilla" '+(formulaEsPlantilla?'checked':'')+' style="width:18px;height:18px;"> 📌 Es una fórmula que se repite mucho (guardar como plantilla frecuente en el Catálogo)</label></div><div class="form-group" id="fm-catcatalogo-box" style="display:'+((formulaEsPlantilla&&formulaCategoria==='Combinada')?'':'none')+';"><label>¿En qué categoría del catálogo la guardamos?</label><div style="display:flex;flex-wrap:wrap;gap:8px;" id="fm-catcatalogo-chips">'+['Nutrición','Plaga','Estimulación','Herbicida'].map(function(c){return '<button type="button" class="op-chip'+(window._formulaCategoriaCatalogo===c?' sel':'')+'" data-catcat="'+c+'" onclick="seleccionUnica(this)">'+CATEGORIA_ICONOS[c]+' '+c+'</button>';}).join('')+'</div><p class="hint">Como "Combinada" varía mucho, no aparece como categoría del catálogo — elige bajo cuál de las 4 se debe encontrar esta plantilla.</p></div><div class="form-group"><label>Notas / Observaciones (opcional)</label><input type="text" id="fm-notas-input" value="'+(window._formulaNotasExistente?window._formulaNotasExistente.replace(/"/g,'&quot;'):'')+'" placeholder="Instrucciones adicionales..."></div><button class="btn-primary" id="fm-guardar">'+(formulaEditId?'Guardar cambios':'Crear fórmula')+'</button></div>'+(formulaEditId?'<div class="form-card"><button type="button" id="fm-eliminar" style="width:100%;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.85rem;cursor:pointer;">🗑️ Eliminar fórmula</button></div>':'')+'<button class="btn-back" style="margin-top:1rem;" onclick="'+formulaVolverDestino()+'">← Volver a '+(formulaEditandoCatalogo?'Catálogo':'fórmulas')+'</button>';
-  document.getElementById('fm-guardar').addEventListener('click',guardarFormula);
+  (document.getElementById('fm-guardar')||{addEventListener:function(){}}).addEventListener('click',guardarFormula);
   var plantillaCheckbox=document.getElementById('fm-plantilla');
   plantillaCheckbox.addEventListener('change',function(){
     document.getElementById('fm-catcatalogo-box').style.display=(plantillaCheckbox.checked&&formulaCategoria==='Combinada')?'':'none';
@@ -4298,7 +4298,7 @@ function pintarFormulaPasoNotas(persistidos){
     });
   });
   if(formulaEditId){
-    document.getElementById('fm-eliminar').addEventListener('click',function(){
+    (document.getElementById('fm-eliminar')||{addEventListener:function(){}}).addEventListener('click',function(){
       if(!confirm('¿Eliminar la fórmula "'+window._formulaNombreExistente+'"? Esta acción no se puede deshacer.')) return;
       from('formulas_aplicacion').eq('id',formulaEditId).update({activo:false}).then(function(){
         showToast('🗑️ Fórmula eliminada');
@@ -4517,10 +4517,10 @@ function renderEditarModoAsignacion(formulaId){
 function renderElegirTipoReasignacion(formulaId,nombre,asignadosTxt){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo">👷 '+nombre+'</div><div class="form-card"><p class="hint" style="margin-bottom:1rem;">Ya está asignada a: <strong>'+asignadosTxt+'</strong>. ¿Qué necesitas hacer?</p><div style="display:flex;flex-direction:column;gap:10px;"><button type="button" class="op-chip" id="reasig-agregar" style="text-align:left;padding:.85rem;">➕ Agregar a alguien más<br><span class="hint" style="margin:0;">'+asignadosTxt+' sigue con la suya, y se suma otra persona en paralelo.</span></button><button type="button" class="op-chip" id="reasig-reemplazar" style="text-align:left;padding:.85rem;">🔄 Reemplazar<br><span class="hint" style="margin:0;">Se cancela la tarea de '+asignadosTxt+' y se asigna a alguien nuevo en su lugar.</span></button></div></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAplicacionesEstatus()">← Volver a Aplicaciones</button>';
-  document.getElementById('reasig-agregar').addEventListener('click',function(){
+  (document.getElementById('reasig-agregar')||{addEventListener:function(){}}).addEventListener('click',function(){
     cargarFormulaParaAsignar(formulaId);
   });
-  document.getElementById('reasig-reemplazar').addEventListener('click',function(){
+  (document.getElementById('reasig-reemplazar')||{addEventListener:function(){}}).addEventListener('click',function(){
     if(!confirm('Esto va a cancelar la(s) tarea(s) activa(s) de '+asignadosTxt+' para esta aplicación y devolver su insumo al inventario. ¿Seguro?')) return;
     from('ordenes_trabajo').select('id,factor_escala,tambos_planeados,tambos_usados').eq('formula_id',formulaId).not('estado','eq','completada').not('estado','eq','cancelada').get().then(function(rows){
       rows=rows||[];
@@ -4591,7 +4591,7 @@ function renderAsigAplicCantidad(){
     var hint=document.getElementById('aplic-bombas-hint');
     if(hint) hint.textContent=textoHintBombas(n);
   }
-  document.getElementById('aplic-cambiar-equipo').addEventListener('click',function(){
+  (document.getElementById('aplic-cambiar-equipo')||{addEventListener:function(){}}).addEventListener('click',function(){
     var box=document.getElementById('aplic-equipo-box');
     box.style.display=box.style.display==='none'?'flex':'none';
   });
@@ -4605,14 +4605,14 @@ function renderAsigAplicCantidad(){
       renderAsigAplicCantidad();
     }
   });});
-  document.getElementById('aplic-modo-tambo').addEventListener('click',function(){
+  (document.getElementById('aplic-modo-tambo')||{addEventListener:function(){}}).addEventListener('click',function(){
     aplic.modoCantidad='tambo';
     this.classList.add('sel');
     document.getElementById('aplic-modo-bombas').classList.remove('sel');
     document.getElementById('aplic-tambo-info').style.display='';
     document.getElementById('aplic-bombas-info').style.display='none';
   });
-  document.getElementById('aplic-modo-bombas').addEventListener('click',function(){
+  (document.getElementById('aplic-modo-bombas')||{addEventListener:function(){}}).addEventListener('click',function(){
     aplic.modoCantidad='bombas';
     this.classList.add('sel');
     document.getElementById('aplic-modo-tambo').classList.remove('sel');
@@ -4620,9 +4620,9 @@ function renderAsigAplicCantidad(){
     document.getElementById('aplic-bombas-info').style.display='';
     actualizarPreview();
   });
-  document.getElementById('aplic-numbombas').addEventListener('input',actualizarPreview);
+  (document.getElementById('aplic-numbombas')||{addEventListener:function(){}}).addEventListener('input',actualizarPreview);
   actualizarPreview();
-  document.getElementById('aplic-cant-continuar').addEventListener('click',function(){
+  (document.getElementById('aplic-cant-continuar')||{addEventListener:function(){}}).addEventListener('click',function(){
     if(aplic.modoCantidad==='bombas'){
       var n=parseFloat(document.getElementById('aplic-numbombas').value)||0;
       if(n<=0){alert('Captura cuántas bombas en total va a preparar.');return;}
@@ -4660,7 +4660,7 @@ function renderAsigAplicComponentes(){
   var tablaEq=componentesUsanPeso(aplic.componentes)?tablaEquivalenciasHtml():'';
   body.innerHTML='<div class="seccion-titulo">🧪 Receta ajustada · '+tituloVol+'</div>'+avisoPorBomba+alertaHtml+'<div class="form-card">'+filas+'</div>'+tablaEq+'<button class="btn-primary" style="margin-top:1.25rem;" id="aplic-comp-continuar">Continuar →</button><button class="btn-back" style="margin-top:.75rem;" onclick="'+(aplic.bomba==='inyeccion'?'renderAsigAplicFormulas()':'renderAsigAplicCantidad()')+'">← Volver</button>';
   wireTablaEquivalencias();
-  document.getElementById('aplic-comp-continuar').addEventListener('click',function(){
+  (document.getElementById('aplic-comp-continuar')||{addEventListener:function(){}}).addEventListener('click',function(){
     if(faltantes.length&&!confirm('El inventario no alcanza para esta cantidad. ¿Asignar de todas formas? (tendrás que comprar antes de aplicar)')) return;
     renderAsigAplicOperarios();
   });
@@ -4670,9 +4670,9 @@ function renderAsigAplicOperarios(){
   var body=document.getElementById('enc-body');
   var opO=cats.operarios.map(function(o){return '<button type="button" class="op-chip'+(aplic.operarios.indexOf(o.id)>-1?' sel':'')+'" data-id="'+o.id+'" onclick="toggleChip(this)">'+o.nombre+'</button>';}).join('');
   body.innerHTML='<div class="seccion-titulo">🧪 ¿Quién la aplica?</div><div class="form-card"><div class="form-group"><label>¿Cómo se asigna?</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip'+(aplic.esExtra?'':' sel')+'" id="aplic-modo-normal">🧑‍🌾 Labores</button><button type="button" class="op-chip'+(aplic.esExtra?' sel':'')+'" id="aplic-modo-extra">⏰ Hora Extra</button></div></div><div class="form-group" id="aplic-horas-wrap" style="display:'+(aplic.esExtra?'':'none')+';"><label>¿Cuántas horas autorizas?</label><input type="number" id="aplic-horas-input" min="0.5" step="0.5" value="'+(aplic.horasExtra||2)+'"><p class="hint">Se le pagará por este número de horas, aunque tarde más en escanear su salida.</p></div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1rem;">'+opO+'</div><button class="btn-primary" id="aplic-op-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigAplicComponentes()">← Volver a receta</button>';
-  document.getElementById('aplic-modo-normal').addEventListener('click',function(){aplic.esExtra=false;this.classList.add('sel');document.getElementById('aplic-modo-extra').classList.remove('sel');document.getElementById('aplic-horas-wrap').style.display='none';});
-  document.getElementById('aplic-modo-extra').addEventListener('click',function(){aplic.esExtra=true;this.classList.add('sel');document.getElementById('aplic-modo-normal').classList.remove('sel');document.getElementById('aplic-horas-wrap').style.display='';});
-  document.getElementById('aplic-op-continuar').addEventListener('click',function(){
+  (document.getElementById('aplic-modo-normal')||{addEventListener:function(){}}).addEventListener('click',function(){aplic.esExtra=false;this.classList.add('sel');document.getElementById('aplic-modo-extra').classList.remove('sel');document.getElementById('aplic-horas-wrap').style.display='none';});
+  (document.getElementById('aplic-modo-extra')||{addEventListener:function(){}}).addEventListener('click',function(){aplic.esExtra=true;this.classList.add('sel');document.getElementById('aplic-modo-normal').classList.remove('sel');document.getElementById('aplic-horas-wrap').style.display='';});
+  (document.getElementById('aplic-op-continuar')||{addEventListener:function(){}}).addEventListener('click',function(){
     var opIds=Array.from(document.querySelectorAll('.op-chip.sel[data-id]')).map(function(c){return c.dataset.id;});
     if(!opIds.length){alert('Selecciona al menos un operario.');return;}
     if(aplic.esExtra){
@@ -4688,7 +4688,7 @@ function renderAsigAplicOperarios(){
 function renderAsigAplicFecha(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo">🧪 Fecha de aplicación</div><div class="form-card"><div class="form-group"><label>¿Cuándo se va a aplicar?</label><input type="date" id="aplic-fecha-input" value="'+aplic.fecha+'"></div><button class="btn-primary" id="aplic-fecha-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigAplicOperarios()">← Volver a operarios</button>';
-  document.getElementById('aplic-fecha-continuar').addEventListener('click',function(){
+  (document.getElementById('aplic-fecha-continuar')||{addEventListener:function(){}}).addEventListener('click',function(){
     aplic.fecha=document.getElementById('aplic-fecha-input').value||aplic.fecha;
     renderAsigAplicNotas();
   });
@@ -4704,7 +4704,7 @@ function renderAsigAplicNotas(){
   var resumenComp=aplic.componentes.map(function(c){return (c.item?c.item.nombre:'')+' · '+fmtAmigable(c.cantidad_base*aplic.factor*tambosPlanNotas,c.item?c.item.unidad:'');}).join('<br>');
   var filaTambos=(aplic.bomba!=='inyeccion')?('<div class="resumen-row"><span class="resumen-key">'+(esBombasNotas?'Bombas planeadas':'Tambos planeados')+'</span><span class="resumen-val">'+(esBombasNotas?'🎒':'🛢️')+' '+tambosPlanNotas+'</span></div>'):'';
   body.innerHTML='<div class="seccion-titulo">🧪 Confirmar aplicación</div><div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row"><span class="resumen-key">Fórmula</span><span class="resumen-val">'+aplic.formula.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Ubicación</span><span class="resumen-val">📍 '+(p?p.nombre:'')+' · '+(t?t.nombre:'')+'</span></div><div class="resumen-row"><span class="resumen-key">Equipo</span><span class="resumen-val">'+BOMBA_ICONOS[aplic.bomba]+' '+BOMBA_LABELS[aplic.bomba]+'</span></div><div class="resumen-row"><span class="resumen-key">'+(esBombasNotas?'Volumen por bomba':'Volumen por tambo')+'</span><span class="resumen-val">'+numFmt(aplic.volumen)+' L</span></div>'+filaTambos+'<div class="resumen-row"><span class="resumen-key">Modo</span><span class="resumen-val">'+(aplic.esExtra?('⏰ Hora Extra ('+numFmt(aplic.horasExtra)+' h autorizadas)'):'🧑‍🌾 Labores')+'</span></div><div class="resumen-row"><span class="resumen-key">Operarios</span><span class="resumen-val">'+opNombres+'</span></div><div class="resumen-row"><span class="resumen-key">Fecha</span><span class="resumen-val">'+aplic.fecha+'</span></div><div class="resumen-row"><span class="resumen-key">Componentes a usar (total)</span></div><div style="font-size:.82rem;padding:.35rem 0;">'+resumenComp+'</div></div><p class="hint" style="margin-bottom:1rem;">⚠️ Al confirmar, esta cantidad total se descuenta del inventario de inmediato. Si el operario necesita más de lo planeado, el sistema descontará el extra automáticamente cuando lo reporte; si al final usa menos, la diferencia se devuelve sola al inventario. Queda pendiente de validación por un ingeniero.</p><div class="form-group"><label>Notas (opcional)</label><input type="text" id="aplic-notas-input" placeholder="Instrucciones para el operario..."></div><button class="btn-primary" id="aplic-finalizar">✅ Asignar aplicación</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigAplicFecha()">← Volver a fecha</button>';
-  document.getElementById('aplic-finalizar').addEventListener('click',guardarAplicacion);
+  (document.getElementById('aplic-finalizar')||{addEventListener:function(){}}).addEventListener('click',guardarAplicacion);
 }
 
 function guardarAplicacion(){
@@ -4819,7 +4819,7 @@ function renderRecomendarAlarma(alertaId,tablaId){
   var tb=cats.tablas.find(function(t){return t.id===tablaId;});
   var p=tb?cats.plantaciones.find(function(x){return x.id===tb.plantacion_id;}):null;
   body.innerHTML='<div class="seccion-titulo">💡 Recomendar solución</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Para: 📍 '+(p?p.nombre:'')+' · '+(tb?tb.nombre:'')+'</p><div style="display:flex;flex-direction:column;gap:10px;"><button type="button" class="op-chip" style="text-align:left;padding:.8rem;" id="rec-aplicacion">🧪 Crear una aplicación (fórmula) para esto</button><button type="button" class="op-chip" style="text-align:left;padding:.8rem;" id="rec-general">📝 Dejar una recomendación general (sin fórmula)</button></div><div id="rec-general-box" style="display:none;margin-top:1rem;"><div class="form-group"><label>Recomendación</label><textarea id="rec-texto" rows="3" placeholder="Ej. Revisar sistema de riego de esa tabla, posible exceso de humedad" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="rec-guardar">Enviar recomendación</button></div></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAlarmasRevision()">← Volver a Alarmas</button>';
-  document.getElementById('rec-aplicacion').addEventListener('click',function(){
+  (document.getElementById('rec-aplicacion')||{addEventListener:function(){}}).addEventListener('click',function(){
     from('alertas_recomendaciones').insert({alerta_id:alertaId,creado_por:usuario.id,tipo:'aplicacion'}).then(function(){
       formulaEditId=null; formulaVolverAResumen=false;
       formulaVia=null; formulaCategoria=null; formulaBombas=[]; formulaCompRows=[]; formulaCompSeq=0;
@@ -4829,10 +4829,10 @@ function renderRecomendarAlarma(alertaId,tablaId){
       renderFormulaPasoVia();
     }).catch(function(e){alert('Error: '+e.message);});
   });
-  document.getElementById('rec-general').addEventListener('click',function(){
+  (document.getElementById('rec-general')||{addEventListener:function(){}}).addEventListener('click',function(){
     document.getElementById('rec-general-box').style.display='block';
   });
-  document.getElementById('rec-guardar').addEventListener('click',function(){
+  (document.getElementById('rec-guardar')||{addEventListener:function(){}}).addEventListener('click',function(){
     var texto=document.getElementById('rec-texto').value.trim();
     if(!texto){alert('Escribe la recomendación.');return;}
     from('alertas_recomendaciones').insert({alerta_id:alertaId,creado_por:usuario.id,tipo:'general',texto:texto}).then(function(){
@@ -5167,7 +5167,7 @@ function renderNuevaCompra(){
   }
   pintarItemsCompra();
 
-  document.getElementById('nc-agregar-btn').addEventListener('click',function(){
+  (document.getElementById('nc-agregar-btn')||{addEventListener:function(){}}).addEventListener('click',function(){
     filas.push(nuevaFilaCompra());
     pintarItemsCompra();
   });
@@ -5176,9 +5176,9 @@ function renderNuevaCompra(){
   function actualizarVisibilidadVencimiento(){
     document.getElementById('nc-vencimiento-wrap').style.display=formaPagoSel==='credito'?'':'none';
   }
-  document.getElementById('nc-fp-contado').addEventListener('click',function(){formaPagoSel='contado';this.classList.add('sel');this.textContent='✓ Contado';document.getElementById('nc-fp-credito').classList.remove('sel');document.getElementById('nc-fp-credito').textContent='Crédito';actualizarVisibilidadVencimiento();});
-  document.getElementById('nc-fp-credito').addEventListener('click',function(){formaPagoSel='credito';this.classList.add('sel');this.textContent='✓ Crédito';document.getElementById('nc-fp-contado').classList.remove('sel');document.getElementById('nc-fp-contado').textContent='Contado';actualizarVisibilidadVencimiento();});
-  document.getElementById('nc-proveedor').addEventListener('change',function(){
+  (document.getElementById('nc-fp-contado')||{addEventListener:function(){}}).addEventListener('click',function(){formaPagoSel='contado';this.classList.add('sel');this.textContent='✓ Contado';document.getElementById('nc-fp-credito').classList.remove('sel');document.getElementById('nc-fp-credito').textContent='Crédito';actualizarVisibilidadVencimiento();});
+  (document.getElementById('nc-fp-credito')||{addEventListener:function(){}}).addEventListener('click',function(){formaPagoSel='credito';this.classList.add('sel');this.textContent='✓ Crédito';document.getElementById('nc-fp-contado').classList.remove('sel');document.getElementById('nc-fp-contado').textContent='Contado';actualizarVisibilidadVencimiento();});
+  (document.getElementById('nc-proveedor')||{addEventListener:function(){}}).addEventListener('change',function(){
     var provId=this.value;
     document.getElementById('nc-prov-nuevo-wrap').style.display=provId==='_nuevo'?'':'none';
     var prov=cats.proveedores.find(function(p){return p.id===provId;});
@@ -5191,7 +5191,7 @@ function renderNuevaCompra(){
       }
     }
   });
-  document.getElementById('nc-comprobante').addEventListener('change',function(){
+  (document.getElementById('nc-comprobante')||{addEventListener:function(){}}).addEventListener('change',function(){
     var f=this.files[0];
     if(!f) return;
     var status=document.getElementById('nc-comprobante-status');
@@ -5202,7 +5202,7 @@ function renderNuevaCompra(){
     }).catch(function(e){status.textContent='Error al subir: '+e.message;});
   });
 
-  document.getElementById('nc-guardar').addEventListener('click',function(){
+  (document.getElementById('nc-guardar')||{addEventListener:function(){}}).addEventListener('click',function(){
     var btn=this;
     var fecha=document.getElementById('nc-fecha').value||hoy;
     var numeroFactura=(document.getElementById('nc-factura').value||'').trim()||null;
@@ -5485,17 +5485,17 @@ function renderEditarCompra(compraId,volverFn){
     pintarNuevas();
     calcularTotal();
 
-    document.getElementById('ec-agregar-btn').addEventListener('click',function(){
+    (document.getElementById('ec-agregar-btn')||{addEventListener:function(){}}).addEventListener('click',function(){
       nuevas.push(nuevaFila());
       pintarNuevas();
     });
 
     var formaPagoSel=compra.forma_pago;
     function actualizarVisibilidadVencimiento(){document.getElementById('ec-vencimiento-wrap').style.display=formaPagoSel==='credito'?'':'none';}
-    document.getElementById('ec-fp-contado').addEventListener('click',function(){formaPagoSel='contado';this.classList.add('sel');this.textContent='✓ Contado';document.getElementById('ec-fp-credito').classList.remove('sel');document.getElementById('ec-fp-credito').textContent='Crédito';actualizarVisibilidadVencimiento();});
-    document.getElementById('ec-fp-credito').addEventListener('click',function(){formaPagoSel='credito';this.classList.add('sel');this.textContent='✓ Crédito';document.getElementById('ec-fp-contado').classList.remove('sel');document.getElementById('ec-fp-contado').textContent='Contado';actualizarVisibilidadVencimiento();});
+    (document.getElementById('ec-fp-contado')||{addEventListener:function(){}}).addEventListener('click',function(){formaPagoSel='contado';this.classList.add('sel');this.textContent='✓ Contado';document.getElementById('ec-fp-credito').classList.remove('sel');document.getElementById('ec-fp-credito').textContent='Crédito';actualizarVisibilidadVencimiento();});
+    (document.getElementById('ec-fp-credito')||{addEventListener:function(){}}).addEventListener('click',function(){formaPagoSel='credito';this.classList.add('sel');this.textContent='✓ Crédito';document.getElementById('ec-fp-contado').classList.remove('sel');document.getElementById('ec-fp-contado').textContent='Contado';actualizarVisibilidadVencimiento();});
 
-    document.getElementById('ec-comprobante').addEventListener('change',function(){
+    (document.getElementById('ec-comprobante')||{addEventListener:function(){}}).addEventListener('change',function(){
       var f=this.files[0]; if(!f) return;
       var status=document.getElementById('ec-comprobante-status');
       status.textContent='Subiendo...';
@@ -5512,10 +5512,10 @@ function renderEditarCompra(compraId,volverFn){
     }
     wireQuitarComprobanteEc();
 
-    document.getElementById('ec-cancelar-top').addEventListener('click',volver);
-    document.getElementById('ec-cancelar-bottom').addEventListener('click',volver);
+    (document.getElementById('ec-cancelar-top')||{addEventListener:function(){}}).addEventListener('click',volver);
+    (document.getElementById('ec-cancelar-bottom')||{addEventListener:function(){}}).addEventListener('click',volver);
 
-    document.getElementById('ec-guardar').addEventListener('click',function(){
+    (document.getElementById('ec-guardar')||{addEventListener:function(){}}).addEventListener('click',function(){
       var btn=this;
       var fecha=document.getElementById('ec-fecha').value||compra.fecha;
       var numeroFactura=(document.getElementById('ec-factura').value||'').trim()||null;
@@ -5625,7 +5625,7 @@ function renderProveedores(){
       }).join('');
     }
     body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderComprasMenu()">← Volver</button>';
-    document.getElementById('prov-nuevo-btn').addEventListener('click',function(){renderProveedorForm(null);});
+    (document.getElementById('prov-nuevo-btn')||{addEventListener:function(){}}).addEventListener('click',function(){renderProveedorForm(null);});
     body.querySelectorAll('[data-editar-prov]').forEach(function(btn){
       btn.addEventListener('click',function(){renderProveedorForm(this.dataset.editarProv);});
     });
@@ -5651,12 +5651,12 @@ function renderProveedorForm(id){
     var activo=esNuevo?true:(pv?pv.activo:true);
     var formaPagoDefault=(pv&&pv.forma_pago_default==='credito')?'credito':'contado';
     if(!esNuevo){
-      document.getElementById('pf-activo-si').addEventListener('click',function(){activo=true;this.classList.add('sel');this.textContent='✓ Activo';document.getElementById('pf-activo-no').classList.remove('sel');document.getElementById('pf-activo-no').textContent='Inactivo';});
-      document.getElementById('pf-activo-no').addEventListener('click',function(){activo=false;this.classList.add('sel');this.textContent='✓ Inactivo';document.getElementById('pf-activo-si').classList.remove('sel');document.getElementById('pf-activo-si').textContent='Activo';});
+      (document.getElementById('pf-activo-si')||{addEventListener:function(){}}).addEventListener('click',function(){activo=true;this.classList.add('sel');this.textContent='✓ Activo';document.getElementById('pf-activo-no').classList.remove('sel');document.getElementById('pf-activo-no').textContent='Inactivo';});
+      (document.getElementById('pf-activo-no')||{addEventListener:function(){}}).addEventListener('click',function(){activo=false;this.classList.add('sel');this.textContent='✓ Inactivo';document.getElementById('pf-activo-si').classList.remove('sel');document.getElementById('pf-activo-si').textContent='Activo';});
     }
-    document.getElementById('pf-fp-contado').addEventListener('click',function(){formaPagoDefault='contado';this.classList.add('sel');this.textContent='✓ Contado';document.getElementById('pf-fp-credito').classList.remove('sel');document.getElementById('pf-fp-credito').textContent='Crédito';document.getElementById('pf-plazo-wrap').style.display='none';});
-    document.getElementById('pf-fp-credito').addEventListener('click',function(){formaPagoDefault='credito';this.classList.add('sel');this.textContent='✓ Crédito';document.getElementById('pf-fp-contado').classList.remove('sel');document.getElementById('pf-fp-contado').textContent='Contado';document.getElementById('pf-plazo-wrap').style.display='';});
-    document.getElementById('pf-guardar').addEventListener('click',function(){
+    (document.getElementById('pf-fp-contado')||{addEventListener:function(){}}).addEventListener('click',function(){formaPagoDefault='contado';this.classList.add('sel');this.textContent='✓ Contado';document.getElementById('pf-fp-credito').classList.remove('sel');document.getElementById('pf-fp-credito').textContent='Crédito';document.getElementById('pf-plazo-wrap').style.display='none';});
+    (document.getElementById('pf-fp-credito')||{addEventListener:function(){}}).addEventListener('click',function(){formaPagoDefault='credito';this.classList.add('sel');this.textContent='✓ Crédito';document.getElementById('pf-fp-contado').classList.remove('sel');document.getElementById('pf-fp-contado').textContent='Contado';document.getElementById('pf-plazo-wrap').style.display='';});
+    (document.getElementById('pf-guardar')||{addEventListener:function(){}}).addEventListener('click',function(){
       var btn=this;
       var nombre=(document.getElementById('pf-nombre').value||'').trim();
       if(!nombre){alert('Captura el nombre del proveedor.');return;}
@@ -5785,7 +5785,7 @@ function renderHistorialGastos(mesStr){
       html+=grupos.map(pintarGrupoCompraCard).join('');
     }
     body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderComprasMenu()">← Volver</button>';
-    document.getElementById('hg-mes').addEventListener('change',function(){renderHistorialGastos(this.value);});
+    (document.getElementById('hg-mes')||{addEventListener:function(){}}).addEventListener('change',function(){renderHistorialGastos(this.value);});
     wireEventosGruposCompra(body,function(){renderHistorialGastos(mesStr);});
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
@@ -5883,7 +5883,7 @@ function renderResumenGastos(mesStr){
     html+='<div class="resumen-row"><span class="resumen-key">🧑‍🌾 Labores Eventual</span><span class="resumen-val">$'+formatMonto(totalEventuales)+'</span></div>';
     html+='<p class="hint" style="margin-top:.75rem;">La nómina se toma de lo ya marcado como pagado en Nóminas y de los pagos a eventuales; no incluye préstamos entregados ni nómina aún pendiente de pagar.</p>';
     body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderComprasMenu()">← Volver</button>';
-    document.getElementById('rg-mes').addEventListener('change',function(){renderResumenGastos(this.value);});
+    (document.getElementById('rg-mes')||{addEventListener:function(){}}).addEventListener('change',function(){renderResumenGastos(this.value);});
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
@@ -6045,8 +6045,8 @@ function renderControlAsistencias(fecha){
       return '<div class="orden-card" style="border-left-color:'+f.estadoColor+';"><strong style="font-size:.9rem;">'+f.op.nombre+'</strong><div class="orden-meta" style="color:'+f.estadoColor+';font-weight:600;">'+f.estadoTxt+'</div></div>';
     }).join('');
     body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderAdministracionMenu()">← Volver a Administración</button>';
-    document.getElementById('ca-fecha').addEventListener('change',function(){renderControlAsistencias(this.value);});
-    document.getElementById('ca-ant').addEventListener('click',function(){var d=new Date(fecha+'T00:00:00');d.setDate(d.getDate()-1);renderControlAsistencias(d.toISOString().slice(0,10));});
+    (document.getElementById('ca-fecha')||{addEventListener:function(){}}).addEventListener('change',function(){renderControlAsistencias(this.value);});
+    (document.getElementById('ca-ant')||{addEventListener:function(){}}).addEventListener('click',function(){var d=new Date(fecha+'T00:00:00');d.setDate(d.getDate()-1);renderControlAsistencias(d.toISOString().slice(0,10));});
     var btnSig=document.getElementById('ca-sig');
     if(!esHoy) btnSig.addEventListener('click',function(){var d=new Date(fecha+'T00:00:00');d.setDate(d.getDate()+1);renderControlAsistencias(d.toISOString().slice(0,10));});
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
@@ -6185,8 +6185,8 @@ function renderPagosEventuales(fecha){
     }
 
     body.innerHTML=html;
-    document.getElementById('pe-fecha').addEventListener('change',function(){renderPagosEventuales(this.value);});
-    document.getElementById('pe-ant').addEventListener('click',function(){var d=new Date(fecha+'T00:00:00');d.setDate(d.getDate()-1);renderPagosEventuales(d.toISOString().slice(0,10));});
+    (document.getElementById('pe-fecha')||{addEventListener:function(){}}).addEventListener('change',function(){renderPagosEventuales(this.value);});
+    (document.getElementById('pe-ant')||{addEventListener:function(){}}).addEventListener('click',function(){var d=new Date(fecha+'T00:00:00');d.setDate(d.getDate()-1);renderPagosEventuales(d.toISOString().slice(0,10));});
     var btnSig=document.getElementById('pe-sig');
     if(!esHoy) btnSig.addEventListener('click',function(){var d=new Date(fecha+'T00:00:00');d.setDate(d.getDate()+1);renderPagosEventuales(d.toISOString().slice(0,10));});
 
@@ -6287,7 +6287,7 @@ function renderInversionistaDetalle(usuarioId){
         }).join('');
       }
       body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderInversionistasMenu()">← Volver</button>';
-      document.getElementById('inv-nuevo-btn').addEventListener('click',function(){renderNuevaInversion(usuarioId);});
+      (document.getElementById('inv-nuevo-btn')||{addEventListener:function(){}}).addEventListener('click',function(){renderNuevaInversion(usuarioId);});
       body.querySelectorAll('[data-ver-inversion]').forEach(function(card){
         card.addEventListener('click',function(){renderInversionDetalle(this.dataset.verInversion);});
       });
@@ -6318,7 +6318,7 @@ function renderNuevaInversion(usuarioId){
   wireMontoInput('ni-monto');
 
   var comprobanteUrl=null;
-  document.getElementById('ni-comprobante').addEventListener('change',function(){
+  (document.getElementById('ni-comprobante')||{addEventListener:function(){}}).addEventListener('change',function(){
     var f=this.files[0];
     if(!f) return;
     var status=document.getElementById('ni-comprobante-status');
@@ -6326,7 +6326,7 @@ function renderNuevaInversion(usuarioId){
     subirComprobanteInversion(f).then(function(url){comprobanteUrl=url;status.textContent='✅ Comprobante adjuntado';}).catch(function(e){status.textContent='Error al subir: '+e.message;});
   });
 
-  document.getElementById('ni-guardar').addEventListener('click',function(){
+  (document.getElementById('ni-guardar')||{addEventListener:function(){}}).addEventListener('click',function(){
     var btn=this;
     var monto=parseMonto(document.getElementById('ni-monto').value);
     if(!monto||monto<=0){alert('Captura el monto invertido.');return;}
@@ -6411,7 +6411,7 @@ function renderInversionDetalle(inversionId){
 
     body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderInversionistaDetalle(\''+usuarioIdInversionista+'\')">← Volver</button>';
 
-    document.getElementById('ic-editar-btn').addEventListener('click',function(){renderEditarInversion(inversionId);});
+    (document.getElementById('ic-editar-btn')||{addEventListener:function(){}}).addEventListener('click',function(){renderEditarInversion(inversionId);});
 
     if(activo){
       wireMontoInput('im-monto');
@@ -6426,14 +6426,14 @@ function renderInversionDetalle(inversionId){
         });
       });
       var comprobanteMovUrl=null;
-      document.getElementById('im-comprobante').addEventListener('change',function(){
+      (document.getElementById('im-comprobante')||{addEventListener:function(){}}).addEventListener('change',function(){
         var f=this.files[0];
         if(!f) return;
         var status=document.getElementById('im-comprobante-status');
         status.textContent='Subiendo...';
         subirComprobanteInversion(f).then(function(url){comprobanteMovUrl=url;status.textContent='✅ Comprobante adjuntado';}).catch(function(e){status.textContent='Error al subir: '+e.message;});
       });
-      document.getElementById('im-guardar').addEventListener('click',function(){
+      (document.getElementById('im-guardar')||{addEventListener:function(){}}).addEventListener('click',function(){
         var btn=this;
         var monto=parseMonto(document.getElementById('im-monto').value);
         if(!monto||monto<=0){alert('Captura un monto válido.');return;}
@@ -6444,7 +6444,7 @@ function renderInversionDetalle(inversionId){
           return from('notificaciones').insert({titulo:'💼 Depósito registrado',cuerpo:'Se registró un depósito de $'+formatMonto(monto)+' ('+(MOV_INVERSION_TIPOS[tipoSel]||{}).lbl+') a tu inversión.',icono:'💼',leida:false,para_rol:'inversionista',para_usuario:usuarioIdInversionista});
         }).then(function(){showToast('✅ Depósito registrado');renderInversionDetalle(inversionId);}).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Registrar depósito';});
       });
-      document.getElementById('ic-cerrar').addEventListener('click',function(){
+      (document.getElementById('ic-cerrar')||{addEventListener:function(){}}).addEventListener('click',function(){
         if(!confirm('¿Cerrar este contrato de inversión? Ya no podrás registrar más depósitos en él.')) return;
         var btn=this;
         var fechaCierre=document.getElementById('ic-fecha').value||fechaHoyLocal();
@@ -6484,7 +6484,7 @@ function renderEditarInversion(inversionId){
     wireMontoInput('ei-monto');
 
     var comprobanteUrl=c.comprobante_url||null;
-    document.getElementById('ei-comprobante').addEventListener('change',function(){
+    (document.getElementById('ei-comprobante')||{addEventListener:function(){}}).addEventListener('change',function(){
       var f=this.files[0];
       if(!f) return;
       var status=document.getElementById('ei-comprobante-status');
@@ -6492,7 +6492,7 @@ function renderEditarInversion(inversionId){
       subirComprobanteInversion(f).then(function(url){comprobanteUrl=url;status.textContent='✅ Comprobante adjuntado';}).catch(function(e){status.textContent='Error al subir: '+e.message;});
     });
 
-    document.getElementById('ei-guardar').addEventListener('click',function(){
+    (document.getElementById('ei-guardar')||{addEventListener:function(){}}).addEventListener('click',function(){
       var btn=this;
       var monto=parseMonto(document.getElementById('ei-monto').value);
       if(!monto||monto<=0){alert('Captura el monto invertido.');return;}
@@ -6805,11 +6805,11 @@ function renderCentroReportes(){
       (recientesHtml||'<div class="empty">Aún no has hecho ningún reporte.</div>')+
       '<button class="btn-back" style="margin-top:1rem;" onclick="tabOperario(\'inicio\')">← Volver</button>';
     body.querySelectorAll('[data-ver]').forEach(function(el){el.addEventListener('click',function(){renderDetalleReporte(this.dataset.ver);});});
-    document.getElementById('cr-acc-incidencia').addEventListener('click',function(){renderNuevoReporteIncidencia();});
-    document.getElementById('cr-acc-mantenimiento').addEventListener('click',function(){renderSolicitudMantenimiento();});
-    document.getElementById('cr-acc-riego').addEventListener('click',function(){renderNuevoReporteIncidencia('fuga_derrame');});
-    document.getElementById('cr-acc-insumos').addEventListener('click',function(){renderSolicitudInsumo();});
-    document.getElementById('cr-acc-sugerencia').addEventListener('click',function(){renderSolicitudOtro('sugerencia');});
+    (document.getElementById('cr-acc-incidencia')||{addEventListener:function(){}}).addEventListener('click',function(){renderNuevoReporteIncidencia();});
+    (document.getElementById('cr-acc-mantenimiento')||{addEventListener:function(){}}).addEventListener('click',function(){renderSolicitudMantenimiento();});
+    (document.getElementById('cr-acc-riego')||{addEventListener:function(){}}).addEventListener('click',function(){renderNuevoReporteIncidencia('fuga_derrame');});
+    (document.getElementById('cr-acc-insumos')||{addEventListener:function(){}}).addEventListener('click',function(){renderSolicitudInsumo();});
+    (document.getElementById('cr-acc-sugerencia')||{addEventListener:function(){}}).addEventListener('click',function(){renderSolicitudOtro('sugerencia');});
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
@@ -6845,12 +6845,12 @@ function renderNuevoReporteIncidencia(categoriaPreseleccionada){
     var meta=REPORTE_CATEGORIA_META[cat];
     if(!meta||!meta.ubicacion){cont.innerHTML='';return;}
     cont.innerHTML='<div class="form-group"><label>Plantación</label><select id="nri-pl"><option value="">Selecciona...</option>'+pO+'</select></div><div class="form-group"><label>Tabla</label><select id="nri-tb"><option value="">Selecciona plantación primero</option></select></div>';
-    document.getElementById('nri-pl').addEventListener('change',function(){
+    (document.getElementById('nri-pl')||{addEventListener:function(){}}).addEventListener('change',function(){
       var tabs=cats.tablas.filter(function(t){return t.plantacion_id===this.value;}.bind(this));
       document.getElementById('nri-tb').innerHTML='<option value="">Selecciona...</option>'+tabs.map(function(t){return '<option value="'+t.id+'">'+t.nombre+'</option>';}).join('');
     });
   }
-  document.getElementById('nri-cat').addEventListener('change',function(){
+  (document.getElementById('nri-cat')||{addEventListener:function(){}}).addEventListener('change',function(){
     if(this.value==='equipo_herramienta'){ renderDanioEquipo(null,null); return; }
     pintarUbicacion(this.value);
   });
@@ -6862,7 +6862,7 @@ function renderNuevoReporteIncidencia(categoriaPreseleccionada){
   // porque la validación sí la exige. Ahora se pinta según el valor real inicial del select.
   var catInicial=document.getElementById('nri-cat').value;
   if(catInicial && catInicial!=='equipo_herramienta') pintarUbicacion(catInicial);
-  document.getElementById('nri-enviar').addEventListener('click',function(){
+  (document.getElementById('nri-enviar')||{addEventListener:function(){}}).addEventListener('click',function(){
     var cat=document.getElementById('nri-cat').value;
     if(cat==='equipo_herramienta'){renderDanioEquipo(null,null);return;}
     var desc=document.getElementById('nri-desc').value.trim();
@@ -6926,7 +6926,7 @@ function renderAccidenteSeguridad(){
     '</div>'+
     '<button class="btn-back" style="margin-top:1rem;" onclick="renderCentroReportes()">← Volver al Centro de Reportes</button>';
   repEvidenciaWirearInputs('acc');
-  document.getElementById('acc-pl').addEventListener('change',function(){
+  (document.getElementById('acc-pl')||{addEventListener:function(){}}).addEventListener('change',function(){
     var tabs=cats.tablas.filter(function(t){return t.plantacion_id===this.value;}.bind(this));
     document.getElementById('acc-tb').innerHTML='<option value="">Selecciona...</option>'+tabs.map(function(t){return '<option value="'+t.id+'">'+t.nombre+'</option>';}).join('');
   });
@@ -6939,7 +6939,7 @@ function renderAccidenteSeguridad(){
       document.getElementById('acc-emerg-detalle').style.display='block';
     });
   });
-  document.getElementById('acc-emerg-enviar').addEventListener('click',function(){
+  (document.getElementById('acc-emerg-enviar')||{addEventListener:function(){}}).addEventListener('click',function(){
     if(!tipoEmergSel){alert('Selecciona qué tipo de emergencia es.');return;}
     if(!confirm('¿Confirmas que es una emergencia real?\n\nSe avisará de inmediato a dueño, encargado y admin.')) return;
     var desc=document.getElementById('acc-emerg-desc').value.trim()||null;
@@ -6958,7 +6958,7 @@ function renderAccidenteSeguridad(){
       this.classList.add('sel'); gravedadSel=this.dataset.g;
     });
   });
-  document.getElementById('acc-enviar').addEventListener('click',function(){
+  (document.getElementById('acc-enviar')||{addEventListener:function(){}}).addEventListener('click',function(){
     var tipoTxt=document.getElementById('acc-tipo').value.trim();
     var desc=document.getElementById('acc-desc').value.trim();
     if(!tipoTxt||!desc){alert('Describe el tipo de accidente y qué pasó.');return;}
@@ -7068,7 +7068,7 @@ function renderDanioEquipo(activoId,nombrePreseleccionado){
       '<button class="btn-back" style="margin-top:1rem;" onclick="tabOperario(\'inicio\')">← Volver</button>';
     repEvidenciaWirearInputs('de');
     if(!activoId){
-      document.getElementById('de-activo').addEventListener('change',function(){
+      (document.getElementById('de-activo')||{addEventListener:function(){}}).addEventListener('change',function(){
         document.getElementById('de-otro-wrap').style.display=(this.value==='__otro__')?'block':'none';
       });
     }
@@ -7080,7 +7080,7 @@ function renderDanioEquipo(activoId,nombrePreseleccionado){
         document.getElementById('de-advertencia').style.display=(utilizableSel==='no')?'block':'none';
       });
     });
-    document.getElementById('de-enviar').addEventListener('click',function(){
+    (document.getElementById('de-enviar')||{addEventListener:function(){}}).addEventListener('click',function(){
       var activoSelVal=document.getElementById('de-activo').value;
       if(!activoSelVal){alert('Selecciona el equipo o herramienta.');return;}
       var activoIdFinal=(activoSelVal==='__otro__')?null:activoSelVal;
@@ -7187,7 +7187,7 @@ function renderDetalleReporte(id){
       '<div class="form-card" style="margin-top:.5rem;"><textarea id="dr-comentario-nuevo" rows="2" placeholder="Escribe un comentario..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea><button class="btn-primary" id="dr-comentario-enviar">Enviar comentario</button></div>'+
       '<button class="btn-back" style="margin-top:1rem;" onclick="'+volverFn+'">← Volver</button>';
 
-    document.getElementById('dr-comentario-enviar').addEventListener('click',function(){
+    (document.getElementById('dr-comentario-enviar')||{addEventListener:function(){}}).addEventListener('click',function(){
       var texto=(document.getElementById('dr-comentario-nuevo').value||'').trim();
       if(!texto){alert('Escribe un comentario.');return;}
       var btn=this; btn.disabled=true;
@@ -7227,7 +7227,7 @@ function renderSolicitudMantenimiento(){
     '<div class="form-group"><label>Equipo o herramienta</label><select id="sm-activo"><option value="">Selecciona...</option>'+rows.map(function(a){return '<option value="'+a.id+'">'+a.nombre+'</option>';}).join('')+'</select></div>'+
     '<div class="form-group"><label>¿Qué necesita?</label><textarea id="sm-mensaje" rows="4" placeholder="Ej. Ya le toca afinación, hace ruido raro, quiero que lo revisen..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div>'+
     '<button class="btn-primary" id="sm-enviar">Enviar solicitud</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderCentroReportes()">← Volver al Centro de Reportes</button>';
-    document.getElementById('sm-enviar').addEventListener('click',function(){
+    (document.getElementById('sm-enviar')||{addEventListener:function(){}}).addEventListener('click',function(){
       var activoId=document.getElementById('sm-activo').value;
       var mensaje=(document.getElementById('sm-mensaje').value||'').trim();
       if(!activoId){alert('Selecciona el equipo o herramienta.');return;}
@@ -7265,7 +7265,7 @@ function renderSolicitudInsumo(){
       this.classList.add('sel'); urgenciaSel=this.dataset.u;
     });
   });
-  document.getElementById('si-enviar').addEventListener('click',function(){
+  (document.getElementById('si-enviar')||{addEventListener:function(){}}).addEventListener('click',function(){
     var insumo=(document.getElementById('si-insumo').value||'').trim();
     if(!insumo){alert('Describe qué insumo o material necesitas.');return;}
     var cantidad=(document.getElementById('si-cantidad').value||'').trim();
@@ -7322,7 +7322,7 @@ function renderPerfilOperario(){
     '<div class="tarea-card" style="cursor:pointer;" onclick="renderMisContratos()"><div class="tarea-title">📝 Contratos</div><div class="tarea-meta">Ver mis contratos</div></div>'+
     '</div>'+
     '<div class="tarea-card" style="cursor:pointer;margin-top:1.25rem;text-align:center;" onclick="salir()"><div class="tarea-title" style="color:var(--gris-3);font-size:.82rem;font-weight:600;">🚪 Cerrar sesión</div></div>';
-    document.getElementById('perf-guardar').addEventListener('click',function(){
+    (document.getElementById('perf-guardar')||{addEventListener:function(){}}).addEventListener('click',function(){
       var tel=document.getElementById('perf-tel').value||null;
       var ceNombre=document.getElementById('perf-ce-nombre').value||null;
       var ceTel=document.getElementById('perf-ce-tel').value||null;
@@ -7330,7 +7330,7 @@ function renderPerfilOperario(){
         showToast('✅ Datos guardados');
       }).catch(function(e){alert('Error: '+e.message);});
     });
-    document.getElementById('perf-guardar-medico').addEventListener('click',function(){
+    (document.getElementById('perf-guardar-medico')||{addEventListener:function(){}}).addEventListener('click',function(){
       var sangre=document.getElementById('perf-sangre').value||null;
       var padecimientos=document.getElementById('perf-padecimientos').value||null;
       var medicamentos=document.getElementById('perf-medicamentos').value||null;
@@ -7382,7 +7382,7 @@ function renderEvaluarComportamiento(){
   var primerDiaMes=new Date(hoyD.getFullYear(),hoyD.getMonth(),1).toISOString().slice(0,10);
   var ultimoDiaMes=new Date(hoyD.getFullYear(),hoyD.getMonth()+1,0).toISOString().slice(0,10);
   body.innerHTML='<div class="seccion-titulo">🤝 Evaluar comportamiento</div><div class="form-card"><div class="form-group"><label>Colaborador</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Calificación (1 a 10)</label><input type="number" id="ev-calif" min="1" max="10" step="0.5" placeholder="Ej. 8.5"></div><div class="form-group"><label>Comentario (opcional)</label><input type="text" id="ev-comentario" placeholder="Ej. Buena actitud, apoya a sus compañeros..."></div><div class="form-group"><label>Periodo evaluado</label><div style="display:flex;gap:8px;"><input type="date" id="ev-desde" value="'+primerDiaMes+'"><input type="date" id="ev-hasta" value="'+ultimoDiaMes+'"></div></div><button class="btn-primary" id="ev-guardar">Guardar evaluación</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderPermisosRevision()">← Volver a Permisos</button>';
-  document.getElementById('ev-guardar').addEventListener('click',function(){
+  (document.getElementById('ev-guardar')||{addEventListener:function(){}}).addEventListener('click',function(){
     var opId=document.querySelector('.op-chip.sel');
     var calif=parseFloat(document.getElementById('ev-calif').value);
     if(!opId){alert('Selecciona un colaborador.');return;}
@@ -7598,7 +7598,7 @@ function renderAjustarNomina(operarioId,nombre,semanaInicio,diasActual,horasActu
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo">✏️ Ajustar nómina — '+nombre+'</div><p class="hint" style="margin-bottom:.75rem;">Corrige manualmente los días trabajados y/o las horas extra de esta semana cuando la asistencia por QR no haya quedado bien registrada. El ajuste reemplaza el cálculo automático solo para esta semana.</p><div class="form-card"><div class="form-group"><label>Días trabajados (pagados)</label><input type="number" id="an-dias" min="0" step="0.5" value="'+diasActual+'"></div><div class="form-group"><label>Horas extra</label><input type="number" id="an-horas" min="0" step="0.1" value="'+horasActual+'"></div><div class="form-group"><label>Motivo (opcional)</label><input type="text" id="an-motivo" value="'+(motivoActual||'').replace(/"/g,'&quot;')+'" placeholder="Ej. QR no registró bien la salida"></div><button class="btn-primary" id="an-guardar">Guardar ajuste</button><button type="button" id="an-quitar" style="width:100%;margin-top:.5rem;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--gris-2);background:var(--gris-1);color:var(--gris-3);font-weight:600;font-size:.85rem;cursor:pointer;">↩️ Quitar ajuste (volver al cálculo automático)</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderGenerarNomina(new Date(\''+semanaInicio+'T00:00:00\'))">← Volver sin guardar</button>';
 
-  document.getElementById('an-guardar').addEventListener('click',function(){
+  (document.getElementById('an-guardar')||{addEventListener:function(){}}).addEventListener('click',function(){
     var btn=this; btn.disabled=true; btn.textContent='Guardando...';
     var dias=parseFloat(document.getElementById('an-dias').value);
     var horas=parseFloat(document.getElementById('an-horas').value);
@@ -7614,7 +7614,7 @@ function renderAjustarNomina(operarioId,nombre,semanaInicio,diasActual,horasActu
     }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Guardar ajuste';});
   });
 
-  document.getElementById('an-quitar').addEventListener('click',function(){
+  (document.getElementById('an-quitar')||{addEventListener:function(){}}).addEventListener('click',function(){
     if(!confirm('¿Quitar el ajuste manual y volver a calcular esta semana automáticamente desde la asistencia?')) return;
     from('nomina_ajustes').eq('operario_id',operarioId).eq('semana_inicio',semanaInicio).delete().then(function(){
       showToast('✅ Ajuste eliminado');
@@ -7705,7 +7705,7 @@ function renderNuevoPrestamo(prefill){
     var montoMax=(cfg.prestamo_monto_max!==undefined&&cfg.prestamo_monto_max!==null&&cfg.prestamo_monto_max!=='')?parseFloat(cfg.prestamo_monto_max):null;
     var opO=cats.operarios.map(function(o){return '<button type="button" class="op-chip'+(prefill.operarioId===o.id?' sel':'')+'" data-id="'+o.id+'" onclick="seleccionUnica(this)">'+o.nombre+'</button>';}).join('');
     body.innerHTML='<div class="seccion-titulo">+ Nuevo préstamo</div><div class="form-card">'+(prefill.solicitudId?'<p class="hint" style="margin-bottom:.75rem;">Completando la solicitud del colaborador — ajusta pagos y fecha antes de registrar.</p>':'')+(montoMax!=null?'<p class="hint" style="margin-bottom:.75rem;">Monto máximo autorizable por préstamo: $'+montoMax.toFixed(2)+' · Máximo '+maxMes+' préstamo(s) por colaborador al mes. <a href="javascript:void(0)" onclick="renderConfig()" style="color:var(--verde-mid);">cambiar</a></p>':'')+'<div class="form-group"><label>Colaborador</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Concepto</label><input type="text" id="pr-concepto" value="'+(prefill.concepto||'').replace(/"/g,'&quot;')+'" placeholder="Ej. Préstamo personal / Anticipo de nómina"></div><div class="form-group"><label>Monto total ($)</label><input type="number" id="pr-monto" min="0" step="1" value="'+(prefill.monto||'')+'" placeholder="Ej. 600"></div><div class="form-group"><label>Número de pagos semanales</label><input type="number" id="pr-pagos" min="1" step="1" placeholder="Ej. 3"></div><div class="form-group"><label>Semana en que inicia el descuento</label><input type="date" id="pr-fecha" value="'+fechaHoyLocal()+'"></div><button class="btn-primary" id="pr-guardar">Registrar préstamo</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderPrestamos()">← Volver a Préstamos</button>';
-    document.getElementById('pr-guardar').addEventListener('click',function(){
+    (document.getElementById('pr-guardar')||{addEventListener:function(){}}).addEventListener('click',function(){
     var opBtn=document.querySelector('.op-chip.sel');
     var concepto=document.getElementById('pr-concepto').value.trim();
     var monto=parseFloat(document.getElementById('pr-monto').value);
@@ -7781,7 +7781,7 @@ function renderNuevoBono(){
   document.querySelectorAll('[data-rec]').forEach(function(b){b.addEventListener('click',function(){
     document.getElementById('bo-monto-wrap').style.display=this.dataset.rec==='economico'?'':'none';
   });});
-  document.getElementById('bo-guardar').addEventListener('click',function(){
+  (document.getElementById('bo-guardar')||{addEventListener:function(){}}).addEventListener('click',function(){
     var tipoBtn=document.querySelector('[data-tipo].sel'), recBtn=document.querySelector('[data-rec].sel');
     var desc=document.getElementById('bo-desc').value.trim();
     if(!desc){alert('Describe el bono.');return;}
@@ -7837,15 +7837,15 @@ function renderAsigCosechaSurcos(){
     var num=parseInt(this.dataset.n);var idx=cosecha.surcos.indexOf(num);
     if(idx>-1){cosecha.surcos.splice(idx,1);this.classList.remove('sel');}else{cosecha.surcos.push(num);this.classList.add('sel');}
   });});
-  document.getElementById('cos-todos').addEventListener('click',function(){
+  (document.getElementById('cos-todos')||{addEventListener:function(){}}).addEventListener('click',function(){
     cosecha.surcos=[];
     document.querySelectorAll('#cos-fsc .surco-btn').forEach(function(b){cosecha.surcos.push(parseInt(b.dataset.n));b.classList.add('sel');});
   });
-  document.getElementById('cos-ninguno').addEventListener('click',function(){
+  (document.getElementById('cos-ninguno')||{addEventListener:function(){}}).addEventListener('click',function(){
     cosecha.surcos=[];
     document.querySelectorAll('#cos-fsc .surco-btn').forEach(function(b){b.classList.remove('sel');});
   });
-  document.getElementById('cos-surcos-continuar').addEventListener('click',function(){
+  (document.getElementById('cos-surcos-continuar')||{addEventListener:function(){}}).addEventListener('click',function(){
     if(!cosecha.surcos.length){alert('Selecciona al menos un surco, o toca "Tabla completa".');return;}
     renderAsigCosechaOperarios();
   });
@@ -7855,7 +7855,7 @@ function renderAsigCosechaOperarios(){
   var body=document.getElementById('enc-body');
   var opO=cats.cosechadores.map(function(o){return '<button type="button" class="op-chip'+(cosecha.operarios.indexOf(o.id)>-1?' sel':'')+'" data-id="'+o.id+'" onclick="toggleChip(this)">'+o.nombre+'</button>';}).join('');
   body.innerHTML='<div class="seccion-titulo">🧺 ¿Quién cosecha?</div><div class="form-card">'+(cats.cosechadores.length?'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1rem;">'+opO+'</div>':'<p class="hint">No hay usuarios con rol "cosechador" registrados. Créalos en Config.</p>')+'<button class="btn-primary" id="cos-op-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigCosechaSurcos()">← Volver a surcos</button>';
-  document.getElementById('cos-op-continuar').addEventListener('click',function(){
+  (document.getElementById('cos-op-continuar')||{addEventListener:function(){}}).addEventListener('click',function(){
     var opIds=Array.from(document.querySelectorAll('.op-chip.sel')).map(function(c){return c.dataset.id;});
     if(!opIds.length){alert('Selecciona al menos un cosechador.');return;}
     cosecha.operarios=opIds;
@@ -7866,7 +7866,7 @@ function renderAsigCosechaOperarios(){
 function renderAsigCosechaFecha(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo">🧺 Fecha</div><div class="form-card"><div class="form-group"><label>Fecha de cosecha</label><input type="date" id="cos-fecha" value="'+cosecha.fecha+'"></div><button class="btn-primary" id="cos-fecha-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigCosechaOperarios()">← Volver a cosechadores</button>';
-  document.getElementById('cos-fecha-continuar').addEventListener('click',function(){
+  (document.getElementById('cos-fecha-continuar')||{addEventListener:function(){}}).addEventListener('click',function(){
     cosecha.fecha=document.getElementById('cos-fecha').value||cosecha.fecha;
     renderAsigCosechaNotas();
   });
@@ -7878,7 +7878,7 @@ function renderAsigCosechaNotas(){
   var p=cats.plantaciones.find(function(x){return x.id===cosecha.plantacionId;});
   var opNombres=cosecha.operarios.map(function(id){var o=cats.cosechadores.find(function(x){return x.id===id;});return o?o.nombre:'';}).join(', ');
   body.innerHTML='<div class="seccion-titulo">🧺 Confirmar cosecha</div><div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row"><span class="resumen-key">Ubicación</span><span class="resumen-val">📍 '+(p?p.nombre:'')+' · '+(t?t.nombre:'')+'</span></div><div class="resumen-row"><span class="resumen-key">Surcos</span><span class="resumen-val">'+cosecha.surcos.join(', ')+'</span></div><div class="resumen-row"><span class="resumen-key">Cosechadores</span><span class="resumen-val">'+opNombres+'</span></div><div class="resumen-row"><span class="resumen-key">Fecha</span><span class="resumen-val">'+cosecha.fecha+'</span></div></div><div class="form-group"><label>Notas (opcional)</label><input type="text" id="cos-notas" placeholder="Instrucciones para el cosechador..."></div><button class="btn-primary" id="cos-finalizar">✅ Asignar cosecha</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigCosechaFecha()">← Volver a fecha</button>';
-  document.getElementById('cos-finalizar').addEventListener('click',guardarCosecha);
+  (document.getElementById('cos-finalizar')||{addEventListener:function(){}}).addEventListener('click',guardarCosecha);
 }
 
 function guardarCosecha(){
@@ -7902,7 +7902,7 @@ function renderAsignarExtra(lb){
   var body=document.getElementById('enc-body');
   var opO=cats.operarios.map(function(o){return '<button type="button" class="op-chip" data-id="'+o.id+'" onclick="toggleChip(this)">'+o.nombre+'</button>';}).join('');
   body.innerHTML='<div class="seccion-titulo">⏰ Hora extra</div><div class="form-card"><div class="labor-chosen">'+(ICONOS[lb.nombre]||'🔧')+' <strong>'+lb.nombre+'</strong></div><div class="form-group"><label>Operarios</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Fecha</label><input type="date" id="ext-fecha" value="'+fechaHoyLocal()+'"></div><div class="form-group"><label>¿Cuántas horas autorizas?</label><input type="number" id="ext-horas" min="0.5" step="0.5" value="2"><p class="hint">Se le pagará por este número de horas, aunque tarde más en escanear su salida.</p></div><div class="form-group"><label>Notas (opcional)</label><input type="text" id="ext-motivo" placeholder="Ej. Terminar aplicación pendiente"></div><button class="btn-primary" id="ext-guardar">Autorizar hora extra</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderFormAsignar()">← Cambiar labor</button>';
-  document.getElementById('ext-guardar').addEventListener('click',function(){
+  (document.getElementById('ext-guardar')||{addEventListener:function(){}}).addEventListener('click',function(){
     var opIds=Array.from(document.querySelectorAll('.op-chip.sel')).map(function(c){return c.dataset.id;});
     var fecha=document.getElementById('ext-fecha').value;
     var motivo=document.getElementById('ext-motivo').value||null;
@@ -8785,7 +8785,7 @@ function renderSolicitarPrestamo(){
       return;
     }
     body.innerHTML='<div class="seccion-titulo">💰 Solicitar préstamo</div>'+estadoTxt+'<div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Tu solicitud llega directo a administración para revisión — no es automático, te avisarán cuando la resuelvan.'+(montoMax!=null?' Monto máximo por préstamo: $'+montoMax.toFixed(2)+'.':'')+'</p><div class="form-group"><label>¿Cuánto necesitas?</label><input type="number" id="sp-monto" min="0" step="any" placeholder="$0.00"></div><div class="form-group"><label>¿Para qué lo necesitas?</label><textarea id="sp-motivo" rows="4" placeholder="Cuéntanos brevemente el motivo..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="sp-enviar">Enviar solicitud</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderSolicitudesMenu()">← Volver a Solicitudes</button>';
-    document.getElementById('sp-enviar').addEventListener('click',function(){
+    (document.getElementById('sp-enviar')||{addEventListener:function(){}}).addEventListener('click',function(){
       var monto=parseFloat(document.getElementById('sp-monto').value)||0;
       var motivo=(document.getElementById('sp-motivo').value||'').trim();
       if(monto<=0){alert('Escribe cuánto necesitas.');return;}
@@ -8806,7 +8806,7 @@ function renderSolicitudOtro(contexto){
   var esSugerencia=contexto==='sugerencia';
   var body=document.getElementById('op-body');
   body.innerHTML='<div class="seccion-titulo">'+(esSugerencia?'💡 Sugerencia':'💬 Otro asunto')+'</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">'+(esSugerencia?'Comparte una idea o sugerencia — administración la va a revisar.':'Para cualquier tema que no sea permiso ni préstamo — administración lo va a revisar directamente.')+'</p><div class="form-group"><label>Cuéntanos qué necesitas</label><textarea id="so-mensaje" rows="5" placeholder="Escribe tu mensaje aquí..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="so-enviar">Enviar '+(esSugerencia?'sugerencia':'solicitud')+'</button></div><button class="btn-back" style="margin-top:1rem;" onclick="'+(esSugerencia?'renderCentroReportes()':'renderSolicitudesMenu()')+'">← Volver</button>';
-  document.getElementById('so-enviar').addEventListener('click',function(){
+  (document.getElementById('so-enviar')||{addEventListener:function(){}}).addEventListener('click',function(){
     var mensaje=(document.getElementById('so-mensaje').value||'').trim();
     if(!mensaje){alert('Escribe tu mensaje.');return;}
     var btn=this; btn.disabled=true; btn.textContent='Enviando...';
@@ -8875,7 +8875,7 @@ function renderFormPermiso(tipo){
   permisoEvidenciaBlob=null;
   var adjuntoHtml=tipo==='medico'?'<div class="form-group"><label>Comprobante médico (foto, opcional pero recomendado)</label><button type="button" onclick="document.getElementById(\'perm-ev-input\').click()" style="width:100%;padding:.75rem;border:1.5px dashed var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📎 Adjuntar foto del comprobante</button><div id="perm-ev-status" class="hint" style="margin-top:.4rem;"></div></div>':'';
   body.innerHTML='<div class="seccion-titulo">'+(tipo==='medico'?'🩺 Permiso médico':'👤 Permiso personal')+'</div><div class="form-card"><div class="form-group"><label>Desde</label><input type="date" id="perm-fi" value="'+hoy+'"></div><div class="form-group"><label>Hasta</label><input type="date" id="perm-ff" value="'+hoy+'"></div><div class="form-group"><label>Motivo</label><input type="text" id="perm-motivo" placeholder="'+(tipo==='medico'?'Ej. Cita médica, incapacidad...':'Ej. Trámite personal, asunto familiar...')+'"></div>'+adjuntoHtml+'<button class="btn-primary" id="perm-enviar">Enviar solicitud</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsisPermisos()">← Cancelar</button>';
-  document.getElementById('perm-enviar').addEventListener('click',function(){
+  (document.getElementById('perm-enviar')||{addEventListener:function(){}}).addEventListener('click',function(){
     var fi=document.getElementById('perm-fi').value, ff=document.getElementById('perm-ff').value;
     var motivo=document.getElementById('perm-motivo').value||null;
     if(!fi||!ff){alert('Completa las fechas.');return;}
@@ -9528,7 +9528,7 @@ function renderRiegoEjecucion(ordenId){
 
   if(o.estado==='pendiente'){
     body.innerHTML=riegoClimaMobileHtml()+'<div class="seccion-titulo">💧 '+(p?p.nombre:'')+' · '+o.tabla.nombre+'</div><div class="riego-ejec-card"><div class="riego-ejec-min">'+o.duracion_minutos+' min</div><p class="hint">Duración programada por el encargado</p><button class="btn-primary" id="riego-iniciar">▶ Iniciar riego</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderRiegoTablas(\''+o.tabla.plantacion_id+'\')">← Volver a tablas</button>';
-    cargarClimaRiego();document.getElementById('riego-iniciar').addEventListener('click',function(){
+    cargarClimaRiego();(document.getElementById('riego-iniciar')||{addEventListener:function(){}}).addEventListener('click',function(){
       var ahora=new Date().toISOString();
       riegoActualizarEstado(o,{estado:'en_proceso',hora_inicio_real:ahora});
       renderRiegoEjecucion(ordenId);
@@ -9548,12 +9548,12 @@ function renderRiegoEjecucion(ordenId){
       var textoRestante=(negP?'+':'')+String(mmP).padStart(2,'0')+':'+String(ssP).padStart(2,'0');
       var motivoHtml=o.motivo_pausa?'<p class="hint" style="margin-top:.35rem;">Motivo: '+o.motivo_pausa+'</p>':'';
       body.innerHTML=riegoClimaMobileHtml()+'<div class="seccion-titulo">💧 '+(p?p.nombre:'')+' · '+o.tabla.nombre+'</div><div class="riego-ejec-card" id="riego-card" style="background:#fff6e5;border:1.5px solid #f0b429;"><div class="riego-ejec-min">⏸ '+textoRestante+'</div><p class="hint" id="riego-msg">Riego en pausa — tiempo restante congelado</p>'+motivoHtml+'<div style="display:flex;gap:8px;margin-top:.75rem;"><button class="btn-primary" id="riego-reanudar" style="flex:1;">▶ Reanudar riego</button><button class="btn-primary" id="riego-terminar-pausado" style="flex:1;background:var(--rojo)">⏹ Terminar</button></div></div><button class="btn-back" style="margin-top:1rem;" onclick="renderRiegoTablas(\''+o.tabla.plantacion_id+'\')">← Volver a tablas</button>';
-      cargarClimaRiego();document.getElementById('riego-reanudar').addEventListener('click',function(){
+      cargarClimaRiego();(document.getElementById('riego-reanudar')||{addEventListener:function(){}}).addEventListener('click',function(){
         var minutosPausa=(Date.now()-pausaInicio)/60000;
         riegoActualizarEstado(o,{pausado_en:null,motivo_pausa:null,minutos_pausados_acumulados:(o.minutos_pausados_acumulados||0)+minutosPausa});
         renderRiegoEjecucion(ordenId);
       });
-      document.getElementById('riego-terminar-pausado').addEventListener('click',function(){
+      (document.getElementById('riego-terminar-pausado')||{addEventListener:function(){}}).addEventListener('click',function(){
         riegoActualizarEstado(o,{estado:'completada',hora_fin_real:new Date().toISOString()});
         riegoIrSiguiente(ordenId);
       });
@@ -9561,12 +9561,12 @@ function renderRiegoEjecucion(ordenId){
     }
 
     body.innerHTML=riegoClimaMobileHtml()+'<div class="seccion-titulo">💧 '+(p?p.nombre:'')+' · '+o.tabla.nombre+'</div><div class="riego-ejec-card" id="riego-card"><div class="riego-ejec-min" id="riego-cuenta">--:--</div><p class="hint" id="riego-msg">Riego en curso</p><div style="display:flex;gap:8px;"><button class="btn-primary" style="flex:1;background:#f0b429" id="riego-pausar">⏸ Pausar</button><button class="btn-primary" style="flex:1;background:var(--rojo)" id="riego-terminar">⏹ Terminar riego</button></div></div><p class="hint" style="margin-top:.75rem;">La alarma sonará una vez cuando falten 5 min para preparar el cambio de tabla y nuevamente al llegar a 00:00. Puedes cerrar la tabla sin Wi‑Fi; Mootsil guardará el cierre y continuará con la siguiente.</p><button class="btn-back" style="margin-top:.5rem;" onclick="renderRiegoTablas(\''+o.tabla.plantacion_id+'\')">← Volver a tablas</button>';
-    cargarClimaRiego();document.getElementById('riego-terminar').addEventListener('click',function(){
+    cargarClimaRiego();(document.getElementById('riego-terminar')||{addEventListener:function(){}}).addEventListener('click',function(){
       pararRiegoTimer();
       riegoActualizarEstado(o,{estado:'completada',hora_fin_real:new Date().toISOString()});
       riegoIrSiguiente(ordenId);
     });
-    document.getElementById('riego-pausar').addEventListener('click',function(){
+    (document.getElementById('riego-pausar')||{addEventListener:function(){}}).addEventListener('click',function(){
       pararRiegoTimer();
       var motivo=prompt('¿Por qué pausas el riego? (opcional)\nEj. fuga, accidente, emergencia...')||'';
       riegoActualizarEstado(o,{pausado_en:new Date().toISOString(),motivo_pausa:motivo.trim()?motivo.trim():null});
@@ -9972,11 +9972,11 @@ function renderConfig(){
     html+='<div class="seccion-titulo" style="margin-top:1.25rem;">📍 Ubicación del rancho</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Párate dentro del rancho con tu celular y toca el botón. Mientras esto no esté definido, los colaboradores pueden registrar su entrada/salida desde cualquier lugar. En cuanto lo definas, la app bloqueará el registro de asistencia a quien esté fuera del radio permitido.</p>'+(cfg.rancho_lat?'<p class="hint" style="margin-bottom:.75rem;color:var(--verde-mid);font-weight:700;">✅ Ubicación guardada — el bloqueo por zona ya está activo</p>':'<p class="hint" style="margin-bottom:.75rem;color:var(--tierra);font-weight:700;">⚠️ Aún no se ha definido — el bloqueo por zona todavía NO está activo</p>')+'<button class="btn-primary" id="cfg-fijar-ubicacion">📍 Usar mi ubicación actual</button><div class="form-group" style="margin-top:.9rem;"><label>Radio permitido (metros)</label><input type="number" id="cfg-radio" value="'+(cfg.rancho_radio_metros||500)+'"><button class="btn-sm btn-completar" id="cfg-guardar-radio" style="margin-top:.5rem;">Guardar radio</button></div></div>';
     html+='<div class="seccion-titulo" style="margin-top:1.25rem;">💰 Préstamos a colaboradores</div><div class="form-card"><div class="form-group"><label>Máximo de préstamos por colaborador al mes</label><input type="number" id="cfg-prestamo-max-mes" min="1" step="1" value="'+(cfg.prestamo_max_activos_mes||1)+'"></div><div class="form-group"><label>Monto máximo que se puede autorizar por préstamo ($)</label><input type="number" id="cfg-prestamo-monto-max" min="0" step="1" value="'+(cfg.prestamo_monto_max||'')+'"></div><p class="hint">Con esto, el colaborador verá en su app cuántos préstamos lleva usados este mes y no podrá solicitar más una vez que llegue al máximo. Administración tampoco podrá registrar un préstamo por encima del monto máximo.</p><button class="btn-primary" id="cfg-guardar-prestamo">Guardar límites de préstamos</button></div>';
     body.innerHTML=html;
-    document.getElementById('cfg-guardar-tarifa').addEventListener('click',function(){
+    (document.getElementById('cfg-guardar-tarifa')||{addEventListener:function(){}}).addEventListener('click',function(){
       var tarifa=document.getElementById('cfg-tarifa-extra').value||70;
       from('config_app').eq('clave','tarifa_hora_extra').update({valor:String(tarifa)}).then(function(){showToast('✅ Tarifa guardada');}).catch(function(e){alert('Error: '+e.message);});
     });
-    document.getElementById('cfg-fijar-ubicacion').addEventListener('click',function(){
+    (document.getElementById('cfg-fijar-ubicacion')||{addEventListener:function(){}}).addEventListener('click',function(){
       var btn=this; btn.disabled=true; btn.textContent='Obteniendo ubicación...';
       if(!navigator.geolocation){alert('Tu navegador no soporta ubicación.');btn.disabled=false;btn.textContent='📍 Usar mi ubicación actual';return;}
       navigator.geolocation.getCurrentPosition(function(pos){
@@ -9986,11 +9986,11 @@ function renderConfig(){
         ]).then(function(){showToast('✅ Ubicación del rancho guardada');renderConfig();}).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='📍 Usar mi ubicación actual';});
       },function(){alert('No se pudo obtener tu ubicación. Revisa los permisos del navegador.');btn.disabled=false;btn.textContent='📍 Usar mi ubicación actual';},{timeout:8000});
     });
-    document.getElementById('cfg-guardar-radio').addEventListener('click',function(){
+    (document.getElementById('cfg-guardar-radio')||{addEventListener:function(){}}).addEventListener('click',function(){
       var radio=document.getElementById('cfg-radio').value||800;
       from('config_app').eq('clave','rancho_radio_metros').update({valor:String(radio)}).then(function(){showToast('✅ Radio guardado');}).catch(function(e){alert('Error: '+e.message);});
     });
-    document.getElementById('cfg-guardar-emerg').addEventListener('click',function(){
+    (document.getElementById('cfg-guardar-emerg')||{addEventListener:function(){}}).addEventListener('click',function(){
       var pol=document.getElementById('cfg-policia').value||'911';
       var bom=document.getElementById('cfg-bomberos').value||'911';
       var amb=document.getElementById('cfg-ambulancia').value||'911';
@@ -10000,7 +10000,7 @@ function renderConfig(){
         from('config_app').eq('clave','emergencia_ambulancia').update({valor:amb})
       ]).then(function(){showToast('✅ Números guardados');}).catch(function(e){alert('Error: '+e.message);});
     });
-    document.getElementById('cfg-guardar-prestamo').addEventListener('click',function(){
+    (document.getElementById('cfg-guardar-prestamo')||{addEventListener:function(){}}).addEventListener('click',function(){
       var maxMes=parseInt(document.getElementById('cfg-prestamo-max-mes').value)||1;
       var montoMax=document.getElementById('cfg-prestamo-monto-max').value;
       montoMax=montoMax===''?'':(parseFloat(montoMax)||0);
@@ -10064,7 +10064,7 @@ function renderNuevoContrato(){
   var body=document.getElementById('enc-body');
   var opO=cats.operarios.map(function(o){return '<button type="button" class="op-chip" data-id="'+o.id+'" onclick="seleccionUnica(this)">'+o.nombre+'</button>';}).join('');
   body.innerHTML='<div class="seccion-titulo">+ Nuevo contrato</div><div class="form-card"><div class="form-group"><label>Colaborador</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Tipo de contrato</label><input type="text" id="ct-tipo" placeholder="Ej. Tiempo completo / Por temporada"></div><div class="form-group"><label>Fecha de inicio</label><input type="date" id="ct-fecha" value="'+fechaHoyLocal()+'"></div><div class="form-group"><label>Documento (foto o PDF, opcional)</label><button type="button" onclick="document.getElementById(\'ct-archivo\').click()" style="width:100%;padding:.75rem;border:1.5px dashed var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📎 Adjuntar archivo</button><div id="ct-archivo-status" style="margin-top:.5rem;"></div><input type="hidden" id="ct-url"><input type="file" id="ct-archivo" accept="image/*,.pdf" style="display:none"></div><div class="form-group"><label>Notas</label><input type="text" id="ct-notas" placeholder="Opcional..."></div><button class="btn-primary" id="ct-guardar">Guardar contrato</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderContratos()">← Volver a Contratos</button>';
-  document.getElementById('ct-archivo').addEventListener('change',function(){
+  (document.getElementById('ct-archivo')||{addEventListener:function(){}}).addEventListener('change',function(){
     var f=this.files&&this.files[0];
     if(!f) return;
     var status=document.getElementById('ct-archivo-status');
@@ -10077,7 +10077,7 @@ function renderNuevoContrato(){
       status.innerHTML='✅ Archivo listo: '+f.name;
     }).catch(function(e){status.innerHTML='<span style="color:var(--rojo);">No se pudo subir: '+e.message+'</span>';});
   });
-  document.getElementById('ct-guardar').addEventListener('click',function(){
+  (document.getElementById('ct-guardar')||{addEventListener:function(){}}).addEventListener('click',function(){
     var opBtn=document.querySelector('.op-chip.sel');
     if(!opBtn){alert('Selecciona un colaborador.');return;}
     var tipo=document.getElementById('ct-tipo').value||null;
@@ -10114,7 +10114,7 @@ function renderNuevoDocumentoPersonal(){
   var body=document.getElementById('enc-body');
   var opO=cats.operarios.map(function(o){return '<button type="button" class="op-chip" data-id="'+o.id+'" onclick="seleccionUnica(this)">'+o.nombre+'</button>';}).join('');
   body.innerHTML='<div class="seccion-titulo">+ Nuevo documento</div><div class="form-card"><div class="form-group"><label>Colaborador</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Tipo de documento</label><select id="dp-tipo"><option value="INE">INE</option><option value="CURP">CURP</option><option value="RFC/SAT">RFC / SAT</option><option value="Comprobante de domicilio">Comprobante de domicilio</option><option value="Acta de nacimiento">Acta de nacimiento</option><option value="Otro">Otro</option></select></div><div class="form-group"><label>Documento (foto o PDF)</label><button type="button" onclick="document.getElementById(\'dp-archivo\').click()" style="width:100%;padding:.75rem;border:1.5px dashed var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📎 Adjuntar archivo</button><div id="dp-archivo-status" style="margin-top:.5rem;"></div><input type="hidden" id="dp-url"><input type="file" id="dp-archivo" accept="image/*,.pdf" style="display:none"></div><div class="form-group"><label>Notas (opcional)</label><input type="text" id="dp-notas"></div><button class="btn-primary" id="dp-guardar">Guardar documento</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderDocumentosPersonales()">← Volver a Documentos</button>';
-  document.getElementById('dp-archivo').addEventListener('change',function(){
+  (document.getElementById('dp-archivo')||{addEventListener:function(){}}).addEventListener('change',function(){
     var f=this.files&&this.files[0];
     if(!f) return;
     var status=document.getElementById('dp-archivo-status');
@@ -10127,7 +10127,7 @@ function renderNuevoDocumentoPersonal(){
       status.innerHTML='✅ Archivo listo: '+f.name;
     }).catch(function(e){status.innerHTML='<span style="color:var(--rojo);">No se pudo subir: '+e.message+'</span>';});
   });
-  document.getElementById('dp-guardar').addEventListener('click',function(){
+  (document.getElementById('dp-guardar')||{addEventListener:function(){}}).addEventListener('click',function(){
     var opBtn=document.querySelector('.op-chip.sel');
     var url=document.getElementById('dp-url').value;
     if(!opBtn){alert('Selecciona un colaborador.');return;}
@@ -10193,7 +10193,7 @@ function renderCambiarMiPin(){
   var body=document.getElementById(esOperario?'op-body':'enc-body');
   var volver = esOperario?'cargarTareas()':'renderTablero()';
   body.innerHTML='<div class="seccion-titulo">🔒 Cambiar mi PIN</div><div class="form-card"><div class="form-group"><label>Tu PIN actual</label><input type="number" id="mp-actual" placeholder="0000" min="0" max="9999"></div><div class="form-group"><label>Nuevo PIN (4 dígitos)</label><input type="number" id="mp-nuevo" placeholder="0000" min="0" max="9999"></div><div class="form-group"><label>Repite el nuevo PIN</label><input type="number" id="mp-nuevo2" placeholder="0000" min="0" max="9999"></div><button class="btn-primary" id="mp-guardar">Guardar nuevo PIN</button></div><button class="btn-back" style="margin-top:1rem;" onclick="'+volver+'">← Cancelar</button>';
-  document.getElementById('mp-guardar').addEventListener('click',function(){
+  (document.getElementById('mp-guardar')||{addEventListener:function(){}}).addEventListener('click',function(){
     var actual=String(document.getElementById('mp-actual').value||'').padStart(4,'0');
     var nuevo=String(document.getElementById('mp-nuevo').value||'').padStart(4,'0');
     var nuevo2=String(document.getElementById('mp-nuevo2').value||'').padStart(4,'0');
@@ -10403,11 +10403,11 @@ renderProgramacionRiegoV1=function(){
   cargarClimaRiego();actualizarSemanaVisibleMootsil();
   var opSel=document.getElementById('rg-plan-operario');if(opSel)opSel.addEventListener('change',function(){if(RIEGO_PLAN_MODO==='semana'){riegoPlanDiaAsegurar(RIEGO_PLAN_DIA_ACTIVO).operario=this.value;}else{RIEGO_PLAN_OPERARIO=this.value;}});
   body.querySelectorAll('[data-rg-modo]').forEach(function(b){b.addEventListener('click',function(){var previo=RIEGO_PLAN_MODO;RIEGO_PLAN_MODO=this.dataset.rgModo;RIEGO_PLAN_EDICION=false;var f=document.getElementById('rg-plan-fecha').value||fechaHoyLocal();RIEGO_PLAN_FECHA=RIEGO_PLAN_MODO==='semana'?riegoInicioSemanaStr(f):f;if(RIEGO_PLAN_MODO==='semana'){RIEGO_PLAN_SEMANA={};RIEGO_PLAN_DIA_ACTIVO=RIEGO_PLAN_FECHA;for(var i=0;i<7;i++)riegoPlanDiaAsegurar(riegoFechaMasDias(RIEGO_PLAN_FECHA,i));}else if(previo==='semana'){RIEGO_PLAN_TABLAS=riegoClonarTablasDefault();RIEGO_PLAN_OPERARIO='';}renderProgramacionRiegoV1();});});
-  document.getElementById('rg-plan-fecha').addEventListener('change',function(){RIEGO_PLAN_FECHA=RIEGO_PLAN_MODO==='semana'?riegoInicioSemanaStr(this.value):this.value;RIEGO_PLAN_EDICION=false;if(RIEGO_PLAN_MODO==='semana'){RIEGO_PLAN_SEMANA={};RIEGO_PLAN_DIA_ACTIVO=RIEGO_PLAN_FECHA;for(var i=0;i<7;i++)riegoPlanDiaAsegurar(riegoFechaMasDias(RIEGO_PLAN_FECHA,i));}renderProgramacionRiegoV1();});
+  (document.getElementById('rg-plan-fecha')||{addEventListener:function(){}}).addEventListener('change',function(){RIEGO_PLAN_FECHA=RIEGO_PLAN_MODO==='semana'?riegoInicioSemanaStr(this.value):this.value;RIEGO_PLAN_EDICION=false;if(RIEGO_PLAN_MODO==='semana'){RIEGO_PLAN_SEMANA={};RIEGO_PLAN_DIA_ACTIVO=RIEGO_PLAN_FECHA;for(var i=0;i<7;i++)riegoPlanDiaAsegurar(riegoFechaMasDias(RIEGO_PLAN_FECHA,i));}renderProgramacionRiegoV1();});
   body.querySelectorAll('[data-rg-weekday]').forEach(function(b){b.addEventListener('click',function(){RIEGO_PLAN_DIA_ACTIVO=this.dataset.rgWeekday;renderProgramacionRiegoV1();});});
   body.querySelectorAll('[data-rg-tabla]').forEach(function(c){c.addEventListener('change',function(){var target=RIEGO_PLAN_MODO==='semana'?riegoPlanDiaAsegurar(RIEGO_PLAN_DIA_ACTIVO).tablas:RIEGO_PLAN_TABLAS;var cfg=target[this.dataset.rgTabla]||{};cfg.sel=this.checked;target[this.dataset.rgTabla]=cfg;if(RIEGO_PLAN_MODO==='dia'&&RIEGO_PLAN_EDICION)RIEGO_PLAN_DIRTY[String(this.dataset.rgTabla)]=true;});});
   body.querySelectorAll('[data-rg-min]').forEach(function(i){i.addEventListener('change',function(){var target=RIEGO_PLAN_MODO==='semana'?riegoPlanDiaAsegurar(RIEGO_PLAN_DIA_ACTIVO).tablas:RIEGO_PLAN_TABLAS;var cfg=target[this.dataset.rgMin]||{};cfg.min=Math.max(1,parseInt(this.value)||45);target[this.dataset.rgMin]=cfg;});});
-  document.getElementById('rg-plan-guardar').addEventListener('click',guardarProgramacionRiegoV1);
+  (document.getElementById('rg-plan-guardar')||{addEventListener:function(){}}).addEventListener('click',guardarProgramacionRiegoV1);
 };
 
 guardarProgramacionRiegoV1=function(){
@@ -10520,5 +10520,8 @@ if('serviceWorker' in navigator){
 <input type="file" id="cam-input" accept="image/*,video/*" capture="environment" style="display:none" onchange="capturaEjec.foto=true;renderEjec();">
 <input type="file" id="gal-input" accept="image/*,video/*" capture style="display:none" onchange="capturaEjec.foto=true;renderEjec();">
 <input type="file" id="perm-ev-input" accept="image/*" style="display:none" onchange="capturarEvidenciaPermiso(event)">
+<script>
+/* C012 hotfix: los controles visualmente retirados no deben romper la carga de Riego. */
+</script>
 </body>
 </html>
