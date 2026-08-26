@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<title>Mootsil · Tablero del Rancho · C029 · Compras Limpias</title>
+<title>Mootsil · Tablero del Rancho · C030 · Compras Compactas</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
@@ -621,6 +621,28 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .nc29-cat-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}.nc29-cat-btn{border:1px solid #d9e2dc;background:#fff;color:#345448;border-radius:999px;padding:7px 11px;font-size:.68rem;font-weight:800;cursor:pointer}.nc29-cat-btn.sel{background:#eaf5ef;border-color:#257252;color:#155239}
 .nc29-prod-label{font-size:.68rem;font-weight:850;color:#5d6d65;text-transform:uppercase;letter-spacing:.03em}
 .nc29-item-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}.nc29-item-index{font-size:.7rem;font-weight:900;color:#174f3c}
+
+
+/* C030 — Compra compacta: menos altura, pago contextual y captura profesional */
+.nc30-card{background:#fff;border:1px solid #dde5df;border-radius:14px;padding:14px 16px;margin-bottom:12px}
+.nc30-topgrid{display:grid;grid-template-columns:1.6fr .8fr .72fr .85fr;gap:10px;align-items:end}
+.nc30-payline{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}
+.nc30-attach{display:inline-flex;align-items:center;gap:7px;border:1px solid #d8e1db;background:#fff;color:#174f3c;border-radius:9px;padding:8px 11px;font-size:.68rem;font-weight:850;cursor:pointer}
+.nc30-file-name{font-size:.65rem;color:#6f7e76;max-width:330px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#nc-comprobante{display:none}
+.nc30-product-row{display:grid;grid-template-columns:170px minmax(260px,1.7fr) 105px 105px 130px 38px;gap:8px;align-items:end}
+.nc30-product-row .form-group{margin-bottom:0!important}
+.nc30-product-row label{font-size:.62rem!important}
+.nc30-remove{height:39px;width:38px;border:1px solid #e1e6e2;background:#fff;border-radius:8px;color:#9b3b3b;cursor:pointer;font-weight:900}
+.nc30-add{display:inline-flex;width:auto!important;padding:8px 12px!important;margin:9px 0 0!important;border:1px solid #d6e1da!important;background:#fff!important;border-radius:9px!important;color:#17583f!important;font-size:.68rem!important;font-weight:850!important}
+.nc30-footer{display:flex;justify-content:flex-end;align-items:center;gap:14px;background:#fff;border:1px solid #dbe5df;border-radius:14px;padding:12px 15px;margin-top:12px}
+.nc30-total-wrap{text-align:right;margin-right:auto}.nc30-total-wrap span{display:block;font-size:.62rem;color:#758078;font-weight:850;text-transform:uppercase}.nc30-total-wrap strong{font-size:1.5rem;color:#126040}
+.nc30-cancel,.nc30-save{border-radius:9px;padding:9px 14px;font-size:.7rem;font-weight:900;cursor:pointer}.nc30-cancel{border:1px solid #d9e1dc;background:#fff;color:#52635a}.nc30-save{border:1px solid #0f6c49;background:#0f6c49;color:#fff;min-width:155px}
+.nc30-venc{min-width:260px}
+.nc30-category-select{width:100%;height:39px}
+.nc30-provider-results{max-height:180px}
+@media(max-width:1050px){.nc30-topgrid{grid-template-columns:1.4fr .8fr .8fr}.nc30-product-row{grid-template-columns:150px minmax(220px,1fr) 100px 100px 120px 38px}}
+@media(max-width:780px){.nc30-topgrid{grid-template-columns:1fr 1fr}.nc30-product-row{grid-template-columns:1fr 1fr}.nc30-product-row .wide{grid-column:1/-1}.nc30-footer{flex-wrap:wrap}.nc30-total-wrap{width:100%;text-align:left}}
 
 </style>
 </head>
@@ -5212,29 +5234,41 @@ function renderGastosCajaMenu(){
   var r=document.getElementById('c027-gastos-resumen');if(r)r.onclick=function(){renderResumenGastos(mes)};
   var h=document.getElementById('c027-gastos-historial');if(h)h.onclick=function(){renderHistorialGastos(mes)};
 }
+
+function ca30SeleccionarCuentaCompra(total,callback){
+  ca21OpenModal('<div class="ca21-dialog-head"><div><h3>Confirmar pago de contado</h3><p>Total de la compra: $'+formatMonto(total)+'</p></div><button class="ca21-close" onclick="ca21CloseModal()">×</button></div>'+
+  '<div class="ca21-dialog-body"><div class="ca21-field"><label>¿De qué cuenta se pagó?</label><select id="ca30-cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex">Banamex</option><option value="santander">Santander</option></select></div></div>'+
+  '<div class="ca21-dialog-actions"><button onclick="ca21CloseModal()">Cancelar</button><button class="save" id="ca30-confirmar">Confirmar pago</button></div>');
+  document.getElementById('ca30-confirmar').onclick=function(){
+    var c=document.getElementById('ca30-cuenta').value;
+    ca21CloseModal();
+    callback(c);
+  };
+}
 function renderNuevaCompra(){
   var body=document.getElementById('enc-body');
   var hoy=fechaHoyLocal();
   var provOpts=cats.proveedores.map(function(p){return '<option value="'+p.id+'">'+p.nombre+(p.giro?' — '+p.giro:'')+'</option>';}).join('');
   body.innerHTML='<div class="nc28-shell">'+
-    '<div class="nc28-head"><div><div class="nc28-eyebrow">Administración · Caja · Compras</div><div class="nc28-title">Nueva compra</div><div class="nc28-sub">Registra la factura, su proveedor y todos los productos de una sola compra.</div></div><button type="button" class="nc28-back" onclick="volverCompraContexto()">← Caja</button></div>'+
-    '<div class="nc28-card"><div class="nc28-card-title">Datos de la factura</div><div class="nc28-grid">'+
-      '<div class="form-group"><label>Proveedor</label><div class="nc29-provider-wrap"><input type="text" id="nc-proveedor-buscar" autocomplete="off" placeholder="Escribe el nombre del proveedor"><div id="nc-proveedor-resultados" class="nc29-provider-results"></div></div><select id="nc-proveedor" style="display:none"><option value="">Sin proveedor</option>'+provOpts+'<option value="_nuevo">+ Agregar nuevo proveedor...</option></select></div>'+
-      '<div class="form-group"><label>Número de factura (opcional)</label><input type="text" id="nc-factura" placeholder="Ej. A-4521"></div>'+
-      '<div class="form-group"><label>Fecha</label><input type="date" id="nc-fecha" value="'+hoy+'" max="'+hoy+'"></div>'+
+    '<div class="nc28-head"><div><div class="nc28-eyebrow">Administración · Caja · Compras</div><div class="nc28-title">Nueva compra</div><div class="nc28-sub">Captura rápida de factura y productos.</div></div><button type="button" class="nc28-back" onclick="volverCompraContexto()">← Caja</button></div>'+
+    '<div class="nc30-card">'+
+      '<div class="nc30-topgrid">'+
+        '<div class="form-group"><label>Proveedor</label><div class="nc29-provider-wrap"><input type="text" id="nc-proveedor-buscar" autocomplete="off" placeholder="Escribe proveedor"><div id="nc-proveedor-resultados" class="nc29-provider-results nc30-provider-results"></div></div><select id="nc-proveedor" style="display:none"><option value="">Sin proveedor</option>'+provOpts+'<option value="_nuevo">+ Agregar nuevo proveedor...</option></select></div>'+
+        '<div class="form-group"><label>Factura</label><input type="text" id="nc-factura" placeholder="Ej. A-4521"></div>'+
+        '<div class="form-group"><label>Fecha</label><input type="date" id="nc-fecha" value="'+hoy+'" max="'+hoy+'"></div>'+
+        '<div class="form-group"><label>Forma de compra</label><div style="display:flex;gap:6px"><button type="button" class="op-chip sel" id="nc-fp-contado">✓ Contado</button><button type="button" class="op-chip" id="nc-fp-credito">Crédito</button></div></div>'+
+      '</div>'+
+      '<div id="nc-prov-nuevo-wrap" style="display:none;background:#f7faf8;border:1px solid #dfe7e1;border-radius:10px;padding:10px;margin-top:9px"><div style="font-size:.68rem;font-weight:900;color:#17523c;margin-bottom:7px">Nuevo proveedor</div><div class="nc28-grid"><div class="form-group"><label>Nombre</label><input type="text" id="nc-prov-nombre"></div><div class="form-group"><label>Giro</label><input type="text" id="nc-prov-giro"></div><div class="form-group"><label>Teléfono</label><input type="text" id="nc-prov-tel"></div></div></div>'+
+      '<div class="nc30-payline">'+
+        '<div class="form-group nc30-venc" id="nc-vencimiento-wrap" style="display:none;margin:0"><label>Vencimiento</label><input type="date" id="nc-vencimiento"><p class="hint">Se registrará en Créditos de proveedores.</p></div>'+
+        '<select id="nc-cuenta-pago" style="display:none"><option value="efectivo">Efectivo en Caja</option><option value="banamex">Banamex</option><option value="santander">Santander</option></select>'+
+        '<label class="nc30-attach" for="nc-comprobante">📎 Adjuntar factura</label><input type="file" id="nc-comprobante" accept="image/*,.pdf"><span class="nc30-file-name" id="nc-comprobante-status">Sin archivo</span>'+
+      '</div>'+
     '</div>'+
-    '<div id="nc-prov-nuevo-wrap" style="display:none;background:#f7faf8;border:1px solid #dfe7e1;border-radius:12px;padding:12px;margin-top:10px"><div style="font-size:.7rem;font-weight:900;color:#17523c;margin-bottom:8px">Nuevo proveedor</div><div class="nc28-grid"><div class="form-group"><label>Nombre del proveedor</label><input type="text" id="nc-prov-nombre" placeholder="Ej. Agroquímicos del Valle"></div><div class="form-group"><label>¿A qué se dedica?</label><input type="text" id="nc-prov-giro" placeholder="Ej. Fertilizantes y agroquímicos"></div><div class="form-group"><label>Teléfono (opcional)</label><input type="text" id="nc-prov-tel" placeholder="Ej. 555-123-4567"></div></div></div>'+
-    '<div class="nc28-payrow">'+
-      '<div class="form-group"><label>Forma de pago</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip sel" id="nc-fp-contado">✓ Contado</button><button type="button" class="op-chip" id="nc-fp-credito">Crédito</button></div></div>'+
-      '<div class="form-group" id="nc-cuenta-wrap"><label>Cuenta de pago</label><select id="nc-cuenta-pago"><option value="efectivo">Efectivo en Caja</option><option value="banamex">Banamex</option><option value="santander">Santander</option></select><p class="hint">Solo aplica cuando la compra se paga de contado.</p></div>'+
-      '<div class="form-group" id="nc-vencimiento-wrap" style="display:none;"><label>Fecha de vencimiento del pago</label><input type="date" id="nc-vencimiento"><p class="hint">Se registrará en Créditos de proveedores.</p></div>'+
-    '</div>'+
-    '<div class="form-group" style="margin-top:4px"><label>Comprobante / foto o PDF de la factura (opcional)</label><input type="file" id="nc-comprobante" accept="image/*,.pdf"><p class="hint" id="nc-comprobante-status"></p></div>'+
-    '</div>'+
-    '<div class="nc28-products-title"><strong>Productos de la factura</strong><span class="nc28-note">Puedes agregar varios productos dentro de la misma factura.</span></div>'+
+    '<div class="nc28-products-title" style="margin-top:10px"><strong>Productos de la factura</strong><span class="nc28-note">Agrega solo las partidas necesarias.</span></div>'+
     '<div id="nc-items"></div>'+
-    '<button type="button" id="nc-agregar-btn" style="width:100%;color:var(--verde-mid);font-weight:700;font-size:.85rem;cursor:pointer;margin-bottom:.8rem;">＋ Agregar otro producto</button>'+
-    '<div class="nc28-total"><div class="nc28-total-label">Total de la compra</div><div id="nc-total-display">$0.00</div><button class="btn-primary" id="nc-guardar" style="margin-top:.75rem;">Registrar compra</button><div class="nc28-note">Contado descuenta Caja. Crédito queda pendiente con el proveedor.</div></div>'+
+    '<button type="button" class="nc30-add" id="nc-agregar-btn">＋ Agregar producto</button>'+
+    '<div class="nc30-footer"><div class="nc30-total-wrap"><span>Total de la compra</span><strong id="nc-total-display">$0.00</strong></div><button type="button" class="nc30-cancel" onclick="volverCompraContexto()">Cancelar</button><button class="nc30-save" id="nc-guardar">Registrar compra</button></div>'+
     '</div>';
 
   var comprobanteUrl=null;
@@ -5325,10 +5359,9 @@ function renderNuevaCompra(){
     var buscadorProductoHtml=grupoCat?('<div class="form-group" style="margin-bottom:.5rem;"><label>Producto</label><div class="fcomp-item-wrap" data-row="'+f.row+'" style="position:relative;"><input type="text" class="fcomp-item-buscar nc-item-buscar" data-row="'+f.row+'" autocomplete="off" placeholder="Buscar producto..." value="'+(f.itemNombre?f.itemNombre.replace(/"/g,'&quot;'):'')+'"><div class="fcomp-item-resultados nc-item-resultados" data-row="'+f.row+'" style="display:none;position:absolute;left:0;right:0;top:100%;z-index:30;background:#fff;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);max-height:220px;overflow-y:auto;box-shadow:0 6px 16px rgba(0,0,0,.15);"></div></div></div>'):'';
     var nuevoProductoHtml=esNuevo?('<div class="form-group" style="margin-bottom:.5rem;background:var(--verde-tenue);padding:.65rem;border-radius:var(--radio-sm);border:1.5px dashed var(--verde-mid);"><label style="color:var(--verde);">🆕 Nuevo producto para inventario</label><input type="text" class="nc-nuevo-nombre" data-row="'+f.row+'" value="'+(nuevoProd.nombre?nuevoProd.nombre.replace(/"/g,'&quot;'):'')+'" placeholder="Nombre del producto" style="width:100%;padding:.5rem;margin-top:.35rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);"><div style="display:flex;gap:8px;margin-top:.4rem;"><select class="nc-nuevo-categoria" data-row="'+f.row+'" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);">'+(grupoCat?GRUPOS_INVENTARIO[grupoCat].categorias.map(function(c){return '<option value="'+c+'"'+(nuevoProd.categoria===c?' selected':'')+'>'+c+'</option>';}).join(''):'')+'</select><select class="nc-nuevo-unidad" data-row="'+f.row+'" style="width:130px;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);">'+Object.keys(UNIDADES_LBL).map(function(u){return '<option value="'+u+'"'+(nuevoProd.unidad===u?' selected':'')+'>'+UNIDADES_LBL[u]+'</option>';}).join('')+'</select></div><p class="hint" style="margin:.3rem 0 0;">Se crea en Inventario · '+(grupoCat?GRUPOS_INVENTARIO[grupoCat].lbl:'')+' al registrar la compra.</p></div>'):'';
     var activoHtml=esActivo?('<div class="form-group" style="margin-bottom:.5rem;"><label>Nombre de la '+(f.categoria==='herramientas'?'herramienta':'equipo')+' (opcional)</label><input type="text" class="nc-activo-nombre" data-row="'+f.row+'" value="'+(f.activoNombre?f.activoNombre.replace(/"/g,'&quot;'):'')+'" placeholder="Ej. Tijera de poda larga"><p class="hint" style="margin:.3rem 0 0;">Si la llenas, se agrega automáticamente a '+(f.categoria==='herramientas'?'🧰 Herramientas':'⚙️ Equipos')+' como disponible.</p></div>'):'';
-    var catBtns=Object.keys(GASTO_CATEGORIAS).map(function(k){var c=GASTO_CATEGORIAS[k];return '<button type="button" class="nc29-cat-btn'+(f.categoria===k?' sel':'')+'" data-row="'+f.row+'" data-cat="'+k+'">'+c.lbl+'</button>';}).join('');
-    return '<div class="form-card" style="margin-bottom:.5rem;padding:.85rem;" data-row="'+f.row+'">'+
+    return '<div class="form-card" style="margin-bottom:.45rem;padding:.75rem;" data-row="'+f.row+'">'+
       '<div class="nc29-item-head"><div class="nc29-item-index">Producto '+(f.row+1)+'</div></div>'+
-      '<div class="form-group" style="margin-bottom:.6rem;"><label>Categoría</label><div class="nc29-cat-row">'+catBtns+'</div><select class="nc-cat" data-row="'+f.row+'" style="display:none">'+catOpts+'</select></div>'+
+      '<div class="form-group" style="margin-bottom:.55rem;"><label>Categoría</label><select class="nc-cat nc30-category-select" data-row="'+f.row+'">'+catOpts+'</select></div>'+
       buscadorProductoHtml+
       nuevoProductoHtml+
       activoHtml+
@@ -5342,13 +5375,6 @@ function renderNuevaCompra(){
   function pintarItemsCompra(){
     var cont=document.getElementById('nc-items');
     cont.innerHTML=filas.map(pintarFilaCompra).join('');
-    cont.querySelectorAll('.nc29-cat-btn').forEach(function(btn){
-      btn.addEventListener('click',function(){
-        var rid=this.dataset.row,val=this.dataset.cat;
-        var sel=cont.querySelector('.nc-cat[data-row="'+rid+'"]');
-        if(sel){sel.value=val;sel.dispatchEvent(new Event('change',{bubbles:true}));}
-      });
-    });
     cont.querySelectorAll('.nc-cat').forEach(function(sel){
       sel.addEventListener('change',function(){
         var rid=this.dataset.row, val=this.value;
@@ -5460,12 +5486,12 @@ function renderNuevaCompra(){
     pintarItemsCompra();
   });
 
-  var formaPagoSel='contado'; var cw=document.getElementById('nc-cuenta-wrap'); if(cw)cw.style.display='block';
+  var formaPagoSel='contado';
   function actualizarVisibilidadVencimiento(){
     document.getElementById('nc-vencimiento-wrap').style.display=formaPagoSel==='credito'?'':'none';
   }
   document.getElementById('nc-fp-contado').addEventListener('click',function(){formaPagoSel='contado';this.classList.add('sel');this.textContent='✓ Contado';document.getElementById('nc-fp-credito').classList.remove('sel');document.getElementById('nc-fp-credito').textContent='Crédito';actualizarVisibilidadVencimiento();});
-  document.getElementById('nc-fp-credito').addEventListener('click',function(){formaPagoSel='credito'; var cw=document.getElementById('nc-cuenta-wrap'); if(cw)cw.style.display='none';this.classList.add('sel');this.textContent='✓ Crédito';document.getElementById('nc-fp-contado').classList.remove('sel');document.getElementById('nc-fp-contado').textContent='Contado';actualizarVisibilidadVencimiento();});
+  document.getElementById('nc-fp-credito').addEventListener('click',function(){formaPagoSel='credito';this.classList.add('sel');this.textContent='✓ Crédito';document.getElementById('nc-fp-contado').classList.remove('sel');document.getElementById('nc-fp-contado').textContent='Contado';actualizarVisibilidadVencimiento();});
   
   var provBuscar=document.getElementById('nc-proveedor-buscar');
   var provResultados=document.getElementById('nc-proveedor-resultados');
@@ -5512,13 +5538,13 @@ function renderNuevaCompra(){
   });
   document.getElementById('nc-comprobante').addEventListener('change',function(){
     var f=this.files[0];
-    if(!f) return;
     var status=document.getElementById('nc-comprobante-status');
-    status.textContent='Subiendo...';
+    if(!f){status.textContent='Sin archivo';return;}
+    status.textContent=f.name+' · subiendo...';
     subirComprobanteGasto(f).then(function(url){
       comprobanteUrl=url;
-      status.textContent='✅ Comprobante adjuntado';
-    }).catch(function(e){status.textContent='Error al subir: '+e.message;});
+      status.textContent=f.name+' ✓';
+    }).catch(function(e){status.textContent='Error al subir';});
   });
 
   document.getElementById('nc-guardar').addEventListener('click',function(){
@@ -5527,7 +5553,7 @@ function renderNuevaCompra(){
     var numeroFactura=(document.getElementById('nc-factura').value||'').trim()||null;
     var proveedorSel=document.getElementById('nc-proveedor').value;
     var esCredito=formaPagoSel==='credito';
-    var cuentaPago=esCredito?null:(document.getElementById('nc-cuenta-pago').value||'efectivo');
+    var cuentaPago=esCredito?null:(btn.dataset.cuentaPago||null);
     var compraIdRegistrada=null;
     var vencimiento=esCredito?(document.getElementById('nc-vencimiento').value||null):null;
     if(esCredito&&!vencimiento){alert('Captura la fecha de vencimiento del pago a crédito.');return;}
@@ -5550,10 +5576,17 @@ function renderNuevaCompra(){
       }
     }
     var total=lineas.reduce(function(s,f){return s+(parseFloat(f.monto)||0);},0);
+    if(!esCredito&&!cuentaPago){
+      ca30SeleccionarCuentaCompra(total,function(cuenta){
+        btn.dataset.cuentaPago=cuenta;
+        btn.click();
+      });
+      return;
+    }
     if(!esCredito){
       var tt=ca21Totals(fecha);
       var disponible=cuentaPago==='efectivo'?tt.efectivo:cuentaPago==='banamex'?tt.banamex:tt.santander;
-      if(total>disponible){alert('La cuenta seleccionada no tiene saldo suficiente para pagar esta compra.');return;}
+      if(total>disponible){delete btn.dataset.cuentaPago;alert('La cuenta seleccionada no tiene saldo suficiente para pagar esta compra.');return;}
     }
     btn.disabled=true; btn.textContent='Guardando...';
 
