@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<title>Mootsil · Tablero del Rancho · C025 · Caja Compras Créditos Financiamientos</title>
+<title>Mootsil · Tablero del Rancho · C026 · Hotfix Caja Compras Créditos Financiamientos</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
@@ -7097,7 +7097,7 @@ function renderCajaMootsil(periodo,fechaBase){
         '<div class="ca17-kpi out"><div class="ball">↑</div><div><div class="lbl">Salidas</div><div class="num">$'+formatMonto(localSalidas)+'</div><div class="meta">'+localDay.filter(function(m){return m.tipo==='salida';}).length+' movimiento(s) de Caja</div></div></div>'+
         '<div class="ca17-kpi net"><div class="ball">▰</div><div><div class="lbl">Saldo disponible</div><div class="num">$'+formatMonto(saldoDisponible)+'</div><div class="meta">Efectivo + Bancos</div></div></div></div>'+
         '<div class="ca22-accounts"><div class="ca22-account"><strong>💵 EFECTIVO EN CAJA</strong><div class="amt">$'+formatMonto(ef)+'</div></div><div class="ca22-account"><strong>🏦 BANAMEX</strong><div class="amt">$'+formatMonto(bn)+'</div></div><div class="ca22-account"><strong>🏦 SANTANDER</strong><div class="amt">$'+formatMonto(st)+'</div></div><button class="ca22-transfer" id="ca21-transfer" '+(!apertura||corte?'disabled style="opacity:.45"':'')+'><span>⇄</span>Transferir entre cuentas<small>Efectivo · Banamex · Santander</small></button></div>'+
-        '<div class="ca22-ops"><button class="ca22-op open" id="ca21-open">'+(apertura?'✎ Caja abierta · Editar':'＋ Abrir Caja')+'</button><button class="ca22-op orange" id="ca22-compras" type="button">🧾 Compras</button><button class="ca22-op red" id="ca22-gastos">💳 Gastos<br><span style="font-size:.56rem">Fijos · Variables</span></button><button class="ca22-op" id="ca22-nomina">💰 Nómina</button><button class="ca22-op purple" id="ca22-inversionistas">💼 Inversionistas</button></div>'+
+        '<div class="ca22-ops" style="grid-template-columns:repeat(6,minmax(0,1fr))"><button class="ca22-op open" id="ca21-open">'+(apertura?'✎ Caja abierta · Editar':'＋ Abrir Caja')+'</button><button class="ca22-op orange" id="ca22-compras" type="button">🧾 Compras</button><button class="ca22-op red" id="ca22-gastos">💳 Gastos</button><button class="ca22-op" id="ca22-nomina">💰 Nómina</button><button class="ca22-op purple" id="ca22-inversionistas">💼 Inversionistas</button><button class="ca22-op" id="ca25-financiamientos">🏦 Financiamientos</button></div>'+
         '<div class="ca22-mini"><button id="ca21-entry" '+(!apertura||corte?'disabled style="opacity:.45"':'')+'>＋ Entrada manual</button><button id="ca21-exit" '+(!apertura||corte?'disabled style="opacity:.45"':'')+'>＋ Gasto / pago manual</button><button id="ca21-close" '+(!apertura||corte?'disabled style="opacity:.45"':'')+'>▣ Corte de caja</button></div>'+
         '<div class="ca17-controls"><input id="ca21-fecha" type="date" value="'+CAJA_FECHA_BASE+'"><select id="ca21-tipo"><option value="todos">Todos los movimientos</option><option value="entrada">Entradas</option><option value="salida">Salidas</option><option value="transferencia">Transferencias</option></select><select><option>Todas las categorías</option></select><select><option>Todas las formas de pago</option><option>Efectivo</option><option>Transferencia</option></select><input placeholder="Buscar concepto, beneficiario, folio..."></div>'+
         '<div class="ca17-table-wrap"><table class="ca17-table"><thead><tr><th>Hora</th><th>Tipo</th><th>Concepto</th><th>Categoría</th><th>Beneficiario / Proveedor</th><th>Forma de pago</th><th>Entrada</th><th>Salida</th><th>Origen</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
@@ -7108,11 +7108,11 @@ function renderCajaMootsil(periodo,fechaBase){
 
     document.getElementById('ca21-fecha').addEventListener('change',function(){renderCajaMootsil(CAJA_PERIODO,this.value);});
     document.getElementById('ca21-open').addEventListener('click',function(){ca21OpenApertura(CAJA_FECHA_BASE);});
-    document.getElementById('ca22-compras').addEventListener('click',renderComprasMenu);
-    document.getElementById('ca22-gastos').addEventListener('click',renderComprasMenu);
-    document.getElementById('ca22-nomina').addEventListener('click',renderNominasMenu);
-    document.getElementById('ca22-inversionistas').addEventListener('click',renderInversionistasMenu);
-    document.getElementById('ca25-financiamientos').addEventListener('click',renderFinanciamientosCaja);
+    var bCompras=document.getElementById('ca22-compras'); if(bCompras)bCompras.addEventListener('click',renderComprasMenu);
+    var bGastos=document.getElementById('ca22-gastos'); if(bGastos)bGastos.addEventListener('click',renderComprasMenu);
+    var bNomina=document.getElementById('ca22-nomina'); if(bNomina)bNomina.addEventListener('click',renderNominasMenu);
+    var bInv=document.getElementById('ca22-inversionistas'); if(bInv)bInv.addEventListener('click',renderInversionistasMenu);
+    var bFin=document.getElementById('ca25-financiamientos'); if(bFin)bFin.addEventListener('click',renderFinanciamientosCaja);
     if(apertura&&!corte){
       document.getElementById('ca21-entry').addEventListener('click',function(){ca21OpenMovimiento('entrada',CAJA_FECHA_BASE);});
       document.getElementById('ca21-exit').addEventListener('click',function(){ca21OpenMovimiento('salida',CAJA_FECHA_BASE);});
