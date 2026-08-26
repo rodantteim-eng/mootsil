@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<title>Mootsil · Tablero del Rancho · C021 · Caja Flujo Completo</title>
+<title>Mootsil · Tablero del Rancho · C022 · Caja Cuentas y Accesos</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
@@ -578,6 +578,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ca21-action-btn{border:1px solid #d9e1dc;background:#fff;border-radius:7px;padding:4px 7px;font-size:.58rem;font-weight:850;cursor:pointer}
 .ca21-source-test{background:#efe9f7;color:#6b3c86}.ca21-source-existing{background:#edf4ef;color:#2f6248}
 @media(max-width:650px){.ca21-form{grid-template-columns:1fr}.ca21-field.full{grid-column:auto}}
+
+
+/* C022 — distribución aprobada de Caja */
+.ca22-accounts{display:grid;grid-template-columns:1fr 1fr 1fr 1.08fr;gap:10px;margin-top:10px}
+.ca22-account,.ca22-transfer{border:1px solid #d8e0da;border-radius:13px;background:#fbfdfb;padding:12px 14px;text-align:center;min-height:74px}
+.ca22-account{display:flex;flex-direction:column;justify-content:center}.ca22-account strong{font-size:.72rem;color:#1a5d42}.ca22-account .amt{font-size:1.08rem;font-weight:900;color:#165438;margin-top:4px}
+.ca22-transfer{background:#fff;cursor:pointer;font-weight:900;color:#174c3a;font-size:.7rem}.ca22-transfer span{display:block;font-size:1.35rem}.ca22-transfer small{display:block;font-size:.56rem;color:#758178;margin-top:3px}
+.ca22-ops{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:12px}
+.ca22-op{border:1px solid #dfe6e1;background:#fff;border-radius:11px;padding:11px 10px;font-size:.68rem;font-weight:900;color:#174c3a;cursor:pointer;min-height:52px}.ca22-op.open{background:#0e6b48;color:#fff;border-color:#0e6b48}.ca22-op.orange{border-top:4px solid #e88300}.ca22-op.red{border-top:4px solid #c81717}.ca22-op.purple{border-top:4px solid #702989}
+.ca22-mini{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.ca22-mini button{border:1px solid #dce4df;background:#fff;border-radius:9px;padding:8px 10px;font-size:.61rem;font-weight:850;cursor:pointer}
+@media(max-width:1050px){.ca22-accounts{grid-template-columns:repeat(2,1fr)}.ca22-ops{grid-template-columns:repeat(3,1fr)}}@media(max-width:650px){.ca22-accounts,.ca22-ops{grid-template-columns:1fr}}
 
 </style>
 </head>
@@ -6813,24 +6824,18 @@ function ca21CloseModal(){
 }
 function ca21Money(v){return Math.round((parseFloat(v||0)||0)*100)/100;}
 function ca21AccountDelta(m,cuenta){
-  var monto=ca21Money(m.monto);
-  if(m.tipo==='entrada')return m.cuenta===cuenta?monto:0;
-  if(m.tipo==='salida')return m.cuenta===cuenta?-monto:0;
-  if(m.tipo==='transferencia'){
-    var s=0;
-    if(m.cuenta_origen===cuenta)s-=monto;
-    if(m.cuenta_destino===cuenta)s+=monto;
-    return s;
-  }
+  var monto=ca21Money(m.monto), mc=m.cuenta==='bancos'?'banamex':m.cuenta;
+  var co=m.cuenta_origen==='bancos'?'banamex':m.cuenta_origen, cd=m.cuenta_destino==='bancos'?'banamex':m.cuenta_destino;
+  if(m.tipo==='entrada')return mc===cuenta?monto:0;
+  if(m.tipo==='salida')return mc===cuenta?-monto:0;
+  if(m.tipo==='transferencia'){var s=0;if(co===cuenta)s-=monto;if(cd===cuenta)s+=monto;return s;}
   return 0;
 }
 function ca21Totals(fechaHasta){
-  var d=ca21Load();
-  var ap=d.aperturas[fechaHasta]||{efectivo:0,bancos:0};
-  var ms=d.movimientos.filter(function(m){return m.fecha===fechaHasta;});
-  var ef=ca21Money(ap.efectivo), ba=ca21Money(ap.bancos);
-  ms.forEach(function(m){ef+=ca21AccountDelta(m,'efectivo');ba+=ca21AccountDelta(m,'bancos');});
-  return {efectivo:ca21Money(ef),bancos:ca21Money(ba),total:ca21Money(ef+ba),movs:ms,apertura:ap};
+  var d=ca21Load(),ap=d.aperturas[fechaHasta]||{},ms=d.movimientos.filter(function(m){return m.fecha===fechaHasta;});
+  var ef=ca21Money(ap.efectivo),bn=ca21Money(ap.banamex!=null?ap.banamex:(ap.bancos||0)),st=ca21Money(ap.santander||0);
+  ms.forEach(function(m){ef+=ca21AccountDelta(m,'efectivo');bn+=ca21AccountDelta(m,'banamex');st+=ca21AccountDelta(m,'santander');});
+  return {efectivo:ca21Money(ef),banamex:ca21Money(bn),santander:ca21Money(st),bancos:ca21Money(bn+st),total:ca21Money(ef+bn+st),movs:ms,apertura:ap};
 }
 function ca21OpenApertura(fecha){
   var dd=ca21DayData(fecha), ap=dd.apertura;
@@ -6838,12 +6843,14 @@ function ca21OpenApertura(fecha){
   var prev=prevDate.getFullYear()+'-'+String(prevDate.getMonth()+1).padStart(2,'0')+'-'+String(prevDate.getDate()).padStart(2,'0');
   var prevCut=dd.data.cortes[prev];
   var efDefault=ap?ap.efectivo:(prevCut?prevCut.efectivo_contado:0);
-  var baDefault=ap?ap.bancos:(prevCut?prevCut.bancos_cierre:0);
+  var baDefault=ap?((ap.banamex!=null)?ap.banamex:(ap.bancos||0)):(prevCut?((prevCut.banamex_cierre!=null)?prevCut.banamex_cierre:(prevCut.bancos_cierre||0)):0);
+  var saDefault=ap?(ap.santander||0):(prevCut?(prevCut.santander_cierre||0):0);
   ca21OpenModal(
     '<div class="ca21-dialog-head"><div><h3>💵 Apertura de Caja</h3><p>'+cajaFechaCorta(fecha)+'</p></div><button class="ca21-close" onclick="ca21CloseModal()">×</button></div>'+
     '<div class="ca21-dialog-body"><div class="ca21-warning">El saldo inicial se separa entre efectivo físico y bancos/transferencias. En operación normal, el cierre anterior podrá convertirse en la apertura del día siguiente.</div><div class="ca21-form" style="margin-top:12px">'+
       '<div class="ca21-field"><label>Efectivo inicial</label><input id="ca21-ap-ef" type="number" min="0" step="0.01" value="'+ca21Money(efDefault)+'"></div>'+
-      '<div class="ca21-field"><label>Bancos inicial</label><input id="ca21-ap-ba" type="number" min="0" step="0.01" value="'+ca21Money(baDefault)+'"></div>'+
+      '<div class="ca21-field"><label>Banamex inicial</label><input id="ca21-ap-ba" type="number" min="0" step="0.01" value="'+ca21Money(baDefault)+'"></div>'+
+      '<div class="ca21-field"><label>Santander inicial</label><input id="ca21-ap-sa" type="number" min="0" step="0.01" value="'+ca21Money(saDefault)+'"></div>'+
       '<div class="ca21-field full"><label>Observación</label><textarea id="ca21-ap-nota" placeholder="Opcional">'+(ap&&ap.nota?ap.nota:'')+'</textarea></div>'+
     '</div></div>'+
     '<div class="ca21-dialog-actions"><button onclick="ca21CloseModal()">Cancelar</button><button class="save" id="ca21-ap-save">Guardar apertura</button></div>'
@@ -6853,7 +6860,9 @@ function ca21OpenApertura(fecha){
     d.aperturas[fecha]={
       fecha:fecha,
       efectivo:ca21Money(document.getElementById('ca21-ap-ef').value),
-      bancos:ca21Money(document.getElementById('ca21-ap-ba').value),
+      bancos:ca21Money(document.getElementById('ca21-ap-ba').value)+ca21Money(document.getElementById('ca21-ap-sa').value),
+      banamex:ca21Money(document.getElementById('ca21-ap-ba').value),
+      santander:ca21Money(document.getElementById('ca21-ap-sa').value),
       nota:document.getElementById('ca21-ap-nota').value.trim(),
       hora:ca21Now(),
       usuario:(usuario&&usuario.nombre)||'Usuario'
@@ -6867,7 +6876,7 @@ function ca21OpenMovimiento(tipo,fecha){
     '<div class="ca21-dialog-head"><div><h3>'+(esEntrada?'➕ Registrar entrada':'➖ Registrar gasto / pago')+'</h3><p>'+cajaFechaCorta(fecha)+'</p></div><button class="ca21-close" onclick="ca21CloseModal()">×</button></div>'+
     '<div class="ca21-dialog-body"><div class="ca21-form">'+
       '<div class="ca21-field"><label>Monto</label><input id="ca21-m-monto" type="number" min="0.01" step="0.01" placeholder="0.00"></div>'+
-      '<div class="ca21-field"><label>Cuenta</label><select id="ca21-m-cuenta"><option value="efectivo">Efectivo</option><option value="bancos">Banco / Transferencia</option></select></div>'+
+      '<div class="ca21-field"><label>Cuenta</label><select id="ca21-m-cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex">Banamex</option><option value="santander">Santander</option></select></div>'+
       '<div class="ca21-field"><label>Categoría</label><select id="ca21-m-cat">'+
         (esEntrada
           ?'<option>Aportaciones</option><option>Venta de fruta</option><option>Reembolso</option><option>Recuperación</option><option>Otros ingresos</option>'
@@ -6899,32 +6908,16 @@ function ca21OpenMovimiento(tipo,fecha){
   });
 }
 function ca21OpenTransfer(fecha){
-  ca21OpenModal(
-    '<div class="ca21-dialog-head"><div><h3>⇄ Transferencia entre cuentas</h3><p>No modifica el saldo total; solo mueve dinero entre Efectivo y Bancos.</p></div><button class="ca21-close" onclick="ca21CloseModal()">×</button></div>'+
-    '<div class="ca21-dialog-body"><div class="ca21-form">'+
-      '<div class="ca21-field"><label>De</label><select id="ca21-t-origen"><option value="bancos">Banco / Transferencia</option><option value="efectivo">Efectivo</option></select></div>'+
-      '<div class="ca21-field"><label>A</label><select id="ca21-t-destino"><option value="efectivo">Efectivo</option><option value="bancos">Banco / Transferencia</option></select></div>'+
-      '<div class="ca21-field"><label>Monto</label><input id="ca21-t-monto" type="number" min="0.01" step="0.01" placeholder="0.00"></div>'+
-      '<div class="ca21-field"><label>Concepto</label><input id="ca21-t-concepto" value="Transferencia entre cuentas"></div>'+
-      '<div class="ca21-field full"><label>Observación</label><textarea id="ca21-t-nota" placeholder="Opcional"></textarea></div>'+
-    '</div></div>'+
-    '<div class="ca21-dialog-actions"><button onclick="ca21CloseModal()">Cancelar</button><button class="save" id="ca21-t-save">Registrar transferencia</button></div>'
-  );
+  ca21OpenModal('<div class="ca21-dialog-head"><div><h3>⇄ Transferir entre cuentas</h3><p>Efectivo · Banamex · Santander. El saldo total no cambia.</p></div><button class="ca21-close" onclick="ca21CloseModal()">×</button></div>'+
+  '<div class="ca21-dialog-body"><div class="ca21-form"><div class="ca21-field"><label>Cuenta origen</label><select id="ca21-t-origen"><option value="banamex">Banamex</option><option value="santander">Santander</option><option value="efectivo">Efectivo en Caja</option></select></div>'+
+  '<div class="ca21-field"><label>Cuenta destino</label><select id="ca21-t-destino"><option value="santander">Santander</option><option value="banamex">Banamex</option><option value="efectivo">Efectivo en Caja</option></select></div>'+
+  '<div class="ca21-field"><label>Monto</label><input id="ca21-t-monto" type="number" min="0.01" step="0.01" placeholder="0.00"></div><div class="ca21-field"><label>Concepto</label><input id="ca21-t-concepto" value="Transferencia entre cuentas"></div>'+
+  '<div class="ca21-field full"><label>Referencia / observación</label><textarea id="ca21-t-nota"></textarea></div></div></div><div class="ca21-dialog-actions"><button onclick="ca21CloseModal()">Cancelar</button><button class="save" id="ca21-t-save">Registrar transferencia</button></div>');
   document.getElementById('ca21-t-save').addEventListener('click',function(){
-    var origen=document.getElementById('ca21-t-origen').value,destino=document.getElementById('ca21-t-destino').value,monto=ca21Money(document.getElementById('ca21-t-monto').value);
-    if(origen===destino){alert('La cuenta de origen y destino deben ser diferentes.');return;}
-    if(monto<=0){alert('Captura un monto mayor a cero.');return;}
-    var totals=ca21Totals(fecha);
-    var disponible=origen==='efectivo'?totals.efectivo:totals.bancos;
-    if(monto>disponible){alert('El monto supera el saldo disponible en la cuenta de origen.');return;}
-    var d=ca21Load();
-    d.movimientos.push({
-      id:ca21Id(),fecha:fecha,hora:ca21Now(),tipo:'transferencia',
-      cuenta_origen:origen,cuenta_destino:destino,monto:monto,
-      categoria:'Transferencia',concepto:document.getElementById('ca21-t-concepto').value.trim()||'Transferencia entre cuentas',
-      persona:'Entre cuentas',nota:document.getElementById('ca21-t-nota').value.trim(),
-      origen:'Caja',estado:'Registrado',usuario:(usuario&&usuario.nombre)||'Usuario'
-    });
+    var o=document.getElementById('ca21-t-origen').value,de=document.getElementById('ca21-t-destino').value,m=ca21Money(document.getElementById('ca21-t-monto').value);
+    if(o===de){alert('La cuenta de origen y destino deben ser diferentes.');return;} if(m<=0){alert('Captura un monto mayor a cero.');return;}
+    var tot=ca21Totals(fecha),disp=o==='efectivo'?tot.efectivo:o==='banamex'?tot.banamex:tot.santander;if(m>disp){alert('El monto supera el saldo disponible en la cuenta de origen.');return;}
+    var d=ca21Load();d.movimientos.push({id:ca21Id(),fecha:fecha,hora:ca21Now(),tipo:'transferencia',cuenta_origen:o,cuenta_destino:de,monto:m,categoria:'Transferencia',concepto:document.getElementById('ca21-t-concepto').value.trim()||'Transferencia entre cuentas',persona:'Entre cuentas',nota:document.getElementById('ca21-t-nota').value.trim(),origen:'Caja',estado:'Registrado',usuario:(usuario&&usuario.nombre)||'Usuario'});
     ca21Save(d);ca21CloseModal();renderCajaMootsil(CAJA_PERIODO,fecha);
   });
 }
@@ -6999,21 +6992,23 @@ function renderCajaMootsil(periodo,fechaBase){
     // into the test opening/closing cash balance until migration rules are approved.
     var localDay=store.movimientos.filter(function(m){return m.fecha===CAJA_FECHA_BASE;});
     var saldoInicialEf=apertura?ca21Money(apertura.efectivo):0;
-    var saldoInicialBa=apertura?ca21Money(apertura.bancos):0;
-    var ef=saldoInicialEf,ba=saldoInicialBa;
-    localDay.forEach(function(m){ef+=ca21AccountDelta(m,'efectivo');ba+=ca21AccountDelta(m,'bancos');});
-    ef=ca21Money(ef);ba=ca21Money(ba);
+    var saldoInicialBn=apertura?ca21Money(apertura.banamex!=null?apertura.banamex:(apertura.bancos||0)):0;
+    var saldoInicialSt=apertura?ca21Money(apertura.santander||0):0;
+    var ef=saldoInicialEf,bn=saldoInicialBn,st=saldoInicialSt;
+    localDay.forEach(function(m){ef+=ca21AccountDelta(m,'efectivo');bn+=ca21AccountDelta(m,'banamex');st+=ca21AccountDelta(m,'santander');});
+    ef=ca21Money(ef);bn=ca21Money(bn);st=ca21Money(st);
 
     var localEntradas=localDay.filter(function(m){return m.tipo==='entrada';}).reduce(function(s,m){return s+ca21Money(m.monto);},0);
     var localSalidas=localDay.filter(function(m){return m.tipo==='salida';}).reduce(function(s,m){return s+ca21Money(m.monto);},0);
-    var saldoInicial=ca21Money(saldoInicialEf+saldoInicialBa);
-    var saldoDisponible=ca21Money(ef+ba);
+    var saldoInicial=ca21Money(saldoInicialEf+saldoInicialBn+saldoInicialSt);
+    var saldoDisponible=ca21Money(ef+bn+st);
 
     var semana='Semana '+riegoSemanaNumero(CAJA_FECHA_BASE);
     var statusHtml=corte?'<span class="ca21-status-closed">● Caja cerrada</span>':(apertura?'<span class="ca21-status-open">● Caja abierta</span>':'<span class="ca21-status-open">● Pendiente apertura</span>');
 
     var rows=movimientos.length?movimientos.map(function(m){
-      var forma=m.tipo==='transferencia'?(m.cuenta_origen+' → '+m.cuenta_destino):(m.forma||(m.cuenta==='efectivo'?'Efectivo':'Transferencia'));
+      function ca22CuentaNombre(x){return x==='efectivo'?'Efectivo':(x==='banamex'||x==='bancos')?'Banamex':x==='santander'?'Santander':(x||'—');}
+      var forma=m.tipo==='transferencia'?(ca22CuentaNombre(m.cuenta_origen)+' → '+ca22CuentaNombre(m.cuenta_destino)):(m.forma||ca22CuentaNombre(m.cuenta));
       var cat=m.categoria||'—';
       var ent=m.tipo==='entrada'?'$'+formatMonto(m.monto):'—';
       var sal=m.tipo==='salida'?'$'+formatMonto(m.monto):'—';
@@ -7028,14 +7023,9 @@ function renderCajaMootsil(periodo,fechaBase){
         '<div class="ca17-kpi in"><div class="ball">↓</div><div><div class="lbl">Entradas</div><div class="num">$'+formatMonto(localEntradas)+'</div><div class="meta">'+localDay.filter(function(m){return m.tipo==='entrada';}).length+' movimiento(s) de Caja</div></div></div>'+
         '<div class="ca17-kpi out"><div class="ball">↑</div><div><div class="lbl">Salidas</div><div class="num">$'+formatMonto(localSalidas)+'</div><div class="meta">'+localDay.filter(function(m){return m.tipo==='salida';}).length+' movimiento(s) de Caja</div></div></div>'+
         '<div class="ca17-kpi net"><div class="ball">▰</div><div><div class="lbl">Saldo disponible</div><div class="num">$'+formatMonto(saldoDisponible)+'</div><div class="meta">Efectivo + Bancos</div></div></div></div>'+
-        '<div class="ca17-accounts"><div class="ca17-account"><strong>💵 EFECTIVO EN CAJA</strong><div>$'+formatMonto(ef)+'</div></div><div class="ca17-account"><strong>🏦 BANCOS / TRANSFERENCIAS</strong><div>$'+formatMonto(ba)+'</div></div></div>'+
-        '<div class="ca17-actions">'+
-          '<button class="entry" id="ca21-open">'+(apertura?'✎ Editar apertura':'＋ Abrir Caja / Saldo inicial')+'</button>'+
-          '<button class="entry" id="ca21-entry" '+(!apertura||corte?'disabled style="opacity:.45"':'')+'>＋ Registrar entrada</button>'+
-          '<button class="exit" id="ca21-exit" '+(!apertura||corte?'disabled style="opacity:.45"':'')+'>＋ Registrar gasto / pago</button>'+
-          '<button id="ca21-transfer" '+(!apertura||corte?'disabled style="opacity:.45"':'')+'>⇄ Transferencia</button>'+
-          '<button id="ca21-close" '+(!apertura||corte?'disabled style="opacity:.45"':'')+'>▣ Corte de caja</button>'+
-        '</div>'+
+        '<div class="ca22-accounts"><div class="ca22-account"><strong>💵 EFECTIVO EN CAJA</strong><div class="amt">$'+formatMonto(ef)+'</div></div><div class="ca22-account"><strong>🏦 BANAMEX</strong><div class="amt">$'+formatMonto(bn)+'</div></div><div class="ca22-account"><strong>🏦 SANTANDER</strong><div class="amt">$'+formatMonto(st)+'</div></div><button class="ca22-transfer" id="ca21-transfer" '+(!apertura||corte?'disabled style="opacity:.45"':'')+'><span>⇄</span>Transferir entre cuentas<small>Efectivo · Banamex · Santander</small></button></div>'+
+        '<div class="ca22-ops"><button class="ca22-op open" id="ca21-open">'+(apertura?'✎ Caja abierta · Editar':'＋ Abrir Caja')+'</button><button class="ca22-op orange" id="ca22-compras">🧾 Compras</button><button class="ca22-op red" id="ca22-gastos">💳 Gastos<br><span style="font-size:.56rem">Fijos · Variables</span></button><button class="ca22-op" id="ca22-nomina">💰 Nómina</button><button class="ca22-op purple" id="ca22-inversionistas">💼 Inversionistas</button></div>'+
+        '<div class="ca22-mini"><button id="ca21-entry" '+(!apertura||corte?'disabled style="opacity:.45"':'')+'>＋ Entrada manual</button><button id="ca21-exit" '+(!apertura||corte?'disabled style="opacity:.45"':'')+'>＋ Gasto / pago manual</button><button id="ca21-close" '+(!apertura||corte?'disabled style="opacity:.45"':'')+'>▣ Corte de caja</button></div>'+
         '<div class="ca17-controls"><input id="ca21-fecha" type="date" value="'+CAJA_FECHA_BASE+'"><select id="ca21-tipo"><option value="todos">Todos los movimientos</option><option value="entrada">Entradas</option><option value="salida">Salidas</option><option value="transferencia">Transferencias</option></select><select><option>Todas las categorías</option></select><select><option>Todas las formas de pago</option><option>Efectivo</option><option>Transferencia</option></select><input placeholder="Buscar concepto, beneficiario, folio..."></div>'+
         '<div class="ca17-table-wrap"><table class="ca17-table"><thead><tr><th>Hora</th><th>Tipo</th><th>Concepto</th><th>Categoría</th><th>Beneficiario / Proveedor</th><th>Forma de pago</th><th>Entrada</th><th>Salida</th><th>Origen</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
         '<div class="ca17-foot"><div>ⓘ <strong>Modo prueba:</strong> apertura y movimientos manuales se guardan en este navegador. Los movimientos existentes de Mootsil se muestran como referencia y no se duplican en el saldo de prueba.</div><div>'+(corte?'Corte: '+corte.hora+' · Diferencia $'+formatMonto(corte.diferencia):'Caja sin corte')+'</div></div></div>'+
@@ -7045,6 +7035,10 @@ function renderCajaMootsil(periodo,fechaBase){
 
     document.getElementById('ca21-fecha').addEventListener('change',function(){renderCajaMootsil(CAJA_PERIODO,this.value);});
     document.getElementById('ca21-open').addEventListener('click',function(){ca21OpenApertura(CAJA_FECHA_BASE);});
+    document.getElementById('ca22-compras').addEventListener('click',renderComprasMenu);
+    document.getElementById('ca22-gastos').addEventListener('click',renderComprasMenu);
+    document.getElementById('ca22-nomina').addEventListener('click',renderNominasMenu);
+    document.getElementById('ca22-inversionistas').addEventListener('click',renderInversionistasMenu);
     if(apertura&&!corte){
       document.getElementById('ca21-entry').addEventListener('click',function(){ca21OpenMovimiento('entrada',CAJA_FECHA_BASE);});
       document.getElementById('ca21-exit').addEventListener('click',function(){ca21OpenMovimiento('salida',CAJA_FECHA_BASE);});
