@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<title>Mootsil · Tablero del Rancho · C030 · Compras Compactas</title>
+<title>Mootsil · Tablero del Rancho · C031 · Compras Lista Progresiva</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
@@ -643,6 +643,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .nc30-provider-results{max-height:180px}
 @media(max-width:1050px){.nc30-topgrid{grid-template-columns:1.4fr .8fr .8fr}.nc30-product-row{grid-template-columns:150px minmax(220px,1fr) 100px 100px 120px 38px}}
 @media(max-width:780px){.nc30-topgrid{grid-template-columns:1fr 1fr}.nc30-product-row{grid-template-columns:1fr 1fr}.nc30-product-row .wide{grid-column:1/-1}.nc30-footer{flex-wrap:wrap}.nc30-total-wrap{width:100%;text-align:left}}
+
+
+/* C031 — Un solo capturador + lista progresiva de productos */
+.nc31-list{display:flex;flex-direction:column;gap:6px;margin-bottom:9px}
+.nc31-list-row{display:grid;grid-template-columns:135px minmax(220px,1.5fr) 130px 120px 118px;gap:10px;align-items:center;background:#fff;border:1px solid #e0e7e2;border-radius:10px;padding:9px 11px;font-size:.68rem}
+.nc31-cat{font-weight:850;color:#285444}.nc31-name{font-weight:850;color:#1d372e}.nc31-qty{color:#66756d}.nc31-amount{text-align:right;font-weight:900;color:#155c3e}
+.nc31-row-actions{display:flex;justify-content:flex-end;gap:5px}.nc31-row-actions button{border:1px solid #dce3df;background:#fff;border-radius:7px;padding:5px 7px;font-size:.6rem;font-weight:800;cursor:pointer}.nc31-row-actions .del{color:#ad2c2c}
+.nc31-editor{background:#fff;border:1px solid #dce5df;border-radius:12px;padding:11px 13px}
+.nc31-editor-head{font-size:.68rem;font-weight:900;color:#174f3c;margin-bottom:8px}
+.nc31-cat-tabs{display:flex;gap:4px;flex-wrap:wrap;margin:3px 0 9px}.nc31-cat-tab{border:0;background:transparent;color:#617168;padding:5px 8px;border-radius:7px;font-size:.64rem;font-weight:800;cursor:pointer}.nc31-cat-tab:hover{background:#f2f6f3}.nc31-cat-tab.sel{background:#e9f4ee;color:#15583d;box-shadow:inset 0 -2px 0 #2a7255}
+.nc31-empty-note{font-size:.64rem;color:#7a877f;margin-bottom:7px}
+@media(max-width:850px){.nc31-list-row{grid-template-columns:1fr 1fr}.nc31-row-actions{justify-content:flex-start}}
 
 </style>
 </head>
@@ -5265,9 +5277,9 @@ function renderNuevaCompra(){
         '<label class="nc30-attach" for="nc-comprobante">📎 Adjuntar factura</label><input type="file" id="nc-comprobante" accept="image/*,.pdf"><span class="nc30-file-name" id="nc-comprobante-status">Sin archivo</span>'+
       '</div>'+
     '</div>'+
-    '<div class="nc28-products-title" style="margin-top:10px"><strong>Productos de la factura</strong><span class="nc28-note">Agrega solo las partidas necesarias.</span></div>'+
+    '<div class="nc28-products-title" style="margin-top:10px"><strong>Productos de la factura</strong><span class="nc28-note">Captura un producto; al guardarlo pasa a la lista.</span></div>'+
     '<div id="nc-items"></div>'+
-    '<button type="button" class="nc30-add" id="nc-agregar-btn">＋ Agregar producto</button>'+
+    '<button type="button" class="nc30-add" id="nc-agregar-btn">Guardar producto y agregar otro</button>'+
     '<div class="nc30-footer"><div class="nc30-total-wrap"><span>Total de la compra</span><strong id="nc-total-display">$0.00</strong></div><button type="button" class="nc30-cancel" onclick="volverCompraContexto()">Cancelar</button><button class="nc30-save" id="nc-guardar">Registrar compra</button></div>'+
     '</div>';
 
@@ -5277,6 +5289,7 @@ function renderNuevaCompra(){
     return {row:filaSeq++,categoria:Object.keys(GASTO_CATEGORIAS)[0],itemId:'',itemNombre:'',modoCaptura:'base',cantidad:'',monto:'',concepto:'',activoNombre:''};
   }
   var filas=[nuevaFilaCompra()];
+  var activeRowId=filas[0].row;
 
   function calcularTotal(){
     var t=filas.reduce(function(s,f){return s+(parseFloat(f.monto)||0);},0);
@@ -5344,7 +5357,7 @@ function renderNuevaCompra(){
   var UNIDADES_LBL={litros:'Litros',ml:'Mililitros',kg:'Kilogramos',gr:'Gramos',pza:'Piezas'};
 
   function pintarFilaCompra(f){
-    var catOpts=Object.keys(GASTO_CATEGORIAS).map(function(k){var c=GASTO_CATEGORIAS[k];return '<option value="'+k+'"'+(f.categoria===k?' selected':'')+'>'+c.ic+' '+c.lbl+'</option>';}).join('');
+    var catOpts=Object.keys(GASTO_CATEGORIAS).map(function(k){var c=GASTO_CATEGORIAS[k];return '<option value="'+k+'"'+(f.categoria===k?' selected':'')+'>'+c.lbl+'</option>';}).join('');
     var grupoCat=CATEGORIA_GASTO_A_GRUPO[f.categoria]||null;
     var esNuevo=f.itemId==='_nuevo';
     var tieneItem=!!f.itemId&&!esNuevo;
@@ -5359,9 +5372,10 @@ function renderNuevaCompra(){
     var buscadorProductoHtml=grupoCat?('<div class="form-group" style="margin-bottom:.5rem;"><label>Producto</label><div class="fcomp-item-wrap" data-row="'+f.row+'" style="position:relative;"><input type="text" class="fcomp-item-buscar nc-item-buscar" data-row="'+f.row+'" autocomplete="off" placeholder="Buscar producto..." value="'+(f.itemNombre?f.itemNombre.replace(/"/g,'&quot;'):'')+'"><div class="fcomp-item-resultados nc-item-resultados" data-row="'+f.row+'" style="display:none;position:absolute;left:0;right:0;top:100%;z-index:30;background:#fff;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);max-height:220px;overflow-y:auto;box-shadow:0 6px 16px rgba(0,0,0,.15);"></div></div></div>'):'';
     var nuevoProductoHtml=esNuevo?('<div class="form-group" style="margin-bottom:.5rem;background:var(--verde-tenue);padding:.65rem;border-radius:var(--radio-sm);border:1.5px dashed var(--verde-mid);"><label style="color:var(--verde);">🆕 Nuevo producto para inventario</label><input type="text" class="nc-nuevo-nombre" data-row="'+f.row+'" value="'+(nuevoProd.nombre?nuevoProd.nombre.replace(/"/g,'&quot;'):'')+'" placeholder="Nombre del producto" style="width:100%;padding:.5rem;margin-top:.35rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);"><div style="display:flex;gap:8px;margin-top:.4rem;"><select class="nc-nuevo-categoria" data-row="'+f.row+'" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);">'+(grupoCat?GRUPOS_INVENTARIO[grupoCat].categorias.map(function(c){return '<option value="'+c+'"'+(nuevoProd.categoria===c?' selected':'')+'>'+c+'</option>';}).join(''):'')+'</select><select class="nc-nuevo-unidad" data-row="'+f.row+'" style="width:130px;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);">'+Object.keys(UNIDADES_LBL).map(function(u){return '<option value="'+u+'"'+(nuevoProd.unidad===u?' selected':'')+'>'+UNIDADES_LBL[u]+'</option>';}).join('')+'</select></div><p class="hint" style="margin:.3rem 0 0;">Se crea en Inventario · '+(grupoCat?GRUPOS_INVENTARIO[grupoCat].lbl:'')+' al registrar la compra.</p></div>'):'';
     var activoHtml=esActivo?('<div class="form-group" style="margin-bottom:.5rem;"><label>Nombre de la '+(f.categoria==='herramientas'?'herramienta':'equipo')+' (opcional)</label><input type="text" class="nc-activo-nombre" data-row="'+f.row+'" value="'+(f.activoNombre?f.activoNombre.replace(/"/g,'&quot;'):'')+'" placeholder="Ej. Tijera de poda larga"><p class="hint" style="margin:.3rem 0 0;">Si la llenas, se agrega automáticamente a '+(f.categoria==='herramientas'?'🧰 Herramientas':'⚙️ Equipos')+' como disponible.</p></div>'):'';
-    return '<div class="form-card" style="margin-bottom:.45rem;padding:.75rem;" data-row="'+f.row+'">'+
-      '<div class="nc29-item-head"><div class="nc29-item-index">Producto '+(f.row+1)+'</div></div>'+
-      '<div class="form-group" style="margin-bottom:.55rem;"><label>Categoría</label><select class="nc-cat nc30-category-select" data-row="'+f.row+'">'+catOpts+'</select></div>'+
+    var catTabs=Object.keys(GASTO_CATEGORIAS).map(function(k){var c=GASTO_CATEGORIAS[k];return '<button type="button" class="nc31-cat-tab'+(f.categoria===k?' sel':'')+'" data-row="'+f.row+'" data-cat="'+k+'">'+c.lbl+'</button>';}).join('');
+    return '<div class="nc31-editor" data-row="'+f.row+'">'+
+      '<div class="nc31-editor-head">Agregar producto</div>'+
+      '<div class="form-group" style="margin-bottom:.35rem;"><label>Categoría</label><div class="nc31-cat-tabs">'+catTabs+'</div><select class="nc-cat" data-row="'+f.row+'" style="display:none">'+catOpts+'</select></div>'+
       buscadorProductoHtml+
       nuevoProductoHtml+
       activoHtml+
@@ -5374,7 +5388,38 @@ function renderNuevaCompra(){
 
   function pintarItemsCompra(){
     var cont=document.getElementById('nc-items');
-    cont.innerHTML=filas.map(pintarFilaCompra).join('');
+    var active=filas.find(function(f){return f.row===activeRowId;});
+    if(!active){active=nuevaFilaCompra();filas.push(active);activeRowId=active.row;}
+    var completas=filas.filter(function(f){return f.row!==activeRowId&&(parseFloat(f.monto)||0)>0;});
+    var listaHtml=completas.length?('<div class="nc31-list">'+completas.map(function(f){
+      var cat=GASTO_CATEGORIAS[f.categoria]?GASTO_CATEGORIAS[f.categoria].lbl:f.categoria;
+      var it=f.itemId&&f.itemId!=='_nuevo'?cats.inventario.find(function(x){return x.id===f.itemId;}):null;
+      var nombre=f.itemNombre||(f.nuevoProducto&&f.nuevoProducto.nombre)||f.concepto||'Producto sin nombre';
+      var cantidad=parseFloat(f.cantidad)>0?(numFmt(parseFloat(f.cantidad))+' '+((it&&it.unidad)||((f.nuevoProducto&&f.nuevoProducto.unidad)||''))):'—';
+      return '<div class="nc31-list-row"><div class="nc31-cat">'+cat+'</div><div class="nc31-name">'+nombre+'</div><div class="nc31-qty">'+cantidad+'</div><div class="nc31-amount">$'+formatMonto(parseFloat(f.monto)||0)+'</div><div class="nc31-row-actions"><button type="button" data-edit-row="'+f.row+'">Editar</button><button type="button" class="del" data-del-row="'+f.row+'">Quitar</button></div></div>';
+    }).join('')+'</div>'):'';
+    cont.innerHTML=listaHtml+pintarFilaCompra(active);
+    cont.querySelectorAll('[data-edit-row]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var rid=parseInt(this.dataset.editRow,10);
+        var actual=filas.find(function(f){return f.row===activeRowId;});
+        if(actual&&!(parseFloat(actual.monto)||0)&&!actual.itemId&&!actual.concepto){filas=filas.filter(function(f){return f.row!==activeRowId;});}
+        activeRowId=rid;pintarItemsCompra();
+      });
+    });
+    cont.querySelectorAll('[data-del-row]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var rid=parseInt(this.dataset.delRow,10);filas=filas.filter(function(f){return f.row!==rid;});pintarItemsCompra();
+      });
+    });
+    cont.querySelectorAll('.nc31-cat-tab').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var rid=parseInt(this.dataset.row,10), val=this.dataset.cat;
+        var f=filas.find(function(x){return x.row===rid;});
+        if(f){f.categoria=val;f.itemId='';f.itemNombre='';f.modoCaptura='base';f.cantidad='';f.nuevoProducto=null;}
+        pintarItemsCompra();
+      });
+    });
     cont.querySelectorAll('.nc-cat').forEach(function(sel){
       sel.addEventListener('change',function(){
         var rid=this.dataset.row, val=this.value;
@@ -5459,8 +5504,9 @@ function renderNuevaCompra(){
     });
     cont.querySelectorAll('.nc-quitar').forEach(function(btn){
       btn.addEventListener('click',function(){
-        var rid=this.dataset.row;
-        filas=filas.filter(function(f){return f.row!=rid;});
+        var rid=parseInt(this.dataset.row,10);
+        filas=filas.filter(function(f){return f.row!==rid;});
+        if(rid===activeRowId){var nf=nuevaFilaCompra();filas.push(nf);activeRowId=nf.row;}
         pintarItemsCompra();
       });
     });
@@ -5482,7 +5528,13 @@ function renderNuevaCompra(){
   pintarItemsCompra();
 
   document.getElementById('nc-agregar-btn').addEventListener('click',function(){
-    filas.push(nuevaFilaCompra());
+    var actual=filas.find(function(f){return f.row===activeRowId;});
+    if(!actual){return;}
+    if(!(parseFloat(actual.monto)>0)){alert('Captura el monto del producto antes de agregar el siguiente.');return;}
+    if(actual.itemId&&!(cantidadBaseDe(actual)>0)){alert('Captura la cantidad del producto antes de agregar el siguiente.');return;}
+    var nf=nuevaFilaCompra();
+    filas.push(nf);
+    activeRowId=nf.row;
     pintarItemsCompra();
   });
 
