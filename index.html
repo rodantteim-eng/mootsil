@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<title>Mootsil · Tablero del Rancho · C020 · Caja Funcional Hotfix</title>
+<title>Mootsil · Tablero del Rancho · C021 · Caja Flujo Completo</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
@@ -400,7 +400,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 @media(max-width:650px){.rg6-mini-btn{padding:7px 8px;font-size:.62rem}}
 
 
-/* C020 — Hotfix Caja: restaura helpers y estado de Caja eliminados accidentalmente al reconstruir Administración. */
+/* C021 — Caja: flujo completo de prueba con apertura, entradas, salidas, transferencias y corte. */
 
 /* C010 — módulo Riego integral: accesos visibles a Hidratación, Filtros y Cintillas */
 
@@ -559,6 +559,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ca17-back{border:1px solid #dce4df;background:#fff;color:#174c3a;border-radius:9px;padding:8px 11px;font-size:.66rem;font-weight:850;cursor:pointer}
 @media(max-width:1100px){.ad17-grid{grid-template-columns:repeat(2,1fr)}.ca17-actions{grid-template-columns:repeat(2,1fr)}.ca17-controls{grid-template-columns:repeat(2,1fr)}.ca17-kpis{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:650px){.ad17-grid,.ca17-kpis,.ca17-accounts,.ca17-actions,.ca17-controls{grid-template-columns:1fr}.ca17-account+.ca17-account{border-left:0;border-top:1px solid #d8e0da}.ca17-week,.ca17-weather{min-width:100%;width:100%}}
+
+
+/* C021 — Flujo funcional completo de Caja (modo prueba persistente en este navegador) */
+.ca21-modal{position:fixed;inset:0;background:rgba(0,0,0,.42);display:flex;align-items:center;justify-content:center;z-index:99999;padding:18px}
+.ca21-dialog{width:min(620px,96vw);max-height:90vh;overflow:auto;background:#fff;border-radius:16px;border:1px solid #dfe6e1;box-shadow:0 20px 70px rgba(0,0,0,.22)}
+.ca21-dialog-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:16px 18px;border-bottom:1px solid #edf0ed}
+.ca21-dialog-head h3{margin:0;color:#164433;font-size:1rem}.ca21-dialog-head p{margin:3px 0 0;color:#728078;font-size:.66rem}
+.ca21-close{border:0;background:#f3f5f3;border-radius:50%;width:30px;height:30px;cursor:pointer;font-weight:900}
+.ca21-dialog-body{padding:16px 18px}.ca21-form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ca21-field{display:flex;flex-direction:column;gap:5px}.ca21-field.full{grid-column:1/-1}.ca21-field label{font-size:.62rem;font-weight:900;color:#40574b;text-transform:uppercase;letter-spacing:.04em}
+.ca21-field input,.ca21-field select,.ca21-field textarea{border:1px solid #d9e1dc;border-radius:9px;padding:9px 10px;font-size:.72rem;background:#fff}.ca21-field textarea{min-height:72px;resize:vertical}
+.ca21-dialog-actions{display:flex;justify-content:flex-end;gap:8px;padding:0 18px 16px}.ca21-dialog-actions button{border:1px solid #d9e1dc;border-radius:9px;padding:9px 13px;font-size:.68rem;font-weight:900;cursor:pointer;background:#fff}
+.ca21-dialog-actions .save{background:#146344;border-color:#146344;color:#fff}.ca21-dialog-actions .danger{background:#c71b1b;border-color:#c71b1b;color:#fff}
+.ca21-warning{background:#fff8e8;border:1px solid #efd49e;border-radius:10px;padding:9px 10px;font-size:.64rem;color:#6f5b31;line-height:1.45}
+.ca21-status-open{display:inline-flex;align-items:center;gap:5px;color:#1c7b4b;font-weight:900}.ca21-status-closed{display:inline-flex;align-items:center;gap:5px;color:#7a4a1f;font-weight:900}
+.ca21-mini{font-size:.58rem;color:#758178;margin-top:2px}
+.ca21-action-btn{border:1px solid #d9e1dc;background:#fff;border-radius:7px;padding:4px 7px;font-size:.58rem;font-weight:850;cursor:pointer}
+.ca21-source-test{background:#efe9f7;color:#6b3c86}.ca21-source-existing{background:#edf4ef;color:#2f6248}
+@media(max-width:650px){.ca21-form{grid-template-columns:1fr}.ca21-field.full{grid-column:auto}}
 
 </style>
 </head>
@@ -6751,12 +6770,203 @@ function cajaMovimiento(tipo,fecha,origen,concepto,persona,monto,forma,id){
   };
 }
 
+
+/* C021 — Caja funcional en etapa de prueba.
+   Persistencia local por navegador para validar el flujo completo sin tocar SQL/RLS.
+   Cuando el flujo quede aprobado se migra a tablas definitivas.
+*/
+var CA21_KEY='mootsil_caja_prueba_v1';
+
+function ca21Load(){
+  try{
+    var x=JSON.parse(localStorage.getItem(CA21_KEY)||'{}');
+    if(!x||typeof x!=='object')x={};
+    if(!x.movimientos)x.movimientos=[];
+    if(!x.aperturas)x.aperturas={};
+    if(!x.cortes)x.cortes={};
+    return x;
+  }catch(e){return {movimientos:[],aperturas:{},cortes:{}};}
+}
+function ca21Save(data){localStorage.setItem(CA21_KEY,JSON.stringify(data));}
+function ca21Id(){return 'CJ-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6);}
+function ca21Now(){
+  var d=new Date();
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+function ca21DateToday(){return fechaHoyLocal();}
+function ca21DayData(fecha){
+  var d=ca21Load();
+  return {data:d, apertura:d.aperturas[fecha]||null, corte:d.cortes[fecha]||null};
+}
+function ca21OpenModal(html){
+  ca21CloseModal();
+  var w=document.createElement('div');
+  w.id='ca21-modal';
+  w.className='ca21-modal';
+  w.innerHTML='<div class="ca21-dialog">'+html+'</div>';
+  document.body.appendChild(w);
+  w.addEventListener('click',function(e){if(e.target===w)ca21CloseModal();});
+}
+function ca21CloseModal(){
+  var x=document.getElementById('ca21-modal');
+  if(x)x.remove();
+}
+function ca21Money(v){return Math.round((parseFloat(v||0)||0)*100)/100;}
+function ca21AccountDelta(m,cuenta){
+  var monto=ca21Money(m.monto);
+  if(m.tipo==='entrada')return m.cuenta===cuenta?monto:0;
+  if(m.tipo==='salida')return m.cuenta===cuenta?-monto:0;
+  if(m.tipo==='transferencia'){
+    var s=0;
+    if(m.cuenta_origen===cuenta)s-=monto;
+    if(m.cuenta_destino===cuenta)s+=monto;
+    return s;
+  }
+  return 0;
+}
+function ca21Totals(fechaHasta){
+  var d=ca21Load();
+  var ap=d.aperturas[fechaHasta]||{efectivo:0,bancos:0};
+  var ms=d.movimientos.filter(function(m){return m.fecha===fechaHasta;});
+  var ef=ca21Money(ap.efectivo), ba=ca21Money(ap.bancos);
+  ms.forEach(function(m){ef+=ca21AccountDelta(m,'efectivo');ba+=ca21AccountDelta(m,'bancos');});
+  return {efectivo:ca21Money(ef),bancos:ca21Money(ba),total:ca21Money(ef+ba),movs:ms,apertura:ap};
+}
+function ca21OpenApertura(fecha){
+  var dd=ca21DayData(fecha), ap=dd.apertura;
+  var prevDate=new Date(fecha+'T12:00:00'); prevDate.setDate(prevDate.getDate()-1);
+  var prev=prevDate.getFullYear()+'-'+String(prevDate.getMonth()+1).padStart(2,'0')+'-'+String(prevDate.getDate()).padStart(2,'0');
+  var prevCut=dd.data.cortes[prev];
+  var efDefault=ap?ap.efectivo:(prevCut?prevCut.efectivo_contado:0);
+  var baDefault=ap?ap.bancos:(prevCut?prevCut.bancos_cierre:0);
+  ca21OpenModal(
+    '<div class="ca21-dialog-head"><div><h3>💵 Apertura de Caja</h3><p>'+cajaFechaCorta(fecha)+'</p></div><button class="ca21-close" onclick="ca21CloseModal()">×</button></div>'+
+    '<div class="ca21-dialog-body"><div class="ca21-warning">El saldo inicial se separa entre efectivo físico y bancos/transferencias. En operación normal, el cierre anterior podrá convertirse en la apertura del día siguiente.</div><div class="ca21-form" style="margin-top:12px">'+
+      '<div class="ca21-field"><label>Efectivo inicial</label><input id="ca21-ap-ef" type="number" min="0" step="0.01" value="'+ca21Money(efDefault)+'"></div>'+
+      '<div class="ca21-field"><label>Bancos inicial</label><input id="ca21-ap-ba" type="number" min="0" step="0.01" value="'+ca21Money(baDefault)+'"></div>'+
+      '<div class="ca21-field full"><label>Observación</label><textarea id="ca21-ap-nota" placeholder="Opcional">'+(ap&&ap.nota?ap.nota:'')+'</textarea></div>'+
+    '</div></div>'+
+    '<div class="ca21-dialog-actions"><button onclick="ca21CloseModal()">Cancelar</button><button class="save" id="ca21-ap-save">Guardar apertura</button></div>'
+  );
+  document.getElementById('ca21-ap-save').addEventListener('click',function(){
+    var d=ca21Load();
+    d.aperturas[fecha]={
+      fecha:fecha,
+      efectivo:ca21Money(document.getElementById('ca21-ap-ef').value),
+      bancos:ca21Money(document.getElementById('ca21-ap-ba').value),
+      nota:document.getElementById('ca21-ap-nota').value.trim(),
+      hora:ca21Now(),
+      usuario:(usuario&&usuario.nombre)||'Usuario'
+    };
+    ca21Save(d); ca21CloseModal(); renderCajaMootsil(CAJA_PERIODO,fecha);
+  });
+}
+function ca21OpenMovimiento(tipo,fecha){
+  var esEntrada=tipo==='entrada';
+  ca21OpenModal(
+    '<div class="ca21-dialog-head"><div><h3>'+(esEntrada?'➕ Registrar entrada':'➖ Registrar gasto / pago')+'</h3><p>'+cajaFechaCorta(fecha)+'</p></div><button class="ca21-close" onclick="ca21CloseModal()">×</button></div>'+
+    '<div class="ca21-dialog-body"><div class="ca21-form">'+
+      '<div class="ca21-field"><label>Monto</label><input id="ca21-m-monto" type="number" min="0.01" step="0.01" placeholder="0.00"></div>'+
+      '<div class="ca21-field"><label>Cuenta</label><select id="ca21-m-cuenta"><option value="efectivo">Efectivo</option><option value="bancos">Banco / Transferencia</option></select></div>'+
+      '<div class="ca21-field"><label>Categoría</label><select id="ca21-m-cat">'+
+        (esEntrada
+          ?'<option>Aportaciones</option><option>Venta de fruta</option><option>Reembolso</option><option>Recuperación</option><option>Otros ingresos</option>'
+          :'<option>Personal</option><option>Insumos</option><option>Empaque</option><option>Combustible</option><option>Mantenimiento</option><option>Servicios</option><option>Renta</option><option>Proveedor</option><option>Otros gastos</option>')+
+      '</select></div>'+
+      '<div class="ca21-field"><label>Concepto</label><input id="ca21-m-concepto" placeholder="'+(esEntrada?'Ej. Aportación de inversionista':'Ej. Compra de fertilizante')+'"></div>'+
+      '<div class="ca21-field full"><label>'+(esEntrada?'Origen / Persona':'Beneficiario / Proveedor')+'</label><input id="ca21-m-persona" placeholder="Nombre"></div>'+
+      '<div class="ca21-field full"><label>Observación / referencia</label><textarea id="ca21-m-nota" placeholder="Folio, detalle o comentario opcional"></textarea></div>'+
+    '</div></div>'+
+    '<div class="ca21-dialog-actions"><button onclick="ca21CloseModal()">Cancelar</button><button class="save" id="ca21-m-save">Guardar movimiento</button></div>'
+  );
+  document.getElementById('ca21-m-save').addEventListener('click',function(){
+    var monto=ca21Money(document.getElementById('ca21-m-monto').value);
+    var concepto=document.getElementById('ca21-m-concepto').value.trim();
+    if(monto<=0){alert('Captura un monto mayor a cero.');return;}
+    if(!concepto){alert('Captura el concepto.');return;}
+    var d=ca21Load();
+    d.movimientos.push({
+      id:ca21Id(),fecha:fecha,hora:ca21Now(),tipo:tipo,
+      cuenta:document.getElementById('ca21-m-cuenta').value,
+      categoria:document.getElementById('ca21-m-cat').value,
+      concepto:concepto,
+      persona:document.getElementById('ca21-m-persona').value.trim()||'—',
+      nota:document.getElementById('ca21-m-nota').value.trim(),
+      monto:monto,origen:'Caja manual',estado:'Registrado',
+      usuario:(usuario&&usuario.nombre)||'Usuario'
+    });
+    ca21Save(d);ca21CloseModal();renderCajaMootsil(CAJA_PERIODO,fecha);
+  });
+}
+function ca21OpenTransfer(fecha){
+  ca21OpenModal(
+    '<div class="ca21-dialog-head"><div><h3>⇄ Transferencia entre cuentas</h3><p>No modifica el saldo total; solo mueve dinero entre Efectivo y Bancos.</p></div><button class="ca21-close" onclick="ca21CloseModal()">×</button></div>'+
+    '<div class="ca21-dialog-body"><div class="ca21-form">'+
+      '<div class="ca21-field"><label>De</label><select id="ca21-t-origen"><option value="bancos">Banco / Transferencia</option><option value="efectivo">Efectivo</option></select></div>'+
+      '<div class="ca21-field"><label>A</label><select id="ca21-t-destino"><option value="efectivo">Efectivo</option><option value="bancos">Banco / Transferencia</option></select></div>'+
+      '<div class="ca21-field"><label>Monto</label><input id="ca21-t-monto" type="number" min="0.01" step="0.01" placeholder="0.00"></div>'+
+      '<div class="ca21-field"><label>Concepto</label><input id="ca21-t-concepto" value="Transferencia entre cuentas"></div>'+
+      '<div class="ca21-field full"><label>Observación</label><textarea id="ca21-t-nota" placeholder="Opcional"></textarea></div>'+
+    '</div></div>'+
+    '<div class="ca21-dialog-actions"><button onclick="ca21CloseModal()">Cancelar</button><button class="save" id="ca21-t-save">Registrar transferencia</button></div>'
+  );
+  document.getElementById('ca21-t-save').addEventListener('click',function(){
+    var origen=document.getElementById('ca21-t-origen').value,destino=document.getElementById('ca21-t-destino').value,monto=ca21Money(document.getElementById('ca21-t-monto').value);
+    if(origen===destino){alert('La cuenta de origen y destino deben ser diferentes.');return;}
+    if(monto<=0){alert('Captura un monto mayor a cero.');return;}
+    var totals=ca21Totals(fecha);
+    var disponible=origen==='efectivo'?totals.efectivo:totals.bancos;
+    if(monto>disponible){alert('El monto supera el saldo disponible en la cuenta de origen.');return;}
+    var d=ca21Load();
+    d.movimientos.push({
+      id:ca21Id(),fecha:fecha,hora:ca21Now(),tipo:'transferencia',
+      cuenta_origen:origen,cuenta_destino:destino,monto:monto,
+      categoria:'Transferencia',concepto:document.getElementById('ca21-t-concepto').value.trim()||'Transferencia entre cuentas',
+      persona:'Entre cuentas',nota:document.getElementById('ca21-t-nota').value.trim(),
+      origen:'Caja',estado:'Registrado',usuario:(usuario&&usuario.nombre)||'Usuario'
+    });
+    ca21Save(d);ca21CloseModal();renderCajaMootsil(CAJA_PERIODO,fecha);
+  });
+}
+function ca21OpenCorte(fecha){
+  var totals=ca21Totals(fecha), dd=ca21DayData(fecha), corte=dd.corte;
+  ca21OpenModal(
+    '<div class="ca21-dialog-head"><div><h3>▣ Corte de Caja</h3><p>'+cajaFechaCorta(fecha)+'</p></div><button class="ca21-close" onclick="ca21CloseModal()">×</button></div>'+
+    '<div class="ca21-dialog-body">'+
+      '<div class="ca21-warning">Efectivo esperado: <strong>$'+formatMonto(totals.efectivo)+'</strong> · Bancos calculados: <strong>$'+formatMonto(totals.bancos)+'</strong></div>'+
+      '<div class="ca21-form" style="margin-top:12px">'+
+        '<div class="ca21-field"><label>Efectivo contado físicamente</label><input id="ca21-c-ef" type="number" min="0" step="0.01" value="'+(corte?corte.efectivo_contado:totals.efectivo)+'"></div>'+
+        '<div class="ca21-field"><label>Bancos al cierre</label><input id="ca21-c-ba" type="number" min="0" step="0.01" value="'+(corte?corte.bancos_cierre:totals.bancos)+'"></div>'+
+        '<div class="ca21-field full"><label>Justificación de diferencia</label><textarea id="ca21-c-nota" placeholder="Obligatoria si existe diferencia">'+(corte&&corte.nota?corte.nota:'')+'</textarea></div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="ca21-dialog-actions"><button onclick="ca21CloseModal()">Cancelar</button><button class="danger" id="ca21-c-save">Cerrar Caja del día</button></div>'
+  );
+  document.getElementById('ca21-c-save').addEventListener('click',function(){
+    var ef=ca21Money(document.getElementById('ca21-c-ef').value),ba=ca21Money(document.getElementById('ca21-c-ba').value);
+    var diferencia=ca21Money(ef-totals.efectivo),nota=document.getElementById('ca21-c-nota').value.trim();
+    if(Math.abs(diferencia)>.009&&!nota){alert('Existe diferencia de efectivo. Captura una justificación.');return;}
+    var d=ca21Load();
+    d.cortes[fecha]={
+      fecha:fecha,hora:ca21Now(),efectivo_esperado:totals.efectivo,efectivo_contado:ef,
+      bancos_cierre:ba,diferencia:diferencia,nota:nota,
+      usuario:(usuario&&usuario.nombre)||'Usuario'
+    };
+    ca21Save(d);ca21CloseModal();renderCajaMootsil(CAJA_PERIODO,fecha);
+  });
+}
+function ca21DeleteMovimiento(id,fecha){
+  if(!confirm('¿Eliminar este movimiento de prueba?'))return;
+  var d=ca21Load();
+  d.movimientos=d.movimientos.filter(function(m){return String(m.id)!==String(id);});
+  ca21Save(d);renderCajaMootsil(CAJA_PERIODO,fecha);
+}
+
 function renderCajaMootsil(periodo,fechaBase){
   CAJA_PERIODO=periodo||CAJA_PERIODO||'dia';
   CAJA_FECHA_BASE=fechaBase||CAJA_FECHA_BASE||fechaHoyLocal();
   var body=document.getElementById('enc-body');
   var rg=cajaRango(CAJA_PERIODO,CAJA_FECHA_BASE);
-  body.innerHTML='<div class="ca17-shell"><div class="ca17-top"><div class="ca17-left"><div class="ca17-icon">💵</div><div><div class="ad17-eyebrow">Administración · Caja</div><div class="ca17-title">Caja</div><div class="ca17-date"><span class="ca17-pill">📅 '+cajaFechaCorta(CAJA_FECHA_BASE)+'</span><span class="ca17-pill status">● Día en curso</span></div></div></div><button class="ca17-back" onclick="renderAdministracionMenu()">← Administración</button></div><div class="ca17-section"><div class="loading">Cargando Caja...</div></div></div>';
 
   Promise.all([
     from('gastos').select('*,proveedor:proveedores(nombre),registrador:usuarios!registrado_por(nombre)').eq('estado_pago','pagado').gte('fecha',rg.inicio).lte('fecha',rg.fin).get(),
@@ -6765,50 +6975,85 @@ function renderCajaMootsil(periodo,fechaBase){
     from('pagos_eventuales').select('*,operario:usuarios!operario_id(nombre)').gte('fecha',rg.inicio).lte('fecha',rg.fin).get(),
     from('prestamos').select('*,operario:usuarios!operario_id(nombre)').gte('fecha_inicio',rg.inicio).lte('fecha_inicio',rg.fin).get(),
     from('inversiones').select('*,inversionista:usuarios!inversionista_id(nombre)').gte('fecha_inicio',rg.inicio).lte('fecha_inicio',rg.fin).get(),
-    from('inversion_movimientos').select('*,inversion:inversiones(inversionista_id)').gte('fecha',rg.inicio).lte('fecha',rg.fin).get()
+    from('inversion_movimientos').select('*').gte('fecha',rg.inicio).lte('fecha',rg.fin).get()
   ]).then(function(r){
-    var gastos=r[0]||[],nom=r[1]||[],extras=r[2]||[],eventuales=r[3]||[],prestamos=r[4]||[],inversiones=r[5]||[],invMovs=r[6]||[];
-    var movimientos=[];
-    gastos.forEach(function(g){movimientos.push(cajaMovimiento('salida',g.fecha,'Compra',g.concepto||(GASTO_CATEGORIAS[g.categoria]?GASTO_CATEGORIAS[g.categoria].lbl:'Gasto'),g.proveedor?g.proveedor.nombre:'Sin proveedor',g.monto,g.forma_pago,g.id));});
-    nom.forEach(function(p){movimientos.push(cajaMovimiento('salida',p.semana_inicio,'Nómina','Nómina personal fijo',p.operario?p.operario.nombre:'Colaborador',p.monto_pagado,'—',p.id));});
-    extras.forEach(function(p){movimientos.push(cajaMovimiento('salida',p.semana_inicio,'Nómina','Horas extra',p.operario?p.operario.nombre:'Colaborador',p.monto_pagado,'—',p.id));});
-    eventuales.forEach(function(p){movimientos.push(cajaMovimiento('salida',p.fecha,'Eventuales',p.concepto||'Pago personal eventual',p.operario?p.operario.nombre:'Colaborador eventual',p.monto,'—',p.id));});
-    prestamos.forEach(function(p){movimientos.push(cajaMovimiento('salida',p.fecha_inicio,'Préstamo','Préstamo a colaborador',p.operario?p.operario.nombre:'Colaborador',p.monto_total,'—',p.id));});
-    inversiones.forEach(function(i){movimientos.push(cajaMovimiento('entrada',i.fecha_inicio,'Entrada manual','Aportación de inversionista',i.inversionista?i.inversionista.nombre:'Inversionista',i.monto_invertido,'Transferencia',i.id));});
-    invMovs.forEach(function(m){if(m.tipo==='rendimiento')movimientos.push(cajaMovimiento('salida',m.fecha,'Inversionistas',m.concepto||'Pago de rendimiento','Inversionista',m.monto,'—',m.id));if(m.tipo==='devolucion_capital')movimientos.push(cajaMovimiento('salida',m.fecha,'Inversionistas',m.concepto||'Devolución de capital','Inversionista',m.monto,'—',m.id));});
-    movimientos.sort(function(a,b){return String(b.fecha).localeCompare(String(a.fecha));});
-    var entradas=movimientos.filter(function(m){return m.tipo==='entrada';}).reduce(function(s,m){return s+m.monto;},0);
-    var salidas=movimientos.filter(function(m){return m.tipo==='salida';}).reduce(function(s,m){return s+m.monto;},0);
-    var saldoInicial=0;
-    var saldoDisponible=saldoInicial+entradas-salidas;
-    var efectivo=movimientos.filter(function(m){return /efectivo/i.test(m.forma||'');}).reduce(function(s,m){return s+(m.tipo==='entrada'?m.monto:-m.monto);},0);
-    var banco=saldoDisponible-efectivo;
+    var externos=[],gastos=r[0]||[],nom=r[1]||[],extras=r[2]||[],eventuales=r[3]||[],prestamos=r[4]||[],inversiones=r[5]||[],invMovs=r[6]||[];
+
+    gastos.forEach(function(g){externos.push({id:'db-g-'+g.id,fecha:g.fecha,hora:'—',tipo:'salida',cuenta:/efectivo/i.test(g.forma_pago||'')?'efectivo':'bancos',categoria:'Compra / gasto',concepto:g.concepto||'Gasto',persona:g.proveedor?g.proveedor.nombre:'Sin proveedor',monto:cajaMonto(g.monto),forma:g.forma_pago||'—',origen:'Compra',estado:'Pagado',db:true});});
+    nom.forEach(function(p){externos.push({id:'db-n-'+p.id,fecha:p.semana_inicio,hora:'—',tipo:'salida',cuenta:'efectivo',categoria:'Personal',concepto:'Nómina personal fijo',persona:p.operario?p.operario.nombre:'Colaborador',monto:cajaMonto(p.monto_pagado),forma:'—',origen:'Nómina',estado:'Pagado',db:true});});
+    extras.forEach(function(p){externos.push({id:'db-x-'+p.id,fecha:p.semana_inicio,hora:'—',tipo:'salida',cuenta:'efectivo',categoria:'Personal',concepto:'Horas extra',persona:p.operario?p.operario.nombre:'Colaborador',monto:cajaMonto(p.monto_pagado),forma:'—',origen:'Nómina',estado:'Pagado',db:true});});
+    eventuales.forEach(function(p){externos.push({id:'db-e-'+p.id,fecha:p.fecha,hora:'—',tipo:'salida',cuenta:'efectivo',categoria:'Personal',concepto:p.concepto||'Pago personal eventual',persona:p.operario?p.operario.nombre:'Eventual',monto:cajaMonto(p.monto),forma:'—',origen:'Eventuales',estado:'Pagado',db:true});});
+    prestamos.forEach(function(p){externos.push({id:'db-p-'+p.id,fecha:p.fecha_inicio,hora:'—',tipo:'salida',cuenta:'efectivo',categoria:'Personal',concepto:'Préstamo a colaborador',persona:p.operario?p.operario.nombre:'Colaborador',monto:cajaMonto(p.monto_total),forma:'—',origen:'Préstamo',estado:'Registrado',db:true});});
+    inversiones.forEach(function(i){externos.push({id:'db-i-'+i.id,fecha:i.fecha_inicio,hora:'—',tipo:'entrada',cuenta:'bancos',categoria:'Aportaciones',concepto:'Aportación de inversionista',persona:i.inversionista?i.inversionista.nombre:'Inversionista',monto:cajaMonto(i.monto_invertido),forma:'Transferencia',origen:'Inversionistas',estado:'Registrado',db:true});});
+    invMovs.forEach(function(m){if(m.tipo==='rendimiento'||m.tipo==='devolucion_capital')externos.push({id:'db-im-'+m.id,fecha:m.fecha,hora:'—',tipo:'salida',cuenta:'bancos',categoria:'Inversionistas',concepto:m.concepto||(m.tipo==='rendimiento'?'Rendimiento':'Devolución de capital'),persona:'Inversionista',monto:cajaMonto(m.monto),forma:'—',origen:'Inversionistas',estado:'Registrado',db:true});});
+
+    var store=ca21Load();
+    var locales=store.movimientos.filter(function(m){return m.fecha>=rg.inicio&&m.fecha<=rg.fin;});
+    var movimientos=externos.concat(locales).sort(function(a,b){return (String(b.fecha)+String(b.hora||'')).localeCompare(String(a.fecha)+String(a.hora||''));});
+
+    var apertura=store.aperturas[CAJA_FECHA_BASE]||null;
+    var corte=store.cortes[CAJA_FECHA_BASE]||null;
+
+    // Daily test balances are based on local opening + local manual cash flows.
+    // Existing DB records are displayed as historical/consolidated movements but are not double-counted
+    // into the test opening/closing cash balance until migration rules are approved.
+    var localDay=store.movimientos.filter(function(m){return m.fecha===CAJA_FECHA_BASE;});
+    var saldoInicialEf=apertura?ca21Money(apertura.efectivo):0;
+    var saldoInicialBa=apertura?ca21Money(apertura.bancos):0;
+    var ef=saldoInicialEf,ba=saldoInicialBa;
+    localDay.forEach(function(m){ef+=ca21AccountDelta(m,'efectivo');ba+=ca21AccountDelta(m,'bancos');});
+    ef=ca21Money(ef);ba=ca21Money(ba);
+
+    var localEntradas=localDay.filter(function(m){return m.tipo==='entrada';}).reduce(function(s,m){return s+ca21Money(m.monto);},0);
+    var localSalidas=localDay.filter(function(m){return m.tipo==='salida';}).reduce(function(s,m){return s+ca21Money(m.monto);},0);
+    var saldoInicial=ca21Money(saldoInicialEf+saldoInicialBa);
+    var saldoDisponible=ca21Money(ef+ba);
+
     var semana='Semana '+riegoSemanaNumero(CAJA_FECHA_BASE);
-    var rows=movimientos.length?movimientos.map(function(m){return '<tr><td>—</td><td>'+(m.tipo==='entrada'?'⬇️':'⬆️')+'</td><td><strong>'+m.concepto+'</strong></td><td><span class="ca17-tag">'+m.origen+'</span></td><td>'+m.persona+'</td><td>'+m.forma+'</td><td class="ca17-money-in">'+(m.tipo==='entrada'?'$'+formatMonto(m.monto):'—')+'</td><td class="ca17-money-out">'+(m.tipo==='salida'?'$'+formatMonto(m.monto):'—')+'</td><td><span class="ca17-tag">'+m.origen+'</span></td><td><span class="ca17-tag">Registrado</span></td><td>•••</td></tr>';}).join(''):'<tr><td colspan="11" style="text-align:center;color:#77837c;padding:24px">No hay movimientos registrados en este periodo.</td></tr>';
+    var statusHtml=corte?'<span class="ca21-status-closed">● Caja cerrada</span>':(apertura?'<span class="ca21-status-open">● Caja abierta</span>':'<span class="ca21-status-open">● Pendiente apertura</span>');
+
+    var rows=movimientos.length?movimientos.map(function(m){
+      var forma=m.tipo==='transferencia'?(m.cuenta_origen+' → '+m.cuenta_destino):(m.forma||(m.cuenta==='efectivo'?'Efectivo':'Transferencia'));
+      var cat=m.categoria||'—';
+      var ent=m.tipo==='entrada'?'$'+formatMonto(m.monto):'—';
+      var sal=m.tipo==='salida'?'$'+formatMonto(m.monto):'—';
+      var trans=m.tipo==='transferencia'?'$'+formatMonto(m.monto):'—';
+      return '<tr><td>'+(m.hora||'—')+'</td><td>'+(m.tipo==='entrada'?'⬇️':m.tipo==='salida'?'⬆️':'⇄')+'</td><td><strong>'+m.concepto+'</strong><div class="ca21-mini">'+(m.nota||'')+'</div></td><td><span class="ca17-tag">'+cat+'</span></td><td>'+(m.persona||'—')+'</td><td>'+forma+'</td><td class="ca17-money-in">'+ent+'</td><td class="ca17-money-out">'+sal+'</td><td><span class="ca17-tag '+(m.db?'ca21-source-existing':'ca21-source-test')+'">'+(m.origen||'Caja')+'</span></td><td><span class="ca17-tag">'+(m.estado||'Registrado')+'</span></td><td>'+(m.db?'—':'<button class="ca21-action-btn" data-ca21-del="'+m.id+'">Eliminar</button>')+'</td></tr>';
+    }).join(''):'<tr><td colspan="11" style="text-align:center;color:#77837c;padding:24px">No hay movimientos registrados en este periodo.</td></tr>';
 
     body.innerHTML='<div class="ca17-shell">'+
-      '<div class="ca17-top"><div class="ca17-left"><div class="ca17-icon">💵</div><div><div class="ad17-eyebrow">Administración · Caja</div><div class="ca17-title">Caja</div><div class="ca17-date"><span class="ca17-pill">📅 '+cajaFechaCorta(CAJA_FECHA_BASE)+'</span><span class="ca17-pill status">● Día en curso</span></div></div></div><div class="ca17-topright"><div class="ca17-week"><div>‹</div><div><strong>'+semana+'</strong><span>'+cajaFechaCorta(rg.inicio)+' – '+cajaFechaCorta(rg.fin)+'</span></div><div>›</div></div><div class="ca17-weather" data-rg-weather><div style="font-size:1.9rem">🌤️</div><div><div class="temp">—°C</div><div class="meta">Clima del rancho<br>Cargando...</div></div></div></div></div>'+
+      '<div class="ca17-top"><div class="ca17-left"><div class="ca17-icon">💵</div><div><div class="ad17-eyebrow">Administración · Caja</div><div class="ca17-title">Caja</div><div class="ca17-date"><span class="ca17-pill">📅 '+cajaFechaCorta(CAJA_FECHA_BASE)+'</span><span class="ca17-pill">'+statusHtml+'</span></div></div></div><div class="ca17-topright"><div class="ca17-week"><div>‹</div><div><strong>'+semana+'</strong><span>'+cajaFechaCorta(rg.inicio)+' – '+cajaFechaCorta(rg.fin)+'</span></div><div>›</div></div><div class="ca17-weather" data-rg-weather><div style="font-size:1.9rem">🌤️</div><div><div class="temp">—°C</div><div class="meta">Clima del rancho<br>Cargando...</div></div></div></div></div>'+
       '<div class="ca17-section"><div class="ca17-section-title">Resumen de Caja · '+(CAJA_PERIODO==='dia'?'Hoy':CAJA_PERIODO)+'</div><div class="ca17-kpis">'+
-        '<div class="ca17-kpi initial"><div class="ball">▣</div><div><div class="lbl">Saldo inicial</div><div class="num">$'+formatMonto(saldoInicial)+'</div><div class="meta">Sin persistencia todavía</div></div></div>'+
-        '<div class="ca17-kpi in"><div class="ball">↓</div><div><div class="lbl">Entradas</div><div class="num">$'+formatMonto(entradas)+'</div><div class="meta">'+movimientos.filter(function(m){return m.tipo==='entrada';}).length+' movimiento(s)</div></div></div>'+
-        '<div class="ca17-kpi out"><div class="ball">↑</div><div><div class="lbl">Salidas</div><div class="num">$'+formatMonto(salidas)+'</div><div class="meta">'+movimientos.filter(function(m){return m.tipo==='salida';}).length+' movimiento(s)</div></div></div>'+
-        '<div class="ca17-kpi net"><div class="ball">▰</div><div><div class="lbl">Saldo disponible</div><div class="num">$'+formatMonto(saldoDisponible)+'</div><div class="meta">Inicial + Entradas − Salidas</div></div></div></div>'+
-        '<div class="ca17-accounts"><div class="ca17-account"><strong>💵 EFECTIVO EN CAJA</strong><div>$'+formatMonto(efectivo)+'</div></div><div class="ca17-account"><strong>🏦 BANCOS / TRANSFERENCIAS</strong><div>$'+formatMonto(banco)+'</div></div></div>'+
-        '<div class="ca17-actions"><button class="entry" id="ca17-entrada">＋ Registrar entrada</button><button class="exit" id="ca17-gasto">＋ Registrar gasto / pago</button><button id="ca17-transfer">⇄ Transferencia entre cuentas</button><button id="ca17-corte">▣ Corte de caja</button><button id="ca17-more">••• Más opciones</button></div>'+
-        '<div class="ca17-controls"><input id="ca17-fecha" type="date" value="'+CAJA_FECHA_BASE+'"><select id="ca17-tipo"><option>Todos los movimientos</option><option>Entradas</option><option>Salidas</option></select><select><option>Todas las categorías</option></select><select><option>Todas las formas de pago</option><option>Efectivo</option><option>Transferencia</option></select><input placeholder="Buscar concepto, beneficiario, folio..."></div>'+
+        '<div class="ca17-kpi initial"><div class="ball">▣</div><div><div class="lbl">Saldo inicial</div><div class="num">$'+formatMonto(saldoInicial)+'</div><div class="meta">'+(apertura?'Apertura '+apertura.hora:'Sin apertura')+'</div></div></div>'+
+        '<div class="ca17-kpi in"><div class="ball">↓</div><div><div class="lbl">Entradas</div><div class="num">$'+formatMonto(localEntradas)+'</div><div class="meta">'+localDay.filter(function(m){return m.tipo==='entrada';}).length+' movimiento(s) de Caja</div></div></div>'+
+        '<div class="ca17-kpi out"><div class="ball">↑</div><div><div class="lbl">Salidas</div><div class="num">$'+formatMonto(localSalidas)+'</div><div class="meta">'+localDay.filter(function(m){return m.tipo==='salida';}).length+' movimiento(s) de Caja</div></div></div>'+
+        '<div class="ca17-kpi net"><div class="ball">▰</div><div><div class="lbl">Saldo disponible</div><div class="num">$'+formatMonto(saldoDisponible)+'</div><div class="meta">Efectivo + Bancos</div></div></div></div>'+
+        '<div class="ca17-accounts"><div class="ca17-account"><strong>💵 EFECTIVO EN CAJA</strong><div>$'+formatMonto(ef)+'</div></div><div class="ca17-account"><strong>🏦 BANCOS / TRANSFERENCIAS</strong><div>$'+formatMonto(ba)+'</div></div></div>'+
+        '<div class="ca17-actions">'+
+          '<button class="entry" id="ca21-open">'+(apertura?'✎ Editar apertura':'＋ Abrir Caja / Saldo inicial')+'</button>'+
+          '<button class="entry" id="ca21-entry" '+(!apertura||corte?'disabled style="opacity:.45"':'')+'>＋ Registrar entrada</button>'+
+          '<button class="exit" id="ca21-exit" '+(!apertura||corte?'disabled style="opacity:.45"':'')+'>＋ Registrar gasto / pago</button>'+
+          '<button id="ca21-transfer" '+(!apertura||corte?'disabled style="opacity:.45"':'')+'>⇄ Transferencia</button>'+
+          '<button id="ca21-close" '+(!apertura||corte?'disabled style="opacity:.45"':'')+'>▣ Corte de caja</button>'+
+        '</div>'+
+        '<div class="ca17-controls"><input id="ca21-fecha" type="date" value="'+CAJA_FECHA_BASE+'"><select id="ca21-tipo"><option value="todos">Todos los movimientos</option><option value="entrada">Entradas</option><option value="salida">Salidas</option><option value="transferencia">Transferencias</option></select><select><option>Todas las categorías</option></select><select><option>Todas las formas de pago</option><option>Efectivo</option><option>Transferencia</option></select><input placeholder="Buscar concepto, beneficiario, folio..."></div>'+
         '<div class="ca17-table-wrap"><table class="ca17-table"><thead><tr><th>Hora</th><th>Tipo</th><th>Concepto</th><th>Categoría</th><th>Beneficiario / Proveedor</th><th>Forma de pago</th><th>Entrada</th><th>Salida</th><th>Origen</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
-        '<div class="ca17-foot"><div>ⓘ Los movimientos mostrados provienen de los registros existentes en Mootsil.</div><div>Última sincronización: sesión actual</div></div></div>'+
+        '<div class="ca17-foot"><div>ⓘ <strong>Modo prueba:</strong> apertura y movimientos manuales se guardan en este navegador. Los movimientos existentes de Mootsil se muestran como referencia y no se duplican en el saldo de prueba.</div><div>'+(corte?'Corte: '+corte.hora+' · Diferencia $'+formatMonto(corte.diferencia):'Caja sin corte')+'</div></div></div>'+
       '<div style="display:flex;justify-content:flex-end"><button class="ca17-back" onclick="renderAdministracionMenu()">← Administración</button></div></div>';
 
     cargarClimaRiego();
-    document.getElementById('ca17-fecha').addEventListener('change',function(){renderCajaMootsil(CAJA_PERIODO,this.value);});
-    document.getElementById('ca17-gasto').addEventListener('click',renderNuevaCompra);
-    document.getElementById('ca17-entrada').addEventListener('click',function(){alert('Registrar entrada será el siguiente flujo funcional de Caja.');});
-    document.getElementById('ca17-transfer').addEventListener('click',function(){alert('Transferencia entre cuentas se habilitará al definir cuentas de Caja y bancos.');});
-    document.getElementById('ca17-corte').addEventListener('click',function(){alert('Corte de caja se habilitará cuando exista saldo inicial persistente.');});
-    document.getElementById('ca17-more').addEventListener('click',renderComprasMenu);
+
+    document.getElementById('ca21-fecha').addEventListener('change',function(){renderCajaMootsil(CAJA_PERIODO,this.value);});
+    document.getElementById('ca21-open').addEventListener('click',function(){ca21OpenApertura(CAJA_FECHA_BASE);});
+    if(apertura&&!corte){
+      document.getElementById('ca21-entry').addEventListener('click',function(){ca21OpenMovimiento('entrada',CAJA_FECHA_BASE);});
+      document.getElementById('ca21-exit').addEventListener('click',function(){ca21OpenMovimiento('salida',CAJA_FECHA_BASE);});
+      document.getElementById('ca21-transfer').addEventListener('click',function(){ca21OpenTransfer(CAJA_FECHA_BASE);});
+      document.getElementById('ca21-close').addEventListener('click',function(){ca21OpenCorte(CAJA_FECHA_BASE);});
+    }
+    body.querySelectorAll('[data-ca21-del]').forEach(function(b){b.addEventListener('click',function(){ca21DeleteMovimiento(this.dataset.ca21Del,CAJA_FECHA_BASE);});});
   }).catch(function(e){
-    body.innerHTML='<div class="ca17-shell"><div class="ca17-top"><div><div class="ad17-eyebrow">Administración · Caja</div><div class="ca17-title">Caja</div><div class="ad17-sub">No se pudo cargar la información.</div></div><button class="ca17-back" onclick="renderAdministracionMenu()">← Administración</button></div><div class="ca17-section"><strong>Error:</strong> '+e.message+'</div></div>';
+    body.innerHTML='<div class="ca17-shell"><div class="ca17-top"><div><div class="ad17-eyebrow">Administración · Caja</div><div class="ca17-title">Caja</div><div class="ad17-sub">No se pudo cargar la información de Caja.</div></div><button class="ca17-back" onclick="renderAdministracionMenu()">← Administración</button></div><div class="ca17-section"><strong>Error:</strong> '+e.message+'</div></div>';
   });
 }
 
