@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<title>Mootsil · Tablero del Rancho · C017 · Administración Caja</title>
+<title>Mootsil · Tablero del Rancho · C019 · Administración Caja Hotfix</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
@@ -400,7 +400,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 @media(max-width:650px){.rg6-mini-btn{padding:7px 8px;font-size:.62rem}}
 
 
-/* C017 — Reconstrucción visual real de Administración y Caja según pantalla aprobada. */
+/* C019 — Hotfix Administración: elimina llamada inexistente setTab('administracion') que detenía el render. */
 
 /* C010 — módulo Riego integral: accesos visibles a Hidratación, Filtros y Cintillas */
 
@@ -6688,7 +6688,6 @@ function renderEditarInversion(inversionId){
 }
 
 function renderAdministracionMenu(){
-  setTab('administracion');
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="ad17-shell"><div class="ad17-head"><div><div class="ad17-eyebrow">Administración</div><div class="ad17-title">Control del Rancho</div><div class="ad17-sub">Finanzas, personal, compras y operación administrativa de Mootsil.</div></div></div><div class="ad17-grid">'+
     '<div class="ad17-card primary" data-admin="caja"><div class="ic">💵</div><h3>Caja</h3><p>Entradas, salidas, pagos, movimientos y control financiero operativo.</p></div>'+
@@ -6702,7 +6701,7 @@ function renderAdministracionMenu(){
   body.querySelector('[data-admin="caja"]').addEventListener('click',function(){renderCajaMootsil('dia',fechaHoyLocal());});
   body.querySelector('[data-admin="empleados"]').addEventListener('click',renderEmpleadosMenu);
   body.querySelector('[data-admin="nominas"]').addEventListener('click',renderNominasMenu);
-  body.querySelector('[data-admin="gastos"]').addEventListener('click',renderComprasGastosMenu);
+  body.querySelector('[data-admin="gastos"]').addEventListener('click',renderComprasMenu);
   body.querySelector('[data-admin="asistencias"]').addEventListener('click',function(){renderControlAsistencias(fechaHoyLocal());});
   body.querySelector('[data-admin="eventual"]').addEventListener('click',function(){renderPagosEventuales(fechaHoyLocal());});
   body.querySelector('[data-admin="inversionistas"]').addEventListener('click',renderInversionistasMenu);
@@ -6763,7 +6762,7 @@ function renderCajaMootsil(periodo,fechaBase){
     document.getElementById('ca17-entrada').addEventListener('click',function(){alert('Registrar entrada será el siguiente flujo funcional de Caja.');});
     document.getElementById('ca17-transfer').addEventListener('click',function(){alert('Transferencia entre cuentas se habilitará al definir cuentas de Caja y bancos.');});
     document.getElementById('ca17-corte').addEventListener('click',function(){alert('Corte de caja se habilitará cuando exista saldo inicial persistente.');});
-    document.getElementById('ca17-more').addEventListener('click',renderComprasGastosMenu);
+    document.getElementById('ca17-more').addEventListener('click',renderComprasMenu);
   }).catch(function(e){
     body.innerHTML='<div class="ca17-shell"><div class="ca17-top"><div><div class="ad17-eyebrow">Administración · Caja</div><div class="ca17-title">Caja</div><div class="ad17-sub">No se pudo cargar la información.</div></div><button class="ca17-back" onclick="renderAdministracionMenu()">← Administración</button></div><div class="ca17-section"><strong>Error:</strong> '+e.message+'</div></div>';
   });
