@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<title>Mootsil · Tablero del Rancho · C019 · Administración Caja Hotfix</title>
+<title>Mootsil · Tablero del Rancho · C020 · Caja Funcional Hotfix</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
@@ -400,7 +400,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 @media(max-width:650px){.rg6-mini-btn{padding:7px 8px;font-size:.62rem}}
 
 
-/* C019 — Hotfix Administración: elimina llamada inexistente setTab('administracion') que detenía el render. */
+/* C020 — Hotfix Caja: restaura helpers y estado de Caja eliminados accidentalmente al reconstruir Administración. */
 
 /* C010 — módulo Riego integral: accesos visibles a Hidratación, Filtros y Cintillas */
 
@@ -6705,6 +6705,50 @@ function renderAdministracionMenu(){
   body.querySelector('[data-admin="asistencias"]').addEventListener('click',function(){renderControlAsistencias(fechaHoyLocal());});
   body.querySelector('[data-admin="eventual"]').addEventListener('click',function(){renderPagosEventuales(fechaHoyLocal());});
   body.querySelector('[data-admin="inversionistas"]').addEventListener('click',renderInversionistasMenu);
+}
+
+
+/* C020 — Helpers de Caja restaurados */
+var CAJA_PERIODO='dia';
+var CAJA_FECHA_BASE=null;
+
+function cajaRango(periodo,fechaBase){
+  fechaBase=fechaBase||fechaHoyLocal();
+  var d=new Date(fechaBase+'T00:00:00');
+  var ini,fin;
+  if(periodo==='semana'){
+    var dow=d.getDay(), delta=(dow===0?-6:1-dow);
+    var a=new Date(d); a.setDate(a.getDate()+delta);
+    var b=new Date(a); b.setDate(b.getDate()+6);
+    ini=a.getFullYear()+'-'+String(a.getMonth()+1).padStart(2,'0')+'-'+String(a.getDate()).padStart(2,'0');
+    fin=b.getFullYear()+'-'+String(b.getMonth()+1).padStart(2,'0')+'-'+String(b.getDate()).padStart(2,'0');
+  }else if(periodo==='mes'){
+    var a2=new Date(d.getFullYear(),d.getMonth(),1);
+    var b2=new Date(d.getFullYear(),d.getMonth()+1,0);
+    ini=a2.getFullYear()+'-'+String(a2.getMonth()+1).padStart(2,'0')+'-'+String(a2.getDate()).padStart(2,'0');
+    fin=b2.getFullYear()+'-'+String(b2.getMonth()+1).padStart(2,'0')+'-'+String(b2.getDate()).padStart(2,'0');
+  }else{
+    ini=fin=fechaBase;
+  }
+  return {inicio:ini,fin:fin};
+}
+function cajaMonto(v){return parseFloat(v||0)||0;}
+function cajaFechaCorta(f){
+  if(!f)return '—';
+  var p=String(f).slice(0,10).split('-');
+  return p.length===3?(p[2]+'/'+p[1]+'/'+p[0]):String(f);
+}
+function cajaMovimiento(tipo,fecha,origen,concepto,persona,monto,forma,id){
+  return {
+    tipo:tipo,
+    fecha:fecha,
+    origen:origen,
+    concepto:concepto||origen,
+    persona:persona||'—',
+    monto:cajaMonto(monto),
+    forma:forma||'—',
+    id:id||''
+  };
 }
 
 function renderCajaMootsil(periodo,fechaBase){
