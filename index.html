@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<title>Mootsil · Tablero del Rancho · C024 · Caja Compras Hotfix</title>
+<title>Mootsil · Tablero del Rancho · C025 · Caja Compras Créditos Financiamientos</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
@@ -2814,13 +2814,17 @@ var REFACCIONES_SUBCATEGORIAS=['Gasolina','Aceite 2 Tiempos','Aceite 4 Tiempos',
 var GALERA_SUBCATEGORIAS=['Clamshell 6oz','Clamshell 9oz','Clamshell 12oz','Clamshell 18oz','Cajas de cartón','Charolas','Bolsas','Etiquetas / Stickers','Ligas','Cinta adhesiva','Otros'];
 var LIMPIEZA_SUBCATEGORIAS=['Cloro','Jabón / Detergente','Trapeadores','Escobas','Bolsas de basura','Guantes de limpieza','Desinfectante','Papel / Toallas','Otros'];
 var GRUPOS_INVENTARIO={
-  insumos:{lbl:'📦 Insumos',categorias:INSUMO_SUBCATEGORIAS},
+  insumos:{lbl:'🌿 Agroquímicos',categorias:INSUMO_SUBCATEGORIAS},
   galera:{lbl:'🏭 Galera',categorias:GALERA_SUBCATEGORIAS},
   limpieza:{lbl:'🧹 Limpieza',categorias:LIMPIEZA_SUBCATEGORIAS},
   seguridad:{lbl:'🦺 Seguridad',categorias:SEGURIDAD_SUBCATEGORIAS},
-  refacciones:{lbl:'🔧 Refacciones y Combustibles',categorias:REFACCIONES_SUBCATEGORIAS}
+  refacciones:{lbl:'🔧 Refacciones y Combustibles',categorias:REFACCIONES_SUBCATEGORIAS},
+  infraestructura:{lbl:'🏗️ Infraestructura',categorias:['Infraestructura']},
+  riego:{lbl:'💧 Riego',categorias:['Riego']},
+  tutoreo:{lbl:'🪢 Tutoreo',categorias:['Tutoreo']},
+  otros:{lbl:'📦 Otros',categorias:['Otros']}
 };
-var ORDEN_GRUPOS_INVENTARIO=['insumos','galera','limpieza','seguridad','refacciones'];
+var ORDEN_GRUPOS_INVENTARIO=['insumos','galera','limpieza','seguridad','refacciones','infraestructura','riego','tutoreo','otros'];
 var GRUPO_NOMBRE_PLANO={insumos:'Insumos',galera:'Galera',limpieza:'Limpieza',seguridad:'Seguridad',refacciones:'Refacciones y Combustibles'};
 var TABS_INVENTARIO=[
   {key:'insumos',lbl:'📦 Insumos',fn:"renderInventario('insumos')"},
@@ -5053,18 +5057,15 @@ function renderRecomendarAlarma(alertaId,tablaId){
 }
 
 var GASTO_CATEGORIAS={
-  insumos:{ic:'📦',lbl:'Insumos'},
-  galera:{ic:'🏭',lbl:'Galera'},
-  limpieza:{ic:'🧹',lbl:'Limpieza'},
-  seguridad:{ic:'🦺',lbl:'Seguridad'},
-  refacciones:{ic:'🔧',lbl:'Refacciones y Combustibles'},
+  agroquimicos:{ic:'🌿',lbl:'Agroquímicos'},
   herramientas:{ic:'🧰',lbl:'Herramientas'},
   equipos:{ic:'⚙️',lbl:'Equipos'},
-  mantenimiento:{ic:'🧑‍🔧',lbl:'Mantenimiento (servicio/mano de obra)'},
-  servicios:{ic:'💡',lbl:'Servicios (luz, agua, profesionales)'},
-  otros:{ic:'💵',lbl:'Otros'}
+  infraestructura:{ic:'🏗️',lbl:'Infraestructura'},
+  riego:{ic:'💧',lbl:'Riego'},
+  tutoreo:{ic:'🪢',lbl:'Tutoreo'},
+  otros:{ic:'📦',lbl:'Otros'}
 };
-var CATEGORIA_GASTO_A_GRUPO={insumos:'insumos',galera:'galera',limpieza:'limpieza',seguridad:'seguridad',refacciones:'refacciones'};
+var CATEGORIA_GASTO_A_GRUPO={agroquimicos:'insumos',infraestructura:'infraestructura',riego:'riego',tutoreo:'tutoreo',otros:'otros'};
 var CATEGORIA_GASTO_A_ACTIVO={herramientas:'Herramienta',equipos:'Equipo'};
 
 function renderComprasMenu(){
@@ -5112,38 +5113,49 @@ function chequearVencimientosProveedores(){
   }).catch(function(){});
 }
 
+
+/* C025 — pagos de créditos de proveedor en Preview */
+function ca25LoadPagosProveedor(){try{return JSON.parse(localStorage.getItem('mootsil_pagos_credito_proveedor_v1')||'[]')}catch(e){return []}}
+function ca25SavePagosProveedor(a){localStorage.setItem('mootsil_pagos_credito_proveedor_v1',JSON.stringify(a||[]))}
+function ca25PagadoCompra(id){return ca25LoadPagosProveedor().filter(function(p){return String(p.compra_id)===String(id)}).reduce(function(s,p){return s+(parseFloat(p.monto)||0)},0)}
+function ca25RegistrarPagoProveedor(compra){
+  var pagado=ca25PagadoCompra(compra.id),saldo=Math.max(0,(parseFloat(compra.total)||0)-pagado);
+  ca21OpenModal('<div class="ca21-dialog-head"><div><h3>💳 Pago a crédito de proveedor</h3><p>'+(compra.proveedor?compra.proveedor.nombre:'Proveedor')+' · Saldo $'+formatMonto(saldo)+'</p></div><button class="ca21-close" onclick="ca21CloseModal()">×</button></div>'+
+  '<div class="ca21-dialog-body"><div class="ca21-form"><div class="ca21-field"><label>Monto a pagar</label><input id="ca25-cp-monto" type="number" min=".01" max="'+saldo+'" step=".01" value="'+saldo+'"></div><div class="ca21-field"><label>Cuenta</label><select id="ca25-cp-cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex">Banamex</option><option value="santander">Santander</option></select></div><div class="ca21-field full"><label>Referencia / observación</label><textarea id="ca25-cp-nota"></textarea></div></div></div>'+
+  '<div class="ca21-dialog-actions"><button onclick="ca21CloseModal()">Cancelar</button><button class="save" id="ca25-cp-save">Registrar pago</button></div>');
+  document.getElementById('ca25-cp-save').onclick=function(){
+    var monto=ca21Money(document.getElementById('ca25-cp-monto').value),cuenta=document.getElementById('ca25-cp-cuenta').value;
+    if(monto<=0||monto>saldo){alert('Captura un monto válido, máximo $'+formatMonto(saldo));return;}
+    var totals=ca21Totals(fechaHoyLocal()),disp=cuenta==='efectivo'?totals.efectivo:cuenta==='banamex'?totals.banamex:totals.santander;
+    if(monto>disp){alert('Saldo insuficiente en la cuenta seleccionada.');return;}
+    var pagos=ca25LoadPagosProveedor();pagos.push({id:ca21Id(),compra_id:compra.id,fecha:fechaHoyLocal(),hora:ca21Now(),monto:monto,cuenta:cuenta,nota:document.getElementById('ca25-cp-nota').value.trim()});ca25SavePagosProveedor(pagos);
+    var d=ca21Load();d.movimientos.push({id:'credprov-'+Date.now(),fecha:fechaHoyLocal(),hora:ca21Now(),tipo:'salida',cuenta:cuenta,monto:monto,categoria:'Crédito proveedor',concepto:'Pago a proveedor'+(compra.numero_factura?' · Factura '+compra.numero_factura:''),persona:compra.proveedor?compra.proveedor.nombre:'Proveedor',forma:cuenta,origen:'Crédito proveedor',estado:'Pagado',usuario:(usuario&&usuario.nombre)||'Usuario'});ca21Save(d);
+    var nuevoPagado=pagado+monto;
+    var prom=Promise.resolve();
+    if(nuevoPagado+0.009>=(parseFloat(compra.total)||0)){
+      prom=from('compras').eq('id',compra.id).update({estado_pago:'pagado'}).then(function(){return from('gastos').eq('compra_id',compra.id).update({estado_pago:'pagado'})});
+    }
+    prom.then(function(){ca21CloseModal();renderCuentasPorPagar();}).catch(function(e){alert('Pago guardado en Preview, pero no se pudo actualizar estado: '+e.message);ca21CloseModal();renderCuentasPorPagar();});
+  };
+}
 function renderCuentasPorPagar(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo">📆 Cuentas por pagar</div><div class="loading">Cargando...</div>';
+  body.innerHTML='<div class="seccion-titulo">📆 Créditos de proveedores</div><div class="loading">Cargando...</div>';
   var hoy=fechaHoyLocal();
-  var limite=new Date(); limite.setDate(limite.getDate()+5);
-  var limiteStr=limite.toISOString().slice(0,10);
-  from('compras').select('*,proveedor:proveedores(nombre)').eq('forma_pago','credito').eq('estado_pago','pendiente').order('fecha_vencimiento').get().then(function(rows){
+  from('compras').select('*,proveedor:proveedores(nombre)').eq('forma_pago','credito').order('fecha_vencimiento').get().then(function(rows){
     rows=rows||[];
-    var totalPendiente=rows.reduce(function(s,c){return s+parseFloat(c.total);},0);
-    var headerHtml='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📆 Cuentas por pagar<button type="button" onclick="renderComprasMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Compras y Gastos</button></div>';
-    var html=headerHtml+'<div class="form-card" style="text-align:center;margin-bottom:1rem;"><div style="font-size:.8rem;color:var(--gris-3);">Total pendiente a crédito</div><div style="font-size:1.6rem;font-weight:800;color:var(--tierra);">$'+formatMonto(totalPendiente)+'</div></div>';
-    if(!rows.length){
-      html+='<div class="empty">🎉 No tienes cuentas a crédito pendientes de pago.</div>';
-    } else {
-      html+=rows.map(function(c){
-        var vencido=c.fecha_vencimiento&&c.fecha_vencimiento<hoy;
-        var porVencer=c.fecha_vencimiento&&!vencido&&c.fecha_vencimiento<=limiteStr;
-        var color=vencido?'var(--rojo)':(porVencer?'var(--tierra)':'var(--gris-2)');
-        var estadoTxt=vencido?'⚠️ Vencido':(porVencer?'⏳ Por vencer':'📅 Programado');
-        return '<div class="orden-card" style="border-left-color:'+color+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem;">🧾 '+(c.proveedor?c.proveedor.nombre:'Sin proveedor')+'</strong><strong style="font-size:.95rem;color:var(--verde-mid);">$'+formatMonto(c.total)+'</strong></div><div class="orden-meta" style="color:'+color+';font-weight:600;">'+estadoTxt+' · Vence '+c.fecha_vencimiento+'</div>'+(c.numero_factura?'<div class="orden-meta">Factura #'+c.numero_factura+'</div>':'')+'<button type="button" class="btn-sm btn-completar" style="margin-top:.4rem;" data-marcar-pagado="'+c.id+'">✅ Marcar como pagado</button></div>';
-      }).join('');
-    }
-    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderComprasMenu()">← Volver</button>';
-    body.querySelectorAll('[data-marcar-pagado]').forEach(function(btn){
-      btn.addEventListener('click',function(){
-        var compraId=this.dataset.marcarPagado;
-        from('compras').eq('id',compraId).update({estado_pago:'pagado'}).then(function(){
-          return from('gastos').eq('compra_id',compraId).update({estado_pago:'pagado'});
-        }).then(function(){showToast('✅ Marcado como pagado');renderCuentasPorPagar();}).catch(function(e){alert('Error: '+e.message);});
-      });
-    });
-  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+    var pendientes=rows.filter(function(c){return c.estado_pago!=='pagado'||ca25PagadoCompra(c.id)<parseFloat(c.total||0)});
+    var totalPendiente=pendientes.reduce(function(s,c){return s+Math.max(0,(parseFloat(c.total)||0)-ca25PagadoCompra(c.id));},0);
+    var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📆 Créditos de proveedores<button type="button" onclick="renderComprasMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Compras</button></div>'+
+    '<div class="form-card" style="text-align:center;margin-bottom:1rem;"><div style="font-size:.8rem;color:var(--gris-3);">Saldo pendiente con proveedores</div><div style="font-size:1.6rem;font-weight:800;color:var(--tierra);">$'+formatMonto(totalPendiente)+'</div></div>';
+    if(!pendientes.length)html+='<div class="empty">✅ No hay créditos de proveedores pendientes.</div>';
+    else html+=pendientes.map(function(c){
+      var total=parseFloat(c.total)||0,pagado=ca25PagadoCompra(c.id),saldo=Math.max(0,total-pagado),vencido=c.fecha_vencimiento&&c.fecha_vencimiento<hoy;
+      return '<div class="orden-card" style="border-left-color:'+(vencido?'var(--rojo)':'var(--tierra)')+'"><div style="display:flex;justify-content:space-between;gap:12px"><strong>🏢 '+(c.proveedor?c.proveedor.nombre:'Sin proveedor')+'</strong><strong>$'+formatMonto(saldo)+' pendiente</strong></div><div class="orden-meta">'+(c.numero_factura?'Factura '+c.numero_factura+' · ':'')+'Compra $'+formatMonto(total)+' · Pagado $'+formatMonto(pagado)+' · Vence '+(c.fecha_vencimiento||'—')+'</div><button class="btn-sm btn-completar" data-pago-prov="'+c.id+'" style="margin-top:.45rem">💳 Registrar pago / abono</button></div>';
+    }).join('');
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem" onclick="renderComprasMenu()">← Volver</button>';
+    body.querySelectorAll('[data-pago-prov]').forEach(function(b){b.onclick=function(){var id=this.dataset.pagoProv,c=rows.find(function(x){return String(x.id)===String(id)});if(c)ca25RegistrarPagoProveedor(c)}});
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>'});
 }
 
 function renderNuevaCompra(){
@@ -5157,6 +5169,7 @@ function renderNuevaCompra(){
     '<div class="form-group"><label>Número de factura (opcional)</label><input type="text" id="nc-factura" placeholder="Ej. A-4521"></div>'+
     '<div class="form-group"><label>Fecha</label><input type="date" id="nc-fecha" value="'+hoy+'" max="'+hoy+'"></div>'+
     '<div class="form-group"><label>Forma de pago</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip sel" id="nc-fp-contado">✓ Contado</button><button type="button" class="op-chip" id="nc-fp-credito">Crédito</button></div></div>'+
+    '<div class="form-group" id="nc-cuenta-wrap"><label>Cuenta de pago</label><select id="nc-cuenta-pago"><option value="efectivo">Efectivo en Caja</option><option value="banamex">Banamex</option><option value="santander">Santander</option></select><p class="hint">Solo aplica cuando la compra se paga de contado.</p></div>'+
     '<div class="form-group" id="nc-vencimiento-wrap" style="display:none;"><label>Fecha de vencimiento del pago</label><input type="date" id="nc-vencimiento"><p class="hint">Te avisaremos 5 días antes de que venza.</p></div>'+
     '<div class="form-group"><label>Comprobante / foto o PDF de la factura (opcional)</label><input type="file" id="nc-comprobante" accept="image/*,.pdf"><p class="hint" id="nc-comprobante-status"></p></div>'+
     '</div>'+
@@ -5380,12 +5393,12 @@ function renderNuevaCompra(){
     pintarItemsCompra();
   });
 
-  var formaPagoSel='contado';
+  var formaPagoSel='contado'; var cw=document.getElementById('nc-cuenta-wrap'); if(cw)cw.style.display='block';
   function actualizarVisibilidadVencimiento(){
     document.getElementById('nc-vencimiento-wrap').style.display=formaPagoSel==='credito'?'':'none';
   }
   document.getElementById('nc-fp-contado').addEventListener('click',function(){formaPagoSel='contado';this.classList.add('sel');this.textContent='✓ Contado';document.getElementById('nc-fp-credito').classList.remove('sel');document.getElementById('nc-fp-credito').textContent='Crédito';actualizarVisibilidadVencimiento();});
-  document.getElementById('nc-fp-credito').addEventListener('click',function(){formaPagoSel='credito';this.classList.add('sel');this.textContent='✓ Crédito';document.getElementById('nc-fp-contado').classList.remove('sel');document.getElementById('nc-fp-contado').textContent='Contado';actualizarVisibilidadVencimiento();});
+  document.getElementById('nc-fp-credito').addEventListener('click',function(){formaPagoSel='credito'; var cw=document.getElementById('nc-cuenta-wrap'); if(cw)cw.style.display='none';this.classList.add('sel');this.textContent='✓ Crédito';document.getElementById('nc-fp-contado').classList.remove('sel');document.getElementById('nc-fp-contado').textContent='Contado';actualizarVisibilidadVencimiento();});
   document.getElementById('nc-proveedor').addEventListener('change',function(){
     var provId=this.value;
     document.getElementById('nc-prov-nuevo-wrap').style.display=provId==='_nuevo'?'':'none';
@@ -5416,6 +5429,8 @@ function renderNuevaCompra(){
     var numeroFactura=(document.getElementById('nc-factura').value||'').trim()||null;
     var proveedorSel=document.getElementById('nc-proveedor').value;
     var esCredito=formaPagoSel==='credito';
+    var cuentaPago=esCredito?null:(document.getElementById('nc-cuenta-pago').value||'efectivo');
+    var compraIdRegistrada=null;
     var vencimiento=esCredito?(document.getElementById('nc-vencimiento').value||null):null;
     if(esCredito&&!vencimiento){alert('Captura la fecha de vencimiento del pago a crédito.');return;}
     var lineas=filas.filter(function(f){return (parseFloat(f.monto)||0)>0;});
@@ -5437,6 +5452,11 @@ function renderNuevaCompra(){
       }
     }
     var total=lineas.reduce(function(s,f){return s+(parseFloat(f.monto)||0);},0);
+    if(!esCredito){
+      var tt=ca21Totals(fecha);
+      var disponible=cuentaPago==='efectivo'?tt.efectivo:cuentaPago==='banamex'?tt.banamex:tt.santander;
+      if(total>disponible){alert('La cuenta seleccionada no tiene saldo suficiente para pagar esta compra.');return;}
+    }
     btn.disabled=true; btn.textContent='Guardando...';
 
     function resolverNuevosProductos(){
@@ -5479,6 +5499,7 @@ function renderNuevaCompra(){
       var compraPayload={proveedor_id:proveedorId,numero_factura:numeroFactura,fecha:fecha,forma_pago:formaPagoSel,fecha_vencimiento:vencimiento,estado_pago:esCredito?'pendiente':'pagado',notificado_vencimiento:false,comprobante_url:comprobanteUrl,total:total,registrado_por:usuario.id};
       return from('compras').insert(compraPayload).then(function(rows){
         var compra=rows[0];
+        compraIdRegistrada=compra.id;
         var gastoPayloads=lineas.map(function(f){
           return {categoria:f.categoria,monto:parseFloat(f.monto),fecha:fecha,proveedor_id:proveedorId,concepto:f.concepto||null,inventario_item_id:f.itemId||null,cantidad:f.itemId?cantidadBaseDe(f):null,comprobante_url:comprobanteUrl,registrado_por:usuario.id,forma_pago:formaPagoSel,fecha_vencimiento:vencimiento,estado_pago:esCredito?'pendiente':'pagado',notificado_vencimiento:false,compra_id:compra.id};
         });
@@ -5507,7 +5528,18 @@ function renderNuevaCompra(){
         }));
       });
     }).then(function(){
-      showToast('✅ Compra registrada');
+      if(!esCredito){
+        var d=ca21Load();
+        if(!d.movimientos.some(function(m){return m.origen==='Compras'&&m.compra_id===compraIdRegistrada;})){
+          var provNombre='Proveedor';
+          if(proveedorSel&&proveedorSel!=='_nuevo'){
+            var pp=cats.proveedores.find(function(p){return p.id===proveedorSel;}); if(pp)provNombre=pp.nombre;
+          } else if(proveedorSel==='_nuevo'){provNombre=(document.getElementById('nc-prov-nombre').value||'Proveedor').trim();}
+          d.movimientos.push({id:'compra-'+compraIdRegistrada,compra_id:compraIdRegistrada,fecha:fecha,hora:ca21Now(),tipo:'salida',cuenta:cuentaPago,monto:total,categoria:'Compra',concepto:'Compra'+(numeroFactura?' · Factura '+numeroFactura:''),persona:provNombre,forma:cuentaPago,origen:'Compras',estado:'Pagado',usuario:(usuario&&usuario.nombre)||'Usuario'});
+          ca21Save(d);
+        }
+      }
+      showToast(esCredito?'✅ Compra a crédito registrada':'✅ Compra registrada y descontada de Caja');
       renderComprasMenu();
     }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Registrar compra';});
   });
@@ -6976,6 +7008,26 @@ function ca23OpenNuevaCompra(){
 function ca23Pagar(id){var a=ca23Load(),c=a.find(function(x){return x.id===id});if(!c||c.estado==='pagada')return;ca21OpenModal('<div class="ca21-dialog-head"><div><h3>Pagar compra</h3><p>'+c.articulo+' · $'+formatMonto(c.total)+'</p></div><button class="ca21-close" onclick="ca21CloseModal()">×</button></div><div class="ca21-dialog-body"><div class="ca21-field"><label>Cuenta</label><select id="ca23-pay"><option value="efectivo">Efectivo en Caja</option><option value="banamex">Banamex</option><option value="santander">Santander</option></select></div></div><div class="ca21-dialog-actions"><button onclick="ca21CloseModal()">Cancelar</button><button class="save" id="ca23-paygo">Confirmar pago</button></div>');document.getElementById('ca23-paygo').onclick=function(){var cc=document.getElementById('ca23-pay').value,t=ca21Totals(CAJA_FECHA_BASE),disp=cc==='efectivo'?t.efectivo:cc==='banamex'?t.banamex:t.santander;if(c.total>disp){alert('Saldo insuficiente.');return}c.estado='pagada';c.cuenta=cc;c.fecha_pago=CAJA_FECHA_BASE;ca23Save(a);var d=ca21Load();d.movimientos.push({id:'mov-'+c.id,fecha:CAJA_FECHA_BASE,hora:ca21Now(),tipo:'salida',cuenta:cc,monto:c.total,categoria:'Compra · '+c.categoria,concepto:c.articulo,persona:c.proveedor,forma:cc,origen:'Compras',estado:'Pagado',usuario:(usuario&&usuario.nombre)||'Usuario'});ca21Save(d);ca21CloseModal();renderComprasCaja()}}
 function renderComprasCaja(){var root=document.getElementById('enc-body');if(!root){console.error('Compras: no existe #enc-body');return;}var a=ca23Load().slice().sort(function(x,y){return(y.fecha||'').localeCompare(x.fecha||'')}),pag=a.filter(function(x){return x.estado==='pagada'}),pen=a.filter(function(x){return x.estado!=='pagada'});root.innerHTML='<div style="padding:18px 36px 35px"><div class="ca23-head"><div><div style="font-weight:900;color:#e37b00;font-size:.75rem">ADMINISTRACIÓN · CAJA</div><h2>Compras</h2><p>Compras del rancho vinculadas a Caja e Inventario.</p></div><div class="ca23-actions"><button class="ca23-btn" id="ca23-caja">← Caja</button><button class="ca23-btn primary" id="ca23-new">＋ Nueva compra</button></div></div><div class="ca23-summary"><div class="ca23-stat"><small>COMPRAS</small><strong>'+a.length+'</strong></div><div class="ca23-stat"><small>PAGADAS</small><strong>'+pag.length+'</strong></div><div class="ca23-stat"><small>PENDIENTES</small><strong>'+pen.length+'</strong></div><div class="ca23-stat"><small>TOTAL REGISTRADO</small><strong>$'+formatMonto(a.reduce(function(s,x){return s+ca21Money(x.total)},0))+'</strong></div></div><div class="ca23-table"><table><thead><tr><th>FECHA</th><th>CATEGORÍA</th><th>PRODUCTO / ARTÍCULO</th><th>PROVEEDOR</th><th>CANTIDAD</th><th>TOTAL</th><th>CUENTA</th><th>ESTADO</th><th>ACCIÓN</th></tr></thead><tbody>'+(a.length?a.map(function(x){return '<tr><td>'+x.fecha+'</td><td><span class="ca23-tag">'+x.categoria+'</span></td><td><b>'+x.articulo+'</b></td><td>'+x.proveedor+'</td><td>'+x.cantidad+' '+x.unidad+'</td><td><b>$'+formatMonto(x.total)+'</b></td><td>'+(x.cuenta||'—')+'</td><td>'+(x.estado==='pagada'?'Pagada':'Pendiente')+'</td><td>'+(x.estado==='pagada'?'—':'<button class="ca23-btn ca23-paybtn" data-id="'+x.id+'">Pagar</button>')+'</td></tr>'}).join(''):'<tr><td colspan="9" class="ca23-empty">No hay compras registradas todavía.</td></tr>')+'</tbody></table></div></div>';document.getElementById('ca23-new').onclick=ca23OpenNuevaCompra;document.getElementById('ca23-caja').onclick=function(){renderCajaMootsil('dia',CAJA_FECHA_BASE)};Array.from(document.querySelectorAll('.ca23-paybtn')).forEach(function(b){b.onclick=function(){ca23Pagar(b.dataset.id)}})}
 
+
+/* C025 — Financiamientos bancarios/institucionales, separados de proveedores */
+function ca25LoadFin(){try{return JSON.parse(localStorage.getItem('mootsil_financiamientos_preview_v1')||'[]')}catch(e){return []}}
+function ca25SaveFin(a){localStorage.setItem('mootsil_financiamientos_preview_v1',JSON.stringify(a||[]))}
+function ca25OpenFinNuevo(){
+  ca21OpenModal('<div class="ca21-dialog-head"><div><h3>🏦 Nuevo financiamiento</h3><p>Banco, financiera o institución que prestó recursos al rancho.</p></div><button class="ca21-close" onclick="ca21CloseModal()">×</button></div><div class="ca21-dialog-body"><div class="ca21-form">'+
+  '<div class="ca21-field"><label>Institución</label><input id="fin-inst" placeholder="Banco / financiera"></div><div class="ca21-field"><label>Monto recibido</label><input id="fin-monto" type="number" min=".01" step=".01"></div><div class="ca21-field"><label>Fecha</label><input id="fin-fecha" type="date" value="'+fechaHoyLocal()+'"></div><div class="ca21-field"><label>Cuenta donde ingresó</label><select id="fin-cuenta"><option value="banamex">Banamex</option><option value="santander">Santander</option><option value="efectivo">Efectivo</option></select></div><div class="ca21-field"><label>Plazo / referencia</label><input id="fin-plazo" placeholder="Ej. 24 meses"></div><div class="ca21-field"><label>Tasa / interés</label><input id="fin-tasa" placeholder="Opcional"></div><div class="ca21-field full"><label>Observaciones</label><textarea id="fin-nota"></textarea></div></div></div>'+
+  '<div class="ca21-dialog-actions"><button onclick="ca21CloseModal()">Cancelar</button><button class="save" id="fin-save">Guardar financiamiento</button></div>');
+  document.getElementById('fin-save').onclick=function(){var inst=document.getElementById('fin-inst').value.trim(),m=ca21Money(document.getElementById('fin-monto').value),fecha=document.getElementById('fin-fecha').value,cuenta=document.getElementById('fin-cuenta').value;if(!inst||m<=0){alert('Captura institución y monto.');return}var a=ca25LoadFin(),f={id:ca21Id(),institucion:inst,monto:m,fecha:fecha,cuenta:cuenta,plazo:document.getElementById('fin-plazo').value.trim(),tasa:document.getElementById('fin-tasa').value.trim(),nota:document.getElementById('fin-nota').value.trim(),pagos:[]};a.push(f);ca25SaveFin(a);var d=ca21Load();d.movimientos.push({id:'fin-'+f.id,fecha:fecha,hora:ca21Now(),tipo:'entrada',cuenta:cuenta,monto:m,categoria:'Financiamiento',concepto:'Recursos recibidos',persona:inst,forma:cuenta,origen:'Financiamiento',estado:'Registrado',usuario:(usuario&&usuario.nombre)||'Usuario'});ca21Save(d);ca21CloseModal();renderFinanciamientosCaja()};
+}
+function ca25PagoFin(id){
+ var a=ca25LoadFin(),f=a.find(function(x){return x.id===id});if(!f)return;var pag=(f.pagos||[]).reduce(function(s,p){return s+ca21Money(p.monto)},0),saldo=Math.max(0,f.monto-pag);
+ ca21OpenModal('<div class="ca21-dialog-head"><div><h3>💳 Pago de financiamiento</h3><p>'+f.institucion+' · Saldo base $'+formatMonto(saldo)+'</p></div><button class="ca21-close" onclick="ca21CloseModal()">×</button></div><div class="ca21-dialog-body"><div class="ca21-form"><div class="ca21-field"><label>Monto</label><input id="fp-monto" type="number" min=".01" step=".01"></div><div class="ca21-field"><label>Cuenta</label><select id="fp-cuenta"><option value="efectivo">Efectivo</option><option value="banamex">Banamex</option><option value="santander">Santander</option></select></div><div class="ca21-field"><label>Capital</label><input id="fp-capital" type="number" min="0" step=".01"></div><div class="ca21-field"><label>Interés</label><input id="fp-interes" type="number" min="0" step=".01"></div><div class="ca21-field full"><label>Referencia</label><input id="fp-nota"></div></div></div><div class="ca21-dialog-actions"><button onclick="ca21CloseModal()">Cancelar</button><button class="save" id="fp-save">Registrar pago</button></div>');
+ document.getElementById('fp-save').onclick=function(){var m=ca21Money(document.getElementById('fp-monto').value),cuenta=document.getElementById('fp-cuenta').value;if(m<=0){alert('Captura monto.');return}var tt=ca21Totals(fechaHoyLocal()),disp=cuenta==='efectivo'?tt.efectivo:cuenta==='banamex'?tt.banamex:tt.santander;if(m>disp){alert('Saldo insuficiente.');return}f.pagos=f.pagos||[];f.pagos.push({id:ca21Id(),fecha:fechaHoyLocal(),hora:ca21Now(),monto:m,cuenta:cuenta,capital:ca21Money(document.getElementById('fp-capital').value),interes:ca21Money(document.getElementById('fp-interes').value),nota:document.getElementById('fp-nota').value.trim()});ca25SaveFin(a);var d=ca21Load();d.movimientos.push({id:'finp-'+Date.now(),fecha:fechaHoyLocal(),hora:ca21Now(),tipo:'salida',cuenta:cuenta,monto:m,categoria:'Financiamiento',concepto:'Pago de financiamiento',persona:f.institucion,forma:cuenta,origen:'Financiamiento',estado:'Pagado',usuario:(usuario&&usuario.nombre)||'Usuario'});ca21Save(d);ca21CloseModal();renderFinanciamientosCaja()};
+}
+function renderFinanciamientosCaja(){
+ var body=document.getElementById('enc-body'),a=ca25LoadFin(),total=a.reduce(function(s,f){return s+ca21Money(f.monto)},0),pag=a.reduce(function(s,f){return s+(f.pagos||[]).reduce(function(q,p){return q+ca21Money(p.monto)},0)},0);
+ body.innerHTML='<div style="padding:18px 28px"><div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center">🏦 Financiamientos<button class="btn-back" id="fin-back">← Caja</button></div><div class="form-card" style="display:flex;justify-content:space-around;text-align:center"><div><small>Recursos recibidos</small><div style="font-size:1.4rem;font-weight:800">$'+formatMonto(total)+'</div></div><div><small>Pagos registrados</small><div style="font-size:1.4rem;font-weight:800">$'+formatMonto(pag)+'</div></div><div><small>Saldo base</small><div style="font-size:1.4rem;font-weight:800">$'+formatMonto(Math.max(0,total-pag))+'</div></div></div><button class="btn-primary" id="fin-new" style="margin:12px 0">＋ Registrar financiamiento</button>'+(a.length?a.map(function(f){var p=(f.pagos||[]).reduce(function(s,x){return s+ca21Money(x.monto)},0);return '<div class="orden-card"><div style="display:flex;justify-content:space-between"><strong>'+f.institucion+'</strong><strong>$'+formatMonto(Math.max(0,f.monto-p))+' saldo</strong></div><div class="orden-meta">Original $'+formatMonto(f.monto)+' · Pagado $'+formatMonto(p)+' · '+(f.plazo||'Sin plazo')+' '+(f.tasa?'· '+f.tasa:'')+'</div><button class="btn-sm btn-completar" data-fin-pay="'+f.id+'">Registrar pago</button></div>'}).join(''):'<div class="empty">No hay financiamientos registrados en Preview.</div>')+'</div>';
+ document.getElementById('fin-new').onclick=ca25OpenFinNuevo;document.getElementById('fin-back').onclick=function(){renderCajaMootsil('dia',CAJA_FECHA_BASE)};body.querySelectorAll('[data-fin-pay]').forEach(function(b){b.onclick=function(){ca25PagoFin(this.dataset.finPay)}});
+}
 function renderCajaMootsil(periodo,fechaBase){
   CAJA_PERIODO=periodo||CAJA_PERIODO||'dia';
   CAJA_FECHA_BASE=fechaBase||CAJA_FECHA_BASE||fechaHoyLocal();
@@ -7056,10 +7108,11 @@ function renderCajaMootsil(periodo,fechaBase){
 
     document.getElementById('ca21-fecha').addEventListener('change',function(){renderCajaMootsil(CAJA_PERIODO,this.value);});
     document.getElementById('ca21-open').addEventListener('click',function(){ca21OpenApertura(CAJA_FECHA_BASE);});
-    document.getElementById('ca22-compras').addEventListener('click',renderComprasCaja);
+    document.getElementById('ca22-compras').addEventListener('click',renderComprasMenu);
     document.getElementById('ca22-gastos').addEventListener('click',renderComprasMenu);
     document.getElementById('ca22-nomina').addEventListener('click',renderNominasMenu);
     document.getElementById('ca22-inversionistas').addEventListener('click',renderInversionistasMenu);
+    document.getElementById('ca25-financiamientos').addEventListener('click',renderFinanciamientosCaja);
     if(apertura&&!corte){
       document.getElementById('ca21-entry').addEventListener('click',function(){ca21OpenMovimiento('entrada',CAJA_FECHA_BASE);});
       document.getElementById('ca21-exit').addEventListener('click',function(){ca21OpenMovimiento('salida',CAJA_FECHA_BASE);});
