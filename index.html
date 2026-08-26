@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<title>Mootsil · Tablero del Rancho · C027 · Caja Flujo Separado Compras Créditos</title>
+<title>Mootsil · Tablero del Rancho · C028 · Compras Visual Mootsil</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
@@ -590,7 +590,31 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ca22-mini{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.ca22-mini button{border:1px solid #dce4df;background:#fff;border-radius:9px;padding:8px 10px;font-size:.61rem;font-weight:850;cursor:pointer}
 @media(max-width:1050px){.ca22-accounts{grid-template-columns:repeat(2,1fr)}.ca22-ops{grid-template-columns:repeat(3,1fr)}}@media(max-width:650px){.ca22-accounts,.ca22-ops{grid-template-columns:1fr}}
 
-/* C024 — Hotfix Compras: renderiza en #enc-body, el contenedor real de la plataforma. */.ca23-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;margin:18px 0 14px}.ca23-head h2{margin:0;color:#164f3c;font-size:1.7rem}.ca23-head p{margin:4px 0 0;color:#718078;font-size:.78rem}.ca23-actions{display:flex;gap:9px;flex-wrap:wrap}.ca23-btn{border:1px solid #d9e2dc;background:#fff;border-radius:10px;padding:10px 14px;font-weight:850;color:#174f3c;cursor:pointer}.ca23-btn.primary{background:#0d704c;color:#fff;border-color:#0d704c}.ca23-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}.ca23-stat{background:#fff;border:1px solid #dde5df;border-radius:13px;padding:14px}.ca23-stat small{font-weight:850;color:#6c7b73}.ca23-stat strong{display:block;color:#154f3b;font-size:1.25rem;margin-top:5px}.ca23-table{background:#fff;border:1px solid #dfe6e1;border-radius:14px;overflow:auto}.ca23-table table{width:100%;border-collapse:collapse;font-size:.7rem}.ca23-table th{background:#10583f;color:#fff;text-align:left;padding:9px}.ca23-table td{padding:9px;border-bottom:1px solid #edf1ee}.ca23-tag{display:inline-block;border-radius:999px;padding:4px 8px;background:#eef7f1;color:#17613f;font-weight:800}.ca23-empty{text-align:center;padding:38px;color:#849088}@media(max-width:800px){.ca23-summary{grid-template-columns:repeat(2,1fr)}.ca23-head{align-items:flex-start;flex-direction:column}}</style>
+/* C024 — Hotfix Compras: renderiza en #enc-body, el contenedor real de la plataforma. */.ca23-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;margin:18px 0 14px}.ca23-head h2{margin:0;color:#164f3c;font-size:1.7rem}.ca23-head p{margin:4px 0 0;color:#718078;font-size:.78rem}.ca23-actions{display:flex;gap:9px;flex-wrap:wrap}.ca23-btn{border:1px solid #d9e2dc;background:#fff;border-radius:10px;padding:10px 14px;font-weight:850;color:#174f3c;cursor:pointer}.ca23-btn.primary{background:#0d704c;color:#fff;border-color:#0d704c}.ca23-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}.ca23-stat{background:#fff;border:1px solid #dde5df;border-radius:13px;padding:14px}.ca23-stat small{font-weight:850;color:#6c7b73}.ca23-stat strong{display:block;color:#154f3b;font-size:1.25rem;margin-top:5px}.ca23-table{background:#fff;border:1px solid #dfe6e1;border-radius:14px;overflow:auto}.ca23-table table{width:100%;border-collapse:collapse;font-size:.7rem}.ca23-table th{background:#10583f;color:#fff;text-align:left;padding:9px}.ca23-table td{padding:9px;border-bottom:1px solid #edf1ee}.ca23-tag{display:inline-block;border-radius:999px;padding:4px 8px;background:#eef7f1;color:#17613f;font-weight:800}.ca23-empty{text-align:center;padding:38px;color:#849088}@media(max-width:800px){.ca23-summary{grid-template-columns:repeat(2,1fr)}.ca23-head{align-items:flex-start;flex-direction:column}}
+/* C028 — Visual de Compras alineado a Caja Mootsil, sin cambiar la lógica existente */
+.nc28-shell{padding:22px 30px 36px;background:#f6f8f6;min-height:calc(100vh - 120px)}
+.nc28-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;margin-bottom:14px}
+.nc28-eyebrow{font-size:.72rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#e37c00}
+.nc28-title{font-size:2rem;line-height:1.05;font-weight:900;color:#164f3c;margin-top:3px}
+.nc28-sub{font-size:.76rem;color:#708078;margin-top:4px}
+.nc28-back{border:1px solid #d8e1db;background:#fff;border-radius:10px;padding:9px 13px;color:#17513d;font-weight:850;cursor:pointer}
+.nc28-card{background:#fff;border:1px solid #dde5df;border-radius:16px;padding:16px 18px;box-shadow:0 4px 16px rgba(23,74,55,.045);margin-bottom:14px}
+.nc28-card-title{display:flex;align-items:center;gap:8px;font-size:.78rem;font-weight:900;color:#174f3c;text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px}
+.nc28-grid{display:grid;grid-template-columns:1.4fr .8fr .8fr;gap:12px}
+.nc28-payrow{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:2px}
+.nc28-products-title{display:flex;justify-content:space-between;align-items:center;margin:16px 0 10px}
+.nc28-products-title strong{font-size:.82rem;color:#174f3c;text-transform:uppercase;letter-spacing:.04em}
+#nc-items .form-card{border:1px solid #dde5df!important;border-radius:14px!important;box-shadow:none!important;background:#fff!important}
+#nc-agregar-btn{background:#f7fbf8!important;border:1.5px dashed #2a7658!important;border-radius:12px!important;padding:.72rem!important}
+.nc28-total{background:linear-gradient(180deg,#fff,#f7fbf8);border:1px solid #d9e6de;border-radius:16px;padding:16px 18px;text-align:center;margin-top:10px}
+.nc28-total-label{font-size:.7rem;color:#708078;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+#nc-total-display{font-size:2rem!important;color:#11613f!important;margin-top:3px}
+#nc-guardar{min-width:220px;background:#0f6c49!important;border-radius:10px!important;padding:.78rem 1rem!important}
+.nc28-note{font-size:.64rem;color:#758179;margin-top:7px}
+@media(max-width:900px){.nc28-grid{grid-template-columns:1fr 1fr}.nc28-payrow{grid-template-columns:1fr}.nc28-head{align-items:flex-start}}
+@media(max-width:650px){.nc28-shell{padding:16px}.nc28-grid{grid-template-columns:1fr}.nc28-head{flex-direction:column}.nc28-back{width:100%}}
+
+</style>
 </head>
 <body>
 
@@ -5184,22 +5208,26 @@ function renderNuevaCompra(){
   var body=document.getElementById('enc-body');
   var hoy=fechaHoyLocal();
   var provOpts=cats.proveedores.map(function(p){return '<option value="'+p.id+'">'+p.nombre+(p.giro?' — '+p.giro:'')+'</option>';}).join('');
-  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🧾 Nueva compra<button type="button" onclick="volverCompraContexto()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Compras y Gastos</button></div>'+
-    '<div class="form-card">'+
-    '<div class="form-group"><label>Proveedor</label><select id="nc-proveedor"><option value="">Sin proveedor</option>'+provOpts+'<option value="_nuevo">+ Agregar nuevo proveedor...</option></select></div>'+
-    '<div id="nc-prov-nuevo-wrap" style="display:none;"><div class="form-group"><label>Nombre del proveedor</label><input type="text" id="nc-prov-nombre" placeholder="Ej. Agroquímicos del Valle"></div><div class="form-group"><label>¿A qué se dedica?</label><input type="text" id="nc-prov-giro" placeholder="Ej. Fertilizantes y agroquímicos"></div><div class="form-group"><label>Teléfono (opcional)</label><input type="text" id="nc-prov-tel" placeholder="Ej. 555-123-4567"></div></div>'+
-    '<div class="form-group"><label>Número de factura (opcional)</label><input type="text" id="nc-factura" placeholder="Ej. A-4521"></div>'+
-    '<div class="form-group"><label>Fecha</label><input type="date" id="nc-fecha" value="'+hoy+'" max="'+hoy+'"></div>'+
-    '<div class="form-group"><label>Forma de pago</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip sel" id="nc-fp-contado">✓ Contado</button><button type="button" class="op-chip" id="nc-fp-credito">Crédito</button></div></div>'+
-    '<div class="form-group" id="nc-cuenta-wrap"><label>Cuenta de pago</label><select id="nc-cuenta-pago"><option value="efectivo">Efectivo en Caja</option><option value="banamex">Banamex</option><option value="santander">Santander</option></select><p class="hint">Solo aplica cuando la compra se paga de contado.</p></div>'+
-    '<div class="form-group" id="nc-vencimiento-wrap" style="display:none;"><label>Fecha de vencimiento del pago</label><input type="date" id="nc-vencimiento"><p class="hint">Te avisaremos 5 días antes de que venza.</p></div>'+
-    '<div class="form-group"><label>Comprobante / foto o PDF de la factura (opcional)</label><input type="file" id="nc-comprobante" accept="image/*,.pdf"><p class="hint" id="nc-comprobante-status"></p></div>'+
+  body.innerHTML='<div class="nc28-shell">'+
+    '<div class="nc28-head"><div><div class="nc28-eyebrow">Administración · Caja · Compras</div><div class="nc28-title">Nueva compra</div><div class="nc28-sub">Registra la factura, su proveedor y todos los productos de una sola compra.</div></div><button type="button" class="nc28-back" onclick="volverCompraContexto()">← Caja</button></div>'+
+    '<div class="nc28-card"><div class="nc28-card-title">🧾 Datos de la factura</div><div class="nc28-grid">'+
+      '<div class="form-group"><label>Proveedor</label><select id="nc-proveedor"><option value="">Sin proveedor</option>'+provOpts+'<option value="_nuevo">+ Agregar nuevo proveedor...</option></select></div>'+
+      '<div class="form-group"><label>Número de factura (opcional)</label><input type="text" id="nc-factura" placeholder="Ej. A-4521"></div>'+
+      '<div class="form-group"><label>Fecha</label><input type="date" id="nc-fecha" value="'+hoy+'" max="'+hoy+'"></div>'+
     '</div>'+
-    '<div class="seccion-titulo" style="margin-top:1rem;font-size:.9rem;">Productos de la factura</div>'+
+    '<div id="nc-prov-nuevo-wrap" style="display:none;"><div class="nc28-grid" style="margin-top:10px"><div class="form-group"><label>Nombre del proveedor</label><input type="text" id="nc-prov-nombre" placeholder="Ej. Agroquímicos del Valle"></div><div class="form-group"><label>¿A qué se dedica?</label><input type="text" id="nc-prov-giro" placeholder="Ej. Fertilizantes y agroquímicos"></div><div class="form-group"><label>Teléfono (opcional)</label><input type="text" id="nc-prov-tel" placeholder="Ej. 555-123-4567"></div></div></div>'+
+    '<div class="nc28-payrow">'+
+      '<div class="form-group"><label>Forma de pago</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip sel" id="nc-fp-contado">✓ Contado</button><button type="button" class="op-chip" id="nc-fp-credito">Crédito</button></div></div>'+
+      '<div class="form-group" id="nc-cuenta-wrap"><label>Cuenta de pago</label><select id="nc-cuenta-pago"><option value="efectivo">Efectivo en Caja</option><option value="banamex">Banamex</option><option value="santander">Santander</option></select><p class="hint">Solo aplica cuando la compra se paga de contado.</p></div>'+
+      '<div class="form-group" id="nc-vencimiento-wrap" style="display:none;"><label>Fecha de vencimiento del pago</label><input type="date" id="nc-vencimiento"><p class="hint">Se registrará en Créditos de proveedores.</p></div>'+
+    '</div>'+
+    '<div class="form-group" style="margin-top:4px"><label>Comprobante / foto o PDF de la factura (opcional)</label><input type="file" id="nc-comprobante" accept="image/*,.pdf"><p class="hint" id="nc-comprobante-status"></p></div>'+
+    '</div>'+
+    '<div class="nc28-products-title"><strong>📦 Productos de la factura</strong><span class="nc28-note">Puedes agregar varios productos dentro de la misma factura.</span></div>'+
     '<div id="nc-items"></div>'+
-    '<button type="button" id="nc-agregar-btn" style="width:100%;padding:.6rem;border:1.5px dashed var(--verde-mid);border-radius:var(--radio-sm);background:none;color:var(--verde-mid);font-weight:600;font-size:.85rem;cursor:pointer;margin-bottom:1rem;">+ Agregar otro producto</button>'+
-    '<div class="form-card" style="text-align:center;"><div style="font-size:.8rem;color:var(--gris-3);">Total de la compra</div><div style="font-size:1.6rem;font-weight:800;color:var(--verde-mid);" id="nc-total-display">$0.00</div><button class="btn-primary" id="nc-guardar" style="margin-top:.75rem;">Registrar compra</button></div>'+
-    '<button class="btn-back" style="margin-top:1rem;" onclick="volverCompraContexto()">← Volver</button>';
+    '<button type="button" id="nc-agregar-btn" style="width:100%;color:var(--verde-mid);font-weight:700;font-size:.85rem;cursor:pointer;margin-bottom:.8rem;">＋ Agregar otro producto</button>'+
+    '<div class="nc28-total"><div class="nc28-total-label">Total de la compra</div><div id="nc-total-display">$0.00</div><button class="btn-primary" id="nc-guardar" style="margin-top:.75rem;">Registrar compra</button><div class="nc28-note">Contado descuenta Caja. Crédito queda pendiente con el proveedor.</div></div>'+
+    '</div>';
 
   var comprobanteUrl=null;
   var filaSeq=0;
