@@ -716,6 +716,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 @media(max-width:900px){.cr43-kpis{grid-template-columns:repeat(2,1fr)}.cr43-table{overflow:auto}.cr43-head{align-items:flex-start}}
 @media(max-width:650px){.cr43-shell{padding:16px}.cr43-kpis{grid-template-columns:1fr}.cr43-head{flex-direction:column}}
 
+
+.cr44-tools{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin:0 0 10px}
+.cr44-tools label{font-size:.62rem;font-weight:850;color:#66776e;text-transform:uppercase}
+.cr44-tools select{border:1px solid #d8e1db;background:#fff;border-radius:8px;padding:7px 30px 7px 10px;color:#24513f;font-size:.66rem;font-weight:800}
+@media(max-width:650px){.cr44-tools{flex-direction:column;align-items:stretch}.cr44-tools select{width:100%}}
 </style>
 </head>
 <body>
@@ -1485,7 +1490,7 @@ function renderSolicitudesLabor(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo">🔧 Labores sugeridas por ingeniero</div><div class="loading">Cargando...</div>';
   from('solicitudes_labor').select('*,tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre),creador:usuarios!creado_por(nombre)').neq('estado','descartada').order('creado_en',{ascending:false}).get().then(function(rows){
-    rows=rows||[];
+    rows=cr44Ordenar(rows||[]);
     var pendientes=rows.filter(function(s){return s.estado==='pendiente';});
     var programadas=rows.filter(function(s){return s.estado==='programada';});
     var terminadas=rows.filter(function(s){return s.estado==='terminada';});
@@ -5267,6 +5272,13 @@ function ca25RegistrarPagoProveedor(compra){
 var C027_CREDITOS_DESDE_CAJA=false;
 function renderCreditosDesdeCaja(){C027_CREDITOS_DESDE_CAJA=true;renderCuentasPorPagar();}
 function volverCreditosContexto(){if(C027_CREDITOS_DESDE_CAJA){C027_CREDITOS_DESDE_CAJA=false;renderCajaMootsil('dia',CAJA_FECHA_BASE||fechaHoyLocal())}else renderComprasMenu();}
+var cr44Orden='recientes';
+function cr44Ordenar(rows){
+ return (rows||[]).slice().sort(function(a,b){
+   var da=String(a.fecha||''),db=String(b.fecha||'');
+   return cr44Orden==='antiguas'?da.localeCompare(db):db.localeCompare(da);
+ });
+}
 function renderCuentasPorPagar(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="cr43-shell"><div class="loading">Cargando créditos de proveedores...</div></div>';
@@ -5317,11 +5329,14 @@ function renderCuentasPorPagar(){
         '<div class="cr43-kpi alert"><span>Vencidos</span><strong>'+vencidos.length+'</strong></div>'+
         '<div class="cr43-kpi warn"><span>Vencen en 7 días</span><strong>'+proximos.length+'</strong></div>'+
       '</div>'+
+      '<div class="cr44-tools"><label for="cr44-orden">Ordenar por fecha</label><select id="cr44-orden"><option value="recientes"'+(cr44Orden==='recientes'?' selected':'')+'>Más recientes primero</option><option value="antiguas"'+(cr44Orden==='antiguas'?' selected':'')+'>Más antiguas primero</option></select></div>'+ 
       '<div class="cr43-table"><table><thead><tr><th>Fecha compra</th><th>Proveedor</th><th>Factura</th><th>Vencimiento</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Estado</th><th>Acción</th></tr></thead><tbody>'+
         (trs||'<tr><td colspan="9"><div class="cr43-empty">No hay compras a crédito registradas.</div></td></tr>')+
       '</tbody></table></div>'+
     '</div>';
 
+    var cr44sel=document.getElementById('cr44-orden');
+    if(cr44sel)cr44sel.onchange=function(){cr44Orden=this.value;renderCuentasPorPagar();};
     body.querySelectorAll('[data-pago-prov]').forEach(function(b){
       b.onclick=function(){
         var id=this.dataset.pagoProv;
