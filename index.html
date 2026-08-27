@@ -693,6 +693,68 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ca40-account-meta{margin-top:4px;font-size:.55rem;line-height:1.35;color:#758178}
 .ca40-account-meta strong{font-size:inherit!important;color:#4f665a!important}
 
+
+/* C043 — Nueva compra compacta, escala visual de Registrar gasto */
+.nc28-shell{
+  max-width:720px!important;
+  min-height:auto!important;
+  margin:18px auto 34px!important;
+  padding:0!important;
+  background:transparent!important;
+}
+.nc28-head{
+  background:#fff;
+  border:1px solid #dde5df;
+  border-radius:16px 16px 0 0;
+  padding:16px 18px 12px;
+  margin:0!important;
+  align-items:center!important;
+}
+.nc28-title{font-size:1.35rem!important}
+.nc28-eyebrow{font-size:.62rem!important}
+.nc28-sub{font-size:.67rem!important}
+.nc28-back{padding:7px 10px!important;font-size:.65rem!important}
+.nc30-card{
+  border-radius:0 0 16px 16px!important;
+  padding:14px 18px!important;
+  margin-bottom:10px!important;
+  box-shadow:0 14px 34px rgba(22,64,48,.12)!important;
+}
+.nc30-topgrid{
+  grid-template-columns:1.4fr .75fr!important;
+  gap:9px!important;
+}
+.nc30-topgrid>.form-group:nth-child(3),
+.nc30-topgrid>.form-group:nth-child(4){margin-top:2px}
+.nc30-payline{gap:9px!important;align-items:end!important}
+.nc28-products-title{margin:12px 0 7px!important}
+#nc-items .form-card{padding:10px 12px!important;margin-bottom:8px!important}
+.nc31-cat-tabs{gap:3px!important}
+.nc31-cat-tab{padding:5px 7px!important;font-size:.59rem!important}
+#nc-agregar-btn{padding:.55rem .7rem!important;font-size:.62rem!important}
+.nc28-total{
+  padding:10px 12px!important;
+  margin-top:8px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  text-align:left!important;
+}
+#nc-total-display{font-size:1.45rem!important}
+#nc-guardar{min-width:150px!important;padding:.62rem .8rem!important}
+@media(max-width:760px){
+  .nc28-shell{margin:10px 12px 24px!important}
+  .nc30-topgrid{grid-template-columns:1fr!important}
+}
+
+/* C043 — identidad individual para módulos financieros: sólo acento superior */
+.ca22-op.c43-compras{border-top:4px solid #e88300}
+.ca22-op.c43-gastos{border-top:4px solid #c81717}
+.ca22-op.c43-creditos{border-top:4px solid #2f7fb9}
+.ca22-op.c43-nomina{border-top:4px solid #c59a12}
+.ca22-op.c43-inversionistas{border-top:4px solid #702989}
+.ca22-op.c43-financiamientos{border-top:4px solid #16806d}
+
 </style>
 </head>
 <body>
@@ -5355,7 +5417,7 @@ function renderNuevaCompra(){
   var hoy=fechaHoyLocal();
   var provOpts=cats.proveedores.map(function(p){return '<option value="'+p.id+'">'+p.nombre+(p.giro?' — '+p.giro:'')+'</option>';}).join('');
   body.innerHTML='<div class="nc28-shell">'+
-    '<div class="nc28-head"><div><div class="nc28-eyebrow">Administración · Caja · Compras</div><div class="nc28-title">Nueva compra</div><div class="nc28-sub">Captura rápida de factura y productos.</div></div><button type="button" class="nc28-back" onclick="volverCompraContexto()">← Caja</button></div>'+
+    '<div class="nc28-head"><div><div class="nc28-eyebrow">Administración · Caja · Compras</div><div class="nc28-title">Nueva compra</div><div class="nc28-sub">Compra rápida · factura y productos.</div></div><button type="button" class="nc28-back" onclick="volverCompraContexto()">← Caja</button></div>'+
     '<div class="nc30-card">'+
       '<div class="nc30-topgrid">'+
         '<div class="form-group"><label>Proveedor</label><div class="nc29-provider-wrap"><input type="text" id="nc-proveedor-buscar" autocomplete="off" placeholder="Escribe proveedor"><div id="nc-proveedor-resultados" class="nc29-provider-results nc30-provider-results"></div></div><select id="nc-proveedor" style="display:none"><option value="">Sin proveedor</option>'+provOpts+'<option value="_nuevo">+ Agregar nuevo proveedor...</option></select></div>'+
@@ -7467,7 +7529,7 @@ function renderCajaMootsil(periodo,fechaBase){
         '<div class="ca17-kpi out"><div class="ball">↑</div><div><div class="lbl">Salidas</div><div class="num">$'+formatMonto(localSalidas)+'</div><div class="meta">MXN</div><div class="num" style="font-size:1.05rem;margin-top:3px">US$ '+formatMonto(localSalidasUsd)+'</div><div class="meta">USD</div></div></div>'+
         '<div class="ca17-kpi net"><div class="ball">▰</div><div><div class="lbl">Saldo disponible</div><div class="num">$'+formatMonto(saldoDisponible)+'</div><div class="meta">MXN · Efectivo + bancos en pesos</div><div class="num" style="font-size:1.05rem;margin-top:3px">US$ '+formatMonto(saldoDisponibleUsd)+'</div><div class="meta">USD · Banamex Dólares</div></div></div></div>'+
         '<div class="ca22-accounts" style="grid-template-columns:repeat(5,minmax(0,1fr))"><div class="ca22-account"><strong>💵 EFECTIVO EN CAJA</strong><div class="amt">$'+formatMonto(ef)+'</div><div class="ca40-account-meta">Inicial <strong>$'+formatMonto(saldoInicialEf)+'</strong> · Salidas <strong>$'+formatMonto(salEf)+'</strong></div></div><div class="ca22-account"><strong>🏦 BANAMEX PESOS</strong><div class="amt">$'+formatMonto(bp)+'</div><div class="ca40-account-meta">Inicial <strong>$'+formatMonto(saldoInicialBp)+'</strong> · Salidas <strong>$'+formatMonto(salBp)+'</strong></div></div><div class="ca22-account"><strong>🏦 BANAMEX DÓLARES</strong><div class="amt">US$ '+formatMonto(bd)+'</div><div class="ca40-account-meta">Inicial <strong>US$ '+formatMonto(saldoInicialBd)+'</strong> · Salidas <strong>US$ '+formatMonto(salBd)+'</strong></div></div><div class="ca22-account"><strong>🏦 SANTANDER PESOS</strong><div class="amt">$'+formatMonto(sp)+'</div><div class="ca40-account-meta">Inicial <strong>$'+formatMonto(saldoInicialSp)+'</strong> · Salidas <strong>$'+formatMonto(salSp)+'</strong></div></div><button class="ca22-transfer" id="ca21-transfer" '+(!apertura||corte?'disabled style="opacity:.45"':'')+'><span>⇄</span>Transferir entre cuentas<small>Entre cuentas de la misma moneda</small></button></div>'+
-        '<div class="ca22-ops" style="grid-template-columns:repeat(6,minmax(0,1fr))"><button class="ca22-op orange" id="ca22-compras" type="button">🧾 Compras</button><button class="ca22-op red" id="ca22-gastos" type="button">💳 Gastos</button><button class="ca22-op orange" id="ca27-creditos" type="button">📆 Créditos</button><button class="ca22-op" id="ca22-nomina" type="button">💰 Nómina</button><button class="ca22-op purple" id="ca22-inversionistas" type="button">💼 Inversionistas</button><button class="ca22-op" id="ca25-financiamientos" type="button">🏦 Financiamientos</button></div>'+
+        '<div class="ca22-ops" style="grid-template-columns:repeat(6,minmax(0,1fr))"><button class="ca22-op c43-compras" id="ca22-compras" type="button">🧾 Compras</button><button class="ca22-op c43-gastos" id="ca22-gastos" type="button">💳 Gastos</button><button class="ca22-op c43-creditos" id="ca27-creditos" type="button">📆 Créditos</button><button class="ca22-op c43-nomina" id="ca22-nomina" type="button">💰 Nómina</button><button class="ca22-op c43-inversionistas" id="ca22-inversionistas" type="button">💼 Inversionistas</button><button class="ca22-op c43-financiamientos" id="ca25-financiamientos" type="button">🏦 Financiamientos</button></div>'+
         '<div class="ca17-controls"><input id="ca21-fecha" type="date" value="'+CAJA_FECHA_BASE+'"><select id="ca21-tipo"><option value="todos">Todos los movimientos</option><option value="entrada">Entradas</option><option value="salida">Salidas</option><option value="transferencia">Transferencias</option></select><select><option>Todas las categorías</option></select><select><option>Todas las formas de pago</option><option>Efectivo</option><option>Transferencia</option></select><input placeholder="Buscar concepto, beneficiario, folio..."></div>'+
         '<div class="ca17-table-wrap"><table class="ca17-table"><thead><tr><th>Hora</th><th>Tipo</th><th>Concepto</th><th>Categoría</th><th>Beneficiario / Proveedor</th><th>Forma de pago</th><th>Entrada</th><th>Salida</th><th>Origen</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
         '<div class="ca17-foot"><div>ⓘ <strong>Modo prueba:</strong> apertura y movimientos manuales se guardan en este navegador. Los movimientos existentes de Mootsil se muestran como referencia y no se duplican en el saldo de prueba.</div><div>'+(corte?'Corte: '+corte.hora+' · Diferencia $'+formatMonto(corte.diferencia):'Caja sin corte')+'</div></div></div>'+
