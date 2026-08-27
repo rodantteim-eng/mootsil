@@ -739,6 +739,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 /* C047 — Nómina con acento propio + orden local de créditos */
 .ca22-op.nomina-gold{border-top:4px solid #c59a12!important}
 
+
+/* C048 — Nómina integrada directamente con Caja */
+.no48-payline{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.no48-account{border:1px solid #d5dfd8;background:#fff;border-radius:8px;padding:6px 28px 6px 9px;font-size:.64rem;font-weight:800;color:#315448;min-width:170px}
+.no48-account-label{font-size:.58rem;font-weight:850;color:#738078;text-transform:uppercase}
+
 </style>
 </head>
 <body>
@@ -8632,8 +8638,10 @@ function renderGenerarNomina(fechaRef){
           (metaExtra.length?'<div class="orden-meta" style="margin-top:.15rem;">'+metaExtra.join(' · ')+'</div>':'')+
           '<div style="margin-top:.6rem;padding-top:.5rem;border-top:1px dashed var(--gris-2);">'+filas+'</div>'+
           '<div class="resumen-row" style="border-top:2px solid var(--gris-1);margin-top:.3rem;padding-top:.5rem;"><strong style="font-size:.85rem;">Total nómina</strong><strong style="font-size:1rem;color:'+(nominaCompleta?'var(--verde-mid)':'var(--tierra)')+';">$'+granTotal.toFixed(2)+'</strong></div>'+
-          '<div style="display:flex;gap:8px;margin-top:.6rem;flex-wrap:wrap;">'+
-          (nominaCompleta?'<button class="btn-sm btn-cancelar" data-despagar="'+idAccion+'">Marcar como pendiente</button>':'<button class="btn-sm btn-completar" data-pagar="'+idAccion+'">✅ Marcar nómina completa como pagada</button>')+
+          '<div style="display:flex;gap:8px;margin-top:.6rem;flex-wrap:wrap;align-items:center;">'+
+          (nominaCompleta?
+            '<button class="btn-sm btn-cancelar" data-despagar="'+idAccion+'">Marcar como pendiente</button>':
+            '<div class="no48-payline"><span class="no48-account-label">Cuenta de pago</span><select class="no48-account" data-nomina-cuenta="'+idAccion+'"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="santander_pesos">Santander Pesos</option></select><button class="btn-sm btn-completar" data-pagar="'+idAccion+'">✅ Marcar nómina completa como pagada</button></div>')+
           '<button type="button" class="btn-sm" style="background:var(--gris-1);color:var(--negro);" data-recibo="'+idAccion+'">🧾 Recibo</button>'+
           '<button type="button" class="btn-sm" style="background:var(--verde-tenue);border:1.5px solid var(--verde-mid);color:var(--verde);" data-ajustar-nom="'+o.id+'" data-dias="'+diasPagados+'" data-horas="'+horasExtra+'" data-motivo="'+((ajuste&&ajuste.motivo)||'').replace(/"/g,'&quot;')+'">✏️ Ajustar</button>'+
           '</div>'+
@@ -8649,7 +8657,17 @@ function renderGenerarNomina(fechaRef){
 
       body.querySelectorAll('[data-pagar]').forEach(function(btn){
         btn.addEventListener('click',function(){
-          var acc=accionesPago[this.dataset.pagar];
+          var accionId=this.dataset.pagar;
+          var acc=accionesPago[accionId];
+          var cuentaSel=body.querySelector('[data-nomina-cuenta="'+accionId+'"]');
+          var cuentaPago=cuentaSel?cuentaSel.value:'efectivo';
+          if(acc.granTotal<0){alert('El total de nómina no puede ser negativo. Revisa los ajustes y deducciones.');return;}
+          var totalsCaja=ca21Totals(fechaHoyLocal());
+          var disponibleCaja=ca35CuentaSaldo(totalsCaja,cuentaPago);
+          if(acc.granTotal>disponibleCaja){
+            alert('Saldo insuficiente en '+ca35CuentaLabel(cuentaPago)+'. Disponible: $'+formatMonto(disponibleCaja));
+            return;
+          }
           btn.disabled=true; btn.textContent='Guardando...';
           var opId=acc.operarioId;
           var existenteSueldo=estadoPorOp[opId];
@@ -8675,8 +8693,20 @@ function renderGenerarNomina(fechaRef){
               });
             }));
           }).then(function(){
+            // Registrar una sola salida en Caja por colaborador/semana.
+            var caja=ca21Load();
+            var refNom='nomina-'+semanaInicio+'-'+opId;
+            caja.movimientos=caja.movimientos.filter(function(m){return m.ref_nomina!==refNom;});
+            caja.movimientos.push({
+              id:refNom+'-'+Date.now(),ref_nomina:refNom,fecha:fechaHoyLocal(),hora:ca21Now(),
+              tipo:'salida',cuenta:cuentaPago,monto:ca21Money(acc.granTotal),
+              categoria:'Nómina',concepto:'Nómina semana '+numSemana+' · '+acc.nombre,
+              persona:acc.nombre,forma:cuentaPago,origen:'Nómina',estado:'Pagado',
+              usuario:(usuario&&usuario.nombre)||'Usuario'
+            });
+            ca21Save(caja);
             return from('notificaciones').insert({titulo:'💳 Nómina pagada',cuerpo:'Tu nómina de la semana '+numSemana+' ($'+acc.granTotal.toFixed(2)+') fue marcada como pagada.',icono:'💳',leida:false,para_rol:'operario',para_usuario:opId});
-          }).then(function(){showToast('✅ Nómina de '+acc.nombre+' marcada como pagada');renderGenerarNomina(lunes);}).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='✅ Marcar nómina completa como pagada';});
+          }).then(function(){showToast('✅ Nómina de '+acc.nombre+' pagada y registrada en Caja');renderGenerarNomina(lunes);}).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='✅ Marcar nómina completa como pagada';});
         });
       });
       body.querySelectorAll('[data-despagar]').forEach(function(btn){
@@ -8688,7 +8718,14 @@ function renderGenerarNomina(fechaRef){
           if(existenteSueldo) pasos.push(from('pagos_semana_estado').eq('id',existenteSueldo.id).update({estado:'pendiente'}));
           var existenteExtra=estadoExtraPorOp[opId];
           if(existenteExtra) pasos.push(from('pagos_extra_estado').eq('id',existenteExtra.id).update({estado:'pendiente'}));
-          Promise.all(pasos).then(function(){showToast('Marcado como pendiente');renderGenerarNomina(lunes);}).catch(function(e){alert('Error: '+e.message);});
+          Promise.all(pasos).then(function(){
+            var caja=ca21Load();
+            var refNom='nomina-'+semanaInicio+'-'+opId;
+            caja.movimientos=caja.movimientos.filter(function(m){return m.ref_nomina!==refNom;});
+            ca21Save(caja);
+            showToast('Marcado como pendiente · salida retirada de Caja');
+            renderGenerarNomina(lunes);
+          }).catch(function(e){alert('Error: '+e.message);});
         });
       });
       body.querySelectorAll('[data-recibo]').forEach(function(btn){
