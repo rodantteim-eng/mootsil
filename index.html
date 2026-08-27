@@ -721,6 +721,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .cr44-tools label{font-size:.62rem;font-weight:850;color:#66776e;text-transform:uppercase}
 .cr44-tools select{border:1px solid #d8e1db;background:#fff;border-radius:8px;padding:7px 30px 7px 10px;color:#24513f;font-size:.66rem;font-weight:800}
 @media(max-width:650px){.cr44-tools{flex-direction:column;align-items:stretch}.cr44-tools select{width:100%}}
+
+/* C045 — buscador de créditos + decisión Inventario en Otros */
+.cr45-search{flex:1;max-width:520px}
+.cr45-search input{width:100%;box-sizing:border-box;border:1px solid #d8e1db;background:#fff;border-radius:8px;padding:8px 11px;color:#244a3b;font-size:.68rem}
+.cr45-tools{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:0 0 10px}
+.cr45-order{display:flex;align-items:center;gap:8px}
+.cr45-invbox{margin-top:10px;padding:11px 12px;border:1px solid #dce6df;border-radius:10px;background:#f8fbf9}
+.cr45-invtitle{font-size:.65rem;font-weight:900;color:#315448;margin-bottom:7px;text-transform:uppercase}
+.cr45-choice{display:flex;gap:8px}
+.cr45-choice button{border:1px solid #d5dfd8;background:#fff;border-radius:999px;padding:6px 12px;font-size:.64rem;font-weight:850;color:#40584d;cursor:pointer}
+.cr45-choice button.on{border-color:#217553;background:#eaf5ef;color:#155b3d}
+.cr45-invhint{font-size:.6rem;color:#7a867f;margin-top:6px}
+@media(max-width:650px){.cr45-tools{flex-direction:column;align-items:stretch}.cr45-search{max-width:none}.cr45-order{justify-content:space-between}}
+
 </style>
 </head>
 <body>
@@ -837,6 +851,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 </div>
 <script>
+var ca45OtrosInventario=false;
+
 var URL_SB = 'https://ypreafyqnckswvoaerbe.supabase.co';
 var KEY_SB = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwcmVhZnlxbmNrc3d2b2FlcmJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NDE0NjAsImV4cCI6MjA5ODQxNzQ2MH0.2Bwg1HdUXKlw9U3a3-3FvpeNV3iKktJchkL6xbD51DU';
 
@@ -5273,6 +5289,19 @@ var C027_CREDITOS_DESDE_CAJA=false;
 function renderCreditosDesdeCaja(){C027_CREDITOS_DESDE_CAJA=true;renderCuentasPorPagar();}
 function volverCreditosContexto(){if(C027_CREDITOS_DESDE_CAJA){C027_CREDITOS_DESDE_CAJA=false;renderCajaMootsil('dia',CAJA_FECHA_BASE||fechaHoyLocal())}else renderComprasMenu();}
 var cr44Orden='recientes';
+var cr45Busqueda='';
+function cr45Filtrar(rows){
+  var q=(cr45Busqueda||'').trim().toLowerCase();
+  if(!q)return rows||[];
+  return (rows||[]).filter(function(c){
+    var proveedor=c.proveedor&&c.proveedor.nombre?c.proveedor.nombre:'';
+    var factura=c.numero_factura||'';
+    var total=parseFloat(c.total)||0;
+    var saldo=Math.max(0,total-ca25PagadoCompra(c.id));
+    var texto=[proveedor,factura,total.toFixed(2),formatMonto(total),saldo.toFixed(2),formatMonto(saldo)].join(' ').toLowerCase();
+    return texto.indexOf(q)>=0;
+  });
+}
 function cr44Ordenar(rows){
  return (rows||[]).slice().sort(function(a,b){
    var da=String(a.fecha||''),db=String(b.fecha||'');
@@ -5300,7 +5329,8 @@ function renderCuentasPorPagar(){
       return diff<=7;
     });
 
-    var trs=rows.map(function(c){
+    var displayRows=cr45Filtrar(rows);
+    var trs=displayRows.map(function(c){
       var total=parseFloat(c.total)||0;
       var pagado=ca25PagadoCompra(c.id);
       var saldo=Math.max(0,total-pagado);
@@ -5329,12 +5359,22 @@ function renderCuentasPorPagar(){
         '<div class="cr43-kpi alert"><span>Vencidos</span><strong>'+vencidos.length+'</strong></div>'+
         '<div class="cr43-kpi warn"><span>Vencen en 7 días</span><strong>'+proximos.length+'</strong></div>'+
       '</div>'+
-      '<div class="cr44-tools"><label for="cr44-orden">Ordenar por fecha</label><select id="cr44-orden"><option value="recientes"'+(cr44Orden==='recientes'?' selected':'')+'>Más recientes primero</option><option value="antiguas"'+(cr44Orden==='antiguas'?' selected':'')+'>Más antiguas primero</option></select></div>'+ 
+      '<div class="cr45-tools"><div class="cr45-search"><input id="cr45-buscar" type="search" placeholder="Buscar factura, proveedor o importe..." value="'+(cr45Busqueda||'').replace(/"/g,'&quot;')+'"></div><div class="cr45-order"><label for="cr44-orden">Ordenar por fecha</label><select id="cr44-orden"><option value="recientes"'+(cr44Orden==='recientes'?' selected':'')+'>Más recientes primero</option><option value="antiguas"'+(cr44Orden==='antiguas'?' selected':'')+'>Más antiguas primero</option></select></div></div>'+ 
       '<div class="cr43-table"><table><thead><tr><th>Fecha compra</th><th>Proveedor</th><th>Factura</th><th>Vencimiento</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Estado</th><th>Acción</th></tr></thead><tbody>'+
         (trs||'<tr><td colspan="9"><div class="cr43-empty">No hay compras a crédito registradas.</div></td></tr>')+
       '</tbody></table></div>'+
     '</div>';
 
+    var cr45inp=document.getElementById('cr45-buscar');
+    if(cr45inp){
+      cr45inp.oninput=function(){
+        cr45Busqueda=this.value;
+        var foco=this.selectionStart;
+        renderCuentasPorPagar();
+        var nuevo=document.getElementById('cr45-buscar');
+        if(nuevo){nuevo.focus();try{nuevo.setSelectionRange(foco,foco);}catch(_e){}}
+      };
+    }
     var cr44sel=document.getElementById('cr44-orden');
     if(cr44sel)cr44sel.onchange=function(){cr44Orden=this.value;renderCuentasPorPagar();};
     body.querySelectorAll('[data-pago-prov]').forEach(function(b){
@@ -11565,6 +11605,38 @@ function salir(){usuario=null;pin='';dibujarPin();setErr('');mostrar('screen-log
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('./sw.js').catch(function(e){console.warn('SW no registrado:',e);});
 }
+
+function ca45MontarDecisionOtros(){
+  var body=document.getElementById('enc-body');
+  if(!body)return;
+  var active=[].slice.call(body.querySelectorAll('button')).find(function(b){
+    return (b.textContent||'').trim()==='Otros' && (b.classList.contains('active')||b.classList.contains('on')||b.getAttribute('aria-pressed')==='true');
+  });
+  var existing=document.getElementById('ca45-otros-inv');
+  if(!active){ if(existing)existing.remove(); return; }
+  var productInputs=[].slice.call(body.querySelectorAll('input')).filter(function(i){
+    var p=(i.placeholder||'').toLowerCase();
+    return p.indexOf('producto')>=0 || p.indexOf('nombre')>=0;
+  });
+  var anchor=productInputs[0];
+  if(!anchor)return;
+  if(existing)return;
+  var box=document.createElement('div');
+  box.id='ca45-otros-inv'; box.className='cr45-invbox';
+  box.innerHTML='<div class="cr45-invtitle">¿Agregar este producto al inventario?</div><div class="cr45-choice"><button type="button" id="ca45-inv-no" class="'+(!ca45OtrosInventario?'on':'')+'">No</button><button type="button" id="ca45-inv-si" class="'+(ca45OtrosInventario?'on':'')+'">Sí</button></div><div class="cr45-invhint">No es la opción predeterminada. Selecciona Sí únicamente si este producto debe generar existencia en Inventario.</div>';
+  anchor.parentNode.insertBefore(box,anchor.nextSibling);
+  document.getElementById('ca45-inv-no').onclick=function(){ca45OtrosInventario=false;ca45MontarDecisionOtrosEstado();};
+  document.getElementById('ca45-inv-si').onclick=function(){ca45OtrosInventario=true;ca45MontarDecisionOtrosEstado();};
+}
+function ca45MontarDecisionOtrosEstado(){
+  var n=document.getElementById('ca45-inv-no'),s=document.getElementById('ca45-inv-si');
+  if(n)n.classList.toggle('on',!ca45OtrosInventario);
+  if(s)s.classList.toggle('on',ca45OtrosInventario);
+}
+document.addEventListener('click',function(e){
+  if((e.target.textContent||'').trim()==='Otros')setTimeout(ca45MontarDecisionOtros,0);
+});
+
 </script>
 
 <input type="file" id="cam-input" accept="image/*,video/*" capture="environment" style="display:none" onchange="capturaEjec.foto=true;renderEjec();">
