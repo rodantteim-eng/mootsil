@@ -693,6 +693,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ca40-account-meta{margin-top:4px;font-size:.55rem;line-height:1.35;color:#758178}
 .ca40-account-meta strong{font-size:inherit!important;color:#4f665a!important}
 
+
+/* C043 — Créditos de proveedores */
+.ca22-op.creditos-blue{border-top:4px solid #2d7fb8!important}
+.cr43-shell{padding:22px 30px 36px;background:#f6f8f6;min-height:calc(100vh - 120px)}
+.cr43-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;margin-bottom:14px}
+.cr43-eyebrow{font-size:.7rem;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:#2d7fb8}
+.cr43-title{font-size:1.9rem;font-weight:900;color:#164f3c}.cr43-sub{font-size:.72rem;color:#708078;margin-top:3px}
+.cr43-back{border:1px solid #d8e1db;background:#fff;border-radius:9px;padding:8px 12px;color:#17513d;font-weight:850;cursor:pointer}
+.cr43-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.cr43-kpi{background:#fff;border:1px solid #dde5df;border-radius:12px;padding:12px 14px}
+.cr43-kpi span{font-size:.6rem;color:#758178;font-weight:850;text-transform:uppercase}
+.cr43-kpi strong{display:block;font-size:1.18rem;color:#174f3c;margin-top:4px}
+.cr43-kpi.alert strong{color:#c81717}.cr43-kpi.warn strong{color:#d67a00}.cr43-kpi.blue strong{color:#2d7fb8}
+.cr43-table{background:#fff;border:1px solid #dde5df;border-radius:13px;overflow:hidden}
+.cr43-table table{width:100%;border-collapse:collapse}.cr43-table th{background:#f4f8f6;text-align:left;padding:9px;font-size:.57rem;color:#708078;text-transform:uppercase}
+.cr43-table td{padding:10px 9px;border-top:1px solid #edf1ee;font-size:.65rem;color:#344d43}
+.cr43-pill{display:inline-block;border-radius:999px;padding:4px 7px;font-size:.56rem;font-weight:850}
+.cr43-pill.vencido{background:#fdebea;color:#b91c1c}.cr43-pill.pendiente{background:#fff3df;color:#a76200}.cr43-pill.pagado{background:#eaf5ef;color:#17623f}
+.cr43-pay{border:1px solid #bfd7ea;background:#eef7fd;color:#22658f;border-radius:8px;padding:6px 8px;font-size:.6rem;font-weight:900;cursor:pointer}
+.cr43-empty{text-align:center;padding:32px;color:#7d8983;font-size:.72rem}
+@media(max-width:900px){.cr43-kpis{grid-template-columns:repeat(2,1fr)}.cr43-table{overflow:auto}.cr43-head{align-items:flex-start}}
+@media(max-width:650px){.cr43-shell{padding:16px}.cr43-kpis{grid-template-columns:1fr}.cr43-head{flex-direction:column}}
+
 </style>
 </head>
 <body>
@@ -5246,24 +5269,70 @@ function renderCreditosDesdeCaja(){C027_CREDITOS_DESDE_CAJA=true;renderCuentasPo
 function volverCreditosContexto(){if(C027_CREDITOS_DESDE_CAJA){C027_CREDITOS_DESDE_CAJA=false;renderCajaMootsil('dia',CAJA_FECHA_BASE||fechaHoyLocal())}else renderComprasMenu();}
 function renderCuentasPorPagar(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo">📆 Créditos de proveedores</div><div class="loading">Cargando...</div>';
+  body.innerHTML='<div class="cr43-shell"><div class="loading">Cargando créditos de proveedores...</div></div>';
   var hoy=fechaHoyLocal();
   from('compras').select('*,proveedor:proveedores(nombre)').eq('forma_pago','credito').order('fecha_vencimiento').get().then(function(rows){
     rows=rows||[];
-    var pendientes=rows.filter(function(c){return c.estado_pago!=='pagado'||ca25PagadoCompra(c.id)<parseFloat(c.total||0)});
-    var totalPendiente=pendientes.reduce(function(s,c){return s+Math.max(0,(parseFloat(c.total)||0)-ca25PagadoCompra(c.id));},0);
-    var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📆 Créditos de proveedores<button type="button" onclick="volverCreditosContexto()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Compras</button></div>'+
-    '<div class="form-card" style="text-align:center;margin-bottom:1rem;"><div style="font-size:.8rem;color:var(--gris-3);">Saldo pendiente con proveedores</div><div style="font-size:1.6rem;font-weight:800;color:var(--tierra);">$'+formatMonto(totalPendiente)+'</div></div>';
-    if(!pendientes.length)html+='<div class="empty">✅ No hay créditos de proveedores pendientes.</div>';
-    else html+=pendientes.map(function(c){
-      var total=parseFloat(c.total)||0,pagado=ca25PagadoCompra(c.id),saldo=Math.max(0,total-pagado),vencido=c.fecha_vencimiento&&c.fecha_vencimiento<hoy;
-      return '<div class="orden-card" style="border-left-color:'+(vencido?'var(--rojo)':'var(--tierra)')+'"><div style="display:flex;justify-content:space-between;gap:12px"><strong>🏢 '+(c.proveedor?c.proveedor.nombre:'Sin proveedor')+'</strong><strong>$'+formatMonto(saldo)+' pendiente</strong></div><div class="orden-meta">'+(c.numero_factura?'Factura '+c.numero_factura+' · ':'')+'Compra $'+formatMonto(total)+' · Pagado $'+formatMonto(pagado)+' · Vence '+(c.fecha_vencimiento||'—')+'</div><button class="btn-sm btn-completar" data-pago-prov="'+c.id+'" style="margin-top:.45rem">💳 Registrar pago / abono</button></div>';
-    }).join('');
-    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem" onclick="volverCreditosContexto()">← Volver</button>';
-    body.querySelectorAll('[data-pago-prov]').forEach(function(b){b.onclick=function(){var id=this.dataset.pagoProv,c=rows.find(function(x){return String(x.id)===String(id)});if(c)ca25RegistrarPagoProveedor(c)}});
-  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>'});
-}
+    var totalOriginal=rows.reduce(function(s,c){return s+(parseFloat(c.total)||0);},0);
+    var totalPagado=rows.reduce(function(s,c){return s+ca25PagadoCompra(c.id);},0);
+    var pendientes=rows.filter(function(c){
+      return Math.max(0,(parseFloat(c.total)||0)-ca25PagadoCompra(c.id))>0.009;
+    });
+    var totalPendiente=pendientes.reduce(function(s,c){
+      return s+Math.max(0,(parseFloat(c.total)||0)-ca25PagadoCompra(c.id));
+    },0);
+    var vencidos=pendientes.filter(function(c){return c.fecha_vencimiento&&c.fecha_vencimiento<hoy;});
+    var proximos=pendientes.filter(function(c){
+      if(!c.fecha_vencimiento||c.fecha_vencimiento<hoy)return false;
+      var diff=(new Date(c.fecha_vencimiento+'T00:00:00')-new Date(hoy+'T00:00:00'))/86400000;
+      return diff<=7;
+    });
 
+    var trs=rows.map(function(c){
+      var total=parseFloat(c.total)||0;
+      var pagado=ca25PagadoCompra(c.id);
+      var saldo=Math.max(0,total-pagado);
+      var terminado=saldo<=0.009;
+      var vencido=!terminado&&c.fecha_vencimiento&&c.fecha_vencimiento<hoy;
+      var estado=terminado?'Pagado':vencido?'Vencido':'Pendiente';
+      var clase=terminado?'pagado':vencido?'vencido':'pendiente';
+      return '<tr>'+
+        '<td>'+(c.fecha||'—')+'</td>'+
+        '<td>'+(c.proveedor?c.proveedor.nombre:'Sin proveedor')+'</td>'+
+        '<td>'+(c.numero_factura||'—')+'</td>'+
+        '<td>'+(c.fecha_vencimiento||'—')+'</td>'+
+        '<td>$'+formatMonto(total)+'</td>'+
+        '<td>$'+formatMonto(pagado)+'</td>'+
+        '<td><strong>$'+formatMonto(saldo)+'</strong></td>'+
+        '<td><span class="cr43-pill '+clase+'">'+estado+'</span></td>'+
+        '<td>'+(terminado?'—':'<button class="cr43-pay" data-pago-prov="'+c.id+'">Registrar pago / abono</button>')+'</td>'+
+      '</tr>';
+    }).join('');
+
+    body.innerHTML='<div class="cr43-shell">'+
+      '<div class="cr43-head"><div><div class="cr43-eyebrow">Administración · Caja</div><div class="cr43-title">Créditos de proveedores</div><div class="cr43-sub">Compras a crédito, vencimientos y pagos realizados.</div></div><button class="cr43-back" onclick="volverCreditosContexto()">← Caja</button></div>'+
+      '<div class="cr43-kpis">'+
+        '<div class="cr43-kpi blue"><span>Saldo pendiente</span><strong>$'+formatMonto(totalPendiente)+'</strong></div>'+
+        '<div class="cr43-kpi"><span>Total pagado</span><strong>$'+formatMonto(totalPagado)+'</strong></div>'+
+        '<div class="cr43-kpi alert"><span>Vencidos</span><strong>'+vencidos.length+'</strong></div>'+
+        '<div class="cr43-kpi warn"><span>Vencen en 7 días</span><strong>'+proximos.length+'</strong></div>'+
+      '</div>'+
+      '<div class="cr43-table"><table><thead><tr><th>Fecha compra</th><th>Proveedor</th><th>Factura</th><th>Vencimiento</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Estado</th><th>Acción</th></tr></thead><tbody>'+
+        (trs||'<tr><td colspan="9"><div class="cr43-empty">No hay compras a crédito registradas.</div></td></tr>')+
+      '</tbody></table></div>'+
+    '</div>';
+
+    body.querySelectorAll('[data-pago-prov]').forEach(function(b){
+      b.onclick=function(){
+        var id=this.dataset.pagoProv;
+        var c=rows.find(function(x){return String(x.id)===String(id);});
+        if(c)ca25RegistrarPagoProveedor(c);
+      };
+    });
+  }).catch(function(e){
+    body.innerHTML='<div class="cr43-shell"><div class="cr43-head"><div><div class="cr43-eyebrow">Administración · Caja</div><div class="cr43-title">Créditos de proveedores</div></div><button class="cr43-back" onclick="volverCreditosContexto()">← Caja</button></div><div class="form-card"><strong>Error:</strong> '+e.message+'</div></div>';
+  });
+}
 
 /* C027 — Contexto limpio de Compras desde Caja */
 var C027_COMPRA_DESDE_CAJA=false;
@@ -7467,7 +7536,7 @@ function renderCajaMootsil(periodo,fechaBase){
         '<div class="ca17-kpi out"><div class="ball">↑</div><div><div class="lbl">Salidas</div><div class="num">$'+formatMonto(localSalidas)+'</div><div class="meta">MXN</div><div class="num" style="font-size:1.05rem;margin-top:3px">US$ '+formatMonto(localSalidasUsd)+'</div><div class="meta">USD</div></div></div>'+
         '<div class="ca17-kpi net"><div class="ball">▰</div><div><div class="lbl">Saldo disponible</div><div class="num">$'+formatMonto(saldoDisponible)+'</div><div class="meta">MXN · Efectivo + bancos en pesos</div><div class="num" style="font-size:1.05rem;margin-top:3px">US$ '+formatMonto(saldoDisponibleUsd)+'</div><div class="meta">USD · Banamex Dólares</div></div></div></div>'+
         '<div class="ca22-accounts" style="grid-template-columns:repeat(5,minmax(0,1fr))"><div class="ca22-account"><strong>💵 EFECTIVO EN CAJA</strong><div class="amt">$'+formatMonto(ef)+'</div><div class="ca40-account-meta">Inicial <strong>$'+formatMonto(saldoInicialEf)+'</strong> · Salidas <strong>$'+formatMonto(salEf)+'</strong></div></div><div class="ca22-account"><strong>🏦 BANAMEX PESOS</strong><div class="amt">$'+formatMonto(bp)+'</div><div class="ca40-account-meta">Inicial <strong>$'+formatMonto(saldoInicialBp)+'</strong> · Salidas <strong>$'+formatMonto(salBp)+'</strong></div></div><div class="ca22-account"><strong>🏦 BANAMEX DÓLARES</strong><div class="amt">US$ '+formatMonto(bd)+'</div><div class="ca40-account-meta">Inicial <strong>US$ '+formatMonto(saldoInicialBd)+'</strong> · Salidas <strong>US$ '+formatMonto(salBd)+'</strong></div></div><div class="ca22-account"><strong>🏦 SANTANDER PESOS</strong><div class="amt">$'+formatMonto(sp)+'</div><div class="ca40-account-meta">Inicial <strong>$'+formatMonto(saldoInicialSp)+'</strong> · Salidas <strong>$'+formatMonto(salSp)+'</strong></div></div><button class="ca22-transfer" id="ca21-transfer" '+(!apertura||corte?'disabled style="opacity:.45"':'')+'><span>⇄</span>Transferir entre cuentas<small>Entre cuentas de la misma moneda</small></button></div>'+
-        '<div class="ca22-ops" style="grid-template-columns:repeat(6,minmax(0,1fr))"><button class="ca22-op orange" id="ca22-compras" type="button">🧾 Compras</button><button class="ca22-op red" id="ca22-gastos" type="button">💳 Gastos</button><button class="ca22-op orange" id="ca27-creditos" type="button">📆 Créditos</button><button class="ca22-op" id="ca22-nomina" type="button">💰 Nómina</button><button class="ca22-op purple" id="ca22-inversionistas" type="button">💼 Inversionistas</button><button class="ca22-op" id="ca25-financiamientos" type="button">🏦 Financiamientos</button></div>'+
+        '<div class="ca22-ops" style="grid-template-columns:repeat(6,minmax(0,1fr))"><button class="ca22-op orange" id="ca22-compras" type="button">🧾 Compras</button><button class="ca22-op red" id="ca22-gastos" type="button">💳 Gastos</button><button class="ca22-op creditos-blue" id="ca27-creditos" type="button">📆 Créditos</button><button class="ca22-op" id="ca22-nomina" type="button">💰 Nómina</button><button class="ca22-op purple" id="ca22-inversionistas" type="button">💼 Inversionistas</button><button class="ca22-op" id="ca25-financiamientos" type="button">🏦 Financiamientos</button></div>'+
         '<div class="ca17-controls"><input id="ca21-fecha" type="date" value="'+CAJA_FECHA_BASE+'"><select id="ca21-tipo"><option value="todos">Todos los movimientos</option><option value="entrada">Entradas</option><option value="salida">Salidas</option><option value="transferencia">Transferencias</option></select><select><option>Todas las categorías</option></select><select><option>Todas las formas de pago</option><option>Efectivo</option><option>Transferencia</option></select><input placeholder="Buscar concepto, beneficiario, folio..."></div>'+
         '<div class="ca17-table-wrap"><table class="ca17-table"><thead><tr><th>Hora</th><th>Tipo</th><th>Concepto</th><th>Categoría</th><th>Beneficiario / Proveedor</th><th>Forma de pago</th><th>Entrada</th><th>Salida</th><th>Origen</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
         '<div class="ca17-foot"><div>ⓘ <strong>Modo prueba:</strong> apertura y movimientos manuales se guardan en este navegador. Los movimientos existentes de Mootsil se muestran como referencia y no se duplican en el saldo de prueba.</div><div>'+(corte?'Corte: '+corte.hora+' · Diferencia $'+formatMonto(corte.diferencia):'Caja sin corte')+'</div></div></div>'+
