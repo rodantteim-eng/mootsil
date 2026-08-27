@@ -754,6 +754,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .no50-loan-account select{width:100%}
 @media(max-width:650px){.no50-loan-account{grid-template-columns:1fr}}
 
+
+.ad17-card.gold{border-top:4px solid #c59a12!important}
 </style>
 </head>
 <body>
@@ -7223,8 +7225,8 @@ function renderAdministracionMenu(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="ad17-shell"><div class="ad17-head"><div><div class="ad17-eyebrow">Administración</div><div class="ad17-title">Control del Rancho</div><div class="ad17-sub">Finanzas, personal, compras y operación administrativa de Mootsil.</div></div></div><div class="ad17-grid">'+
     '<div class="ad17-card primary" data-admin="caja"><div class="ic">💵</div><h3>Caja</h3><p>Entradas, salidas, pagos, movimientos y control financiero operativo.</p></div>'+
-    '<div class="ad17-card blue" data-admin="empleados"><div class="ic">👥</div><h3>Empleados</h3><p>Personal fijo, eventual, cosecha y galera.</p></div>'+
-    '<div class="ad17-card orange" data-admin="nominas"><div class="ic">💰</div><h3>Nóminas</h3><p>Pagos semanales, bonos, horas extra y préstamos.</p></div>'+
+    '<div class="ad17-card blue" data-admin="empleados"><div class="ic">👥</div><h3>Empleados</h3><p>Altas y bajas, asistencia, contratos, permisos, documentos y solicitudes.</p></div>'+
+    '<div class="ad17-card gold" data-admin="compensaciones"><div class="ic">💰</div><h3>Nómina y Compensaciones</h3><p>Sueldos, bonos, préstamos e historial de nómina.</p></div>'+
     '<div class="ad17-card orange" data-admin="gastos"><div class="ic">🧾</div><h3>Compras y Gastos</h3><p>Compras, proveedores, cuentas por pagar e historial.</p></div>'+
     '<div class="ad17-card primary" data-admin="asistencias"><div class="ic">📋</div><h3>Control de Asistencias</h3><p>Entradas, faltas, retardos, permisos y jornada.</p></div>'+
     '<div class="ad17-card primary" data-admin="eventual"><div class="ic">🧑‍🌾</div><h3>Labores Eventual</h3><p>Registro y pago del personal eventual por día.</p></div>'+
@@ -7232,7 +7234,7 @@ function renderAdministracionMenu(){
   '</div></div>';
   body.querySelector('[data-admin="caja"]').addEventListener('click',function(){renderCajaMootsil('dia',fechaHoyLocal());});
   body.querySelector('[data-admin="empleados"]').addEventListener('click',renderEmpleadosMenu);
-  body.querySelector('[data-admin="nominas"]').addEventListener('click',renderNominasMenu);
+  body.querySelector('[data-admin="compensaciones"]').addEventListener('click',renderCompensacionesMenu);
   body.querySelector('[data-admin="gastos"]').addEventListener('click',renderComprasMenu);
   body.querySelector('[data-admin="asistencias"]').addEventListener('click',function(){renderControlAsistencias(fechaHoyLocal());});
   body.querySelector('[data-admin="eventual"]').addEventListener('click',function(){renderPagosEventuales(fechaHoyLocal());});
@@ -7656,18 +7658,72 @@ function renderCajaMootsil(periodo,fechaBase){
 
 function renderEmpleadosMenu(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">👥 Empleados<button type="button" onclick="renderAdministracionMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Administración</button></div><div class="labor-grid" style="grid-template-columns:repeat(2,1fr);">'+
+  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">👥 EMPLEADOS<button type="button" onclick="renderAdministracionMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Administración</button></div>'+
+  '<div class="labor-grid" style="grid-template-columns:repeat(2,1fr);">'+
     '<div class="labor-tile" data-emp="altasbajas"><div class="labor-tile-ic">👤</div><div class="labor-tile-lbl">Altas y Bajas</div></div>'+
+    '<div class="labor-tile" data-emp="asistencia"><div class="labor-tile-ic">📋</div><div class="labor-tile-lbl">Asistencia</div></div>'+
     '<div class="labor-tile" data-emp="contratos"><div class="labor-tile-ic">📄</div><div class="labor-tile-lbl">Contratos</div></div>'+
+    '<div class="labor-tile" data-emp="permisos"><div class="labor-tile-ic">🗂️</div><div class="labor-tile-lbl">Permisos</div></div>'+
     '<div class="labor-tile" data-emp="documentos"><div class="labor-tile-ic">🪪</div><div class="labor-tile-lbl">Documentos</div></div>'+
-    '<div class="labor-tile" data-emp="permisos"><div class="labor-tile-ic">📋</div><div class="labor-tile-lbl">Permisos</div></div>'+
     '<div class="labor-tile" data-emp="solicitudes"><div class="labor-tile-ic">📨</div><div class="labor-tile-lbl">Solicitudes</div></div>'+
   '</div>';
   body.querySelector('[data-emp="altasbajas"]').addEventListener('click',renderAltasBajas);
+  body.querySelector('[data-emp="asistencia"]').addEventListener('click',function(){renderControlAsistencias(fechaHoyLocal());});
   body.querySelector('[data-emp="contratos"]').addEventListener('click',renderContratos);
-  body.querySelector('[data-emp="documentos"]').addEventListener('click',renderDocumentosPersonales);
   body.querySelector('[data-emp="permisos"]').addEventListener('click',renderPermisosRevision);
+  body.querySelector('[data-emp="documentos"]').addEventListener('click',renderDocumentosPersonales);
   body.querySelector('[data-emp="solicitudes"]').addEventListener('click',renderSolicitudesOperarioRevision);
+}
+
+
+function renderPersonalSueldos(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="loading">Cargando sueldos...</div>';
+  from('usuarios').select('id,nombre,rol,activo,sueldo_base').eq('rol','operario').order('nombre').get().then(function(rows){
+    rows=rows||[];
+    var totalBase=rows.reduce(function(s,u){return s+(parseFloat(u.sueldo_base)||0);},0);
+    var html='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px;"><div><div style="font-size:.7rem;font-weight:850;color:var(--tierra);letter-spacing:.05em;">ADMINISTRACIÓN · PERSONAL</div><h2 style="margin:.15rem 0;color:var(--verde);">Sueldos</h2><div class="hint">El sueldo diario definido aquí alimenta automáticamente Pago de Nómina en Caja.</div></div><button class="btn-back" onclick="renderCompensacionesMenu()">← Nómina y Compensaciones</button></div>'+
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">'+
+        '<div class="form-card" style="margin:0;padding:.8rem;"><div class="hint">COLABORADORES</div><strong style="font-size:1.2rem;color:var(--verde);">'+rows.length+'</strong></div>'+
+        '<div class="form-card" style="margin:0;padding:.8rem;"><div class="hint">SUMA SUELDOS DIARIOS</div><strong style="font-size:1.2rem;color:var(--verde);">$'+totalBase.toFixed(2)+'</strong></div>'+
+        '<div class="form-card" style="margin:0;padding:.8rem;"><div class="hint">AFECTA CAJA</div><strong style="font-size:.85rem;color:var(--verde);">Al generar nómina</strong></div>'+
+      '</div>'+
+      '<div class="form-card" style="padding:0;overflow:hidden;"><table style="width:100%;border-collapse:collapse;"><thead><tr style="background:var(--gris-1);"><th style="text-align:left;padding:.7rem;font-size:.65rem;">COLABORADOR</th><th style="text-align:left;padding:.7rem;font-size:.65rem;">SUELDO DIARIO</th><th style="text-align:left;padding:.7rem;font-size:.65rem;">ESTADO</th><th style="text-align:right;padding:.7rem;font-size:.65rem;">ACCIÓN</th></tr></thead><tbody>'+
+      rows.map(function(u){
+        return '<tr style="border-top:1px solid var(--gris-2);"><td style="padding:.65rem .7rem;font-weight:700;">'+u.nombre+'</td><td style="padding:.65rem .7rem;"><input type="number" min="0" step="1" value="'+(parseFloat(u.sueldo_base)||0)+'" data-sueldo-id="'+u.id+'" style="max-width:150px;padding:.5rem;border:1px solid var(--gris-2);border-radius:8px;"></td><td style="padding:.65rem .7rem;font-size:.7rem;color:'+(u.activo?'var(--verde-mid)':'var(--gris-3)')+';">'+(u.activo?'Activo':'Inactivo')+'</td><td style="padding:.65rem .7rem;text-align:right;"><button class="btn-sm btn-completar" data-save-sueldo="'+u.id+'">Guardar</button></td></tr>';
+      }).join('')+
+      '</tbody></table></div>';
+    body.innerHTML=html;
+    body.querySelectorAll('[data-save-sueldo]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var id=this.dataset.saveSueldo;
+        var input=body.querySelector('[data-sueldo-id="'+id+'"]');
+        var sueldo=parseFloat(input.value);
+        if(isNaN(sueldo)||sueldo<0){alert('Captura un sueldo diario válido.');return;}
+        var b=this;b.disabled=true;b.textContent='Guardando...';
+        from('usuarios').eq('id',id).update({sueldo_base:sueldo}).then(function(){
+          showToast('✅ Sueldo actualizado');
+          return cargarCatalogos();
+        }).then(function(){renderPersonalSueldos();}).catch(function(e){alert('Error: '+e.message);b.disabled=false;b.textContent='Guardar';});
+      });
+    });
+  }).catch(function(e){body.innerHTML='<div class="form-card">Error: '+e.message+'</div>';});
+}
+
+
+function renderCompensacionesMenu(){
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">💰 NÓMINA Y COMPENSACIONES<button type="button" onclick="renderAdministracionMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Administración</button></div>'+
+  '<div class="labor-grid" style="grid-template-columns:repeat(2,1fr);">'+
+    '<div class="labor-tile" data-comp="sueldos"><div class="labor-tile-ic">💵</div><div class="labor-tile-lbl">Sueldos</div></div>'+
+    '<div class="labor-tile" data-comp="bonos"><div class="labor-tile-ic">🎁</div><div class="labor-tile-lbl">Bonos</div></div>'+
+    '<div class="labor-tile" data-comp="prestamos"><div class="labor-tile-ic">📝</div><div class="labor-tile-lbl">Préstamos</div></div>'+
+    '<div class="labor-tile" data-comp="historial"><div class="labor-tile-ic">📊</div><div class="labor-tile-lbl">Historial de nómina</div></div>'+
+  '</div>';
+  body.querySelector('[data-comp="sueldos"]').addEventListener('click',renderPersonalSueldos);
+  body.querySelector('[data-comp="bonos"]').addEventListener('click',renderBonos);
+  body.querySelector('[data-comp="prestamos"]').addEventListener('click',renderPrestamos);
+  body.querySelector('[data-comp="historial"]').addEventListener('click',renderResumenNomina);
 }
 
 var NO50_NOMINA_DESDE_CAJA=false;
@@ -7685,17 +7741,7 @@ function no50VolverNomina(){
 }
 function renderNominasMenu(){
   NO50_NOMINA_DESDE_CAJA=false;
-  var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">💰 Nóminas<button type="button" onclick="renderAdministracionMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Administración</button></div><div class="labor-grid" style="grid-template-columns:repeat(2,1fr);">'+
-    '<div class="labor-tile" data-nom="sueldos"><div class="labor-tile-ic">💰</div><div class="labor-tile-lbl">Generar Nómina</div></div>'+
-    '<div class="labor-tile" data-nom="bonos"><div class="labor-tile-ic">🎁</div><div class="labor-tile-lbl">Bonos</div></div>'+
-    '<div class="labor-tile" data-nom="prestamos"><div class="labor-tile-ic">📝</div><div class="labor-tile-lbl">Préstamos</div></div>'+
-    '<div class="labor-tile" data-nom="historial"><div class="labor-tile-ic">📊</div><div class="labor-tile-lbl">Historial nómina</div></div>'+
-  '</div>';
-  body.querySelector('[data-nom="sueldos"]').addEventListener('click',function(){renderGenerarNomina(new Date());});
-  body.querySelector('[data-nom="bonos"]').addEventListener('click',renderBonos);
-  body.querySelector('[data-nom="prestamos"]').addEventListener('click',renderPrestamos);
-  body.querySelector('[data-nom="historial"]').addEventListener('click',renderResumenNomina);
+  renderCompensacionesMenu();
 }
 
 function renderSolicitudesOperarioRevision(){
@@ -8512,7 +8558,7 @@ function renderResumenNomina(){
       var permisoTxt=(resumen.diasPermisoConGoce||resumen.diasPermisoSinGoce)?('<span>🩺 '+(resumen.diasPermisoConGoce+resumen.diasPermisoSinGoce)+' permiso(s)</span>'):'';
       return '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+o.nombre+'</strong></div><div class="orden-meta" style="display:flex;gap:1rem;margin-top:.3rem;flex-wrap:wrap;"><span>✅ '+resumen.trabajados+' trabajados</span><span style="color:var(--rojo);">❌ '+resumen.faltas+' faltas</span><span style="color:var(--tierra);">⏰ '+resumen.retardos+' retardos</span>'+permisoTxt+'</div>'+(horasExtra>0?'<div class="orden-meta" style="margin-top:.2rem;">💰 '+horasExtra.toFixed(1)+' h extra</div>':'')+'</div>';
     }).join('');
-    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderNominasMenu()">← Volver a Nóminas</button>';
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderCompensacionesMenu()">← Volver a Nómina y Compensaciones</button>';
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
@@ -8863,7 +8909,7 @@ function renderPrestamos(){
   body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📝 Préstamos<button type="button" onclick="renderNuevoPrestamo()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo préstamo</button></div><div class="loading">Cargando...</div>';
   from('prestamos').select('*,operario:usuarios!operario_id(nombre)').order('creado_en',{ascending:false}).get().then(function(prestamos){
     var header='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📝 Préstamos<button type="button" onclick="renderNuevoPrestamo()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo préstamo</button></div>';
-    if(!prestamos||!prestamos.length){body.innerHTML=header+'<div class="empty">Sin préstamos registrados.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderNominasMenu()">← Volver a Nóminas</button>';return;}
+    if(!prestamos||!prestamos.length){body.innerHTML=header+'<div class="empty">Sin préstamos registrados.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderCompensacionesMenu()">← Volver a Nómina y Compensaciones</button>';return;}
     var ids=prestamos.map(function(p){return p.id;});
     from('prestamo_pagos').select('*').in('prestamo_id',ids).order('numero_pago',{ascending:true}).get().then(function(pagos){
       var html=header;
@@ -8878,7 +8924,7 @@ function renderPrestamos(){
         }).join('');
         return '<div class="orden-card" style="border-left-color:'+(p.estado==='activo'?'var(--tierra)':'var(--gris-3)')+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(p.operario?p.operario.nombre:'')+' · '+p.concepto+'</strong><span style="font-size:.72rem;font-weight:700;color:'+(p.estado==='activo'?'var(--tierra)':'var(--verde-mid)')+';">'+(p.estado==='activo'?'Activo':'Liquidado')+'</span></div><div class="orden-meta">Total: $'+parseFloat(p.monto_total).toFixed(2)+' · Restante: $'+restante.toFixed(2)+'</div><div style="margin-top:.5rem;">'+filas+'</div></div>';
       }).join('');
-      body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderNominasMenu()">← Volver a Nóminas</button>';
+      body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderCompensacionesMenu()">← Volver a Nómina y Compensaciones</button>';
       body.querySelectorAll('[data-descontar]').forEach(function(btn){
         btn.addEventListener('click',function(){
           var pagoId=this.dataset.descontar, prestamoId=this.dataset.prestamo;
@@ -8975,12 +9021,12 @@ function renderBonos(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🎁 Bonos<button type="button" onclick="renderNuevoBono()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo bono</button></div><div class="loading">Cargando...</div>';
   from('bonos').select('*').order('creado_en',{ascending:false}).get().then(function(rows){
-    if(!rows||!rows.length){body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🎁 Bonos<button type="button" onclick="renderNuevoBono()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo bono</button></div><div class="empty">Sin bonos registrados.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderNominasMenu()">← Volver a Nóminas</button>';return;}
+    if(!rows||!rows.length){body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🎁 Bonos<button type="button" onclick="renderNuevoBono()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo bono</button></div><div class="empty">Sin bonos registrados.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderCompensacionesMenu()">← Volver a Nómina y Compensaciones</button>';return;}
     var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🎁 Bonos<button type="button" onclick="renderNuevoBono()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo bono</button></div>';
     html+=rows.map(function(b){
       return '<div class="orden-card" style="border-left-color:'+(b.estado==='activo'?'var(--verde-mid)':'var(--gris-3)')+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(b.tipo==='equipo'?'🤝 Equipo':'👤 Individual')+' · '+(b.tipo_recompensa==='economico'?'💰 Económico':'🎁 En especie')+(b.monto?' · $'+b.monto:'')+'</strong><span style="font-size:.72rem;font-weight:700;color:'+(b.estado==='activo'?'var(--verde-mid)':'var(--gris-3)')+';">'+(b.estado==='activo'?'Activo':'Cerrado')+'</span></div><div class="orden-meta">'+b.descripcion+(b.umbral_minimo?'<br/>Requiere '+b.umbral_minimo+'/10 de rendimiento':'')+'<br/>📅 '+b.periodo_inicio+' a '+b.periodo_fin+'</div>'+(b.estado==='activo'?'<button class="btn-sm btn-cancelar" data-cerrar="'+b.id+'" style="margin-top:.5rem;">Cerrar bono</button>':'')+'</div>';
     }).join('');
-    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderNominasMenu()">← Volver a Nóminas</button>';
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderCompensacionesMenu()">← Volver a Nómina y Compensaciones</button>';
     body.querySelectorAll('[data-cerrar]').forEach(function(btn){btn.addEventListener('click',function(){
       from('bonos').eq('id',this.dataset.cerrar).update({estado:'cerrado'}).then(function(){showToast('Bono cerrado');renderBonos();});
     });});
