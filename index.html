@@ -748,6 +748,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .no49-payfield select{min-width:175px;border:1px solid #d9cfaa;border-radius:8px;background:#fff;padding:7px 28px 7px 9px;font-size:.64rem;font-weight:800;color:#405348}
 .no49-note{font-size:.58rem;color:#7d7863;max-width:260px;line-height:1.3}
 
+
+/* C050 — Caja paga; Personal administra */
+.no50-loan-account{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.no50-loan-account select{width:100%}
+@media(max-width:650px){.no50-loan-account{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body>
@@ -7635,7 +7641,7 @@ function renderCajaMootsil(periodo,fechaBase){
     var bCompras=document.getElementById('ca22-compras'); if(bCompras)bCompras.addEventListener('click',renderNuevaCompraDesdeCaja);
     var bGastos=document.getElementById('ca22-gastos'); if(bGastos)bGastos.addEventListener('click',ga37Nuevo);
     var bCred=document.getElementById('ca27-creditos'); if(bCred)bCred.addEventListener('click',renderCreditosDesdeCaja);
-    var bNomina=document.getElementById('ca22-nomina'); if(bNomina)bNomina.addEventListener('click',renderNominasMenu);
+    var bNomina=document.getElementById('ca22-nomina'); if(bNomina)bNomina.addEventListener('click',no50AbrirNominaDesdeCaja);
     var bInv=document.getElementById('ca22-inversionistas'); if(bInv)bInv.addEventListener('click',renderInversionistasMenu);
     var bFin=document.getElementById('ca25-financiamientos'); if(bFin)bFin.addEventListener('click',renderFinanciamientosCaja);
     if(apertura&&!corte){
@@ -7664,7 +7670,21 @@ function renderEmpleadosMenu(){
   body.querySelector('[data-emp="solicitudes"]').addEventListener('click',renderSolicitudesOperarioRevision);
 }
 
+var NO50_NOMINA_DESDE_CAJA=false;
+function no50AbrirNominaDesdeCaja(){
+  NO50_NOMINA_DESDE_CAJA=true;
+  renderGenerarNomina(new Date());
+}
+function no50VolverNomina(){
+  if(NO50_NOMINA_DESDE_CAJA){
+    NO50_NOMINA_DESDE_CAJA=false;
+    renderCajaMootsil('hoy',fechaHoyLocal());
+  }else{
+    renderNominasMenu();
+  }
+}
 function renderNominasMenu(){
+  NO50_NOMINA_DESDE_CAJA=false;
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">💰 Nóminas<button type="button" onclick="renderAdministracionMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Administración</button></div><div class="labor-grid" style="grid-template-columns:repeat(2,1fr);">'+
     '<div class="labor-tile" data-nom="sueldos"><div class="labor-tile-ic">💰</div><div class="labor-tile-lbl">Generar Nómina</div></div>'+
@@ -8651,7 +8671,7 @@ function renderGenerarNomina(fechaRef){
           '</div>';
       }).join('');
 
-      body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderNominasMenu()">← Volver a Nóminas</button>';
+      body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="no50VolverNomina()">← Volver</button>';
 
       var btnAnt=document.getElementById('gn-ant');
       if(btnAnt) btnAnt.addEventListener('click',function(){var d=new Date(lunes);d.setDate(d.getDate()-7);renderGenerarNomina(d);});
@@ -8855,18 +8875,23 @@ function renderNuevoPrestamo(prefill){
     var maxMes=parseInt(cfg.prestamo_max_activos_mes)||1;
     var montoMax=(cfg.prestamo_monto_max!==undefined&&cfg.prestamo_monto_max!==null&&cfg.prestamo_monto_max!=='')?parseFloat(cfg.prestamo_monto_max):null;
     var opO=cats.operarios.map(function(o){return '<button type="button" class="op-chip'+(prefill.operarioId===o.id?' sel':'')+'" data-id="'+o.id+'" onclick="seleccionUnica(this)">'+o.nombre+'</button>';}).join('');
-    body.innerHTML='<div class="seccion-titulo">+ Nuevo préstamo</div><div class="form-card">'+(prefill.solicitudId?'<p class="hint" style="margin-bottom:.75rem;">Completando la solicitud del colaborador — ajusta pagos y fecha antes de registrar.</p>':'')+(montoMax!=null?'<p class="hint" style="margin-bottom:.75rem;">Monto máximo autorizable por préstamo: $'+montoMax.toFixed(2)+' · Máximo '+maxMes+' préstamo(s) por colaborador al mes. <a href="javascript:void(0)" onclick="renderConfig()" style="color:var(--verde-mid);">cambiar</a></p>':'')+'<div class="form-group"><label>Colaborador</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Concepto</label><input type="text" id="pr-concepto" value="'+(prefill.concepto||'').replace(/"/g,'&quot;')+'" placeholder="Ej. Préstamo personal / Anticipo de nómina"></div><div class="form-group"><label>Monto total ($)</label><input type="number" id="pr-monto" min="0" step="1" value="'+(prefill.monto||'')+'" placeholder="Ej. 600"></div><div class="form-group"><label>Número de pagos semanales</label><input type="number" id="pr-pagos" min="1" step="1" placeholder="Ej. 3"></div><div class="form-group"><label>Semana en que inicia el descuento</label><input type="date" id="pr-fecha" value="'+fechaHoyLocal()+'"></div><button class="btn-primary" id="pr-guardar">Registrar préstamo</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderPrestamos()">← Volver a Préstamos</button>';
+    body.innerHTML='<div class="seccion-titulo">+ Nuevo préstamo</div><div class="form-card">'+(prefill.solicitudId?'<p class="hint" style="margin-bottom:.75rem;">Completando la solicitud del colaborador — ajusta pagos y fecha antes de registrar.</p>':'')+(montoMax!=null?'<p class="hint" style="margin-bottom:.75rem;">Monto máximo autorizable por préstamo: $'+montoMax.toFixed(2)+' · Máximo '+maxMes+' préstamo(s) por colaborador al mes. <a href="javascript:void(0)" onclick="renderConfig()" style="color:var(--verde-mid);">cambiar</a></p>':'')+'<div class="form-group"><label>Colaborador</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Concepto</label><input type="text" id="pr-concepto" value="'+(prefill.concepto||'').replace(/"/g,'&quot;')+'" placeholder="Ej. Préstamo personal / Anticipo de nómina"></div><div class="form-group"><label>Monto total ($)</label><input type="number" id="pr-monto" min="0" step="1" value="'+(prefill.monto||'')+'" placeholder="Ej. 600"></div><div class="form-group"><label>Número de pagos semanales</label><input type="number" id="pr-pagos" min="1" step="1" placeholder="Ej. 3"></div><div class="no50-loan-account"><div class="form-group"><label>Semana en que inicia el descuento</label><input type="date" id="pr-fecha" value="'+fechaHoyLocal()+'"></div><div class="form-group"><label>Cuenta de entrega</label><select id="pr-cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="santander_pesos">Santander Pesos</option></select><p class="hint">El préstamo genera una salida inmediata en Caja.</p></div></div><button class="btn-primary" id="pr-guardar">Registrar préstamo y salida en Caja</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderPrestamos()">← Volver a Préstamos</button>';
     document.getElementById('pr-guardar').addEventListener('click',function(){
     var opBtn=document.querySelector('.op-chip.sel');
     var concepto=document.getElementById('pr-concepto').value.trim();
     var monto=parseFloat(document.getElementById('pr-monto').value);
     var numPagos=parseInt(document.getElementById('pr-pagos').value);
     var fechaIni=document.getElementById('pr-fecha').value;
+    var cuentaEntrega=document.getElementById('pr-cuenta').value;
     if(!opBtn){alert('Selecciona un colaborador.');return;}
     if(!concepto){alert('Describe el concepto.');return;}
     if(!monto||monto<=0){alert('Captura un monto válido.');return;}
     if(!numPagos||numPagos<1){alert('Captura el número de pagos.');return;}
     if(montoMax!=null&&monto>montoMax){alert('El monto máximo que se puede autorizar por préstamo es $'+montoMax.toFixed(2)+'. Puedes cambiar este límite en Configuración.');return;}
+    var cajaPrest=ca21Totals(fechaHoyLocal());
+    var disponiblePrest=ca35CuentaSaldo(cajaPrest,cuentaEntrega);
+    if(monto>disponiblePrest){alert('Saldo insuficiente en '+ca35CuentaLabel(cuentaEntrega)+'. Disponible: $'+formatMonto(disponiblePrest));return;}
+    var prestamoCreado=null;
     var btn=this; btn.disabled=true; btn.textContent='Verificando...';
     contarPrestamosDelMes(opBtn.dataset.id).then(function(usadosDelMes){
       if(usadosDelMes>=maxMes){
@@ -8883,6 +8908,7 @@ function renderNuevoPrestamo(prefill){
       });
     }).then(function(nuevoPrestamoRows){
       var prestamo=nuevoPrestamoRows[0];
+      prestamoCreado=prestamo;
       var montoPorPago=Math.round((monto/numPagos)*100)/100;
       var lunes=inicioDeSemana(new Date(fechaIni+'T00:00:00'));
       var pagosArr=[];
@@ -8894,9 +8920,19 @@ function renderNuevoPrestamo(prefill){
       }
       return Promise.all(pagosArr.map(function(p){return from('prestamo_pagos').insert(p);}));
     }).then(function(){
+      var caja=ca21Load();
+      var refPrest='prestamo-'+(prestamoCreado&&prestamoCreado.id?prestamoCreado.id:Date.now());
+      caja.movimientos=caja.movimientos.filter(function(m){return m.ref_prestamo!==refPrest;});
+      caja.movimientos.push({
+        id:refPrest+'-'+Date.now(),ref_prestamo:refPrest,fecha:fechaHoyLocal(),hora:ca21Now(),
+        tipo:'salida',cuenta:cuentaEntrega,monto:ca21Money(monto),categoria:'Préstamo personal',
+        concepto:concepto,persona:opBtn.textContent.trim(),forma:cuentaEntrega,origen:'Personal · Préstamo',
+        estado:'Entregado',usuario:(usuario&&usuario.nombre)||'Usuario'
+      });
+      ca21Save(caja);
       return from('notificaciones').insert({titulo:'📝 Nuevo préstamo registrado',cuerpo:usuario.nombre+' te registró: '+concepto+' — $'+monto+' en '+numPagos+' pago(s) semanales',icono:'📝',leida:false,para_rol:'operario',para_usuario:opBtn.dataset.id});
     }).then(function(){
-      showToast('✅ Préstamo registrado');
+      showToast('✅ Préstamo registrado · salida aplicada en Caja');
       renderPrestamos();
     }).catch(function(e){
       if(e&&e._cancelado) return;
