@@ -673,6 +673,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .nc31-list-row{grid-template-columns:180px minmax(220px,1.4fr) 180px 120px 118px}
 .nc31-cat small{display:block;font-size:.56rem;color:#75827b;font-weight:700;margin-top:2px}
 
+
+/* C037 — Gastos fijos y variables */
+.ga37-shell{padding:22px 30px 36px;background:#f6f8f6;min-height:calc(100vh - 120px)}
+.ga37-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;margin-bottom:14px}
+.ga37-eyebrow{font-size:.7rem;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:#e37c00}
+.ga37-title{font-size:1.9rem;font-weight:900;color:#164f3c}.ga37-sub{font-size:.72rem;color:#708078;margin-top:3px}
+.ga37-back{border:1px solid #d8e1db;background:#fff;border-radius:9px;padding:8px 12px;color:#17513d;font-weight:850;cursor:pointer}
+.ga37-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.ga37-tabs{display:flex;gap:5px}.ga37-tab{border:0;background:transparent;padding:7px 10px;border-radius:8px;font-size:.68rem;font-weight:850;color:#64736b;cursor:pointer}.ga37-tab.sel{background:#e9f4ee;color:#15583d;box-shadow:inset 0 -2px 0 #2a7255}
+.ga37-new{border:0;background:#0f6c49;color:#fff;border-radius:9px;padding:9px 13px;font-size:.7rem;font-weight:900;cursor:pointer}
+.ga37-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:12px}.ga37-kpi{background:#fff;border:1px solid #dde5df;border-radius:12px;padding:12px}.ga37-kpi span{font-size:.62rem;color:#78857e;font-weight:850;text-transform:uppercase}.ga37-kpi strong{display:block;font-size:1.25rem;color:#174f3c;margin-top:3px}
+.ga37-table{background:#fff;border:1px solid #dde5df;border-radius:13px;overflow:hidden}.ga37-table table{width:100%;border-collapse:collapse}.ga37-table th{background:#f5f8f6;text-align:left;padding:9px;font-size:.58rem;color:#708078;text-transform:uppercase}.ga37-table td{padding:10px 9px;border-top:1px solid #edf1ee;font-size:.66rem;color:#344d43}.ga37-pill{display:inline-block;border-radius:999px;padding:4px 7px;font-size:.58rem;font-weight:850}.ga37-pill.fijo{background:#eef3ff;color:#435b92}.ga37-pill.variable{background:#fff4e8;color:#9b5b16}
+.ga37-empty{text-align:center;padding:30px;color:#7b8881;font-size:.72rem}
+@media(max-width:800px){.ga37-shell{padding:16px}.ga37-kpis{grid-template-columns:1fr}.ga37-head,.ga37-actions{align-items:flex-start;flex-direction:column}.ga37-table{overflow:auto}}
+
 </style>
 </head>
 <body>
@@ -5252,16 +5267,59 @@ function volverCompraContexto(){
   if(C027_COMPRA_DESDE_CAJA){C027_COMPRA_DESDE_CAJA=false;renderCajaMootsil('dia',CAJA_FECHA_BASE||fechaHoyLocal());}
   else renderComprasMenu();
 }
-function renderGastosCajaMenu(){
-  var body=document.getElementById('enc-body');
-  if(!body)return;
-  var mes=new Date().toISOString().slice(0,7);
-  body.innerHTML='<div style="padding:20px 28px"><div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center">💳 Gastos<button class="btn-back" id="c027-gastos-back">← Caja</button></div>'+
-  '<p class="hint" style="margin-bottom:14px">Aquí se concentrarán los gastos operativos. Por ahora se conservan las consultas ya existentes sin mezclar Compras.</p>'+
-  '<div class="labor-grid" style="grid-template-columns:repeat(2,1fr)"><div class="labor-tile" id="c027-gastos-resumen"><div class="labor-tile-ic">📊</div><div class="labor-tile-lbl">Resumen del mes</div></div><div class="labor-tile" id="c027-gastos-historial"><div class="labor-tile-ic">📜</div><div class="labor-tile-lbl">Historial de gastos</div></div></div></div>';
-  var b=document.getElementById('c027-gastos-back');if(b)b.onclick=function(){renderCajaMootsil('dia',CAJA_FECHA_BASE||fechaHoyLocal())};
-  var r=document.getElementById('c027-gastos-resumen');if(r)r.onclick=function(){renderResumenGastos(mes)};
-  var h=document.getElementById('c027-gastos-historial');if(h)h.onclick=function(){renderHistorialGastos(mes)};
+var GA37_FILTRO='todos';
+var GA37_CATS={
+  fijo:['Renta','Energía / Luz','Internet / Telefonía','Honorarios','Seguros','Vigilancia','Mantenimiento contratado','Servicios administrativos','Otros fijos'],
+  variable:['Combustible','Viáticos','Fletes / Transporte','Reparaciones menores','Mantenimiento no programado','Alimentos','Mensajería','Herramientas menores','Servicios operativos','Otros variables']
+};
+function ga37Movs(){
+  return ca21Load().movimientos.filter(function(m){return m.tipo==='salida'&&m.origen==='Gasto operativo';}).sort(function(a,b){return (b.fecha+b.hora).localeCompare(a.fecha+a.hora);});
+}
+function renderGastosCajaMenu(filtro){
+  if(filtro)GA37_FILTRO=filtro;
+  var body=document.getElementById('enc-body');if(!body)return;
+  var all=ga37Movs(),rows=GA37_FILTRO==='todos'?all:all.filter(function(m){return m.clase_gasto===GA37_FILTRO;});
+  var mxn=rows.filter(function(m){return ca35CuentaMoneda(m.cuenta)==='MXN';}).reduce(function(s,m){return s+ca21Money(m.monto);},0);
+  var usd=rows.filter(function(m){return ca35CuentaMoneda(m.cuenta)==='USD';}).reduce(function(s,m){return s+ca21Money(m.monto);},0);
+  var html=rows.map(function(m){
+    return '<tr><td>'+m.fecha+'</td><td><span class="ga37-pill '+m.clase_gasto+'">'+(m.clase_gasto==='fijo'?'Fijo':'Variable')+'</span></td><td>'+m.categoria+'</td><td><strong>'+m.concepto+'</strong></td><td>'+(m.persona||'—')+'</td><td>'+ca35CuentaLabel(m.cuenta)+'</td><td>'+(ca35CuentaMoneda(m.cuenta)==='USD'?'US$ ':'$')+formatMonto(m.monto)+'</td><td>'+(m.comprobante_nombre||'—')+'</td></tr>';
+  }).join('');
+  body.innerHTML='<div class="ga37-shell"><div class="ga37-head"><div><div class="ga37-eyebrow">Administración · Caja</div><div class="ga37-title">Gastos</div><div class="ga37-sub">Control de gastos fijos y variables del rancho.</div></div><button class="ga37-back" id="ga37-back">← Caja</button></div>'+
+  '<div class="ga37-actions"><div class="ga37-tabs"><button class="ga37-tab '+(GA37_FILTRO==='todos'?'sel':'')+'" data-ga37="todos">Todos</button><button class="ga37-tab '+(GA37_FILTRO==='fijo'?'sel':'')+'" data-ga37="fijo">Fijos</button><button class="ga37-tab '+(GA37_FILTRO==='variable'?'sel':'')+'" data-ga37="variable">Variables</button></div><button class="ga37-new" id="ga37-new">＋ Registrar gasto</button></div>'+
+  '<div class="ga37-kpis"><div class="ga37-kpi"><span>Registros</span><strong>'+rows.length+'</strong></div><div class="ga37-kpi"><span>Total MXN</span><strong>$'+formatMonto(mxn)+'</strong></div><div class="ga37-kpi"><span>Total USD</span><strong>US$ '+formatMonto(usd)+'</strong></div></div>'+
+  '<div class="ga37-table"><table><thead><tr><th>Fecha</th><th>Tipo</th><th>Categoría</th><th>Concepto</th><th>Beneficiario / Proveedor</th><th>Cuenta</th><th>Monto</th><th>Comprobante</th></tr></thead><tbody>'+(html||'<tr><td colspan="8"><div class="ga37-empty">Aún no hay gastos registrados en este filtro.</div></td></tr>')+'</tbody></table></div></div>';
+  document.getElementById('ga37-back').onclick=function(){renderCajaMootsil('dia',CAJA_FECHA_BASE||fechaHoyLocal());};
+  document.getElementById('ga37-new').onclick=ga37Nuevo;
+  body.querySelectorAll('[data-ga37]').forEach(function(b){b.onclick=function(){renderGastosCajaMenu(this.dataset.ga37);};});
+}
+function ga37Nuevo(){
+  var hoy=fechaHoyLocal(),cats=GA37_CATS.variable;
+  ca21OpenModal('<div class="ca21-dialog-head"><div><h3>Registrar gasto</h3><p>Gasto operativo del rancho</p></div><button class="ca21-close" onclick="ca21CloseModal()">×</button></div>'+
+  '<div class="ca21-dialog-body"><div class="ca21-form">'+
+  '<div class="ca21-field"><label>Fecha</label><input id="ga37-fecha" type="date" value="'+hoy+'" max="'+hoy+'"></div>'+
+  '<div class="ca21-field"><label>Tipo de gasto</label><div class="nc31-cat-tabs"><button type="button" class="nc31-cat-tab ga37-tipo" data-tipo="fijo">Fijo</button><button type="button" class="nc31-cat-tab ga37-tipo sel" data-tipo="variable">Variable</button></div><input type="hidden" id="ga37-tipo" value="variable"></div>'+
+  '<div class="ca21-field"><label>Categoría</label><select id="ga37-cat">'+cats.map(function(c){return '<option>'+c+'</option>';}).join('')+'</select></div>'+
+  '<div class="ca21-field"><label>Monto</label><input id="ga37-monto" type="number" min=".01" step=".01" placeholder="0.00"></div>'+
+  '<div class="ca21-field"><label>Cuenta de pago</label><select id="ga37-cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div>'+
+  '<div class="ca21-field"><label>Concepto</label><input id="ga37-concepto" placeholder="Ej. Pago de energía eléctrica"></div>'+
+  '<div class="ca21-field full"><label>Beneficiario / Proveedor</label><input id="ga37-persona" placeholder="Nombre o empresa"></div>'+
+  '<div class="ca21-field full"><label>Comprobante (opcional)</label><input id="ga37-file" type="file" accept="image/*,.pdf"><p class="hint" id="ga37-file-name">Sin archivo</p></div>'+
+  '<div class="ca21-field full"><label>Observaciones</label><textarea id="ga37-nota" placeholder="Referencia, periodo o detalle opcional"></textarea></div>'+
+  '</div></div><div class="ca21-dialog-actions"><button onclick="ca21CloseModal()">Cancelar</button><button class="save" id="ga37-save">Registrar gasto</button></div>');
+  document.querySelectorAll('.ga37-tipo').forEach(function(b){b.onclick=function(){
+    document.querySelectorAll('.ga37-tipo').forEach(function(x){x.classList.remove('sel');});this.classList.add('sel');
+    var tipo=this.dataset.tipo;document.getElementById('ga37-tipo').value=tipo;
+    document.getElementById('ga37-cat').innerHTML=GA37_CATS[tipo].map(function(c){return '<option>'+c+'</option>';}).join('');
+  };});
+  document.getElementById('ga37-file').onchange=function(){document.getElementById('ga37-file-name').textContent=this.files[0]?this.files[0].name:'Sin archivo';};
+  document.getElementById('ga37-save').onclick=function(){
+    var monto=ca21Money(document.getElementById('ga37-monto').value),concepto=document.getElementById('ga37-concepto').value.trim(),cuenta=document.getElementById('ga37-cuenta').value,fecha=document.getElementById('ga37-fecha').value;
+    if(monto<=0){alert('Captura un monto mayor a cero.');return;}if(!concepto){alert('Captura el concepto del gasto.');return;}
+    var tt=ca21Totals(fecha),disp=ca35CuentaSaldo(tt,cuenta);if(monto>disp){alert('La cuenta seleccionada no tiene saldo suficiente.');return;}
+    var f=document.getElementById('ga37-file').files[0];
+    var d=ca21Load();d.movimientos.push({id:ca21Id(),fecha:fecha,hora:ca21Now(),tipo:'salida',clase_gasto:document.getElementById('ga37-tipo').value,categoria:document.getElementById('ga37-cat').value,concepto:concepto,persona:document.getElementById('ga37-persona').value.trim()||'—',cuenta:cuenta,monto:monto,nota:document.getElementById('ga37-nota').value.trim(),comprobante_nombre:f?f.name:null,origen:'Gasto operativo',estado:'Registrado',usuario:(usuario&&usuario.nombre)||'Usuario'});
+    ca21Save(d);ca21CloseModal();renderGastosCajaMenu(GA37_FILTRO);
+  };
 }
 
 function ca30SeleccionarCuentaCompra(total,callback){
