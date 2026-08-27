@@ -735,6 +735,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .cr45-invhint{font-size:.6rem;color:#7a867f;margin-top:6px}
 @media(max-width:650px){.cr45-tools{flex-direction:column;align-items:stretch}.cr45-search{max-width:none}.cr45-order{justify-content:space-between}}
 
+
+/* C047 — Nómina con acento propio + orden local de créditos */
+.ca22-op.nomina-gold{border-top:4px solid #c59a12!important}
+
 </style>
 </head>
 <body>
@@ -5339,7 +5343,7 @@ function renderCuentasPorPagar(){
       var estado=terminado?'Pagado':vencido?'Vencido':'Pendiente';
       var clase=terminado?'pagado':vencido?'vencido':'pendiente';
       var searchText=[c.proveedor?c.proveedor.nombre:'',c.numero_factura||'',String(total),formatMonto(total),String(saldo),formatMonto(saldo)].join(' ').toLowerCase().replace(/"/g,'&quot;');
-      return '<tr data-cr45-search="'+searchText+'">'+
+      return '<tr data-cr45-search="'+searchText+'" data-cr47-fecha="'+(c.fecha||'')+'">'+
         '<td>'+(c.fecha||'—')+'</td>'+
         '<td>'+(c.proveedor?c.proveedor.nombre:'Sin proveedor')+'</td>'+
         '<td>'+(c.numero_factura||'—')+'</td>'+
@@ -5383,7 +5387,18 @@ function renderCuentasPorPagar(){
       };
     }
     var cr44sel=document.getElementById('cr44-orden');
-    if(cr44sel)cr44sel.onchange=function(){cr44Orden=this.value;renderCuentasPorPagar();};
+    if(cr44sel)cr44sel.onchange=function(){
+      cr44Orden=this.value;
+      var tbody=body.querySelector('.cr43-table tbody');
+      if(!tbody)return;
+      var empty=tbody.querySelector('#cr45-no-results');
+      var filas=[].slice.call(tbody.querySelectorAll('tr[data-cr47-fecha]'));
+      filas.sort(function(a,b){
+        var da=a.dataset.cr47Fecha||'', db=b.dataset.cr47Fecha||'';
+        return cr44Orden==='antiguas' ? da.localeCompare(db) : db.localeCompare(da);
+      });
+      filas.forEach(function(tr){tbody.insertBefore(tr,empty||null);});
+    };
     body.querySelectorAll('[data-pago-prov]').forEach(function(b){
       b.onclick=function(){
         var id=this.dataset.pagoProv;
@@ -7598,7 +7613,7 @@ function renderCajaMootsil(periodo,fechaBase){
         '<div class="ca17-kpi out"><div class="ball">↑</div><div><div class="lbl">Salidas</div><div class="num">$'+formatMonto(localSalidas)+'</div><div class="meta">MXN</div><div class="num" style="font-size:1.05rem;margin-top:3px">US$ '+formatMonto(localSalidasUsd)+'</div><div class="meta">USD</div></div></div>'+
         '<div class="ca17-kpi net"><div class="ball">▰</div><div><div class="lbl">Saldo disponible</div><div class="num">$'+formatMonto(saldoDisponible)+'</div><div class="meta">MXN · Efectivo + bancos en pesos</div><div class="num" style="font-size:1.05rem;margin-top:3px">US$ '+formatMonto(saldoDisponibleUsd)+'</div><div class="meta">USD · Banamex Dólares</div></div></div></div>'+
         '<div class="ca22-accounts" style="grid-template-columns:repeat(5,minmax(0,1fr))"><div class="ca22-account"><strong>💵 EFECTIVO EN CAJA</strong><div class="amt">$'+formatMonto(ef)+'</div><div class="ca40-account-meta">Inicial <strong>$'+formatMonto(saldoInicialEf)+'</strong> · Salidas <strong>$'+formatMonto(salEf)+'</strong></div></div><div class="ca22-account"><strong>🏦 BANAMEX PESOS</strong><div class="amt">$'+formatMonto(bp)+'</div><div class="ca40-account-meta">Inicial <strong>$'+formatMonto(saldoInicialBp)+'</strong> · Salidas <strong>$'+formatMonto(salBp)+'</strong></div></div><div class="ca22-account"><strong>🏦 BANAMEX DÓLARES</strong><div class="amt">US$ '+formatMonto(bd)+'</div><div class="ca40-account-meta">Inicial <strong>US$ '+formatMonto(saldoInicialBd)+'</strong> · Salidas <strong>US$ '+formatMonto(salBd)+'</strong></div></div><div class="ca22-account"><strong>🏦 SANTANDER PESOS</strong><div class="amt">$'+formatMonto(sp)+'</div><div class="ca40-account-meta">Inicial <strong>$'+formatMonto(saldoInicialSp)+'</strong> · Salidas <strong>$'+formatMonto(salSp)+'</strong></div></div><button class="ca22-transfer" id="ca21-transfer" '+(!apertura||corte?'disabled style="opacity:.45"':'')+'><span>⇄</span>Transferir entre cuentas<small>Entre cuentas de la misma moneda</small></button></div>'+
-        '<div class="ca22-ops" style="grid-template-columns:repeat(6,minmax(0,1fr))"><button class="ca22-op orange" id="ca22-compras" type="button">🧾 Compras</button><button class="ca22-op red" id="ca22-gastos" type="button">💳 Gastos</button><button class="ca22-op creditos-blue" id="ca27-creditos" type="button">📆 Créditos</button><button class="ca22-op" id="ca22-nomina" type="button">💰 Nómina</button><button class="ca22-op purple" id="ca22-inversionistas" type="button">💼 Inversionistas</button><button class="ca22-op" id="ca25-financiamientos" type="button">🏦 Financiamientos</button></div>'+
+        '<div class="ca22-ops" style="grid-template-columns:repeat(6,minmax(0,1fr))"><button class="ca22-op orange" id="ca22-compras" type="button">🧾 Compras</button><button class="ca22-op red" id="ca22-gastos" type="button">💳 Gastos</button><button class="ca22-op creditos-blue" id="ca27-creditos" type="button">📆 Créditos</button><button class="ca22-op nomina-gold" id="ca22-nomina" type="button">💰 Nómina</button><button class="ca22-op purple" id="ca22-inversionistas" type="button">💼 Inversionistas</button><button class="ca22-op" id="ca25-financiamientos" type="button">🏦 Financiamientos</button></div>'+
         '<div class="ca17-controls"><input id="ca21-fecha" type="date" value="'+CAJA_FECHA_BASE+'"><select id="ca21-tipo"><option value="todos">Todos los movimientos</option><option value="entrada">Entradas</option><option value="salida">Salidas</option><option value="transferencia">Transferencias</option></select><select><option>Todas las categorías</option></select><select><option>Todas las formas de pago</option><option>Efectivo</option><option>Transferencia</option></select><input placeholder="Buscar concepto, beneficiario, folio..."></div>'+
         '<div class="ca17-table-wrap"><table class="ca17-table"><thead><tr><th>Hora</th><th>Tipo</th><th>Concepto</th><th>Categoría</th><th>Beneficiario / Proveedor</th><th>Forma de pago</th><th>Entrada</th><th>Salida</th><th>Origen</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
         '<div class="ca17-foot"><div>ⓘ <strong>Modo prueba:</strong> apertura y movimientos manuales se guardan en este navegador. Los movimientos existentes de Mootsil se muestran como referencia y no se duplican en el saldo de prueba.</div><div>'+(corte?'Corte: '+corte.hora+' · Diferencia $'+formatMonto(corte.diferencia):'Caja sin corte')+'</div></div></div>'+
