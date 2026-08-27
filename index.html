@@ -5274,7 +5274,7 @@ function volverCompraContexto(){
 }
 var GA37_FILTRO='todos';
 var GA37_CATS={
-  fijo:['Renta Rancho','Renta Casa Rancho','Renta Casa Villa Corona','Luz','Agua potable','Celulares','Internet Rancho','Internet Villa','Otros'],
+  fijo:['Renta','Luz','Agua potable','Celulares','Internet','Otros'],
   variable:['Combustible','Viáticos','Fletes / Transporte','Reparaciones menores','Mantenimiento no programado','Alimentos','Mensajería','Herramientas menores','Servicios operativos','Otros variables']
 };
 function ga37Movs(){
@@ -5366,7 +5366,7 @@ function renderNuevaCompra(){
       '<div id="nc-prov-nuevo-wrap" style="display:none;background:#f7faf8;border:1px solid #dfe7e1;border-radius:10px;padding:10px;margin-top:9px"><div style="font-size:.68rem;font-weight:900;color:#17523c;margin-bottom:7px">Nuevo proveedor</div><div class="nc28-grid"><div class="form-group"><label>Nombre</label><input type="text" id="nc-prov-nombre"></div><div class="form-group"><label>Giro</label><input type="text" id="nc-prov-giro"></div><div class="form-group"><label>Teléfono</label><input type="text" id="nc-prov-tel"></div></div></div>'+
       '<div class="nc30-payline">'+
         '<div class="form-group nc30-venc" id="nc-vencimiento-wrap" style="display:none;margin:0"><label>Vencimiento</label><input type="date" id="nc-vencimiento"><p class="hint">Se registrará en Créditos de proveedores.</p></div>'+
-        '<select id="nc-cuenta-pago" style="display:none"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select>'+
+        '<div class="form-group" id="nc-cuenta-pago-wrap" style="margin:0;min-width:250px"><label>Cuenta de pago</label><select id="nc-cuenta-pago"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div>'+
         '<label class="nc30-attach" for="nc-comprobante">📎 Adjuntar factura</label><input type="file" id="nc-comprobante" accept="image/*,.pdf"><span class="nc30-file-name" id="nc-comprobante-status">Sin archivo</span>'+
       '</div>'+
     '</div>'+
@@ -5666,10 +5666,13 @@ var nuevoProductoHtml=esNuevo?('<div class="form-group" style="margin-bottom:.5r
 
   var formaPagoSel='contado';
   function actualizarVisibilidadVencimiento(){
-    document.getElementById('nc-vencimiento-wrap').style.display=formaPagoSel==='credito'?'':'none';
+    var esCredito=formaPagoSel==='credito';
+    document.getElementById('nc-vencimiento-wrap').style.display=esCredito?'':'none';
+    document.getElementById('nc-cuenta-pago-wrap').style.display=esCredito?'none':'';
   }
   document.getElementById('nc-fp-contado').addEventListener('click',function(){formaPagoSel='contado';this.classList.add('sel');this.textContent='✓ Contado';document.getElementById('nc-fp-credito').classList.remove('sel');document.getElementById('nc-fp-credito').textContent='Crédito';actualizarVisibilidadVencimiento();});
   document.getElementById('nc-fp-credito').addEventListener('click',function(){formaPagoSel='credito';this.classList.add('sel');this.textContent='✓ Crédito';document.getElementById('nc-fp-contado').classList.remove('sel');document.getElementById('nc-fp-contado').textContent='Contado';actualizarVisibilidadVencimiento();});
+  actualizarVisibilidadVencimiento();
   
   var provBuscar=document.getElementById('nc-proveedor-buscar');
   var provResultados=document.getElementById('nc-proveedor-resultados');
@@ -5731,7 +5734,7 @@ var nuevoProductoHtml=esNuevo?('<div class="form-group" style="margin-bottom:.5r
     var numeroFactura=(document.getElementById('nc-factura').value||'').trim()||null;
     var proveedorSel=document.getElementById('nc-proveedor').value;
     var esCredito=formaPagoSel==='credito';
-    var cuentaPago=esCredito?null:(btn.dataset.cuentaPago||null);
+    var cuentaPago=esCredito?null:(document.getElementById('nc-cuenta-pago').value||null);
     var compraIdRegistrada=null;
     var vencimiento=esCredito?(document.getElementById('nc-vencimiento').value||null):null;
     if(esCredito&&!vencimiento){alert('Captura la fecha de vencimiento del pago a crédito.');return;}
@@ -5758,17 +5761,10 @@ var nuevoProductoHtml=esNuevo?('<div class="form-group" style="margin-bottom:.5r
       }
     }
     var total=lineas.reduce(function(s,f){return s+(parseFloat(f.monto)||0);},0);
-    if(!esCredito&&!cuentaPago){
-      ca30SeleccionarCuentaCompra(total,function(cuenta){
-        btn.dataset.cuentaPago=cuenta;
-        btn.click();
-      });
-      return;
-    }
     if(!esCredito){
       var tt=ca21Totals(fecha);
       var disponible=ca35CuentaSaldo(tt,cuentaPago);
-      if(total>disponible){delete btn.dataset.cuentaPago;alert('La cuenta seleccionada no tiene saldo suficiente para pagar esta compra.');return;}
+      if(total>disponible){alert('La cuenta seleccionada no tiene saldo suficiente para pagar esta compra.');return;}
     }
     btn.disabled=true; btn.textContent='Guardando...';
 
