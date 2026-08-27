@@ -5338,7 +5338,8 @@ function renderCuentasPorPagar(){
       var vencido=!terminado&&c.fecha_vencimiento&&c.fecha_vencimiento<hoy;
       var estado=terminado?'Pagado':vencido?'Vencido':'Pendiente';
       var clase=terminado?'pagado':vencido?'vencido':'pendiente';
-      return '<tr>'+
+      var searchText=[c.proveedor?c.proveedor.nombre:'',c.numero_factura||'',String(total),formatMonto(total),String(saldo),formatMonto(saldo)].join(' ').toLowerCase().replace(/"/g,'&quot;');
+      return '<tr data-cr45-search="'+searchText+'">'+
         '<td>'+(c.fecha||'—')+'</td>'+
         '<td>'+(c.proveedor?c.proveedor.nombre:'Sin proveedor')+'</td>'+
         '<td>'+(c.numero_factura||'—')+'</td>'+
@@ -5362,17 +5363,23 @@ function renderCuentasPorPagar(){
       '<div class="cr45-tools"><div class="cr45-search"><input id="cr45-buscar" type="search" placeholder="Buscar factura, proveedor o importe..." value="'+(cr45Busqueda||'').replace(/"/g,'&quot;')+'"></div><div class="cr45-order"><label for="cr44-orden">Ordenar por fecha</label><select id="cr44-orden"><option value="recientes"'+(cr44Orden==='recientes'?' selected':'')+'>Más recientes primero</option><option value="antiguas"'+(cr44Orden==='antiguas'?' selected':'')+'>Más antiguas primero</option></select></div></div>'+ 
       '<div class="cr43-table"><table><thead><tr><th>Fecha compra</th><th>Proveedor</th><th>Factura</th><th>Vencimiento</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Estado</th><th>Acción</th></tr></thead><tbody>'+
         (trs||'<tr><td colspan="9"><div class="cr43-empty">No hay compras a crédito registradas.</div></td></tr>')+
+        '<tr id="cr45-no-results" style="display:none"><td colspan="9"><div class="cr43-empty">No se encontraron créditos con ese criterio.</div></td></tr>'+
       '</tbody></table></div>'+
     '</div>';
 
     var cr45inp=document.getElementById('cr45-buscar');
     if(cr45inp){
       cr45inp.oninput=function(){
-        cr45Busqueda=this.value;
-        var foco=this.selectionStart;
-        renderCuentasPorPagar();
-        var nuevo=document.getElementById('cr45-buscar');
-        if(nuevo){nuevo.focus();try{nuevo.setSelectionRange(foco,foco);}catch(_e){}}
+        cr45Busqueda=this.value||'';
+        var q=cr45Busqueda.trim().toLowerCase();
+        var visibles=0;
+        body.querySelectorAll('.cr43-table tbody tr[data-cr45-search]').forEach(function(tr){
+          var ok=!q || (tr.dataset.cr45Search||'').indexOf(q)>=0;
+          tr.style.display=ok?'':'none';
+          if(ok)visibles++;
+        });
+        var empty=document.getElementById('cr45-no-results');
+        if(empty)empty.style.display=(q&&visibles===0)?'':'none';
       };
     }
     var cr44sel=document.getElementById('cr44-orden');
