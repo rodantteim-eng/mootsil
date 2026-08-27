@@ -8593,14 +8593,23 @@ function renderGenerarNomina(fechaRef){
         return calcularScoreOperario(o.id,b.periodo_inicio,b.periodo_fin).then(function(score){return {bono:b,score:score.final};});
       }));
     })).then(function(scoresPorOp){
-      var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">💰 Generar Nómina<button type="button" onclick="renderNominasMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Nóminas</button></div>';
-      html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:8px;"><button type="button" id="gn-ant" style="border:none;background:var(--gris-1);border-radius:20px;padding:.4rem .9rem;font-size:.8rem;cursor:pointer;">← Semana anterior</button><span class="hint" style="margin:0;">Semana '+numSemana+' · '+semanaInicio+' a '+semanaFin+' · Extra: $'+tarifa+'/h</span>'+(esSemanaActual?'':'<button type="button" id="gn-sig" style="border:none;background:var(--gris-1);border-radius:20px;padding:.4rem .9rem;font-size:.8rem;cursor:pointer;">Semana siguiente →</button>')+'</div>';
+      var html='<style>'+
+        '.gn51-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px}.gn51-title{font-size:1.35rem;font-weight:800;color:var(--verde);line-height:1.1}.gn51-sub{font-size:.76rem;color:var(--gris-5);margin-top:3px}'+
+        '.gn51-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}.gn51-nav button{border:1px solid var(--gris-2);background:white;border-radius:18px;padding:.35rem .75rem;font-size:.74rem;cursor:pointer}.gn51-week{font-size:.76rem;color:var(--gris-5);margin-left:auto}'+
+        '.gn51-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0 12px}.gn51-kpi{background:white;border:1px solid var(--gris-2);border-radius:12px;padding:9px 12px}.gn51-kpi small{display:block;font-size:.62rem;text-transform:uppercase;letter-spacing:.04em;color:var(--gris-5);font-weight:700}.gn51-kpi strong{display:block;font-size:1.02rem;color:var(--verde);margin-top:2px}.gn51-kpi.pending strong{color:var(--tierra)}'+
+        '.gn51-list{display:flex;flex-direction:column;gap:7px}.gn51-card{background:white;border:1px solid var(--gris-2);border-left:4px solid var(--tierra);border-radius:12px;padding:9px 12px}.gn51-card.paid{border-left-color:var(--verde-mid)}'+
+        '.gn51-main{display:grid;grid-template-columns:minmax(150px,1.25fr) minmax(150px,1.1fr) minmax(105px,.65fr) minmax(300px,1.8fr);gap:10px;align-items:center}.gn51-name strong{font-size:.9rem}.gn51-meta{font-size:.68rem;color:var(--gris-5);margin-top:2px}.gn51-amount small{display:block;font-size:.61rem;color:var(--gris-5);text-transform:uppercase;font-weight:700}.gn51-amount strong{font-size:1rem;color:var(--tierra)}.gn51-card.paid .gn51-amount strong{color:var(--verde-mid)}'+
+        '.gn51-actions{display:flex;gap:6px;align-items:center;justify-content:flex-end}.gn51-actions select{height:34px;min-width:130px;border:1px solid var(--gris-2);border-radius:8px;padding:0 7px;font-size:.7rem;background:white}.gn51-actions button{height:34px;padding:0 10px;border-radius:8px;font-size:.7rem;white-space:nowrap}.gn51-pay{background:var(--verde-mid)!important;color:white!important;border:none!important;font-weight:700}.gn51-sec{background:white!important;color:var(--verde)!important;border:1px solid var(--gris-2)!important}.gn51-detail{display:flex;gap:12px;flex-wrap:wrap;margin-top:7px;padding-top:6px;border-top:1px dashed var(--gris-2);font-size:.66rem;color:var(--gris-5)}'+
+        '@media(max-width:900px){.gn51-summary{grid-template-columns:repeat(2,1fr)}.gn51-main{grid-template-columns:1fr 1fr}.gn51-actions{grid-column:1/-1;justify-content:flex-start}}'+
+        '</style>'+
+        '<div class="gn51-head"><div><div class="gn51-title">💰 Pago de Nómina</div><div class="gn51-sub">Revisa importes, selecciona la cuenta y registra cada pago en Caja.</div></div></div>';
+      html+='<div class="gn51-nav"><button type="button" id="gn-ant">← Semana anterior</button>'+(esSemanaActual?'':'<button type="button" id="gn-sig">Semana siguiente →</button>')+'<span class="gn51-week">Semana '+numSemana+' · '+semanaInicio+' a '+semanaFin+' · Extra $'+tarifa+'/h</span></div>';
 
       if(!operarios.length) html+='<div class="empty">No hay operarios registrados.</div>';
 
       var accionesPago={};
-
-      html+=operarios.map(function(o,idx){
+      var gn51Total=0,gn51Pendiente=0,gn51Pagado=0,gn51Pendientes=0;
+      var gn51Tarjetas=operarios.map(function(o,idx){
         var regsOp=registros.filter(function(x){return x.usuario_id===o.id;});
         var permisosOp=permisosAprobados.filter(function(p){return p.usuario_id===o.id;});
         var resumen=calcularResumenAsistencia(regsOp,semanaInicio,permisosOp);
@@ -8656,22 +8665,41 @@ function renderGenerarNomina(fechaRef){
         if(!sueldoBase) metaExtra.push('<span style="color:var(--rojo);">⚠️ sin sueldo base</span>');
         if((tieneAjusteDias||tieneAjusteExtra)&&ajuste&&ajuste.motivo) metaExtra.push('<span style="color:var(--tierra);">✏️ '+ajuste.motivo+'</span>');
 
-        return '<div class="orden-card" style="border-left-color:'+(nominaCompleta?'var(--verde-mid)':'var(--tierra)')+';">'+
-          '<div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.95rem">'+o.nombre+'</strong><span style="font-size:.72rem;font-weight:700;color:'+(nominaCompleta?'var(--verde-mid)':'var(--tierra)')+';">'+(nominaCompleta?'✅ Pagada':'⏳ Pendiente')+'</span></div>'+
-          (metaExtra.length?'<div class="orden-meta" style="margin-top:.15rem;">'+metaExtra.join(' · ')+'</div>':'')+
-          '<div style="margin-top:.6rem;padding-top:.5rem;border-top:1px dashed var(--gris-2);">'+filas+'</div>'+
-          '<div class="resumen-row" style="border-top:2px solid var(--gris-1);margin-top:.3rem;padding-top:.5rem;"><strong style="font-size:.85rem;">Total nómina</strong><strong style="font-size:1rem;color:'+(nominaCompleta?'var(--verde-mid)':'var(--tierra)')+';">$'+granTotal.toFixed(2)+'</strong></div>'+
-          '<div style="display:flex;gap:8px;margin-top:.6rem;flex-wrap:wrap;">'+
-          (nominaCompleta?
-            '<button class="btn-sm btn-cancelar" data-despagar="'+idAccion+'">Marcar como pendiente</button>':
-            '<div class="no49-paybox"><div class="no49-payfield"><label>Cuenta de pago</label><select data-nomina-cuenta="'+idAccion+'"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="santander_pesos">Santander Pesos</option></select></div><button class="btn-sm btn-completar" data-pagar="'+idAccion+'">✅ Pagar y registrar en Caja</button><div class="no49-note">Al pagar se genera automáticamente la salida en Caja.</div></div>')+
-          '<button type="button" class="btn-sm" style="background:var(--gris-1);color:var(--negro);" data-recibo="'+idAccion+'">🧾 Recibo</button>'+
-          '<button type="button" class="btn-sm" style="background:var(--verde-tenue);border:1.5px solid var(--verde-mid);color:var(--verde);" data-ajustar-nom="'+o.id+'" data-dias="'+diasPagados+'" data-horas="'+horasExtra+'" data-motivo="'+((ajuste&&ajuste.motivo)||'').replace(/"/g,'&quot;')+'">✏️ Ajustar</button>'+
+        gn51Total+=granTotal;
+        if(nominaCompleta){gn51Pagado+=granTotal;}else{gn51Pendiente+=granTotal;gn51Pendientes++;}
+        var incidencias=[];
+        if(resumen.faltas) incidencias.push('❌ '+resumen.faltas+' falta'+(resumen.faltas===1?'':'s'));
+        if(resumen.retardos) incidencias.push('🕐 '+resumen.retardos+' retardo'+(resumen.retardos===1?'':'s'));
+        if(resumen.diasPermisoConGoce) incidencias.push('🩺 '+resumen.diasPermisoConGoce+' permiso c/goce');
+        if(resumen.diasPermisoSinGoce) incidencias.push('🩺 '+resumen.diasPermisoSinGoce+' permiso s/goce');
+        var detalle=[];
+        detalle.push('Sueldo: $'+totalSueldo.toFixed(2)+' · '+diasLabelTxt);
+        if(totalExtra>0) detalle.push('Extra: +$'+totalExtra.toFixed(2));
+        if(totalBonos>0) detalle.push('Bonos: +$'+totalBonos.toFixed(2));
+        if(totalDeducciones>0) detalle.push('Préstamos: -$'+totalDeducciones.toFixed(2));
+        return '<div class="gn51-card '+(nominaCompleta?'paid':'')+'">'+
+          '<div class="gn51-main">'+
+            '<div class="gn51-name"><strong>'+o.nombre+'</strong><div class="gn51-meta">'+(incidencias.length?incidencias.join(' · '):(resumen.trabajados+' días trabajados'))+'</div></div>'+
+            '<div class="gn51-meta">'+detalle.join(' · ')+'</div>'+
+            '<div class="gn51-amount"><small>'+(nominaCompleta?'Pagado':'Total a pagar')+'</small><strong>$'+granTotal.toFixed(2)+'</strong></div>'+
+            '<div class="gn51-actions">'+
+              (nominaCompleta?
+                '<button class="gn51-sec" data-despagar="'+idAccion+'">Marcar pendiente</button>':
+                '<select data-nomina-cuenta="'+idAccion+'"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="santander_pesos">Santander Pesos</option></select><button class="gn51-pay" data-pagar="'+idAccion+'">✓ Pagar</button>')+
+              '<button type="button" class="gn51-sec" data-recibo="'+idAccion+'">Recibo</button>'+
+              '<button type="button" class="gn51-sec" data-ajustar-nom="'+o.id+'" data-dias="'+diasPagados+'" data-horas="'+horasExtra+'" data-motivo="'+((ajuste&&ajuste.motivo)||'').replace(/"/g,'&quot;')+'">Ajustar</button>'+
+            '</div>'+
           '</div>'+
-          '</div>';
-      }).join('');
+        '</div>';
+      });
+      html+='<div class="gn51-summary">'+
+        '<div class="gn51-kpi"><small>Colaboradores</small><strong>'+operarios.length+'</strong></div>'+
+        '<div class="gn51-kpi"><small>Nómina total</small><strong>$'+gn51Total.toFixed(2)+'</strong></div>'+
+        '<div class="gn51-kpi pending"><small>Pendiente · '+gn51Pendientes+'</small><strong>$'+gn51Pendiente.toFixed(2)+'</strong></div>'+
+        '<div class="gn51-kpi"><small>Pagado</small><strong>$'+gn51Pagado.toFixed(2)+'</strong></div>'+
+      '</div><div class="gn51-list">'+gn51Tarjetas.join('')+'</div>';
 
-      body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="no50VolverNomina()">← Volver</button>';
+      body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="no50VolverNomina()">← Volver a Caja</button>';
 
       var btnAnt=document.getElementById('gn-ant');
       if(btnAnt) btnAnt.addEventListener('click',function(){var d=new Date(lunes);d.setDate(d.getDate()-7);renderGenerarNomina(d);});
