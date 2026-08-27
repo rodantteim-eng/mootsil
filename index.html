@@ -5313,12 +5313,25 @@ function ga37Nuevo(){
   };});
   document.getElementById('ga37-file').onchange=function(){document.getElementById('ga37-file-name').textContent=this.files[0]?this.files[0].name:'Sin archivo';};
   document.getElementById('ga37-save').onclick=function(){
+    var saveBtn=document.getElementById('ga37-save');
+    if(saveBtn&&saveBtn.dataset.saving==='1')return;
+
     var monto=ca21Money(document.getElementById('ga37-monto').value),concepto=document.getElementById('ga37-concepto').value.trim(),cuenta=document.getElementById('ga37-cuenta').value,fecha=document.getElementById('ga37-fecha').value;
     if(monto<=0){alert('Captura un monto mayor a cero.');return;}if(!concepto){alert('Captura el concepto del gasto.');return;}
     var tt=ca21Totals(fecha),disp=ca35CuentaSaldo(tt,cuenta);if(monto>disp){alert('La cuenta seleccionada no tiene saldo suficiente.');return;}
     var f=document.getElementById('ga37-file').files[0];
-    var d=ca21Load();d.movimientos.push({id:ca21Id(),fecha:fecha,hora:ca21Now(),tipo:'salida',clase_gasto:document.getElementById('ga37-tipo').value,categoria:document.getElementById('ga37-cat').value,concepto:concepto,persona:document.getElementById('ga37-persona').value.trim()||'—',cuenta:cuenta,monto:monto,nota:document.getElementById('ga37-nota').value.trim(),comprobante_nombre:f?f.name:null,origen:'Gasto operativo',estado:'Registrado',usuario:(usuario&&usuario.nombre)||'Usuario'});
-    ca21Save(d);ca21CloseModal();renderGastosCajaMenu(GA37_FILTRO);
+    var d=ca21Load();
+    var mov={id:ca21Id(),fecha:fecha,hora:ca21Now(),tipo:'salida',clase_gasto:document.getElementById('ga37-tipo').value,categoria:document.getElementById('ga37-cat').value,concepto:concepto,persona:document.getElementById('ga37-persona').value.trim()||'—',cuenta:cuenta,monto:monto,nota:document.getElementById('ga37-nota').value.trim(),comprobante_nombre:f?f.name:null,origen:'Gasto operativo',estado:'Registrado',usuario:(usuario&&usuario.nombre)||'Usuario'};
+    d.movimientos.push(mov);
+    try{
+      ca21Save(d);
+      var check=ca21Load().movimientos.some(function(x){return x.id===mov.id;});
+      if(!check)throw new Error('No se pudo confirmar el guardado local.');
+    }catch(e){alert('No se pudo registrar el gasto: '+e.message);return;}
+    GA37_FILTRO='todos';
+    ca21CloseModal();
+    renderGastosCajaMenu('todos');
+    if(typeof showToast==='function')showToast('✅ Gasto registrado');
   };
 }
 
