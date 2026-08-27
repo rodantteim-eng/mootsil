@@ -688,6 +688,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ga37-empty{text-align:center;padding:30px;color:#7b8881;font-size:.72rem}
 @media(max-width:800px){.ga37-shell{padding:16px}.ga37-kpis{grid-template-columns:1fr}.ga37-head,.ga37-actions{align-items:flex-start;flex-direction:column}.ga37-table{overflow:auto}}
 
+
+/* C040 — lectura de saldo inicial vs gasto por cuenta */
+.ca40-account-meta{margin-top:4px;font-size:.55rem;line-height:1.35;color:#758178}
+.ca40-account-meta strong{font-size:inherit!important;color:#4f665a!important}
+
 </style>
 </head>
 <body>
@@ -5269,7 +5274,7 @@ function volverCompraContexto(){
 }
 var GA37_FILTRO='todos';
 var GA37_CATS={
-  fijo:['Renta','Energía / Luz','Internet / Telefonía','Honorarios','Seguros','Vigilancia','Mantenimiento contratado','Servicios administrativos','Otros fijos'],
+  fijo:['Renta Rancho','Renta Casa Rancho','Renta Casa Villa Corona','Luz','Agua potable','Celulares','Internet Rancho','Internet Villa','Otros'],
   variable:['Combustible','Viáticos','Fletes / Transporte','Reparaciones menores','Mantenimiento no programado','Alimentos','Mensajería','Herramientas menores','Servicios operativos','Otros variables']
 };
 function ga37Movs(){
@@ -7430,6 +7435,21 @@ function renderCajaMootsil(periodo,fechaBase){
     var saldoDisponible=ca21Money(ef+bp+sp);
     var saldoDisponibleUsd=ca21Money(bd);
 
+    // C040: referencia por cuenta = saldo inicial, salidas del día y saldo actual.
+    function ca40SalidasCuenta(cuenta){
+      return ca21Money(localDay.filter(function(m){
+        return m.tipo==='salida' && (
+          m.cuenta===cuenta ||
+          (cuenta==='banamex_pesos' && (m.cuenta==='banamex'||m.cuenta==='bancos')) ||
+          (cuenta==='santander_pesos' && m.cuenta==='santander')
+        );
+      }).reduce(function(s,m){return s+ca21Money(m.monto);},0));
+    }
+    var salEf=ca40SalidasCuenta('efectivo');
+    var salBp=ca40SalidasCuenta('banamex_pesos');
+    var salBd=ca40SalidasCuenta('banamex_dolares');
+    var salSp=ca40SalidasCuenta('santander_pesos');
+
     var semana='Semana '+riegoSemanaNumero(CAJA_FECHA_BASE);
     var statusHtml=corte?'<span class="ca21-status-closed">● Caja cerrada</span>':(apertura?'<span class="ca21-status-open">● Caja abierta</span>':'<span class="ca21-status-open">● Pendiente apertura</span>');
 
@@ -7450,7 +7470,7 @@ function renderCajaMootsil(periodo,fechaBase){
         '<div class="ca17-kpi in"><div class="ball">↓</div><div><div class="lbl">Entradas</div><div class="num">$'+formatMonto(localEntradas)+'</div><div class="meta">MXN</div><div class="num" style="font-size:1.05rem;margin-top:3px">US$ '+formatMonto(localEntradasUsd)+'</div><div class="meta">USD</div></div></div>'+
         '<div class="ca17-kpi out"><div class="ball">↑</div><div><div class="lbl">Salidas</div><div class="num">$'+formatMonto(localSalidas)+'</div><div class="meta">MXN</div><div class="num" style="font-size:1.05rem;margin-top:3px">US$ '+formatMonto(localSalidasUsd)+'</div><div class="meta">USD</div></div></div>'+
         '<div class="ca17-kpi net"><div class="ball">▰</div><div><div class="lbl">Saldo disponible</div><div class="num">$'+formatMonto(saldoDisponible)+'</div><div class="meta">MXN · Efectivo + bancos en pesos</div><div class="num" style="font-size:1.05rem;margin-top:3px">US$ '+formatMonto(saldoDisponibleUsd)+'</div><div class="meta">USD · Banamex Dólares</div></div></div></div>'+
-        '<div class="ca22-accounts" style="grid-template-columns:repeat(5,minmax(0,1fr))"><div class="ca22-account"><strong>💵 EFECTIVO EN CAJA</strong><div class="amt">$'+formatMonto(ef)+'</div></div><div class="ca22-account"><strong>🏦 BANAMEX PESOS</strong><div class="amt">$'+formatMonto(bp)+'</div></div><div class="ca22-account"><strong>🏦 BANAMEX DÓLARES</strong><div class="amt">US$ '+formatMonto(bd)+'</div></div><div class="ca22-account"><strong>🏦 SANTANDER PESOS</strong><div class="amt">$'+formatMonto(sp)+'</div></div><button class="ca22-transfer" id="ca21-transfer" '+(!apertura||corte?'disabled style="opacity:.45"':'')+'><span>⇄</span>Transferir entre cuentas<small>Entre cuentas de la misma moneda</small></button></div>'+
+        '<div class="ca22-accounts" style="grid-template-columns:repeat(5,minmax(0,1fr))"><div class="ca22-account"><strong>💵 EFECTIVO EN CAJA</strong><div class="amt">$'+formatMonto(ef)+'</div><div class="ca40-account-meta">Inicial <strong>$'+formatMonto(saldoInicialEf)+'</strong> · Salidas <strong>$'+formatMonto(salEf)+'</strong></div></div><div class="ca22-account"><strong>🏦 BANAMEX PESOS</strong><div class="amt">$'+formatMonto(bp)+'</div><div class="ca40-account-meta">Inicial <strong>$'+formatMonto(saldoInicialBp)+'</strong> · Salidas <strong>$'+formatMonto(salBp)+'</strong></div></div><div class="ca22-account"><strong>🏦 BANAMEX DÓLARES</strong><div class="amt">US$ '+formatMonto(bd)+'</div><div class="ca40-account-meta">Inicial <strong>US$ '+formatMonto(saldoInicialBd)+'</strong> · Salidas <strong>US$ '+formatMonto(salBd)+'</strong></div></div><div class="ca22-account"><strong>🏦 SANTANDER PESOS</strong><div class="amt">$'+formatMonto(sp)+'</div><div class="ca40-account-meta">Inicial <strong>$'+formatMonto(saldoInicialSp)+'</strong> · Salidas <strong>$'+formatMonto(salSp)+'</strong></div></div><button class="ca22-transfer" id="ca21-transfer" '+(!apertura||corte?'disabled style="opacity:.45"':'')+'><span>⇄</span>Transferir entre cuentas<small>Entre cuentas de la misma moneda</small></button></div>'+
         '<div class="ca22-ops" style="grid-template-columns:repeat(6,minmax(0,1fr))"><button class="ca22-op orange" id="ca22-compras" type="button">🧾 Compras</button><button class="ca22-op red" id="ca22-gastos" type="button">💳 Gastos</button><button class="ca22-op orange" id="ca27-creditos" type="button">📆 Créditos</button><button class="ca22-op" id="ca22-nomina" type="button">💰 Nómina</button><button class="ca22-op purple" id="ca22-inversionistas" type="button">💼 Inversionistas</button><button class="ca22-op" id="ca25-financiamientos" type="button">🏦 Financiamientos</button></div>'+
         '<div class="ca17-controls"><input id="ca21-fecha" type="date" value="'+CAJA_FECHA_BASE+'"><select id="ca21-tipo"><option value="todos">Todos los movimientos</option><option value="entrada">Entradas</option><option value="salida">Salidas</option><option value="transferencia">Transferencias</option></select><select><option>Todas las categorías</option></select><select><option>Todas las formas de pago</option><option>Efectivo</option><option>Transferencia</option></select><input placeholder="Buscar concepto, beneficiario, folio..."></div>'+
         '<div class="ca17-table-wrap"><table class="ca17-table"><thead><tr><th>Hora</th><th>Tipo</th><th>Concepto</th><th>Categoría</th><th>Beneficiario / Proveedor</th><th>Forma de pago</th><th>Entrada</th><th>Salida</th><th>Origen</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
