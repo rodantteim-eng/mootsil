@@ -6834,70 +6834,25 @@ function as61CurrentAdmin(){
   }catch(e){return 'Administración';}
 }
 function as61Close(){var x=document.getElementById('as61-modal-bg');if(x)x.remove();}
+
+var AS66_KEY='mootsil_asistencia_ajustes_admin_v1';
+function as66Load(){try{return JSON.parse(localStorage.getItem(AS66_KEY)||'{}')||{};}catch(e){return {};}}
+function as66Key(uid,fecha){return String(uid)+'|'+fecha;}
+function as66Get(uid,fecha){return as66Load()[as66Key(uid,fecha)]||null;}
+function as66Set(uid,fecha,val){var all=as66Load(),k=as66Key(uid,fecha);if(val)all[k]=val;else delete all[k];localStorage.setItem(AS66_KEY,JSON.stringify(all));}
 function as61OpenEdit(u,fecha,reg,perm,heInfo){
   as61Close();reg=reg||{};perm=perm||{};heInfo=heInfo||{};
-  var he=parseFloat(heInfo.horas_max||0)||0;
-  var estado=perm&&perm.id?((String(perm.tipo||'').toLowerCase().indexOf('vac')>=0)?'vacaciones':'permiso'):(reg.entrada?(reg.retardo?'retardo':'presente'):'falta');
+  var ajuste=as66Get(u.id,fecha),he=parseFloat(heInfo.horas_max||0)||0;
+  var estado=ajuste?ajuste.estado:(perm&&perm.id?((String(perm.tipo||'').toLowerCase().indexOf('vac')>=0)?'vacaciones':'permiso'):(reg.entrada?(reg.retardo?'retardo':'presente'):'falta'));
+  var entrada=(ajuste&&ajuste.entrada)||reg.hora_entrada||'07:00',salida=(ajuste&&ajuste.salida)||reg.hora_salida||'16:00';
   var bg=document.createElement('div');bg.className='as61-modal-bg';bg.id='as61-modal-bg';
-  var heHtml=he>0
-    ? '<div class="as61-field full"><label>Hora extra autorizada</label><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--gris-2);border-radius:8px;padding:8px 10px;background:#fafbf9;"><strong style="color:var(--tierra);">'+he.toFixed(1)+' h</strong><button type="button" class="btn-sm" id="as63-corregir-he">Corregir H.E.</button></div><div class="hint" style="margin-top:4px;">La actividad y motivo se administran desde la asignación de horas extra del Encargado.</div></div>'
-    : '<div class="as61-field full"><label>Hora extra</label><div class="hint" style="padding:8px 0;">Sin H.E. asignada este día. La autorización de horas, actividad y motivo se realiza desde el flujo del Encargado.</div></div>';
-  bg.innerHTML='<div class="as61-modal"><div class="as61-modal-h"><div><strong>Editar asistencia</strong><div style="font-size:.65rem;color:var(--gris-5)">'+u.nombre+' · '+fecha+'</div></div><button class="em59-back" onclick="as61Close()">✕</button></div>'+
-  '<div class="as61-modal-b"><div class="as61-grid">'+
-    '<div class="as61-field"><label>Estado</label><select id="as61-estado"><option value="presente">Presente</option><option value="falta">Falta</option><option value="retardo">Retardo</option><option value="permiso">Permiso</option><option value="vacaciones">Vacaciones</option></select></div>'+
-    '<div></div>'+
-    '<div class="as61-field"><label>Hora de entrada</label><input id="as61-entrada" type="time" value="'+(reg.hora_entrada||'07:00')+'"></div>'+
-    '<div class="as61-field"><label>Hora de salida</label><input id="as61-salida" type="time" value="'+(reg.hora_salida||'16:00')+'"></div>'+heHtml+
-  '</div></div><div class="as61-modal-f"><button class="btn-sm" onclick="as61Close()">Cancelar</button><button class="btn-sm btn-completar" id="as61-guardar">Guardar cambio</button></div></div>';
+  var heHtml=he>0?'<div class="as61-field full"><label>Hora extra autorizada</label><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--gris-2);border-radius:8px;padding:8px 10px;background:#fafbf9;"><strong style="color:var(--tierra);">'+he.toFixed(1)+' h</strong><button type="button" class="btn-sm" id="as63-corregir-he">Corregir H.E.</button></div></div>':'';
+  bg.innerHTML='<div class="as61-modal"><div class="as61-modal-h"><div><strong>Editar asistencia</strong><div style="font-size:.65rem;color:var(--gris-5)">'+u.nombre+' · '+fecha+'</div></div><button class="em59-back" onclick="as61Close()">✕</button></div><div class="as61-modal-b"><div class="as61-grid"><div class="as61-field"><label>Estado</label><select id="as61-estado"><option value="presente">Presente</option><option value="falta">Falta</option><option value="retardo">Retardo</option><option value="permiso">Permiso</option><option value="vacaciones">Vacaciones</option></select></div><div></div><div class="as61-field"><label>Hora de entrada</label><input id="as61-entrada" type="time" value="'+entrada+'"></div><div class="as61-field"><label>Hora de salida</label><input id="as61-salida" type="time" value="'+salida+'"></div>'+heHtml+'</div></div><div class="as61-modal-f"><button class="btn-sm" onclick="as61Close()">Cancelar</button><button class="btn-sm btn-completar" id="as61-guardar">Guardar cambio</button></div></div>';
   document.body.appendChild(bg);document.getElementById('as61-estado').value=estado;
-
-  var bhe=document.getElementById('as63-corregir-he');
-  if(bhe)bhe.onclick=function(){
-    as61Close();
-    renderGestionHorasExtra(u.id,fecha,heInfo.tipo_labor_id||null,function(){renderControlAsistencias(fecha);});
-  };
-
+  var bhe=document.getElementById('as63-corregir-he');if(bhe)bhe.onclick=function(){as61Close();renderGestionHorasExtra(u.id,fecha,heInfo.tipo_labor_id||null,function(){renderControlAsistencias(fecha);});};
   document.getElementById('as61-guardar').onclick=function(){
-    var nuevoEstado=document.getElementById('as61-estado').value;
-    var entrada=document.getElementById('as61-entrada').value||'07:00';
-    var salida=document.getElementById('as61-salida').value||'16:00';
-    var entradaISO=new Date(fecha+'T'+entrada+':00').toISOString();
-    var salidaISO=new Date(fecha+'T'+salida+':00').toISOString();
-    var btn=this;btn.disabled=true;btn.textContent='Guardando...';
-    var ops=[];
-
-    if(nuevoEstado==='presente'||nuevoEstado==='retardo'){
-      if(reg.entrada_id){
-        ops.push(from('asistencia_registros').eq('id',reg.entrada_id).update({modalidad:'labores',registrado_en:entradaISO,retardo:nuevoEstado==='retardo'}));
-      }else{
-        ops.push(from('asistencia_registros').insert({usuario_id:u.id,tipo:'entrada',fecha:fecha,modalidad:'labores',registrado_en:entradaISO,retardo:nuevoEstado==='retardo'}));
-      }
-      if(reg.salida_id){
-        ops.push(from('asistencia_registros').eq('id',reg.salida_id).update({modalidad:'labores',registrado_en:salidaISO,retardo:false}));
-      }else{
-        ops.push(from('asistencia_registros').insert({usuario_id:u.id,tipo:'salida',fecha:fecha,modalidad:'labores',registrado_en:salidaISO,retardo:false}));
-      }
-    }else{
-      // No borra historial: saca los registros del cálculo de labores.
-      if(reg.entrada_id)ops.push(from('asistencia_registros').eq('id',reg.entrada_id).update({modalidad:'ajuste_admin'}));
-      if(reg.salida_id)ops.push(from('asistencia_registros').eq('id',reg.salida_id).update({modalidad:'ajuste_admin'}));
-    }
-
-    if(perm&&perm.id){
-      if(nuevoEstado==='permiso'||nuevoEstado==='vacaciones'){
-        ops.push(from('permisos').eq('id',perm.id).update({tipo:nuevoEstado==='vacaciones'?'vacaciones':'personal',estado:'aprobado'}));
-      }else{
-        ops.push(from('permisos').eq('id',perm.id).update({estado:'cancelado'}));
-      }
-    }else if(nuevoEstado==='permiso'||nuevoEstado==='vacaciones'){
-      ops.push(from('permisos').insert({usuario_id:u.id,tipo:nuevoEstado==='vacaciones'?'vacaciones':'personal',fecha_inicio:fecha,fecha_fin:fecha,estado:'aprobado',con_goce:false,motivo:'Ajuste administrativo de asistencia'}));
-    }
-
-    Promise.all(ops).then(function(){
-      showToast('✅ Asistencia actualizada');as61Close();renderControlAsistencias(fecha);
-    }).catch(function(e){
-      alert('No se pudo guardar el cambio: '+e.message);btn.disabled=false;btn.textContent='Guardar cambio';
-    });
+    as66Set(u.id,fecha,{estado:document.getElementById('as61-estado').value,entrada:document.getElementById('as61-entrada').value||'07:00',salida:document.getElementById('as61-salida').value||'16:00',actualizado_en:new Date().toISOString()});
+    showToast('✅ Asistencia corregida');as61Close();renderControlAsistencias(fecha);
   };
 }
 function renderControlAsistencias(fecha){
@@ -6933,7 +6888,12 @@ function renderControlAsistencias(fecha){
     });
     var dn=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
     function celda(u,f){
-      var r=regMap[u.id+'|'+f],p=permMap[u.id+'|'+f],he=extraDayMap[u.id+'|'+f]||0,base='';
+      var r=regMap[u.id+'|'+f],p=permMap[u.id+'|'+f],he=extraDayMap[u.id+'|'+f]||0,base='',aj=as66Get(u.id,f);
+      if(aj){
+        if(aj.estado==='presente'||aj.estado==='retardo'){r={entrada:true,salida:true,retardo:aj.estado==='retardo',hora_entrada:aj.entrada,hora_salida:aj.salida};p=null;}
+        else if(aj.estado==='permiso'||aj.estado==='vacaciones'){r=null;p={id:'ajuste',tipo:aj.estado==='vacaciones'?'vacaciones':'personal',con_goce:false};}
+        else {r=null;p=null;}
+      }
       if(f>hoy)base='<span class="as58-cell as58-na">—</span>';
       else if(p){
         var pt=(p.tipo||'').toLowerCase();
@@ -6942,7 +6902,7 @@ function renderControlAsistencias(fecha){
       }else if(r&&r.entrada)base=r.retardo?'<span class="as58-cell as58-r" title="Retardo">R</span>':'<span class="as58-cell as58-p" title="Presente">✓</span>';
       else if(f===hoy)base='<span class="as58-cell as58-na" title="Sin registro todavía">·</span>';
       else base='<span class="as58-cell as58-f" title="Falta">F</span>';
-      if(he>0)base+='<span class="as59-he">H.E. '+he.toFixed(1)+' h</span>';
+      if(aj)base+='<span style="display:block;font-size:.5rem;color:#2d6d4e;font-weight:800;">AJUSTE ADMIN</span>';if(he>0)base+='<span class="as59-he">H.E. '+he.toFixed(1)+' h</span>';
       else base+='<span class="as60-he0">H.E. 0.0 h</span>';
       return '<div class="as61-editable" data-uid="'+u.id+'" data-fecha="'+f+'" title="Editar asistencia">'+base+'</div>';
     }
