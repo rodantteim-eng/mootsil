@@ -782,6 +782,30 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 @media(max-width:850px){.ex54-grid,.ex54-grid.two{grid-template-columns:1fr 1fr}.ex54-field.span3{grid-column:1/-1}.ex54-row{grid-template-columns:1fr}.ex54-row .orden-actions{justify-content:flex-start}}
 @media(max-width:560px){.ex54-grid,.ex54-grid.two{grid-template-columns:1fr}.ex54-field.span2,.ex54-field.span3{grid-column:auto}}
 
+
+/* C055 — expediente como centro: acciones diferenciadas + docs/contrato embebidos */
+.ex55-action-exp{background:#e9f5ef!important;color:#14673f!important;border:1px solid #cfe7d8!important}
+.ex55-action-pin{background:#f1f3f2!important;color:#45534b!important;border:1px solid #dfe4e1!important}
+.ex55-action-cred{background:#eef3f7!important;color:#3e5d71!important;border:1px solid #dce5eb!important}
+.ex55-action-baja{background:#fff0ee!important;color:#c43d2c!important;border:1px solid #f1d8d3!important}
+.ex55-subcard{border:1px solid var(--gris-2);border-radius:10px;background:#fafbf9;padding:10px 11px;margin-top:7px}
+.ex55-subhead{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.ex55-subhead strong{font-size:.76rem;color:var(--verde)}
+.ex55-mini{font-size:.66rem;color:var(--gris-5)}
+.ex55-status{display:inline-block;border-radius:12px;padding:2px 7px;font-size:.6rem;font-weight:800}
+.ex55-ok{background:#e8f4ed;color:#28734b}.ex55-pend{background:#f4f1e8;color:#8b6c19}
+.ex55-inline-form{display:none;margin-top:9px;padding-top:9px;border-top:1px dashed var(--gris-2)}
+.ex55-inline-form.open{display:block}
+.ex55-docgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.ex55-docitem{border:1px solid var(--gris-2);border-radius:9px;padding:9px;background:#fff}
+.ex55-docrow{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.ex55-docname{font-size:.72rem;font-weight:750}
+.ex55-btn{border:1px solid var(--gris-2);background:#fff;border-radius:8px;padding:6px 9px;font-size:.66rem;font-weight:700;color:var(--verde);cursor:pointer}
+.ex55-btn.primary{background:var(--verde-mid);color:#fff;border-color:var(--verde-mid)}
+.ex55-btn.danger{color:#c43d2c}
+.ex55-contract-row{display:grid;grid-template-columns:1fr .8fr .8fr .7fr auto;gap:8px;align-items:center;font-size:.68rem}
+@media(max-width:800px){.ex55-docgrid{grid-template-columns:1fr}.ex55-contract-row{grid-template-columns:1fr 1fr}.ex55-contract-row .ex55-actions{grid-column:1/-1}}
+
 </style>
 </head>
 <body>
@@ -11348,7 +11372,7 @@ function renderAltasBajas(){
     var html='<div class="ex54-head"><div><div class="ex54-eyebrow">Administración · Empleados</div><div class="ex54-title">Expedientes</div><div class="ex54-sub">Información personal, laboral y condiciones de pago de cada colaborador.</div></div><button class="btn-sm btn-completar" onclick="renderNuevoUsuario()">+ Nuevo expediente</button></div><div class="ex54-list">';
     html+=users.map(function(u){
       var ex=ex54Get(u.id), cargo=ex.cargo||(ROLES[u.rol]||u.rol);
-      return '<div class="ex54-row"><div><div class="ex54-name">'+u.nombre+'</div><div class="ex54-role">'+cargo+(u.fecha_ingreso?' · Ingreso '+u.fecha_ingreso:'')+'</div></div><div><div class="ex54-status" style="color:'+(u.activo?'var(--verde-mid)':'var(--gris-3)')+';">'+(u.activo?'Activo':'Inactivo')+'</div><div class="ex54-role">Sueldo base: $'+(parseFloat(u.sueldo_base)||0).toFixed(2)+'</div></div><div class="orden-actions"><button class="btn-sm btn-iniciar" onclick="renderEditarUsuario(\''+u.id+'\',\''+ex54Esc(u.nombre).replace(/'/g,"\\'")+'\',\''+u.rol+'\','+(u.certificado_ambas?'true':'false')+')">Expediente</button><button class="btn-sm btn-completar" onclick="renderCambiarPin(\''+u.id+'\',\''+ex54Esc(u.nombre).replace(/'/g,"\\'")+'\')">PIN</button><button class="btn-sm btn-iniciar" onclick="renderCredencialId(\''+u.id+'\')">Credencial</button>'+(u.activo?'<button class="btn-sm btn-cancelar" onclick="bajaUsuario(\''+u.id+'\')">Dar de baja</button>':'<button class="btn-sm btn-iniciar" onclick="altaUsuario(\''+u.id+'\')">Reactivar</button>')+'</div></div>';
+      return '<div class="ex54-row"><div><div class="ex54-name">'+u.nombre+'</div><div class="ex54-role">'+cargo+(u.fecha_ingreso?' · Ingreso '+u.fecha_ingreso:'')+'</div></div><div><div class="ex54-status" style="color:'+(u.activo?'var(--verde-mid)':'var(--gris-3)')+';">'+(u.activo?'Activo':'Inactivo')+'</div><div class="ex54-role">Sueldo base: $'+(parseFloat(u.sueldo_base)||0).toFixed(2)+'</div></div><div class="orden-actions"><button class="btn-sm ex55-action-exp" onclick="renderEditarUsuario(\''+u.id+'\',\''+ex54Esc(u.nombre).replace(/'/g,"\\'")+'\',\''+u.rol+'\','+(u.certificado_ambas?'true':'false')+')">Expediente</button><button class="btn-sm ex55-action-pin" onclick="renderCambiarPin(\''+u.id+'\',\''+ex54Esc(u.nombre).replace(/'/g,"\\'")+'\')">PIN</button><button class="btn-sm ex55-action-cred" onclick="renderCredencialId(\''+u.id+'\')">Credencial</button>'+(u.activo?'<button class="btn-sm ex55-action-baja" onclick="bajaUsuario(\''+u.id+'\')">Dar de baja</button>':'<button class="btn-sm btn-iniciar" onclick="altaUsuario(\''+u.id+'\')">Reactivar</button>')+'</div></div>';
     }).join('');
     body.innerHTML=html+'</div><button class="btn-back" style="margin-top:1rem;" onclick="renderEmpleadosMenu()">← Empleados</button>';
   });
@@ -11449,6 +11473,36 @@ function renderNuevoDocumentoPersonal(){
 }
 
 
+
+var EX55_DOC_KEY='mootsil_exp_docs_v1';
+var EX55_CON_KEY='mootsil_exp_contracts_v1';
+function ex55Load(key){try{return JSON.parse(localStorage.getItem(key)||'{}')||{};}catch(e){return {};}}
+function ex55Save(key,obj){localStorage.setItem(key,JSON.stringify(obj||{}));}
+function ex55Docs(id){var a=ex55Load(EX55_DOC_KEY);return a[id]||{};}
+function ex55SetDoc(id,tipo,meta){var a=ex55Load(EX55_DOC_KEY);a[id]=a[id]||{};a[id][tipo]=meta;ex55Save(EX55_DOC_KEY,a);}
+function ex55Contracts(id){var a=ex55Load(EX55_CON_KEY);return a[id]||[];}
+function ex55AddContract(id,c){var a=ex55Load(EX55_CON_KEY);a[id]=a[id]||[];a[id].unshift(c);ex55Save(EX55_CON_KEY,a);}
+function ex55RemoveContract(id,idx){var a=ex55Load(EX55_CON_KEY);a[id]=a[id]||[];a[id].splice(idx,1);ex55Save(EX55_CON_KEY,a);}
+function ex55Toggle(id){var el=document.getElementById(id);if(el)el.classList.toggle('open');}
+function ex55AttachDoc(empId,tipo,inputId){
+  var inp=document.getElementById(inputId); if(!inp||!inp.files||!inp.files[0])return;
+  var f=inp.files[0];
+  ex55SetDoc(empId,tipo,{name:f.name,type:f.type||'',size:f.size||0,date:fechaHoyLocal()});
+  showToast('✅ Documento registrado en expediente');
+  renderEditarUsuario(empId,'','operario',false);
+}
+function ex55SaveContract(empId){
+  var tipo=document.getElementById('ex55-con-tipo').value.trim();
+  var ini=document.getElementById('ex55-con-ini').value||null;
+  var fin=document.getElementById('ex55-con-fin').value||null;
+  var notas=document.getElementById('ex55-con-notas').value.trim();
+  var inp=document.getElementById('ex55-con-file');
+  var fileName=(inp&&inp.files&&inp.files[0])?inp.files[0].name:'';
+  if(!tipo){alert('Captura el tipo de contrato.');return;}
+  ex55AddContract(empId,{tipo:tipo,inicio:ini,fin:fin,notas:notas,file:fileName,estado:'Vigente'});
+  showToast('✅ Contrato agregado al expediente');
+  renderEditarUsuario(empId,'','operario',false);
+}
 function ex54FormHtml(mode,id,base,extra){
   base=base||{}; extra=extra||{};
   var isEdit=mode==='edit';
@@ -11479,10 +11533,24 @@ function ex54FormHtml(mode,id,base,extra){
       '<div class="ex54-field"><label>Tipo de sangre</label><input id="ex54-sangre" value="'+ex54Esc(extra.tipo_sangre||'')+'" placeholder="Ej. O+"></div>'+
       '<div class="ex54-field span2"><label>Alergias / dato relevante</label><input id="ex54-salud" value="'+ex54Esc(extra.salud_emergencia||'')+'" placeholder="Solo información útil en una emergencia"></div>'+
     '</div></div>'+
-    '<div class="ex54-sec"><h3>Documentos y contrato</h3><div class="ex54-grid two">'+
-      '<div><strong style="font-size:.75rem;">Documentos</strong><div class="ex54-docnote">'+(isEdit?'Consulta o agrega identificación, CURP, RFC, NSS y otros documentos desde el módulo Documentos.':'Se habilitan después de guardar el expediente.')+'</div>'+(isEdit?'<button type="button" class="btn-sm btn-iniciar" style="margin-top:7px" onclick="renderDocumentosPersonales()">Abrir Documentos</button>':'')+'</div>'+
-      '<div><strong style="font-size:.75rem;">Contrato</strong><div class="ex54-docnote">'+(isEdit?'Consulta o agrega el contrato vigente desde el módulo Contratos.':'Se habilita después de guardar el expediente.')+'</div>'+(isEdit?'<button type="button" class="btn-sm btn-iniciar" style="margin-top:7px" onclick="renderContratos()">Abrir Contratos</button>':'')+'</div>'+
-    '</div></div>'+
+        '<div class="ex54-sec"><h3>Documentos</h3>'+
+      (isEdit?(function(){
+        var docs=ex55Docs(id), tipos=['INE','CURP','RFC','NSS','Comprobante domicilio','Otro'];
+        return '<div class="ex55-docgrid">'+tipos.map(function(tp,ix){
+          var d=docs[tp], iid='ex55-doc-'+ix;
+          return '<div class="ex55-docitem"><div class="ex55-docrow"><div><div class="ex55-docname">'+tp+'</div><div class="ex55-mini">'+(d?('Cargado · '+d.name):'Pendiente')+'</div></div><span class="ex55-status '+(d?'ex55-ok':'ex55-pend')+'">'+(d?'Cargado':'Pendiente')+'</span></div><div style="margin-top:7px;display:flex;gap:6px;align-items:center;"><input type="file" id="'+iid+'" style="font-size:.65rem;max-width:210px;"><button type="button" class="ex55-btn" onclick="ex55AttachDoc(\''+id+'\',\''+tp+'\',\''+iid+'\')">'+(d?'Reemplazar':'Adjuntar')+'</button></div></div>';
+        }).join('')+'</div>';
+      })():'<div class="ex55-mini">Guarda primero el expediente para habilitar documentos.</div>')+
+    '</div>'+
+    '<div class="ex54-sec"><h3>Contrato</h3>'+
+      (isEdit?(function(){
+        var cs=ex55Contracts(id);
+        var lista=cs.length?('<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;">'+cs.map(function(c,i){
+          return '<div class="ex55-subcard"><div class="ex55-contract-row"><strong>'+ex54Esc(c.tipo)+'</strong><span>'+ex54Esc(c.inicio||'—')+'</span><span>'+ex54Esc(c.fin||'Sin fin')+'</span><span class="ex55-status ex55-ok">'+ex54Esc(c.estado||'Vigente')+'</span><div class="ex55-actions"><button type="button" class="ex55-btn danger" onclick="ex55RemoveContract(\''+id+'\','+i+');renderEditarUsuario(\''+id+'\',\'\',\'operario\',false)">Quitar</button></div></div><div class="ex55-mini" style="margin-top:4px;">'+(c.file?('Archivo: '+ex54Esc(c.file)):'Sin archivo')+(c.notas?(' · '+ex54Esc(c.notas)):'')+'</div></div>';
+        }).join('')+'</div>'):'<div class="ex55-mini" style="margin-bottom:8px;">Sin contratos registrados en este expediente.</div>';
+        return lista+'<button type="button" class="ex55-btn primary" onclick="ex55Toggle(\'ex55-contract-form\')">+ Agregar contrato</button><div class="ex55-inline-form" id="ex55-contract-form"><div class="ex54-grid"><div class="ex54-field"><label>Tipo de contrato</label><input id="ex55-con-tipo" placeholder="Tiempo completo / Temporada"></div><div class="ex54-field"><label>Inicio</label><input type="date" id="ex55-con-ini" value="'+fechaHoyLocal()+'"></div><div class="ex54-field"><label>Fin / vigencia</label><input type="date" id="ex55-con-fin"></div><div class="ex54-field span2"><label>Archivo</label><input type="file" id="ex55-con-file"></div><div class="ex54-field"><label>Notas</label><input id="ex55-con-notas" placeholder="Opcional"></div></div><div style="margin-top:8px;"><button type="button" class="ex55-btn primary" onclick="ex55SaveContract(\''+id+'\')">Guardar contrato</button></div></div>';
+      })():'<div class="ex55-mini">Guarda primero el expediente para habilitar contrato.</div>')+
+    '</div>'+
     '<div class="ex54-actions"><button class="btn-back" onclick="renderAltasBajas()">Cancelar</button><button class="btn-next" id="ex54-guardar">'+(isEdit?'Guardar cambios':'Crear expediente')+'</button></div>'+
   '</div>';
 }
