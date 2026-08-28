@@ -850,6 +850,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .sol59-field textarea{min-height:74px;resize:vertical}
 @media(max-width:700px){.sol59-grid{grid-template-columns:1fr}.sol59-field.full{grid-column:auto}.em59-menu .labor-tile{min-width:150px;flex:1 1 150px}}
 
+/* C060 — Empleados integrado en Administración + H.E. diaria explícita */
+.em60-card{cursor:default!important}
+.em60-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:11px}
+.em60-actions button{border:1px solid #cfdad3;background:#fff;border-radius:8px;padding:6px 9px;font-size:.64rem;font-weight:800;color:var(--verde);cursor:pointer}
+.em60-actions button:hover{background:#eef6f1}
+.as60-he0{display:block;font-size:.54rem;color:#a4aaa6;font-weight:700;margin-top:2px}
+
 </style>
 </head>
 <body>
@@ -6847,17 +6854,18 @@ function renderControlAsistencias(fecha){
       }else if(r&&r.entrada)base=r.retardo?'<span class="as58-cell as58-r" title="Retardo">R</span>':'<span class="as58-cell as58-p" title="Presente">✓</span>';
       else if(f===hoy)base='<span class="as58-cell as58-na" title="Sin registro todavía">·</span>';
       else base='<span class="as58-cell as58-f" title="Falta">F</span>';
-      if(he>0)base+='<span class="as59-he">+'+he.toFixed(1)+'h</span>';
+      if(he>0)base+='<span class="as59-he">H.E. '+he.toFixed(1)+' h</span>';
+      else base+='<span class="as60-he0">H.E. 0.0 h</span>';
       return base;
     }
-    var html='<div class="as58-head"><div><div class="as58-title">📋 Asistencia · Semana '+num+'</div><div class="as58-sub">'+inicio+' — '+fin+' · Sólo colaboradores activos</div></div><button class="em59-back" onclick="renderEmpleadosMenu()">← Empleados</button></div>';
+    var html='<div class="as58-head"><div><div class="as58-title">📋 Asistencia · Semana '+num+'</div><div class="as58-sub">'+inicio+' — '+fin+' · Sólo colaboradores activos</div></div><button class="em59-back" onclick="renderAdministracionMenu()">← Empleados</button></div>';
     html+='<div class="as58-nav"><button id="as58-prev">← Semana anterior</button><button id="as58-now">Semana actual</button><input type="date" id="as58-date" value="'+(fecha||hoy)+'" max="'+hoy+'"><button id="as58-next" '+(fin>=hoy?'disabled':'')+'>Semana siguiente →</button><span class="as58-week">Semana '+num+'</span></div>';
     html+='<div class="as58-wrap"><table class="as58-table"><thead><tr><th>Colaborador</th><th>Tipo</th>'+dn.map(function(x,i){return '<th>'+x+'<br><span style="font-weight:500">'+dias[i].slice(8,10)+'</span></th>';}).join('')+'<th>H. extra</th></tr></thead><tbody>';
     html+=users.map(function(u){
       var ex=ex54Get(u.id),tipo=ex.tipo_colaborador||(u.rol==='labores_eventual'?'Eventual':'Base');
       return '<tr><td><div class="as58-name">'+u.nombre+'</div><div style="font-size:.58rem;color:var(--gris-5)">'+(ex.cargo||ROLES[u.rol]||u.rol)+'</div></td><td><span class="em58-badge '+(tipo==='Eventual'?'em58-eventual':'em58-base')+'">'+tipo.toUpperCase()+'</span></td>'+dias.map(function(f){return '<td>'+celda(u,f)+'</td>';}).join('')+'<td><strong>'+(extraMap[u.id]||0).toFixed(1)+' h</strong></td></tr>';
     }).join('');
-    html+='</tbody></table></div><div class="as58-legend"><span class="as58-p">✓ Presente</span><span class="as58-f">F Falta</span><span class="as58-r">R Retardo</span><span class="as58-per">P Permiso</span><span class="as58-v">V Vacaciones</span><span class="as58-na">— No aplica/futuro</span></div><button class="em59-back" style="margin-top:.7rem" onclick="renderEmpleadosMenu()">← Empleados</button>';
+    html+='</tbody></table></div><div class="as58-legend"><span class="as58-p">✓ Presente</span><span class="as58-f">F Falta</span><span class="as58-r">R Retardo</span><span class="as58-per">P Permiso</span><span class="as58-v">V Vacaciones</span><span class="as58-na">— No aplica/futuro</span></div><button class="em59-back" style="margin-top:.7rem" onclick="renderAdministracionMenu()">← Empleados</button>';
     body.innerHTML=html;
     document.getElementById('as58-date').addEventListener('change',function(){renderControlAsistencias(this.value);});
     document.getElementById('as58-now').addEventListener('click',function(){renderControlAsistencias(hoy);});
@@ -7331,18 +7339,18 @@ function renderAdministracionMenu(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="ad17-shell"><div class="ad17-head"><div><div class="ad17-eyebrow">Administración</div><div class="ad17-title">Control del Rancho</div><div class="ad17-sub">Finanzas, personal, compras y operación administrativa de Mootsil.</div></div></div><div class="ad17-grid">'+
     '<div class="ad17-card primary" data-admin="caja"><div class="ic">💵</div><h3>Caja</h3><p>Entradas, salidas, pagos, movimientos y control financiero operativo.</p></div>'+
-    '<div class="ad17-card blue" data-admin="empleados"><div class="ic">👥</div><h3>Empleados</h3><p>Expedientes, asistencia y solicitudes del personal.</p></div>'+
+    '<div class="ad17-card blue em60-card" data-admin="empleados"><div class="ic">👥</div><h3>Empleados</h3><p>Expedientes, asistencia y solicitudes del personal.</p><div class="em60-actions"><button type="button" data-empgo="expedientes">👤 Expedientes</button><button type="button" data-empgo="asistencia">📋 Asistencia</button><button type="button" data-empgo="solicitudes">📨 Solicitudes</button></div></div>'+
     '<div class="ad17-card gold" data-admin="compensaciones"><div class="ic">💰</div><h3>Nómina y Compensaciones</h3><p>Sueldos, bonos, préstamos e historial de nómina.</p></div>'+
     '<div class="ad17-card orange" data-admin="gastos"><div class="ic">🧾</div><h3>Compras y Gastos</h3><p>Compras, proveedores, cuentas por pagar e historial.</p></div>'+
-    '<div class="ad17-card primary" data-admin="asistencias"><div class="ic">📋</div><h3>Control de Asistencias</h3><p>Entradas, faltas, retardos, permisos y jornada.</p></div>'+
     '<div class="ad17-card primary" data-admin="eventual"><div class="ic">🧑‍🌾</div><h3>Labores Eventual</h3><p>Registro y pago del personal eventual por día.</p></div>'+
     '<div class="ad17-card purple" data-admin="inversionistas"><div class="ic">💼</div><h3>Inversionistas</h3><p>Aportaciones, contratos, movimientos y devoluciones.</p></div>'+
   '</div></div>';
   body.querySelector('[data-admin="caja"]').addEventListener('click',function(){renderCajaMootsil('dia',fechaHoyLocal());});
-  body.querySelector('[data-admin="empleados"]').addEventListener('click',renderEmpleadosMenu);
+  body.querySelector('[data-empgo="expedientes"]').addEventListener('click',function(e){e.stopPropagation();renderAltasBajas();});
+  body.querySelector('[data-empgo="asistencia"]').addEventListener('click',function(e){e.stopPropagation();renderControlAsistencias(fechaHoyLocal());});
+  body.querySelector('[data-empgo="solicitudes"]').addEventListener('click',function(e){e.stopPropagation();renderSolicitudesOperarioRevision();});
   body.querySelector('[data-admin="compensaciones"]').addEventListener('click',renderCompensacionesMenu);
   body.querySelector('[data-admin="gastos"]').addEventListener('click',renderComprasMenu);
-  body.querySelector('[data-admin="asistencias"]').addEventListener('click',function(){renderControlAsistencias(fechaHoyLocal());});
   body.querySelector('[data-admin="eventual"]').addEventListener('click',function(){renderPagosEventuales(fechaHoyLocal());});
   body.querySelector('[data-admin="inversionistas"]').addEventListener('click',renderInversionistasMenu);
 }
@@ -7920,9 +7928,9 @@ function renderSolicitudesOperarioRevision(filtro){
       }
       return '<div class="sol58-row" style="border-left-color:'+color+'"><div class="sol58-main"><div><div class="sol58-type">'+(tipoLbl[x.tipo]||x.tipo)+'</div><div class="sol58-person">'+x.nombre+'</div></div><div class="sol58-detail">'+(x.fecha?new Date(x.fecha).toLocaleDateString('es-MX'):'')+'</div><div class="sol58-detail">'+x.detalle+'</div><div class="sol58-state" style="color:'+color+'">'+st+'</div><div class="sol58-actions">'+actions+'</div></div></div>';
     }
-    var html='<div class="as58-head"><div><div class="as58-title">📨 Solicitudes</div><div class="as58-sub">Bandeja única de solicitudes del personal.</div></div><button class="em59-back" onclick="renderEmpleadosMenu()">← Empleados</button></div>';
+    var html='<div class="as58-head"><div><div class="as58-title">📨 Solicitudes</div><div class="as58-sub">Bandeja única de solicitudes del personal.</div></div><button class="em59-back" onclick="renderAdministracionMenu()">← Empleados</button></div>';
     html+='<div class="sol59-filters"><button class="sol59-filter '+(filtro==='todas'?'active':'')+'" data-filter="todas">Todas '+counts.todas+'</button><button class="sol59-filter '+(filtro==='prestamos'?'active':'')+'" data-filter="prestamos">Préstamos '+counts.prestamos+'</button><button class="sol59-filter '+(filtro==='permisos'?'active':'')+'" data-filter="permisos">Permisos '+counts.permisos+'</button><button class="sol59-filter '+(filtro==='medicas'?'active':'')+'" data-filter="medicas">Médicas '+counts.medicas+'</button><button class="sol59-filter '+(filtro==='vacaciones'?'active':'')+'" data-filter="vacaciones">Vacaciones '+counts.vacaciones+'</button><button class="sol59-filter '+(filtro==='movimientos'?'active':'')+'" data-filter="movimientos">Llegadas/Salidas '+counts.movimientos+'</button></div>';
-    html+='<div class="sol58-list">'+(visibles.length?visibles.map(row).join(''):'<div class="hint">No hay solicitudes en este filtro.</div>')+'</div><button class="em59-back" style="margin-top:1rem" onclick="renderEmpleadosMenu()">← Empleados</button>';
+    html+='<div class="sol58-list">'+(visibles.length?visibles.map(row).join(''):'<div class="hint">No hay solicitudes en este filtro.</div>')+'</div><button class="em59-back" style="margin-top:1rem" onclick="renderAdministracionMenu()">← Empleados</button>';
     body.innerHTML=html;
     body.querySelectorAll('[data-filter]').forEach(function(b){b.onclick=function(){renderSolicitudesOperarioRevision(this.dataset.filter);};});
     body.querySelectorAll('[data-pg]').forEach(function(b){b.onclick=function(){resolverPermiso(this.dataset.pg,'aprobado',true);};});
@@ -11474,12 +11482,12 @@ function renderAltasBajas(){
   body.innerHTML='<div class="loading">Cargando expedientes...</div>';
   from('usuarios').select('id,nombre,rol,activo,certificado_ambas,sueldo_base,fecha_ingreso,fecha_nacimiento').order('nombre').get().then(function(users){
     users=users||[];
-    var html='<div class="ex54-head"><div><div class="ex54-eyebrow">Administración · Empleados</div><div class="ex54-title">Expedientes</div><div class="ex54-sub">Información personal, laboral y condiciones de pago de cada colaborador.</div></div><div style="display:flex;gap:7px;align-items:center;"><button class="btn-back" onclick="renderEmpleadosMenu()">← Empleados</button><button class="btn-sm btn-completar" onclick="renderNuevoUsuario()">+ Nuevo expediente</button></div></div><div class="ex54-list">';
+    var html='<div class="ex54-head"><div><div class="ex54-eyebrow">Administración · Empleados</div><div class="ex54-title">Expedientes</div><div class="ex54-sub">Información personal, laboral y condiciones de pago de cada colaborador.</div></div><div style="display:flex;gap:7px;align-items:center;"><button class="em59-back" onclick="renderAdministracionMenu()">← Empleados</button><button class="btn-sm btn-completar" onclick="renderNuevoUsuario()">+ Nuevo expediente</button></div></div><div class="ex54-list">';
     html+=users.map(function(u){
       var ex=ex54Get(u.id), cargo=ex.cargo||(ROLES[u.rol]||u.rol), tipo=ex.tipo_colaborador||(u.rol==='labores_eventual'?'Eventual':'Base');
       return '<div class="ex54-row"><div><div class="ex54-name">'+u.nombre+' <span class="em58-badge '+(tipo==='Eventual'?'em58-eventual':'em58-base')+'">'+tipo.toUpperCase()+'</span></div><div class="ex54-role">'+cargo+(u.fecha_ingreso?' · Ingreso '+u.fecha_ingreso:'')+'</div></div><div><div class="ex54-status" style="color:'+(u.activo?'var(--verde-mid)':'var(--gris-3)')+';">'+(u.activo?'Activo':'Inactivo')+'</div><div class="ex54-role">Sueldo base: $'+(parseFloat(u.sueldo_base)||0).toFixed(2)+'</div></div><div class="orden-actions"><button class="btn-sm ex55-action-exp" onclick="renderEditarUsuario(\''+u.id+'\',\''+ex54Esc(u.nombre).replace(/'/g,"\\'")+'\',\''+u.rol+'\','+(u.certificado_ambas?'true':'false')+')">Expediente</button><button class="btn-sm ex55-action-pin" onclick="renderCambiarPin(\''+u.id+'\',\''+ex54Esc(u.nombre).replace(/'/g,"\\'")+'\')">PIN</button><button class="btn-sm ex55-action-cred" onclick="renderCredencialId(\''+u.id+'\')">Credencial</button>'+(u.activo?'<button class="btn-sm ex55-action-baja" onclick="bajaUsuario(\''+u.id+'\')">Dar de baja</button>':'<button class="btn-sm btn-iniciar" onclick="altaUsuario(\''+u.id+'\')">Reactivar</button>')+'</div></div>';
     }).join('');
-    body.innerHTML=html+'</div><button class="btn-back" style="margin-top:1rem;" onclick="renderEmpleadosMenu()">← Empleados</button>';
+    body.innerHTML=html+'</div><button class="em59-back" style="margin-top:.8rem;" onclick="renderAdministracionMenu()">← Empleados</button>';
   });
 }
 
