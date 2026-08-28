@@ -6907,10 +6907,12 @@ function renderPagosEventuales(fecha){
   var esHoy=fecha===hoy;
   Promise.all([
     from('asistencia_registros').select('*').eq('fecha',fecha).eq('modalidad','labores').get(),
-    from('pagos_eventuales').select('*').eq('fecha',fecha).get()
+    from('pagos_eventuales').select('*').eq('fecha',fecha).get(),
+    from('horas_extra_asignadas').select('operario_id,horas_max').eq('fecha',fecha).eq('estado','aprobada').get()
   ]).then(function(r){
     var registros=r[0]||[];
     var pagosDelDia=r[1]||[];
+    var extrasDia=r[2]||[]; var extraPorOperario={}; extrasDia.forEach(function(x){extraPorOperario[x.operario_id]=(extraPorOperario[x.operario_id]||0)+(parseFloat(x.horas_max)||0);});
     var pagosPorOperario={}; pagosDelDia.forEach(function(p){(pagosPorOperario[p.operario_id]=pagosPorOperario[p.operario_id]||[]).push(p);});
     var clockPorOperario={};
     registros.forEach(function(reg){
@@ -6931,20 +6933,22 @@ function renderPagosEventuales(fecha){
     html+='<div class="form-card" style="text-align:center;margin-bottom:1rem;"><div style="font-size:.8rem;color:var(--gris-3);">Pagado este día</div><div style="font-size:1.6rem;font-weight:800;color:var(--verde-mid);">$'+totalDia.toFixed(2)+'</div></div>';
 
     if(!eventuales.length){
-      html+='<div class="empty">Aún no tienes colaboradores con rol "Labores Eventual". Dalos de alta en Empleados → Altas y Bajas.</div>';
+      html+='<div class="empty">Aún no tienes colaboradores con rol "Labores Eventual". Dalos de alta en Empleados → Expedientes.</div>';
     } else {
       html+=eventuales.map(function(o){
         var clockIn=clockPorOperario[o.id];
         var pagos=pagosPorOperario[o.id]||[];
         var horaE=clockIn&&clockIn.entrada?new Date(clockIn.entrada).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}):null;
         var asistTxt=clockIn?('✅ Marcó asistencia · '+horaE):'— Sin registro de asistencia este día';
+        var exEmp=ex54Get(o.id), sueldoDia=parseFloat(o.sueldo_base)||0, horasExtra=extraPorOperario[o.id]||0, tarifaExtra=parseFloat(exEmp.tarifa_hora_extra)||0, extraMonto=horasExtra*tarifaExtra, sugerido=(clockIn?sueldoDia:0)+extraMonto;
+        if(horasExtra>0)asistTxt+=' · ⏰ '+numFmt(horasExtra)+' h extra ($'+extraMonto.toFixed(2)+')';
         var totalOp=pagos.reduce(function(s,p){return s+parseFloat(p.monto);},0);
         var pagosHtml=pagos.map(function(pago){
           return '<div style="margin-top:.5rem;display:flex;justify-content:space-between;align-items:center;"><span style="font-weight:700;color:var(--verde-mid);">✅ Pagado: $'+parseFloat(pago.monto).toFixed(2)+(pago.concepto?' · '+pago.concepto:'')+'</span><button type="button" class="btn-sm btn-cancelar" data-quitar-pago="'+pago.id+'">Quitar</button></div>';
         }).join('');
         var totalTxt=pagos.length>1?'<div class="orden-meta" style="margin-top:.35rem;font-weight:700;">Total del día: $'+totalOp.toFixed(2)+'</div>':'';
-        var formAgregar='<div style="margin-top:.5rem;display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><input type="number" min="0" step="1" placeholder="Monto $" data-monto-input="'+o.id+'" style="flex:1;min-width:90px;padding:.5rem .6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><input type="text" placeholder="Concepto (opcional)" data-concepto-input="'+o.id+'" style="flex:1;min-width:120px;padding:.5rem .6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><button type="button" class="btn-sm btn-completar" data-registrar-pago="'+o.id+'">💵 '+(pagos.length?'Agregar otro pago':'Registrar pago')+'</button></div>';
-        return '<div class="orden-card" style="border-left-color:'+(pagos.length?'var(--verde-mid)':(clockIn?'var(--tierra)':'var(--gris-2)'))+';"><strong style="font-size:.9rem;">'+o.nombre+'</strong><div class="orden-meta">'+asistTxt+'</div>'+pagosHtml+totalTxt+formAgregar+'</div>';
+        var formAgregar='<div style="margin-top:.5rem;display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><input type="number" min="0" step="1" placeholder="Monto $" value="'+(sugerido>0?sugerido.toFixed(2):'')+'" data-monto-input="'+o.id+'" style="flex:1;min-width:90px;padding:.5rem .6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><input type="text" placeholder="Concepto (opcional)" data-concepto-input="'+o.id+'" style="flex:1;min-width:120px;padding:.5rem .6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><button type="button" class="btn-sm btn-completar" data-registrar-pago="'+o.id+'">💵 '+(pagos.length?'Agregar otro pago':'Registrar pago')+'</button></div>';
+        return '<div class="orden-card" style="border-left-color:'+(pagos.length?'var(--verde-mid)':(clockIn?'var(--tierra)':'var(--gris-2)'))+';"><strong style="font-size:.9rem;">'+o.nombre+'</strong><div class="orden-meta">'+asistTxt+(sueldoDia?(' · Tarifa día $'+sueldoDia.toFixed(2)):'')+'</div>'+pagosHtml+totalTxt+formAgregar+'</div>';
       }).join('');
     }
 
@@ -7010,7 +7014,7 @@ function renderInversionistasMenu(){
     var headerHtml='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">💼 Inversionistas<button type="button" onclick="renderAdministracionMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Administración</button></div>';
     var html=headerHtml;
     if(!inversionistas.length){
-      html+='<div class="empty">Aún no tienes usuarios con rol "Inversionista". Dalos de alta en Empleados → Altas y Bajas.</div>';
+      html+='<div class="empty">Aún no tienes usuarios con rol "Inversionista". Dalos de alta en Empleados → Expedientes.</div>';
     } else {
       html+=inversionistas.map(function(iv){
         var contratos=porInversionista[iv.id]||[];
@@ -7277,7 +7281,7 @@ function renderAdministracionMenu(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="ad17-shell"><div class="ad17-head"><div><div class="ad17-eyebrow">Administración</div><div class="ad17-title">Control del Rancho</div><div class="ad17-sub">Finanzas, personal, compras y operación administrativa de Mootsil.</div></div></div><div class="ad17-grid">'+
     '<div class="ad17-card primary" data-admin="caja"><div class="ic">💵</div><h3>Caja</h3><p>Entradas, salidas, pagos, movimientos y control financiero operativo.</p></div>'+
-    '<div class="ad17-card blue" data-admin="empleados"><div class="ic">👥</div><h3>Empleados</h3><p>Altas y bajas, asistencia, contratos, permisos, documentos y solicitudes.</p></div>'+
+    '<div class="ad17-card blue" data-admin="empleados"><div class="ic">👥</div><h3>Empleados</h3><p>Expedientes, asistencia y solicitudes del personal.</p></div>'+
     '<div class="ad17-card gold" data-admin="compensaciones"><div class="ic">💰</div><h3>Nómina y Compensaciones</h3><p>Sueldos, bonos, préstamos e historial de nómina.</p></div>'+
     '<div class="ad17-card orange" data-admin="gastos"><div class="ic">🧾</div><h3>Compras y Gastos</h3><p>Compras, proveedores, cuentas por pagar e historial.</p></div>'+
     '<div class="ad17-card primary" data-admin="asistencias"><div class="ic">📋</div><h3>Control de Asistencias</h3><p>Entradas, faltas, retardos, permisos y jornada.</p></div>'+
@@ -7711,19 +7715,13 @@ function renderCajaMootsil(periodo,fechaBase){
 function renderEmpleadosMenu(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">👥 EMPLEADOS<button type="button" onclick="renderAdministracionMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Administración</button></div>'+
-  '<div class="labor-grid" style="grid-template-columns:repeat(2,1fr);">'+
+  '<div class="labor-grid" style="grid-template-columns:repeat(3,1fr);">'+
     '<div class="labor-tile" data-emp="altasbajas"><div class="labor-tile-ic">👤</div><div class="labor-tile-lbl">Expedientes</div></div>'+
     '<div class="labor-tile" data-emp="asistencia"><div class="labor-tile-ic">📋</div><div class="labor-tile-lbl">Asistencia</div></div>'+
-    '<div class="labor-tile" data-emp="contratos"><div class="labor-tile-ic">📄</div><div class="labor-tile-lbl">Contratos</div></div>'+
-    '<div class="labor-tile" data-emp="permisos"><div class="labor-tile-ic">🗂️</div><div class="labor-tile-lbl">Permisos</div></div>'+
-    '<div class="labor-tile" data-emp="documentos"><div class="labor-tile-ic">🪪</div><div class="labor-tile-lbl">Documentos</div></div>'+
     '<div class="labor-tile" data-emp="solicitudes"><div class="labor-tile-ic">📨</div><div class="labor-tile-lbl">Solicitudes</div></div>'+
   '</div>';
   body.querySelector('[data-emp="altasbajas"]').addEventListener('click',renderAltasBajas);
   body.querySelector('[data-emp="asistencia"]').addEventListener('click',function(){renderControlAsistencias(fechaHoyLocal());});
-  body.querySelector('[data-emp="contratos"]').addEventListener('click',renderContratos);
-  body.querySelector('[data-emp="permisos"]').addEventListener('click',renderPermisosRevision);
-  body.querySelector('[data-emp="documentos"]').addEventListener('click',renderDocumentosPersonales);
   body.querySelector('[data-emp="solicitudes"]').addEventListener('click',renderSolicitudesOperarioRevision);
 }
 
@@ -11511,6 +11509,15 @@ function ex55SaveContract(empId){
   function finish(){ex55AddContract(empId,c);showToast('✅ Contrato agregado al expediente');renderEditarUsuario(empId,'','operario',false);}
   if(file){var key='contract:'+empId+':'+Date.now();ex56PutFile(key,file).then(function(){c.fileKey=key;finish();}).catch(function(e){alert('No se pudo guardar el archivo: '+e.message);});}else finish();
 }
+var EX57_HIST_KEY='mootsil_expediente_historial_v1', EX57_NOTAS_KEY='mootsil_expediente_notas_v1';
+function ex57Load(k){try{return JSON.parse(localStorage.getItem(k)||'{}')}catch(e){return {}}}
+function ex57Save(k,v){localStorage.setItem(k,JSON.stringify(v||{}));}
+function ex57Actor(){return (usuario&&usuario.nombre)?usuario.nombre:'Administrador';}
+function ex57AddHist(id,mov,ant,nue){var x=ex57Load(EX57_HIST_KEY);x[id]=x[id]||[];x[id].unshift({fecha:new Date().toISOString(),movimiento:mov,anterior:ant==null?'—':String(ant),nuevo:nue==null?'—':String(nue),responsable:ex57Actor()});ex57Save(EX57_HIST_KEY,x);}
+function ex57Hist(id){var x=ex57Load(EX57_HIST_KEY);return x[id]||[];}
+function ex57Notas(id){var x=ex57Load(EX57_NOTAS_KEY);return x[id]||[];}
+function ex57AddNota(id){var el=document.getElementById('ex57-nota');if(!el||!el.value.trim())return;var x=ex57Load(EX57_NOTAS_KEY);x[id]=x[id]||[];x[id].unshift({fecha:new Date().toISOString(),nota:el.value.trim(),responsable:ex57Actor()});ex57Save(EX57_NOTAS_KEY,x);showToast('✅ Nota administrativa guardada');renderEditarUsuario(id,'','operario',false);}
+function ex57FmtFecha(v){try{return new Date(v).toLocaleString('es-MX',{dateStyle:'short',timeStyle:'short'})}catch(e){return v}}
 function ex54FormHtml(mode,id,base,extra){
   base=base||{}; extra=extra||{};
   var isEdit=mode==='edit';
@@ -11563,6 +11570,8 @@ function ex54FormHtml(mode,id,base,extra){
         return lista+'<button type="button" class="ex55-btn primary" onclick="ex55Toggle(\'ex55-contract-form\')">+ Agregar contrato</button><div class="ex55-inline-form" id="ex55-contract-form"><div class="ex54-grid"><div class="ex54-field"><label>Tipo de contrato</label><input id="ex55-con-tipo" placeholder="Tiempo completo / Temporada"></div><div class="ex54-field"><label>Inicio</label><input type="date" id="ex55-con-ini" value="'+fechaHoyLocal()+'"></div><div class="ex54-field"><label>Fin / vigencia</label><input type="date" id="ex55-con-fin"></div><div class="ex54-field span2"><label>Archivo</label><input type="file" id="ex55-con-file"></div><div class="ex54-field"><label>Notas</label><input id="ex55-con-notas" placeholder="Opcional"></div></div><div style="margin-top:8px;"><button type="button" class="ex55-btn primary" onclick="ex55SaveContract(\''+id+'\')">Guardar contrato</button></div></div>';
       })():'<div class="ex55-mini">Guarda primero el expediente para habilitar contrato.</div>')+
     '</div>'+
+    (isEdit?(function(){var ns=ex57Notas(id);return '<div class="ex54-sec"><h3>Notas administrativas</h3><div style="display:flex;gap:8px;"><input id="ex57-nota" placeholder="Agregar nota administrativa..." style="flex:1;"><button type="button" class="ex55-btn primary" onclick="ex57AddNota(\''+id+'\')">Agregar</button></div>'+(ns.length?'<div style="margin-top:8px;">'+ns.map(function(n){return '<div class="ex55-subcard"><strong>'+ex57FmtFecha(n.fecha)+'</strong> · '+ex54Esc(n.responsable)+'<div class="ex55-mini" style="margin-top:3px;">'+ex54Esc(n.nota)+'</div></div>';}).join('')+'</div>':'<div class="ex55-mini" style="margin-top:6px;">Sin notas registradas.</div>')+'</div>';})():'')+
+    (isEdit?(function(){var hs=ex57Hist(id);return '<div class="ex54-sec"><h3>Historial laboral</h3>'+(hs.length?'<div style="display:flex;flex-direction:column;gap:6px;">'+hs.map(function(h){return '<div class="ex55-subcard" style="display:grid;grid-template-columns:130px 1fr 1.5fr 1fr;gap:8px;align-items:center;"><span class="ex55-mini">'+ex57FmtFecha(h.fecha)+'</span><strong>'+ex54Esc(h.movimiento)+'</strong><span>'+ex54Esc(h.anterior)+' → '+ex54Esc(h.nuevo)+'</span><span class="ex55-mini">'+ex54Esc(h.responsable)+'</span></div>';}).join('')+'</div>':'<div class="ex55-mini">Los cambios de cargo, sueldo, hora extra y estatus se registrarán aquí automáticamente.</div>')+'</div>';})():'')+
     '<div class="ex54-actions"><button class="btn-back" onclick="renderAltasBajas()">Cancelar</button><button class="btn-next" id="ex54-guardar">'+(isEdit?'Guardar cambios':'Crear expediente')+'</button></div>'+
   '</div>';
 }
@@ -11599,6 +11608,10 @@ function guardarNuevoUsuario(){
   from('usuarios').insert({nombre:nombre,rol:rol,fecha_ingreso:fechaIngreso,fecha_nacimiento:fechaNacimiento,sueldo_base:sueldoBase,activo:true}).then(function(data){
     var uid=Array.isArray(data)?data[0].id:data.id;
     ex54Put(uid,extra);
+    ex57AddHist(uid,'Alta','—','Activo');
+    if(extra.cargo)ex57AddHist(uid,'Cargo','—',extra.cargo);
+    if(sueldoBase)ex57AddHist(uid,'Sueldo base diario','—','$'+sueldoBase.toFixed(2));
+    if(extra.tarifa_hora_extra)ex57AddHist(uid,'Hora extra','—','$'+extra.tarifa_hora_extra.toFixed(2)+'/h');
     return api('/rest/v1/rpc/set_pin',{method:'POST',body:{p_usuario_id:uid,p_pin:pin}});
   }).then(function(){
     return cargarCatalogos();
@@ -11625,8 +11638,12 @@ function guardarEditarUsuario(id){
   var pinRaw=String(document.getElementById('ex54-pin').value||'');
   var extra=ex54Collect(), rol=ex54CargoRol(extra.cargo);
   if(!nombre){alert('El nombre es obligatorio.');return;}
+  var anteriorExtra=ex54Get(id), anteriorBase=null;
   var btn=document.getElementById('ex54-guardar');btn.disabled=true;btn.textContent='Guardando...';
-  from('usuarios').eq('id',id).update({nombre:nombre,rol:rol,fecha_ingreso:fechaIngreso,fecha_nacimiento:fechaNacimiento,sueldo_base:sueldoBase}).then(function(){
+  from('usuarios').select('rol,sueldo_base,activo').eq('id',id).get().then(function(rr){anteriorBase=(rr&&rr[0])||{};return from('usuarios').eq('id',id).update({nombre:nombre,rol:rol,fecha_ingreso:fechaIngreso,fecha_nacimiento:fechaNacimiento,sueldo_base:sueldoBase});}).then(function(){
+    if((anteriorExtra.cargo||ROLES[anteriorBase.rol]||'')!==extra.cargo)ex57AddHist(id,'Cargo',anteriorExtra.cargo||ROLES[anteriorBase.rol]||'—',extra.cargo);
+    if((parseFloat(anteriorBase.sueldo_base)||0)!==(parseFloat(sueldoBase)||0))ex57AddHist(id,'Sueldo base diario','$'+(parseFloat(anteriorBase.sueldo_base)||0).toFixed(2),'$'+(parseFloat(sueldoBase)||0).toFixed(2));
+    if((parseFloat(anteriorExtra.tarifa_hora_extra)||0)!==(parseFloat(extra.tarifa_hora_extra)||0))ex57AddHist(id,'Hora extra','$'+(parseFloat(anteriorExtra.tarifa_hora_extra)||0).toFixed(2)+'/h','$'+(parseFloat(extra.tarifa_hora_extra)||0).toFixed(2)+'/h');
     ex54Put(id,extra);
     if(pinRaw){
       var pin=pinRaw.padStart(4,'0');
@@ -11675,8 +11692,8 @@ function guardarPin(id){
   api('/rest/v1/rpc/set_pin',{method:'POST',body:{p_usuario_id:id,p_pin:pin}}).then(function(){alert('PIN actualizado.');renderAltasBajas();});
 }
 
-function bajaUsuario(id){if(confirm('¿Dar de baja?')) from('usuarios').eq('id',id).update({activo:false}).then(function(){renderAltasBajas();});}
-function altaUsuario(id){from('usuarios').eq('id',id).update({activo:true}).then(function(){renderAltasBajas();});}
+function bajaUsuario(id){if(confirm('¿Dar de baja? El expediente y todo su historial se conservarán.')) from('usuarios').eq('id',id).update({activo:false}).then(function(){ex57AddHist(id,'Estatus','Activo','Inactivo');renderAltasBajas();});}
+function altaUsuario(id){from('usuarios').eq('id',id).update({activo:true}).then(function(){ex57AddHist(id,'Estatus','Inactivo','Activo');renderAltasBajas();});}
 function usarCamara(){document.getElementById('cam-input').click();}
 function abrirGaleria(){document.getElementById('gal-input').click();}
 
