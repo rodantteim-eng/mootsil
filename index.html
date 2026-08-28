@@ -756,6 +756,32 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 
 .ad17-card.gold{border-top:4px solid #c59a12!important}
+
+/* C054 — Expediente del empleado */
+.ex54-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px}
+.ex54-eyebrow{font-size:.68rem;font-weight:850;color:var(--tierra);letter-spacing:.05em;text-transform:uppercase}
+.ex54-title{font-size:1.4rem;font-weight:850;color:var(--verde);margin:.1rem 0}
+.ex54-sub{font-size:.72rem;color:var(--gris-5)}
+.ex54-form{display:flex;flex-direction:column;gap:10px}
+.ex54-sec{background:#fff;border:1px solid var(--gris-2);border-radius:12px;padding:12px 14px}
+.ex54-sec h3{font-size:.72rem;margin:0 0 9px;color:var(--verde);text-transform:uppercase;letter-spacing:.04em}
+.ex54-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px 10px}
+.ex54-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.ex54-field{display:flex;flex-direction:column;gap:4px}
+.ex54-field.span2{grid-column:span 2}.ex54-field.span3{grid-column:1/-1}
+.ex54-field label{font-size:.62rem;font-weight:800;color:#707a74;text-transform:uppercase}
+.ex54-field input,.ex54-field select,.ex54-field textarea{width:100%;box-sizing:border-box;border:1px solid #d9dfdb;border-radius:8px;background:#fafbf9;padding:8px 9px;font-size:.76rem;color:#26382f}
+.ex54-field textarea{min-height:58px;resize:vertical}
+.ex54-actions{display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:8px;background:rgba(247,248,246,.94);padding:8px;border-radius:10px}
+.ex54-actions button{min-width:110px}
+.ex54-list{display:flex;flex-direction:column;gap:7px}
+.ex54-row{background:#fff;border:1px solid var(--gris-2);border-left:4px solid var(--verde-mid);border-radius:11px;padding:9px 12px;display:grid;grid-template-columns:minmax(160px,1.3fr) minmax(120px,.7fr) minmax(250px,1.4fr);gap:10px;align-items:center}
+.ex54-name{font-size:.86rem;font-weight:800}.ex54-role{font-size:.65rem;color:var(--gris-5);margin-top:2px}
+.ex54-status{font-size:.66rem;font-weight:750}.ex54-row .orden-actions{justify-content:flex-end;margin:0}
+.ex54-docnote{font-size:.67rem;color:var(--gris-5);padding:8px 0 0}
+@media(max-width:850px){.ex54-grid,.ex54-grid.two{grid-template-columns:1fr 1fr}.ex54-field.span3{grid-column:1/-1}.ex54-row{grid-template-columns:1fr}.ex54-row .orden-actions{justify-content:flex-start}}
+@media(max-width:560px){.ex54-grid,.ex54-grid.two{grid-template-columns:1fr}.ex54-field.span2,.ex54-field.span3{grid-column:auto}}
+
 </style>
 </head>
 <body>
@@ -7660,7 +7686,7 @@ function renderEmpleadosMenu(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">👥 EMPLEADOS<button type="button" onclick="renderAdministracionMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Administración</button></div>'+
   '<div class="labor-grid" style="grid-template-columns:repeat(2,1fr);">'+
-    '<div class="labor-tile" data-emp="altasbajas"><div class="labor-tile-ic">👤</div><div class="labor-tile-lbl">Altas y Bajas</div></div>'+
+    '<div class="labor-tile" data-emp="altasbajas"><div class="labor-tile-ic">👤</div><div class="labor-tile-lbl">Expedientes</div></div>'+
     '<div class="labor-tile" data-emp="asistencia"><div class="labor-tile-ic">📋</div><div class="labor-tile-lbl">Asistencia</div></div>'+
     '<div class="labor-tile" data-emp="contratos"><div class="labor-tile-ic">📄</div><div class="labor-tile-lbl">Contratos</div></div>'+
     '<div class="labor-tile" data-emp="permisos"><div class="labor-tile-ic">🗂️</div><div class="labor-tile-lbl">Permisos</div></div>'+
@@ -8649,7 +8675,7 @@ function renderGenerarNomina(fechaRef){
         '@media(max-width:900px){.gn51-summary{grid-template-columns:repeat(2,1fr)}.gn51-main{grid-template-columns:1fr 1fr}.gn51-actions{grid-column:1/-1;justify-content:flex-start}}'+
         '</style>'+
         '<div class="gn51-head"><div><div class="gn51-title">💰 Pago de Nómina</div><div class="gn51-sub">Revisa importes, selecciona la cuenta y registra cada pago en Caja.</div></div></div>';
-      html+='<div class="gn51-nav"><button type="button" id="gn-ant">← Semana anterior</button>'+(esSemanaActual?'':'<button type="button" id="gn-sig">Semana siguiente →</button>')+'<span class="gn51-week">Semana '+numSemana+' · '+semanaInicio+' a '+semanaFin+' · Extra $'+tarifa+'/h</span></div>';
+      html+='<div class="gn51-nav"><button type="button" id="gn-ant">← Semana anterior</button>'+(esSemanaActual?'':'<button type="button" id="gn-sig">Semana siguiente →</button>')+'<span class="gn51-week">Semana '+numSemana+' · '+semanaInicio+' a '+semanaFin+' · Hora extra según expediente</span></div>';
 
       if(!operarios.length) html+='<div class="empty">No hay operarios registrados.</div>';
 
@@ -8670,7 +8696,9 @@ function renderGenerarNomina(fechaRef){
         var mapaMaxOp=mapaHorasMaxPorFecha(horasExtraAsignadas.filter(function(h){return h.operario_id===o.id;}));
         var tieneAjusteExtra=!!(ajuste&&ajuste.horas_extra_override!=null);
         var horasExtra=tieneAjusteExtra?parseFloat(ajuste.horas_extra_override):horasExtraCapadasDesdeRegistros(regsOp,mapaMaxOp);
-        var totalExtra=horasExtra*tarifa;
+        var ex54Op=ex54Get(o.id);
+        var tarifaOp=(ex54Op.tarifa_hora_extra!=null&&parseFloat(ex54Op.tarifa_hora_extra)>=0)?parseFloat(ex54Op.tarifa_hora_extra):tarifa;
+        var totalExtra=horasExtra*tarifaOp;
         var estExtra=estadoExtraPorOp[o.id];
         var pagadoExtra=estExtra&&estExtra.estado==='pagado';
 
@@ -8690,7 +8718,7 @@ function renderGenerarNomina(fechaRef){
 
         var idAccion='gn-acc-'+o.id;
         accionesPago[idAccion]={operarioId:o.id,nombre:o.nombre,totalSueldo:totalSueldo,horasExtra:horasExtra,totalExtra:totalExtra,deducciones:deduccionesOp,bonosQueCalifican:bonosQueCalifican,scoresOp:scoresOp,nominaCompleta:nominaCompleta,granTotal:granTotal,
-          recibo:{nombre:o.nombre,numSemana:numSemana,semanaInicio:semanaInicio,semanaFin:semanaFin,resumen:resumen,sueldoBase:sueldoBase,totalSueldo:totalSueldo,tarifa:tarifa,horasExtra:horasExtra,totalExtra:totalExtra,bonos:bonosQueCalifican.map(function(b){return {descripcion:b.descripcion,monto:parseFloat(b.monto||0)};}),deducciones:deduccionesOp.map(function(d){var pr=prestamoIdsOp[d.prestamo_id];return {concepto:pr?pr.concepto:'Préstamo',numero:d.numero_pago,monto:parseFloat(d.monto)};}),granTotal:granTotal,nominaCompleta:nominaCompleta}};
+          recibo:{nombre:o.nombre,numSemana:numSemana,semanaInicio:semanaInicio,semanaFin:semanaFin,resumen:resumen,sueldoBase:sueldoBase,totalSueldo:totalSueldo,tarifa:tarifaOp,horasExtra:horasExtra,totalExtra:totalExtra,bonos:bonosQueCalifican.map(function(b){return {descripcion:b.descripcion,monto:parseFloat(b.monto||0)};}),deducciones:deduccionesOp.map(function(d){var pr=prestamoIdsOp[d.prestamo_id];return {concepto:pr?pr.concepto:'Préstamo',numero:d.numero_pago,monto:parseFloat(d.monto)};}),granTotal:granTotal,nominaCompleta:nominaCompleta}};
 
         var diasLabelTxt=tieneAjusteDias?(diasPagados+' días ✏️'):(resumen.trabajados+' días'+(resumen.diasPermisoConGoce?' + '+resumen.diasPermisoConGoce+' permiso c/goce':''));
         var filas='<div class="resumen-row"><span class="resumen-key">💵 Sueldo ('+diasLabelTxt+')</span><span class="resumen-val">+$'+totalSueldo.toFixed(2)+'</span></div>';
@@ -11296,15 +11324,33 @@ function renderCredencialId(id){
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
+
+var EX54_KEY='mootsil_expedientes_preview_v1';
+function ex54Load(){
+  try{return JSON.parse(localStorage.getItem(EX54_KEY)||'{}')||{};}catch(e){return {};}
+}
+function ex54Save(all){localStorage.setItem(EX54_KEY,JSON.stringify(all||{}));}
+function ex54Get(id){var x=ex54Load();return x[id]||{};}
+function ex54Put(id,data){var x=ex54Load();x[id]=Object.assign({},x[id]||{},data||{});ex54Save(x);}
+function ex54CargoRol(cargo){
+  return cargo==='Cosecha'?'cosechador':
+    cargo==='Ingeniero'?'ingeniero':
+    cargo==='Eventual'?'labores_eventual':
+    cargo==='Galerista'?'galerista':
+    cargo==='Encargado'?'encargado':'operario';
+}
+function ex54Esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 function renderAltasBajas(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="loading">Cargando usuarios...</div>';
-  from('usuarios').select('id,nombre,rol,activo,certificado_ambas').order('nombre').get().then(function(users){
-    var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">👥 Altas y Bajas<button class="btn-sm btn-completar" onclick="renderNuevoUsuario()">+ Nuevo</button></div>';
+  body.innerHTML='<div class="loading">Cargando expedientes...</div>';
+  from('usuarios').select('id,nombre,rol,activo,certificado_ambas,sueldo_base,fecha_ingreso,fecha_nacimiento').order('nombre').get().then(function(users){
+    users=users||[];
+    var html='<div class="ex54-head"><div><div class="ex54-eyebrow">Administración · Empleados</div><div class="ex54-title">Expedientes</div><div class="ex54-sub">Información personal, laboral y condiciones de pago de cada colaborador.</div></div><button class="btn-sm btn-completar" onclick="renderNuevoUsuario()">+ Nuevo expediente</button></div><div class="ex54-list">';
     html+=users.map(function(u){
-      return '<div class="orden-card" style="border-left-color:var(--verde-mid)"><div class="orden-header"><div class="orden-labor">'+u.nombre+'</div><span class="orden-badge-rol" style="'+( ROLE_COLORS[u.rol]||'background:#888;color:#fff')+'">'+( ROLES[u.rol]||u.rol)+'</span></div><div class="orden-actions"><button class="btn-sm btn-iniciar" onclick="renderEditarUsuario(\''+u.id+'\',\''+u.nombre+'\',\''+u.rol+'\','+(u.certificado_ambas?'true':'false')+')">Editar</button><button class="btn-sm btn-completar" onclick="renderCambiarPin(\''+u.id+'\',\''+u.nombre+'\')">Cambiar PIN</button><button class="btn-sm btn-iniciar" onclick="renderCredencialId(\''+u.id+'\')">🪪 Credencial</button>'+(u.activo?'<button class="btn-sm btn-cancelar" onclick="bajaUsuario(\''+u.id+'\')">Dar de baja</button>':'<button class="btn-sm btn-iniciar" onclick="altaUsuario(\''+u.id+'\')">Reactivar</button>')+'</div></div>';
+      var ex=ex54Get(u.id), cargo=ex.cargo||(ROLES[u.rol]||u.rol);
+      return '<div class="ex54-row"><div><div class="ex54-name">'+u.nombre+'</div><div class="ex54-role">'+cargo+(u.fecha_ingreso?' · Ingreso '+u.fecha_ingreso:'')+'</div></div><div><div class="ex54-status" style="color:'+(u.activo?'var(--verde-mid)':'var(--gris-3)')+';">'+(u.activo?'Activo':'Inactivo')+'</div><div class="ex54-role">Sueldo base: $'+(parseFloat(u.sueldo_base)||0).toFixed(2)+'</div></div><div class="orden-actions"><button class="btn-sm btn-iniciar" onclick="renderEditarUsuario(\''+u.id+'\',\''+ex54Esc(u.nombre).replace(/'/g,"\\'")+'\',\''+u.rol+'\','+(u.certificado_ambas?'true':'false')+')">Expediente</button><button class="btn-sm btn-completar" onclick="renderCambiarPin(\''+u.id+'\',\''+ex54Esc(u.nombre).replace(/'/g,"\\'")+'\')">PIN</button><button class="btn-sm btn-iniciar" onclick="renderCredencialId(\''+u.id+'\')">Credencial</button>'+(u.activo?'<button class="btn-sm btn-cancelar" onclick="bajaUsuario(\''+u.id+'\')">Dar de baja</button>':'<button class="btn-sm btn-iniciar" onclick="altaUsuario(\''+u.id+'\')">Reactivar</button>')+'</div></div>';
     }).join('');
-    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderEmpleadosMenu()">← Volver a Empleados</button>';
+    body.innerHTML=html+'</div><button class="btn-back" style="margin-top:1rem;" onclick="renderEmpleadosMenu()">← Empleados</button>';
   });
 }
 
@@ -11402,46 +11448,112 @@ function renderNuevoDocumentoPersonal(){
   });
 }
 
+
+function ex54FormHtml(mode,id,base,extra){
+  base=base||{}; extra=extra||{};
+  var isEdit=mode==='edit';
+  var cargo=extra.cargo||base.cargo||'Labores';
+  var cargos=['Labores','Cosecha','Ingeniero','Eventual','Galerista','Auxiliar Galera','Transportista','Encargado'];
+  return '<div class="ex54-head"><div><div class="ex54-eyebrow">Administración · Empleados · Expedientes</div><div class="ex54-title">'+(isEdit?'Editar expediente':'Nuevo expediente')+'</div><div class="ex54-sub">Una sola ficha alimenta asistencia, nómina y operación del colaborador.</div></div></div>'+
+  '<div class="ex54-form">'+
+    '<div class="ex54-sec"><h3>Datos personales</h3><div class="ex54-grid">'+
+      '<div class="ex54-field span2"><label>Nombre completo</label><input id="ex54-nombre" value="'+ex54Esc(base.nombre||'')+'" placeholder="Nombre completo"></div>'+
+      '<div class="ex54-field"><label>Fecha de nacimiento</label><input type="date" id="ex54-nacimiento" value="'+ex54Esc(base.fecha_nacimiento||'')+'"></div>'+
+      '<div class="ex54-field"><label>Teléfono</label><input id="ex54-telefono" value="'+ex54Esc(extra.telefono||'')+'" placeholder="Teléfono"></div>'+
+      '<div class="ex54-field span2"><label>Domicilio</label><input id="ex54-direccion" value="'+ex54Esc(extra.direccion||'')+'" placeholder="Calle, colonia, municipio"></div>'+
+    '</div></div>'+
+    '<div class="ex54-sec"><h3>Datos laborales y nómina</h3><div class="ex54-grid">'+
+      '<div class="ex54-field"><label>Cargo</label><select id="ex54-cargo">'+cargos.map(function(c){return '<option'+(c===cargo?' selected':'')+'>'+c+'</option>';}).join('')+'</select></div>'+
+      '<div class="ex54-field"><label>Fecha de ingreso</label><input type="date" id="ex54-ingreso" value="'+ex54Esc(base.fecha_ingreso||fechaHoyLocal())+'"></div>'+
+      '<div class="ex54-field"><label>Estatus</label><input value="'+(base.activo===false?'Inactivo':'Activo')+'" disabled></div>'+
+      '<div class="ex54-field"><label>Sueldo base diario ($)</label><input type="number" min="0" step="1" id="ex54-sueldo" value="'+ex54Esc(base.sueldo_base==null?'':base.sueldo_base)+'" placeholder="Ej. 380"></div>'+
+      '<div class="ex54-field"><label>Hora extra ($/h)</label><input type="number" min="0" step="1" id="ex54-extra" value="'+ex54Esc(extra.tarifa_hora_extra==null?'':extra.tarifa_hora_extra)+'" placeholder="Ej. 70"></div>'+
+      '<div class="ex54-field"><label>PIN (4 dígitos)'+(isEdit?' · opcional':'')+'</label><input type="number" min="0" max="9999" id="ex54-pin" placeholder="'+(isEdit?'Dejar vacío para conservar':'1234')+'"></div>'+
+    '</div></div>'+
+    '<div class="ex54-sec"><h3>Contacto de emergencia</h3><div class="ex54-grid">'+
+      '<div class="ex54-field"><label>Nombre</label><input id="ex54-em-nombre" value="'+ex54Esc(extra.emergencia_nombre||'')+'"></div>'+
+      '<div class="ex54-field"><label>Parentesco</label><input id="ex54-em-parentesco" value="'+ex54Esc(extra.emergencia_parentesco||'')+'"></div>'+
+      '<div class="ex54-field"><label>Teléfono</label><input id="ex54-em-telefono" value="'+ex54Esc(extra.emergencia_telefono||'')+'"></div>'+
+    '</div></div>'+
+    '<div class="ex54-sec"><h3>Información básica para emergencia</h3><div class="ex54-grid">'+
+      '<div class="ex54-field"><label>Tipo de sangre</label><input id="ex54-sangre" value="'+ex54Esc(extra.tipo_sangre||'')+'" placeholder="Ej. O+"></div>'+
+      '<div class="ex54-field span2"><label>Alergias / dato relevante</label><input id="ex54-salud" value="'+ex54Esc(extra.salud_emergencia||'')+'" placeholder="Solo información útil en una emergencia"></div>'+
+    '</div></div>'+
+    '<div class="ex54-sec"><h3>Documentos y contrato</h3><div class="ex54-grid two">'+
+      '<div><strong style="font-size:.75rem;">Documentos</strong><div class="ex54-docnote">'+(isEdit?'Consulta o agrega identificación, CURP, RFC, NSS y otros documentos desde el módulo Documentos.':'Se habilitan después de guardar el expediente.')+'</div>'+(isEdit?'<button type="button" class="btn-sm btn-iniciar" style="margin-top:7px" onclick="renderDocumentosPersonales()">Abrir Documentos</button>':'')+'</div>'+
+      '<div><strong style="font-size:.75rem;">Contrato</strong><div class="ex54-docnote">'+(isEdit?'Consulta o agrega el contrato vigente desde el módulo Contratos.':'Se habilita después de guardar el expediente.')+'</div>'+(isEdit?'<button type="button" class="btn-sm btn-iniciar" style="margin-top:7px" onclick="renderContratos()">Abrir Contratos</button>':'')+'</div>'+
+    '</div></div>'+
+    '<div class="ex54-actions"><button class="btn-back" onclick="renderAltasBajas()">Cancelar</button><button class="btn-next" id="ex54-guardar">'+(isEdit?'Guardar cambios':'Crear expediente')+'</button></div>'+
+  '</div>';
+}
+function ex54Collect(){
+  return {
+    telefono:document.getElementById('ex54-telefono').value.trim(),
+    direccion:document.getElementById('ex54-direccion').value.trim(),
+    cargo:document.getElementById('ex54-cargo').value,
+    tarifa_hora_extra:parseFloat(document.getElementById('ex54-extra').value)||0,
+    emergencia_nombre:document.getElementById('ex54-em-nombre').value.trim(),
+    emergencia_parentesco:document.getElementById('ex54-em-parentesco').value.trim(),
+    emergencia_telefono:document.getElementById('ex54-em-telefono').value.trim(),
+    tipo_sangre:document.getElementById('ex54-sangre').value.trim(),
+    salud_emergencia:document.getElementById('ex54-salud').value.trim()
+  };
+}
 function renderNuevoUsuario(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="form-card"><h3>Nuevo usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="nu-n" placeholder="Nombre completo"/></div><div class="form-group"><label>Rol</label><select id="nu-r"><option value="operario">Labores</option><option value="labores_eventual">Labores Eventual</option><option value="encargado">Encargado</option><option value="ingeniero">Ingeniero</option><option value="cosechador">Cosechador</option><option value="galerista">Galerista</option><option value="dueño">Dueño</option><option value="inversionista">Inversionista</option><option value="admin">Admin</option></select></div><div class="form-group"><label>Fecha de ingreso</label><input type="date" id="nu-fi" value="'+fechaHoyLocal()+'"></div><div class="form-group"><label>PIN (4 dígitos)</label><input type="number" id="nu-p" placeholder="1234" min="0" max="9999"/></div><div class="nav-row"><button class="btn-back" onclick="renderAltasBajas()">← Cancelar</button><button class="btn-next" onclick="guardarNuevoUsuario()">Guardar</button></div></div>';
+  body.innerHTML=ex54FormHtml('new',null,{fecha_ingreso:fechaHoyLocal(),activo:true},{});
+  document.getElementById('ex54-guardar').addEventListener('click',guardarNuevoUsuario);
 }
 
 function guardarNuevoUsuario(){
-  var nombre=document.getElementById('nu-n').value.trim();
-  var rol=document.getElementById('nu-r').value;
-  var fechaIngreso=document.getElementById('nu-fi').value||null;
-  var pin=String(document.getElementById('nu-p').value).padStart(4,'0');
-  if(!nombre||pin.length!==4){alert('Completa todos los campos.');return;}
-  from('usuarios').insert({nombre:nombre,rol:rol,fecha_ingreso:fechaIngreso,activo:true}).then(function(data){
+  var nombre=document.getElementById('ex54-nombre').value.trim();
+  var fechaIngreso=document.getElementById('ex54-ingreso').value||null;
+  var fechaNacimiento=document.getElementById('ex54-nacimiento').value||null;
+  var sueldoBase=parseFloat(document.getElementById('ex54-sueldo').value)||null;
+  var pin=String(document.getElementById('ex54-pin').value||'').padStart(4,'0');
+  var extra=ex54Collect(), rol=ex54CargoRol(extra.cargo);
+  if(!nombre||pin.length!==4){alert('Captura nombre y PIN de 4 dígitos.');return;}
+  var btn=document.getElementById('ex54-guardar');btn.disabled=true;btn.textContent='Guardando...';
+  from('usuarios').insert({nombre:nombre,rol:rol,fecha_ingreso:fechaIngreso,fecha_nacimiento:fechaNacimiento,sueldo_base:sueldoBase,activo:true}).then(function(data){
     var uid=Array.isArray(data)?data[0].id:data.id;
-    api('/rest/v1/rpc/set_pin',{method:'POST',body:{p_usuario_id:uid,p_pin:pin}}).then(function(){
-      cargarCatalogos().then(function(){renderAltasBajas();});
-    });
-  }).catch(function(e){alert('Error: '+e.message);});
+    ex54Put(uid,extra);
+    return api('/rest/v1/rpc/set_pin',{method:'POST',body:{p_usuario_id:uid,p_pin:pin}});
+  }).then(function(){
+    return cargarCatalogos();
+  }).then(function(){showToast('✅ Expediente creado');renderAltasBajas();})
+    .catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Crear expediente';});
 }
 
 function renderEditarUsuario(id,nombre,rol,certAmbas){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="loading">Cargando...</div>';
-  from('usuarios').select('avatar_url,sueldo_base,fecha_ingreso,fecha_nacimiento').eq('id',id).get().then(function(rows){
-    var avatarUrl=(rows&&rows[0]&&rows[0].avatar_url)||'';
-    var sueldoBase=(rows&&rows[0]&&rows[0].sueldo_base)||'';
-    var fechaIngreso=(rows&&rows[0]&&rows[0].fecha_ingreso)||'';
-    var fechaNacimiento=(rows&&rows[0]&&rows[0].fecha_nacimiento)||'';
-    body.innerHTML='<div class="form-card"><h3>Editar usuario</h3><div class="form-group"><label>Nombre</label><input type="text" id="eu-n" value="'+nombre+'"/></div><div class="form-group"><label>Rol</label><select id="eu-r"><option value="operario"'+(rol==='operario'?' selected':'')+'>Labores</option><option value="labores_eventual"'+(rol==='labores_eventual'?' selected':'')+'>Labores Eventual</option><option value="encargado"'+(rol==='encargado'?' selected':'')+'>Encargado</option><option value="ingeniero"'+(rol==='ingeniero'?' selected':'')+'>Ingeniero</option><option value="cosechador"'+(rol==='cosechador'?' selected':'')+'>Cosechador</option><option value="galerista"'+(rol==='galerista'?' selected':'')+'>Galerista</option><option value="dueño"'+(rol==='dueño'?' selected':'')+'>Dueño</option><option value="inversionista"'+(rol==='inversionista'?' selected':'')+'>Inversionista</option><option value="admin"'+(rol==='admin'?' selected':'')+'>Admin</option></select></div><div class="form-group"><label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:.85rem;"><input type="checkbox" id="eu-cert" '+(certAmbas?'checked':'')+' style="width:18px;height:18px;"> Certificado para Labores y Cosecha (ambas)</label></div><div class="form-group"><label>Fecha de ingreso</label><input type="date" id="eu-fi" value="'+fechaIngreso+'"></div><div class="form-group"><label>Fecha de nacimiento</label><input type="date" id="eu-fn" value="'+fechaNacimiento+'"></div><div class="form-group"><label>Sueldo base diario ($)</label><input type="number" id="eu-sueldo" min="0" step="1" value="'+sueldoBase+'" placeholder="Ej. 350"></div><div class="form-group"><label>URL de su Mootsilito personalizado (opcional)</label><input type="text" id="eu-avatar" value="'+avatarUrl.replace(/"/g,'&quot;')+'" placeholder="Ej. https://tusitio.pages.dev/avatares/lalo.png"><p class="hint">Sube la imagen a tu repo (junto a index.html) y pega aquí el link completo.</p></div><div class="nav-row"><button class="btn-back" onclick="renderAltasBajas()">← Cancelar</button><button class="btn-next" onclick="guardarEditarUsuario(\''+id+'\')">Guardar</button></div></div>';
+  body.innerHTML='<div class="loading">Cargando expediente...</div>';
+  from('usuarios').select('nombre,rol,activo,sueldo_base,fecha_ingreso,fecha_nacimiento').eq('id',id).get().then(function(rows){
+    var base=(rows&&rows[0])||{nombre:nombre,rol:rol,activo:true};
+    var extra=ex54Get(id);
+    body.innerHTML=ex54FormHtml('edit',id,base,extra);
+    document.getElementById('ex54-guardar').addEventListener('click',function(){guardarEditarUsuario(id);});
   });
 }
 
 function guardarEditarUsuario(id){
-  var nn=document.getElementById('eu-n').value.trim(), nr=document.getElementById('eu-r').value;
-  var certAmbas=document.getElementById('eu-cert').checked;
-  var avatarUrl=document.getElementById('eu-avatar').value.trim()||null;
-  var sueldoBase=parseFloat(document.getElementById('eu-sueldo').value)||null;
-  var fechaIngreso=document.getElementById('eu-fi').value||null;
-  var fechaNacimiento=document.getElementById('eu-fn').value||null;
-  if(!nn){alert('El nombre es obligatorio.');return;}
-  from('usuarios').eq('id',id).update({nombre:nn,rol:nr,certificado_ambas:certAmbas,avatar_url:avatarUrl,sueldo_base:sueldoBase,fecha_ingreso:fechaIngreso,fecha_nacimiento:fechaNacimiento}).then(function(){cargarCatalogos().then(function(){renderAltasBajas();});});
+  var nombre=document.getElementById('ex54-nombre').value.trim();
+  var fechaIngreso=document.getElementById('ex54-ingreso').value||null;
+  var fechaNacimiento=document.getElementById('ex54-nacimiento').value||null;
+  var sueldoBase=parseFloat(document.getElementById('ex54-sueldo').value)||null;
+  var pinRaw=String(document.getElementById('ex54-pin').value||'');
+  var extra=ex54Collect(), rol=ex54CargoRol(extra.cargo);
+  if(!nombre){alert('El nombre es obligatorio.');return;}
+  var btn=document.getElementById('ex54-guardar');btn.disabled=true;btn.textContent='Guardando...';
+  from('usuarios').eq('id',id).update({nombre:nombre,rol:rol,fecha_ingreso:fechaIngreso,fecha_nacimiento:fechaNacimiento,sueldo_base:sueldoBase}).then(function(){
+    ex54Put(id,extra);
+    if(pinRaw){
+      var pin=pinRaw.padStart(4,'0');
+      if(pin.length!==4)throw new Error('El PIN debe tener 4 dígitos.');
+      return api('/rest/v1/rpc/set_pin',{method:'POST',body:{p_usuario_id:id,p_pin:pin}});
+    }
+  }).then(function(){return cargarCatalogos();})
+    .then(function(){showToast('✅ Expediente actualizado');renderAltasBajas();})
+    .catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Guardar cambios';});
 }
 
 function renderCambiarPin(id,nombre){
