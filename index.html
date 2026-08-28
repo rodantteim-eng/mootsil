@@ -857,6 +857,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .em60-actions button:hover{background:#eef6f1}
 .as60-he0{display:block;font-size:.54rem;color:#a4aaa6;font-weight:700;margin-top:2px}
 
+
+/* C061 */
+.as61-editable{cursor:pointer;transition:background .15s ease}.as61-editable:hover{background:#f2f7f4}
+.as61-edit-hint{font-size:.6rem;color:var(--gris-5);margin:6px 0 8px}
+.as61-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.42);display:flex;align-items:center;justify-content:center;z-index:10000;padding:16px}
+.as61-modal{background:#fff;border-radius:14px;width:min(620px,95vw);box-shadow:0 22px 70px rgba(0,0,0,.25);overflow:hidden}
+.as61-modal-h{padding:14px 16px;border-bottom:1px solid var(--gris-2);display:flex;justify-content:space-between;gap:10px;align-items:center}
+.as61-modal-b{padding:14px 16px}.as61-modal-f{padding:12px 16px;border-top:1px solid var(--gris-2);display:flex;justify-content:flex-end;gap:8px}
+.as61-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.as61-field{display:flex;flex-direction:column;gap:4px}.as61-field.full{grid-column:1/-1}
+.as61-field label{font-size:.62rem;font-weight:800;color:#67736c;text-transform:uppercase}
+.as61-field input,.as61-field select,.as61-field textarea{border:1px solid var(--gris-2);border-radius:8px;padding:8px 9px;font-size:.74rem;background:#fafbf9}
+.as61-field textarea{min-height:72px;resize:vertical}.sol61-section{margin-top:10px}.sol61-section-title{font-size:.72rem;font-weight:900;color:var(--verde);margin:7px 0}.sol61-section-title.pending{color:#a86200}.sol61-meta{font-size:.6rem;color:var(--gris-5);margin-top:3px}.sol61-resolved{opacity:.94}
+@media(max-width:700px){.as61-grid{grid-template-columns:1fr}.as61-field.full{grid-column:auto}}
 </style>
 </head>
 <body>
@@ -6812,6 +6825,33 @@ function generarPdfOrdenCompra(productos){
   });
 }
 
+
+function as61CurrentAdmin(){
+  try{
+    if(window.usuarioActual&&usuarioActual.nombre)return usuarioActual.nombre;
+    var txt=document.body.innerText||'',m=txt.match(/([A-Za-zÁÉÍÓÚÑáéíóúñ ]+)\s*\[Admin\]/);
+    return m?m[1].trim():'Administración';
+  }catch(e){return 'Administración';}
+}
+function as61Close(){var x=document.getElementById('as61-modal-bg');if(x)x.remove();}
+function as61OpenEdit(u,fecha,reg,perm,he){
+  as61Close();reg=reg||{};perm=perm||{};he=parseFloat(he||0)||0;
+  var estado=perm&&perm.id?((String(perm.tipo||'').toLowerCase().indexOf('vac')>=0)?'vacaciones':'permiso'):(reg.entrada?(reg.retardo?'retardo':'presente'):'falta');
+  var bg=document.createElement('div');bg.className='as61-modal-bg';bg.id='as61-modal-bg';
+  bg.innerHTML='<div class="as61-modal"><div class="as61-modal-h"><div><strong>Editar asistencia</strong><div style="font-size:.65rem;color:var(--gris-5)">'+u.nombre+' · '+fecha+'</div></div><button class="em59-back" onclick="as61Close()">✕</button></div><div class="as61-modal-b"><div class="as61-grid"><div class="as61-field"><label>Estado</label><select id="as61-estado"><option value="presente">Presente</option><option value="falta">Falta</option><option value="retardo">Retardo</option><option value="permiso">Permiso</option><option value="vacaciones">Vacaciones</option></select></div><div class="as61-field"><label>Horas extra del día</label><input id="as61-he" type="number" min="0" step="0.5" value="'+he.toFixed(1)+'"></div><div class="as61-field"><label>Hora de entrada</label><input id="as61-entrada" type="time" value="'+(reg.hora_entrada||'')+'"></div><div class="as61-field"><label>Hora de salida</label><input id="as61-salida" type="time" value="'+(reg.hora_salida||'')+'"></div><div class="as61-field full"><label>Observación administrativa</label><textarea id="as61-nota" placeholder="Motivo del ajuste o comentario"></textarea></div></div></div><div class="as61-modal-f"><button class="btn-sm" onclick="as61Close()">Cancelar</button><button class="btn-sm btn-completar" id="as61-guardar">Guardar cambio</button></div></div>';
+  document.body.appendChild(bg);document.getElementById('as61-estado').value=estado;
+  document.getElementById('as61-guardar').onclick=function(){
+    var nuevoEstado=document.getElementById('as61-estado').value,entrada=document.getElementById('as61-entrada').value||null,salida=document.getElementById('as61-salida').value||null,h=parseFloat(document.getElementById('as61-he').value||0)||0,nota=document.getElementById('as61-nota').value.trim(),responsable=as61CurrentAdmin(),ahora=new Date().toISOString(),ops=[];
+    if(reg.id){
+      ops.push(from('asistencia_registros').eq('id',reg.id).update({retardo:nuevoEstado==='retardo',hora_entrada:entrada,hora_salida:salida,observacion_admin:nota||null,modificado_por:responsable,modificado_en:ahora}).catch(function(){return null;}));
+    }
+    if(perm&&perm.id&&nuevoEstado!=='permiso'&&nuevoEstado!=='vacaciones')ops.push(from('permisos').eq('id',perm.id).update({estado:'cancelado'}).catch(function(){return null;}));
+    if((nuevoEstado==='permiso'||nuevoEstado==='vacaciones')&&!(perm&&perm.id))ops.push(from('permisos').insert({usuario_id:u.id,tipo:nuevoEstado==='vacaciones'?'vacaciones':'personal',fecha_inicio:fecha,fecha_fin:fecha,estado:'aprobado',con_goce:false,motivo:nota||'Ajuste administrativo'}).catch(function(){return null;}));
+    if(h>0)ops.push(from('horas_extra_asignadas').upsert({operario_id:u.id,fecha:fecha,horas_max:h,estado:'aprobada',asignado_por:responsable},{onConflict:'operario_id,fecha'}).catch(function(){return null;}));
+    else ops.push(from('horas_extra_asignadas').eq('operario_id',u.id).eq('fecha',fecha).delete().catch(function(){return null;}));
+    Promise.all(ops).then(function(){as61Close();renderControlAsistencias(fecha);});
+  };
+}
 function renderControlAsistencias(fecha){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="loading">Cargando asistencia semanal...</div>';
@@ -6831,9 +6871,9 @@ function renderControlAsistencias(fecha){
     var regs=rr[1]||[], permisos=rr[2]||[], extras=rr[3]||[];
     var regMap={},permMap={},extraMap={},extraDayMap={};
     regs.forEach(function(r){
-      var k=r.usuario_id+'|'+r.fecha;if(!regMap[k])regMap[k]={entrada:false,salida:false,retardo:false};
-      if(r.tipo==='entrada'){regMap[k].entrada=true;if(r.retardo)regMap[k].retardo=true;}
-      if(r.tipo==='salida')regMap[k].salida=true;
+      var k=r.usuario_id+'|'+r.fecha;if(!regMap[k])regMap[k]={entrada:false,salida:false,retardo:false,id:r.id||null,hora_entrada:null,hora_salida:null};
+      if(r.tipo==='entrada'){regMap[k].entrada=true;regMap[k].id=regMap[k].id||r.id||null;regMap[k].hora_entrada=r.hora_entrada||r.hora||null;if(r.retardo)regMap[k].retardo=true;}
+      if(r.tipo==='salida'){regMap[k].salida=true;regMap[k].hora_salida=r.hora_salida||r.hora||null;}
     });
     permisos.forEach(function(p){
       dias.forEach(function(f){if(f>=p.fecha_inicio&&f<=p.fecha_fin)permMap[p.usuario_id+'|'+f]=p;});
@@ -6856,11 +6896,11 @@ function renderControlAsistencias(fecha){
       else base='<span class="as58-cell as58-f" title="Falta">F</span>';
       if(he>0)base+='<span class="as59-he">H.E. '+he.toFixed(1)+' h</span>';
       else base+='<span class="as60-he0">H.E. 0.0 h</span>';
-      return base;
+      return '<div class="as61-editable" data-uid="'+u.id+'" data-fecha="'+f+'" title="Editar asistencia">'+base+'</div>';
     }
     var html='<div class="as58-head"><div><div class="as58-title">📋 Asistencia · Semana '+num+'</div><div class="as58-sub">'+inicio+' — '+fin+' · Sólo colaboradores activos</div></div><button class="em59-back" onclick="renderAdministracionMenu()">← Empleados</button></div>';
     html+='<div class="as58-nav"><button id="as58-prev">← Semana anterior</button><button id="as58-now">Semana actual</button><input type="date" id="as58-date" value="'+(fecha||hoy)+'" max="'+hoy+'"><button id="as58-next" '+(fin>=hoy?'disabled':'')+'>Semana siguiente →</button><span class="as58-week">Semana '+num+'</span></div>';
-    html+='<div class="as58-wrap"><table class="as58-table"><thead><tr><th>Colaborador</th><th>Tipo</th>'+dn.map(function(x,i){return '<th>'+x+'<br><span style="font-weight:500">'+dias[i].slice(8,10)+'</span></th>';}).join('')+'<th>H. extra</th></tr></thead><tbody>';
+    html+='<div class="as61-edit-hint">Haz clic en cualquier día para corregir asistencia u horas extra.</div><div class="as58-wrap"><table class="as58-table"><thead><tr><th>Colaborador</th><th>Tipo</th>'+dn.map(function(x,i){return '<th>'+x+'<br><span style="font-weight:500">'+dias[i].slice(8,10)+'</span></th>';}).join('')+'<th>H. extra</th></tr></thead><tbody>';
     html+=users.map(function(u){
       var ex=ex54Get(u.id),tipo=ex.tipo_colaborador||(u.rol==='labores_eventual'?'Eventual':'Base');
       return '<tr><td><div class="as58-name">'+u.nombre+'</div><div style="font-size:.58rem;color:var(--gris-5)">'+(ex.cargo||ROLES[u.rol]||u.rol)+'</div></td><td><span class="em58-badge '+(tipo==='Eventual'?'em58-eventual':'em58-base')+'">'+tipo.toUpperCase()+'</span></td>'+dias.map(function(f){return '<td>'+celda(u,f)+'</td>';}).join('')+'<td><strong>'+(extraMap[u.id]||0).toFixed(1)+' h</strong></td></tr>';
@@ -6870,7 +6910,7 @@ function renderControlAsistencias(fecha){
     document.getElementById('as58-date').addEventListener('change',function(){renderControlAsistencias(this.value);});
     document.getElementById('as58-now').addEventListener('click',function(){renderControlAsistencias(hoy);});
     document.getElementById('as58-prev').addEventListener('click',function(){var d=new Date(lunes);d.setDate(d.getDate()-7);renderControlAsistencias(iso(d));});
-    var nx=document.getElementById('as58-next');if(!nx.disabled)nx.addEventListener('click',function(){var d=new Date(lunes);d.setDate(d.getDate()+7);renderControlAsistencias(iso(d));});
+    var nx=document.getElementById('as58-next');if(!nx.disabled)nx.addEventListener('click',function(){var d=new Date(lunes);d.setDate(d.getDate()+7);renderControlAsistencias(iso(d));});body.querySelectorAll('.as61-editable').forEach(function(el){el.onclick=function(){var uid=this.dataset.uid,f=this.dataset.fecha,u=users.find(function(x){return String(x.id)===String(uid);});if(u)as61OpenEdit(u,f,regMap[uid+'|'+f]||{},permMap[uid+'|'+f]||{},extraDayMap[uid+'|'+f]||0);};});
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
@@ -7863,9 +7903,9 @@ function sol59RejectSolicitud(id,origen){
     var motivo=document.getElementById('sol59-rechazo').value.trim();
     if(!motivo){alert('Captura el motivo del rechazo.');return;}
     if(origen==='perm'){
-      from('permisos').eq('id',id).update({estado:'rechazado',motivo_rechazo:motivo}).then(function(){sol59Close();renderSolicitudesOperarioRevision();});
+      from('permisos').eq('id',id).update({estado:'rechazado',motivo_rechazo:motivo,resuelto_por:as61CurrentAdmin(),resuelto_en:new Date().toISOString()}).then(function(){sol59Close();renderSolicitudesOperarioRevision();});
     }else{
-      from('solicitudes_operario').eq('id',id).update({estado:'rechazada',respuesta:motivo}).then(function(){sol59Close();renderSolicitudesOperarioRevision();});
+      from('solicitudes_operario').eq('id',id).update({estado:'rechazada',respuesta:motivo,resuelto_por:as61CurrentAdmin(),resuelto_en:new Date().toISOString()}).then(function(){sol59Close();renderSolicitudesOperarioRevision();});
     }
   };
 }
@@ -7902,12 +7942,12 @@ function renderSolicitudesOperarioRevision(filtro){
   ]).then(function(rr){
     var sols=rr[0]||[], pers=rr[1]||[], items=[];
     sols.forEach(function(s){
-      items.push({origen:'sol',id:s.id,operario_id:s.operario_id,nombre:s.operario?s.operario.nombre:'',tipo:s.tipo,grupo:(s.tipo==='prestamo'?'prestamos':'otras'),detalle:(s.monto_solicitado?'$'+parseFloat(s.monto_solicitado).toFixed(2)+' · ':'')+(s.mensaje||''),estado:s.estado||'pendiente',fecha:s.creado_en||'',raw:s});
+      items.push({origen:'sol',id:s.id,operario_id:s.operario_id,nombre:s.operario?s.operario.nombre:'',tipo:s.tipo,grupo:(s.tipo==='prestamo'?'prestamos':'otras'),resuelto_por:s.resuelto_por||s.autorizado_por||s.aprobado_por||'',resuelto_en:s.resuelto_en||s.aprobado_en||'',detalle:(s.monto_solicitado?'$'+parseFloat(s.monto_solicitado).toFixed(2)+' · ':'')+(s.mensaje||''),estado:s.estado||'pendiente',fecha:s.creado_en||'',raw:s});
     });
     pers.forEach(function(p){
       var pt=(p.tipo||'personal').toLowerCase(),lbl=pt.indexOf('med')>=0?'permiso_medico':pt.indexOf('vac')>=0?'vacaciones':pt;
       var grupo=lbl==='permiso_medico'?'medicas':lbl==='vacaciones'?'vacaciones':(lbl==='llegada_tarde'||lbl==='salida_temprana'?'movimientos':'permisos');
-      items.push({origen:'perm',id:p.id,operario_id:p.usuario_id,nombre:p.operario?p.operario.nombre:'',tipo:lbl,grupo:grupo,detalle:(p.fecha_inicio||'')+(p.fecha_fin&&p.fecha_fin!==p.fecha_inicio?' a '+p.fecha_fin:'')+(p.motivo?' · '+p.motivo:''),estado:p.estado||'pendiente',fecha:p.creado_en||'',raw:p});
+      items.push({origen:'perm',id:p.id,operario_id:p.usuario_id,nombre:p.operario?p.operario.nombre:'',tipo:lbl,grupo:grupo,resuelto_por:p.resuelto_por||p.autorizado_por||p.aprobado_por||p.modificado_por||'',resuelto_en:p.resuelto_en||p.aprobado_en||p.modificado_en||'',detalle:(p.fecha_inicio||'')+(p.fecha_fin&&p.fecha_fin!==p.fecha_inicio?' a '+p.fecha_fin:'')+(p.motivo?' · '+p.motivo:''),estado:p.estado||'pendiente',fecha:p.creado_en||'',raw:p});
     });
     var counts={todas:items.length,prestamos:0,permisos:0,medicas:0,vacaciones:0,movimientos:0};
     items.forEach(function(x){if(counts[x.grupo]!=null)counts[x.grupo]++;});
@@ -7926,11 +7966,14 @@ function renderSolicitudesOperarioRevision(filtro){
           actions='<button class="btn-sm btn-completar" data-sa="'+x.id+'">Atender</button><button class="btn-sm btn-cancelar" data-rj="'+x.id+'" data-origen="sol">Rechazar</button>';
         }
       }
-      return '<div class="sol58-row" style="border-left-color:'+color+'"><div class="sol58-main"><div><div class="sol58-type">'+(tipoLbl[x.tipo]||x.tipo)+'</div><div class="sol58-person">'+x.nombre+'</div></div><div class="sol58-detail">'+(x.fecha?new Date(x.fecha).toLocaleDateString('es-MX'):'')+'</div><div class="sol58-detail">'+x.detalle+'</div><div class="sol58-state" style="color:'+color+'">'+st+'</div><div class="sol58-actions">'+actions+'</div></div></div>';
+      var meta=!isPend?('<div class="sol61-meta">'+(st==='Rechazada'?'Rechazó: ':'Autorizó: ')+(x.resuelto_por||'Administración')+(x.resuelto_en?' · '+new Date(x.resuelto_en).toLocaleString('es-MX'):'')+'</div>'):'';
+      return '<div class="sol58-row '+(!isPend?'sol61-resolved':'')+'" style="border-left-color:'+color+'"><div class="sol58-main"><div><div class="sol58-type">'+(tipoLbl[x.tipo]||x.tipo)+'</div><div class="sol58-person">'+x.nombre+'</div>'+meta+'</div><div class="sol58-detail">'+(x.fecha?new Date(x.fecha).toLocaleDateString('es-MX'):'')+'</div><div class="sol58-detail">'+x.detalle+'</div><div class="sol58-state" style="color:'+color+'">'+st+'</div><div class="sol58-actions">'+actions+'</div></div></div>';
     }
     var html='<div class="as58-head"><div><div class="as58-title">📨 Solicitudes</div><div class="as58-sub">Bandeja única de solicitudes del personal.</div></div><button class="em59-back" onclick="renderAdministracionMenu()">← Empleados</button></div>';
     html+='<div class="sol59-filters"><button class="sol59-filter '+(filtro==='todas'?'active':'')+'" data-filter="todas">Todas '+counts.todas+'</button><button class="sol59-filter '+(filtro==='prestamos'?'active':'')+'" data-filter="prestamos">Préstamos '+counts.prestamos+'</button><button class="sol59-filter '+(filtro==='permisos'?'active':'')+'" data-filter="permisos">Permisos '+counts.permisos+'</button><button class="sol59-filter '+(filtro==='medicas'?'active':'')+'" data-filter="medicas">Médicas '+counts.medicas+'</button><button class="sol59-filter '+(filtro==='vacaciones'?'active':'')+'" data-filter="vacaciones">Vacaciones '+counts.vacaciones+'</button><button class="sol59-filter '+(filtro==='movimientos'?'active':'')+'" data-filter="movimientos">Llegadas/Salidas '+counts.movimientos+'</button></div>';
-    html+='<div class="sol58-list">'+(visibles.length?visibles.map(row).join(''):'<div class="hint">No hay solicitudes en este filtro.</div>')+'</div><button class="em59-back" style="margin-top:1rem" onclick="renderAdministracionMenu()">← Empleados</button>';
+    var pendientes=visibles.filter(function(x){return x.estado==='pendiente';}),resueltas=visibles.filter(function(x){return x.estado!=='pendiente';});
+    html+='<div class="sol61-section"><div class="sol61-section-title pending">POR REVISAR · '+pendientes.length+'</div><div class="sol58-list">'+(pendientes.length?pendientes.map(row).join(''):'<div class="hint">No hay solicitudes por revisar en este filtro.</div>')+'</div></div>';
+    html+='<div class="sol61-section"><div class="sol61-section-title">RESUELTAS · '+resueltas.length+'</div><div class="sol58-list">'+(resueltas.length?resueltas.map(row).join(''):'<div class="hint">No hay solicitudes resueltas en este filtro.</div>')+'</div></div><button class="em59-back" style="margin-top:1rem" onclick="renderAdministracionMenu()">← Empleados</button>';
     body.innerHTML=html;
     body.querySelectorAll('[data-filter]').forEach(function(b){b.onclick=function(){renderSolicitudesOperarioRevision(this.dataset.filter);};});
     body.querySelectorAll('[data-pg]').forEach(function(b){b.onclick=function(){resolverPermiso(this.dataset.pg,'aprobado',true);};});
