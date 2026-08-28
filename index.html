@@ -808,6 +808,28 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 
 .ex56-view{background:#eef5f1!important;color:#17643f!important;border:1px solid #cfe3d7!important}.ex56-banknote{font-size:.62rem;color:var(--gris-5);margin-top:4px}
+
+/* C058 — empleados: Base/Eventual, asistencia semanal, solicitudes unificadas */
+.em58-badge{display:inline-block;padding:2px 7px;border-radius:12px;font-size:.58rem;font-weight:850;margin-left:6px;vertical-align:1px}
+.em58-base{background:#e8f4ed;color:#267048}.em58-eventual{background:#fff2df;color:#9b6500}
+.as58-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}
+.as58-title{font-size:1.28rem;font-weight:850;color:var(--verde)}.as58-sub{font-size:.69rem;color:var(--gris-5)}
+.as58-nav{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:10px}
+.as58-nav button,.as58-nav input{height:34px;border:1px solid var(--gris-2);background:#fff;border-radius:9px;padding:0 9px;font-size:.7rem}
+.as58-week{margin-left:auto;font-size:.72rem;font-weight:750;color:var(--verde)}
+.as58-wrap{overflow-x:auto;background:#fff;border:1px solid var(--gris-2);border-radius:12px}
+.as58-table{width:100%;border-collapse:collapse;min-width:920px}
+.as58-table th{background:#f4f6f4;padding:8px 6px;font-size:.6rem;text-transform:uppercase;color:#667169;border-bottom:1px solid var(--gris-2)}
+.as58-table td{padding:8px 6px;border-bottom:1px solid #edf0ee;font-size:.67rem;text-align:center}
+.as58-table td:first-child,.as58-table td:nth-child(2){text-align:left}
+.as58-name{font-weight:800;font-size:.75rem}.as58-cell{font-weight:850}.as58-p{color:#26834f}.as58-f{color:#cf3d2e}.as58-r{color:#bb7600}.as58-per{color:#2675a8}.as58-v{color:#7b59a6}.as58-na{color:#a4aaa6}
+.as58-legend{display:flex;gap:12px;flex-wrap:wrap;margin:8px 2px;font-size:.63rem;color:var(--gris-5)}
+.sol58-list{display:flex;flex-direction:column;gap:7px}.sol58-row{background:#fff;border:1px solid var(--gris-2);border-left:4px solid var(--tierra);border-radius:11px;padding:9px 11px}
+.sol58-main{display:grid;grid-template-columns:minmax(150px,1.1fr) minmax(120px,.8fr) minmax(220px,1.6fr) minmax(95px,.6fr) auto;gap:9px;align-items:center}
+.sol58-type{font-size:.75rem;font-weight:850}.sol58-person{font-size:.68rem;font-weight:750}.sol58-detail{font-size:.65rem;color:var(--gris-5)}.sol58-state{font-size:.64rem;font-weight:800}
+.sol58-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}.sol58-actions button{font-size:.64rem}
+@media(max-width:850px){.sol58-main{grid-template-columns:1fr 1fr}.sol58-detail,.sol58-actions{grid-column:1/-1}.as58-week{margin-left:0}}
+
 </style>
 </head>
 <body>
@@ -1344,7 +1366,7 @@ function tabEncargado(tab){
   if(tab==='tablero') renderTablero();
   else if(tab==='asignar') renderAsignarEstatus();
   else if(tab==='notif') renderNotifs('enc-body');
-  else if(tab==='permisos') renderPermisosRevision();
+  else if(tab==='permisos') renderSolicitudesOperarioRevision();
   else if(tab==='alarmas') renderAlarmasRevision();
   else if(tab==='admin') renderAdministracionMenu();
   else if(tab==='reporte') renderReporte();
@@ -6765,54 +6787,57 @@ function generarPdfOrdenCompra(productos){
 
 function renderControlAsistencias(fecha){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo">📋 Control de Asistencias</div><div class="loading">Cargando...</div>';
-  var hoy=fechaHoyLocal();
-  var operariosTodos=cats.operarios.concat(cats.cosechadores||[]).concat(cats.eventuales||[]);
-  var idsUnicos={}; operariosTodos=operariosTodos.filter(function(o){if(idsUnicos[o.id])return false;idsUnicos[o.id]=true;return true;});
+  body.innerHTML='<div class="loading">Cargando asistencia semanal...</div>';
+  var hoy=fechaHoyLocal(),ref=new Date((fecha||hoy)+'T12:00:00');
+  var dia=ref.getDay(), dif=(dia===0?-6:1-dia), lunes=new Date(ref); lunes.setDate(ref.getDate()+dif);
+  var domingo=new Date(lunes); domingo.setDate(lunes.getDate()+6);
+  function iso(d){var y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');return y+'-'+m+'-'+dd;}
+  var inicio=iso(lunes),fin=iso(domingo),num=numeroSemanaISO(lunes);
+  var dias=[];for(var i=0;i<7;i++){var d=new Date(lunes);d.setDate(lunes.getDate()+i);dias.push(iso(d));}
   Promise.all([
-    from('asistencia_registros').select('*').eq('fecha',fecha).eq('modalidad','labores').get(),
-    from('permisos').select('*').eq('estado','aprobado').lte('fecha_inicio',fecha).gte('fecha_fin',fecha).get()
+    from('usuarios').select('id,nombre,rol,activo').eq('activo',true).get(),
+    from('asistencia_registros').select('*').gte('fecha',inicio).lte('fecha',fin).eq('modalidad','labores').get(),
+    from('permisos').select('*').eq('estado','aprobado').lte('fecha_inicio',fin).gte('fecha_fin',inicio).get(),
+    from('horas_extra_asignadas').select('operario_id,fecha,horas_max').gte('fecha',inicio).lte('fecha',fin).eq('estado','aprobada').get()
   ]).then(function(rr){
-    var rows=rr[0]||[];
-    var permisosDelDia=rr[1]||[];
-    var permisoPorOperario={}; permisosDelDia.forEach(function(p){permisoPorOperario[p.usuario_id]=p;});
-    var porOperario={};
-    rows.forEach(function(r){
-      if(!porOperario[r.usuario_id]) porOperario[r.usuario_id]={entrada:null,salida:null,retardo:false};
-      if(r.tipo==='entrada'&&(!porOperario[r.usuario_id].entrada||r.registrado_en<porOperario[r.usuario_id].entrada)){porOperario[r.usuario_id].entrada=r.registrado_en;porOperario[r.usuario_id].retardo=!!r.retardo;}
-      if(r.tipo==='salida'&&(!porOperario[r.usuario_id].salida||r.registrado_en>porOperario[r.usuario_id].salida)) porOperario[r.usuario_id].salida=r.registrado_en;
+    var users=(rr[0]||[]).filter(function(u){return ['operario','cosechador','galerista','labores_eventual'].indexOf(u.rol)>=0;});
+    var regs=rr[1]||[], permisos=rr[2]||[], extras=rr[3]||[];
+    var regMap={},permMap={},extraMap={};
+    regs.forEach(function(r){
+      var k=r.usuario_id+'|'+r.fecha;if(!regMap[k])regMap[k]={entrada:false,salida:false,retardo:false};
+      if(r.tipo==='entrada'){regMap[k].entrada=true;if(r.retardo)regMap[k].retardo=true;}
+      if(r.tipo==='salida')regMap[k].salida=true;
     });
-    var esHoy=fecha===hoy, esFuturo=fecha>hoy;
-    var conPresente=0, conFalta=0, conRetardo=0, conPermiso=0;
-    var filas=operariosTodos.map(function(op){
-      var d=porOperario[op.id];
-      var permiso=permisoPorOperario[op.id];
-      var horaE=d&&d.entrada?new Date(d.entrada).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}):null;
-      var horaS=d&&d.salida?new Date(d.salida).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}):null;
-      var estadoTxt, estadoColor;
-      if(d&&d.entrada&&d.salida){estadoTxt='✅ Completo — '+horaE+' a '+horaS;estadoColor='var(--verde-mid)';conPresente++;}
-      else if(d&&d.entrada){estadoTxt='🟡 En el rancho desde '+horaE;estadoColor='var(--tierra)';conPresente++;}
-      else if(permiso&&!esFuturo){estadoTxt='🩺 Permiso '+(permiso.tipo==='medico'?'médico':'personal')+' ('+(permiso.con_goce?'con goce':'sin goce')+')';estadoColor='#2980b9';conPermiso++;}
-      else if(esFuturo){estadoTxt='—';estadoColor='var(--gris-3)';}
-      else if(esHoy){estadoTxt='⏳ Aún no llega';estadoColor='var(--gris-3)';}
-      else {estadoTxt='❌ Falta';estadoColor='var(--rojo)';conFalta++;}
-      if(d&&d.retardo){estadoTxt+=' · 🕐 Retardo';conRetardo++;}
-      return {op:op,estadoTxt:estadoTxt,estadoColor:estadoColor,tieneFalta:(!d||!d.entrada)&&!permiso&&!esFuturo&&!esHoy};
+    permisos.forEach(function(p){
+      dias.forEach(function(f){if(f>=p.fecha_inicio&&f<=p.fecha_fin)permMap[p.usuario_id+'|'+f]=p;});
     });
-    filas.sort(function(a,b){return (b.tieneFalta?1:0)-(a.tieneFalta?1:0);});
-    var fechaLbl=new Date(fecha+'T00:00:00').toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-    var html='<div class="seccion-titulo">📋 Control de Asistencias</div>';
-    html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:.75rem;flex-wrap:wrap;"><button type="button" id="ca-ant" style="border:none;background:var(--gris-1);border-radius:20px;padding:.4rem .9rem;font-size:.8rem;cursor:pointer;">← Día anterior</button><input type="date" id="ca-fecha" value="'+fecha+'" max="'+hoy+'" style="padding:.4rem .6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><button type="button" id="ca-sig" style="border:none;background:var(--gris-1);border-radius:20px;padding:.4rem .9rem;font-size:.8rem;cursor:pointer;" '+(esHoy?'disabled':'')+'>Día siguiente →</button></div>';
-    html+='<p class="hint" style="margin-bottom:.75rem;text-transform:capitalize;">'+fechaLbl+'</p>';
-    if(!esFuturo) html+='<div class="stats-row" style="grid-template-columns:repeat(4,1fr);"><div class="stat-card"><div class="stat-num stat-vd">'+conPresente+'</div><div class="stat-lbl">Presentes</div></div><div class="stat-card"><div class="stat-num" style="color:var(--rojo);">'+conFalta+'</div><div class="stat-lbl">Faltas</div></div><div class="stat-card"><div class="stat-num stat-am">'+conRetardo+'</div><div class="stat-lbl">Retardos</div></div><div class="stat-card"><div class="stat-num" style="color:#2980b9;">'+conPermiso+'</div><div class="stat-lbl">Permisos</div></div></div>';
-    html+=filas.map(function(f){
-      return '<div class="orden-card" style="border-left-color:'+f.estadoColor+';"><strong style="font-size:.9rem;">'+f.op.nombre+'</strong><div class="orden-meta" style="color:'+f.estadoColor+';font-weight:600;">'+f.estadoTxt+'</div></div>';
+    extras.forEach(function(x){extraMap[x.operario_id]=(extraMap[x.operario_id]||0)+(parseFloat(x.horas_max)||0);});
+    var dn=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+    function celda(u,f){
+      var r=regMap[u.id+'|'+f],p=permMap[u.id+'|'+f];
+      if(f>hoy)return '<span class="as58-cell as58-na">—</span>';
+      if(p){
+        var pt=(p.tipo||'').toLowerCase();
+        if(pt.indexOf('vac')>=0)return '<span class="as58-cell as58-v" title="Vacaciones">V</span>';
+        return '<span class="as58-cell as58-per" title="Permiso '+(p.con_goce?'con goce':'sin goce')+'">P</span>';
+      }
+      if(r&&r.entrada)return r.retardo?'<span class="as58-cell as58-r" title="Retardo">R</span>':'<span class="as58-cell as58-p" title="Presente">✓</span>';
+      if(f===hoy)return '<span class="as58-cell as58-na" title="Sin registro todavía">·</span>';
+      return '<span class="as58-cell as58-f" title="Falta">F</span>';
+    }
+    var html='<div class="as58-head"><div><div class="as58-title">📋 Asistencia · Semana '+num+'</div><div class="as58-sub">'+inicio+' — '+fin+' · Sólo colaboradores activos</div></div><button class="btn-back" onclick="renderEmpleadosMenu()">← Empleados</button></div>';
+    html+='<div class="as58-nav"><button id="as58-prev">← Semana anterior</button><button id="as58-now">Semana actual</button><input type="date" id="as58-date" value="'+(fecha||hoy)+'" max="'+hoy+'"><button id="as58-next" '+(fin>=hoy?'disabled':'')+'>Semana siguiente →</button><span class="as58-week">Semana '+num+'</span></div>';
+    html+='<div class="as58-wrap"><table class="as58-table"><thead><tr><th>Colaborador</th><th>Tipo</th>'+dn.map(function(x,i){return '<th>'+x+'<br><span style="font-weight:500">'+dias[i].slice(8,10)+'</span></th>';}).join('')+'<th>H. extra</th></tr></thead><tbody>';
+    html+=users.map(function(u){
+      var ex=ex54Get(u.id),tipo=ex.tipo_colaborador||(u.rol==='labores_eventual'?'Eventual':'Base');
+      return '<tr><td><div class="as58-name">'+u.nombre+'</div><div style="font-size:.58rem;color:var(--gris-5)">'+(ex.cargo||ROLES[u.rol]||u.rol)+'</div></td><td><span class="em58-badge '+(tipo==='Eventual'?'em58-eventual':'em58-base')+'">'+tipo.toUpperCase()+'</span></td>'+dias.map(function(f){return '<td>'+celda(u,f)+'</td>';}).join('')+'<td><strong>'+(extraMap[u.id]||0).toFixed(1)+' h</strong></td></tr>';
     }).join('');
-    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderAdministracionMenu()">← Volver a Administración</button>';
-    document.getElementById('ca-fecha').addEventListener('change',function(){renderControlAsistencias(this.value);});
-    document.getElementById('ca-ant').addEventListener('click',function(){var d=new Date(fecha+'T00:00:00');d.setDate(d.getDate()-1);renderControlAsistencias(d.toISOString().slice(0,10));});
-    var btnSig=document.getElementById('ca-sig');
-    if(!esHoy) btnSig.addEventListener('click',function(){var d=new Date(fecha+'T00:00:00');d.setDate(d.getDate()+1);renderControlAsistencias(d.toISOString().slice(0,10));});
+    html+='</tbody></table></div><div class="as58-legend"><span class="as58-p">✓ Presente</span><span class="as58-f">F Falta</span><span class="as58-r">R Retardo</span><span class="as58-per">P Permiso</span><span class="as58-v">V Vacaciones</span><span class="as58-na">— No aplica/futuro</span></div><button class="btn-back" style="margin-top:.7rem" onclick="renderEmpleadosMenu()">← Empleados</button>';
+    body.innerHTML=html;
+    document.getElementById('as58-date').addEventListener('change',function(){renderControlAsistencias(this.value);});
+    document.getElementById('as58-now').addEventListener('click',function(){renderControlAsistencias(hoy);});
+    document.getElementById('as58-prev').addEventListener('click',function(){var d=new Date(lunes);d.setDate(d.getDate()-7);renderControlAsistencias(iso(d));});
+    var nx=document.getElementById('as58-next');if(!nx.disabled)nx.addEventListener('click',function(){var d=new Date(lunes);d.setDate(d.getDate()+7);renderControlAsistencias(iso(d));});
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
@@ -7715,12 +7740,12 @@ function renderCajaMootsil(periodo,fechaBase){
 function renderEmpleadosMenu(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">👥 EMPLEADOS<button type="button" onclick="renderAdministracionMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Administración</button></div>'+
-  '<div class="labor-grid" style="grid-template-columns:repeat(3,1fr);">'+
-    '<div class="labor-tile" data-emp="altasbajas"><div class="labor-tile-ic">👤</div><div class="labor-tile-lbl">Expedientes</div></div>'+
+  '<div class="labor-grid" style="grid-template-columns:repeat(2,1fr);">'+
+    '<div class="labor-tile" data-emp="expedientes"><div class="labor-tile-ic">👤</div><div class="labor-tile-lbl">Expedientes</div></div>'+
     '<div class="labor-tile" data-emp="asistencia"><div class="labor-tile-ic">📋</div><div class="labor-tile-lbl">Asistencia</div></div>'+
     '<div class="labor-tile" data-emp="solicitudes"><div class="labor-tile-ic">📨</div><div class="labor-tile-lbl">Solicitudes</div></div>'+
   '</div>';
-  body.querySelector('[data-emp="altasbajas"]').addEventListener('click',renderAltasBajas);
+  body.querySelector('[data-emp="expedientes"]').addEventListener('click',renderAltasBajas);
   body.querySelector('[data-emp="asistencia"]').addEventListener('click',function(){renderControlAsistencias(fechaHoyLocal());});
   body.querySelector('[data-emp="solicitudes"]').addEventListener('click',renderSolicitudesOperarioRevision);
 }
@@ -7796,36 +7821,44 @@ function renderNominasMenu(){
 
 function renderSolicitudesOperarioRevision(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo">📨 Solicitudes de colaboradores</div><div class="loading">Cargando...</div>';
-  from('solicitudes_operario').select('*,operario:usuarios!operario_id(nombre),activo_rancho:activos_rancho(nombre)').order('creado_en',{ascending:false}).get().then(function(rows){
-    rows=rows||[];
-    var headerHtml='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📨 Solicitudes de colaboradores<button type="button" onclick="renderEmpleadosMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Empleados</button></div>';
-    if(!rows.length){body.innerHTML=headerHtml+'<div class="empty">Sin solicitudes por ahora.</div>';return;}
-    var pend=rows.filter(function(s){return s.estado==='pendiente';});
-    var resueltos=rows.filter(function(s){return s.estado!=='pendiente';});
-    var estLbl={pendiente:'⏳ Pendiente',atendida:'✅ Atendida',rechazada:'❌ Rechazada'};
-    var estColor={pendiente:'var(--tierra)',atendida:'var(--verde-mid)',rechazada:'var(--rojo)'};
-    var tipoLbl={prestamo:'💰 Préstamo',herramienta:'⚠️ Herramienta',otro:'💬 Otro',mantenimiento:'🔧 Mantenimiento',insumo:'📦 Insumo'};
-    function tarjeta(s){
-      var partesMsg=s.mensaje.split('\n');
-      var textoMsg=partesMsg[0];
-      var fotoMsg=partesMsg[1]&&partesMsg[1].indexOf('http')===0?partesMsg[1]:null;
-      var evidenciaUrl=s.evidencia_url||fotoMsg;
-      var urgenciaTxt=s.urgencia?(' · Urgencia: '+s.urgencia.charAt(0).toUpperCase()+s.urgencia.slice(1)):'';
-      var ac=s.estado==='pendiente'?'<div style="display:flex;gap:8px;margin-top:.6rem;flex-wrap:wrap;">'+(s.tipo==='prestamo'?'<button class="btn-sm btn-completar" data-aprob-prestamo="'+s.id+'" data-op="'+s.operario_id+'" data-monto="'+s.monto_solicitado+'" data-motivo="'+s.mensaje.replace(/"/g,'&quot;')+'">✅ Aprobar y registrar</button>':'<button class="btn-sm btn-completar" data-atender="'+s.id+'">✅ Marcar atendida</button>')+'<button class="btn-sm btn-cancelar" data-rechazar="'+s.id+'">❌ Rechazar</button></div>':'';
-      return '<div class="orden-card" style="border-left-color:'+estColor[s.estado]+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(tipoLbl[s.tipo]||s.tipo)+(s.activo_rancho?' — '+s.activo_rancho.nombre:'')+' · '+(s.operario?s.operario.nombre:'')+'</strong><span style="font-size:.72rem;font-weight:700;color:'+estColor[s.estado]+';">'+estLbl[s.estado]+'</span></div><div class="orden-meta">'+(s.monto_solicitado?'$'+parseFloat(s.monto_solicitado).toFixed(2)+' · ':'')+textoMsg+urgenciaTxt+(evidenciaUrl?'<br/><a href="'+evidenciaUrl+'" target="_blank" style="color:var(--verde-mid);font-weight:700;">📎 Ver evidencia</a>':'')+(s.respuesta?'<br/>📩 '+s.respuesta:'')+'</div>'+ac+'</div>';
-    }
-    var html=headerHtml+'<div class="seccion-titulo" style="margin-top:0;">'+(pend.length?'<span style="font-size:.75rem;color:var(--rojo);font-weight:700;">('+pend.length+' pendientes)</span>':'Solicitudes')+'</div>';
-    if(pend.length) html+=pend.map(tarjeta).join('');
-    if(resueltos.length) html+='<div class="seccion-titulo" style="margin-top:1rem;">Resueltas</div>'+resueltos.map(tarjeta).join('');
-    body.innerHTML=html;
-    body.querySelectorAll('[data-aprob-prestamo]').forEach(function(b){
-      b.addEventListener('click',function(){
-        renderNuevoPrestamo({operarioId:this.dataset.op,monto:this.dataset.monto,concepto:this.dataset.motivo,solicitudId:this.dataset.aprobPrestamo});
-      });
+  body.innerHTML='<div class="loading">Cargando solicitudes...</div>';
+  Promise.all([
+    from('solicitudes_operario').select('*,operario:usuarios!operario_id(nombre)').order('creado_en',{ascending:false}).get(),
+    from('permisos').select('*,operario:usuarios!usuario_id(nombre)').order('creado_en',{ascending:false}).get()
+  ]).then(function(rr){
+    var sols=rr[0]||[], pers=rr[1]||[], items=[];
+    sols.forEach(function(s){items.push({origen:'sol',id:s.id,operario_id:s.operario_id,nombre:s.operario?s.operario.nombre:'',tipo:s.tipo,detalle:(s.monto_solicitado?'$'+parseFloat(s.monto_solicitado).toFixed(2)+' · ':'')+(s.mensaje||''),estado:s.estado||'pendiente',fecha:s.creado_en||'',raw:s});});
+    pers.forEach(function(p){
+      var pt=(p.tipo||'personal').toLowerCase(),lbl=pt.indexOf('med')>=0?'permiso_medico':pt.indexOf('vac')>=0?'vacaciones':pt;
+      items.push({origen:'perm',id:p.id,operario_id:p.usuario_id,nombre:p.operario?p.operario.nombre:'',tipo:lbl,detalle:(p.fecha_inicio||'')+(p.fecha_fin&&p.fecha_fin!==p.fecha_inicio?' a '+p.fecha_fin:'')+(p.motivo?' · '+p.motivo:''),estado:p.estado||'pendiente',fecha:p.creado_en||'',raw:p});
     });
-    body.querySelectorAll('[data-atender]').forEach(function(b){b.addEventListener('click',function(){resolverSolicitudOperario(this.dataset.atender,'atendida');});});
-    body.querySelectorAll('[data-rechazar]').forEach(function(b){b.addEventListener('click',function(){resolverSolicitudOperario(this.dataset.rechazar,'rechazada');});});
+    items.sort(function(a,b){return (a.estado==='pendiente'?0:1)-(b.estado==='pendiente'?0:1)||String(b.fecha).localeCompare(String(a.fecha));});
+    var tipoLbl={prestamo:'💰 Préstamo',permiso_medico:'🩺 Permiso médico',personal:'👤 Permiso personal',permiso_personal:'👤 Permiso personal',falta:'📅 Permiso de falta',salida_temprana:'🚪 Salida anticipada',llegada_tarde:'🕐 Llegada tarde',vacaciones:'🏖️ Vacaciones',herramienta:'🧰 Herramienta',otro:'💬 Otro',mantenimiento:'🔧 Mantenimiento',insumo:'📦 Insumo'};
+    var pend=items.filter(function(x){return x.estado==='pendiente';}).length;
+    function row(x){
+      var isPend=x.estado==='pendiente',st=x.estado==='aprobado'||x.estado==='atendida'?'Aprobada/Atendida':x.estado==='rechazado'||x.estado==='rechazada'?'Rechazada':'Pendiente';
+      var color=isPend?'var(--tierra)':(st==='Rechazada'?'var(--rojo)':'var(--verde-mid)');
+      var actions='';
+      if(isPend){
+        if(x.origen==='perm'){
+          actions='<button class="btn-sm btn-completar" data-pg="'+x.id+'">Con goce</button><button class="btn-sm" data-ps="'+x.id+'">Sin goce</button><button class="btn-sm btn-cancelar" data-pr="'+x.id+'">Rechazar</button>';
+        }else if(x.tipo==='prestamo'){
+          actions='<button class="btn-sm btn-completar" data-sp="'+x.id+'" data-op="'+x.operario_id+'" data-monto="'+(x.raw.monto_solicitado||0)+'" data-motivo="'+String(x.raw.mensaje||'').replace(/"/g,'&quot;')+'">Aprobar</button><button class="btn-sm btn-cancelar" data-sr="'+x.id+'">Rechazar</button>';
+        }else{
+          actions='<button class="btn-sm btn-completar" data-sa="'+x.id+'">Atender</button><button class="btn-sm btn-cancelar" data-sr="'+x.id+'">Rechazar</button>';
+        }
+      }
+      return '<div class="sol58-row" style="border-left-color:'+color+'"><div class="sol58-main"><div><div class="sol58-type">'+(tipoLbl[x.tipo]||x.tipo)+'</div><div class="sol58-person">'+x.nombre+'</div></div><div class="sol58-detail">'+(x.fecha?new Date(x.fecha).toLocaleDateString('es-MX'):'')+'</div><div class="sol58-detail">'+x.detalle+'</div><div class="sol58-state" style="color:'+color+'">'+st+'</div><div class="sol58-actions">'+actions+'</div></div></div>';
+    }
+    var html='<div class="as58-head"><div><div class="as58-title">📨 Solicitudes</div><div class="as58-sub">Bandeja única: préstamos, permisos, faltas autorizadas, salidas, llegadas tarde y vacaciones.</div></div><button class="btn-back" onclick="renderEmpleadosMenu()">← Empleados</button></div>';
+    html+='<div class="hint" style="margin-bottom:8px;">'+pend+' pendiente'+(pend===1?'':'s')+'</div><div class="sol58-list">'+items.map(row).join('')+'</div><button class="btn-back" style="margin-top:1rem" onclick="renderEmpleadosMenu()">← Empleados</button>';
+    body.innerHTML=html;
+    body.querySelectorAll('[data-pg]').forEach(function(b){b.addEventListener('click',function(){resolverPermiso(this.dataset.pg,'aprobado',true);});});
+    body.querySelectorAll('[data-ps]').forEach(function(b){b.addEventListener('click',function(){resolverPermiso(this.dataset.ps,'aprobado',false);});});
+    body.querySelectorAll('[data-pr]').forEach(function(b){b.addEventListener('click',function(){resolverPermiso(this.dataset.pr,'rechazado',null);});});
+    body.querySelectorAll('[data-sp]').forEach(function(b){b.addEventListener('click',function(){renderNuevoPrestamo({operarioId:this.dataset.op,monto:this.dataset.monto,concepto:this.dataset.motivo,solicitudId:this.dataset.sp});});});
+    body.querySelectorAll('[data-sa]').forEach(function(b){b.addEventListener('click',function(){resolverSolicitudOperario(this.dataset.sa,'atendida');});});
+    body.querySelectorAll('[data-sr]').forEach(function(b){b.addEventListener('click',function(){resolverSolicitudOperario(this.dataset.sr,'rechazada');});});
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
@@ -11357,10 +11390,10 @@ function ex54Load(){
 function ex54Save(all){localStorage.setItem(EX54_KEY,JSON.stringify(all||{}));}
 function ex54Get(id){var x=ex54Load();return x[id]||{};}
 function ex54Put(id,data){var x=ex54Load();x[id]=Object.assign({},x[id]||{},data||{});ex54Save(x);}
-function ex54CargoRol(cargo){
+function ex54CargoRol(cargo,tipo){
+  if(tipo==='Eventual')return 'labores_eventual';
   return cargo==='Cosecha'?'cosechador':
     cargo==='Ingeniero'?'ingeniero':
-    cargo==='Eventual'?'labores_eventual':
     cargo==='Galerista'?'galerista':
     cargo==='Encargado'?'encargado':'operario';
 }
@@ -11370,10 +11403,10 @@ function renderAltasBajas(){
   body.innerHTML='<div class="loading">Cargando expedientes...</div>';
   from('usuarios').select('id,nombre,rol,activo,certificado_ambas,sueldo_base,fecha_ingreso,fecha_nacimiento').order('nombre').get().then(function(users){
     users=users||[];
-    var html='<div class="ex54-head"><div><div class="ex54-eyebrow">Administración · Empleados</div><div class="ex54-title">Expedientes</div><div class="ex54-sub">Información personal, laboral y condiciones de pago de cada colaborador.</div></div><button class="btn-sm btn-completar" onclick="renderNuevoUsuario()">+ Nuevo expediente</button></div><div class="ex54-list">';
+    var html='<div class="ex54-head"><div><div class="ex54-eyebrow">Administración · Empleados</div><div class="ex54-title">Expedientes</div><div class="ex54-sub">Información personal, laboral y condiciones de pago de cada colaborador.</div></div><div style="display:flex;gap:7px;align-items:center;"><button class="btn-back" onclick="renderEmpleadosMenu()">← Empleados</button><button class="btn-sm btn-completar" onclick="renderNuevoUsuario()">+ Nuevo expediente</button></div></div><div class="ex54-list">';
     html+=users.map(function(u){
-      var ex=ex54Get(u.id), cargo=ex.cargo||(ROLES[u.rol]||u.rol);
-      return '<div class="ex54-row"><div><div class="ex54-name">'+u.nombre+'</div><div class="ex54-role">'+cargo+(u.fecha_ingreso?' · Ingreso '+u.fecha_ingreso:'')+'</div></div><div><div class="ex54-status" style="color:'+(u.activo?'var(--verde-mid)':'var(--gris-3)')+';">'+(u.activo?'Activo':'Inactivo')+'</div><div class="ex54-role">Sueldo base: $'+(parseFloat(u.sueldo_base)||0).toFixed(2)+'</div></div><div class="orden-actions"><button class="btn-sm ex55-action-exp" onclick="renderEditarUsuario(\''+u.id+'\',\''+ex54Esc(u.nombre).replace(/'/g,"\\'")+'\',\''+u.rol+'\','+(u.certificado_ambas?'true':'false')+')">Expediente</button><button class="btn-sm ex55-action-pin" onclick="renderCambiarPin(\''+u.id+'\',\''+ex54Esc(u.nombre).replace(/'/g,"\\'")+'\')">PIN</button><button class="btn-sm ex55-action-cred" onclick="renderCredencialId(\''+u.id+'\')">Credencial</button>'+(u.activo?'<button class="btn-sm ex55-action-baja" onclick="bajaUsuario(\''+u.id+'\')">Dar de baja</button>':'<button class="btn-sm btn-iniciar" onclick="altaUsuario(\''+u.id+'\')">Reactivar</button>')+'</div></div>';
+      var ex=ex54Get(u.id), cargo=ex.cargo||(ROLES[u.rol]||u.rol), tipo=ex.tipo_colaborador||(u.rol==='labores_eventual'?'Eventual':'Base');
+      return '<div class="ex54-row"><div><div class="ex54-name">'+u.nombre+' <span class="em58-badge '+(tipo==='Eventual'?'em58-eventual':'em58-base')+'">'+tipo.toUpperCase()+'</span></div><div class="ex54-role">'+cargo+(u.fecha_ingreso?' · Ingreso '+u.fecha_ingreso:'')+'</div></div><div><div class="ex54-status" style="color:'+(u.activo?'var(--verde-mid)':'var(--gris-3)')+';">'+(u.activo?'Activo':'Inactivo')+'</div><div class="ex54-role">Sueldo base: $'+(parseFloat(u.sueldo_base)||0).toFixed(2)+'</div></div><div class="orden-actions"><button class="btn-sm ex55-action-exp" onclick="renderEditarUsuario(\''+u.id+'\',\''+ex54Esc(u.nombre).replace(/'/g,"\\'")+'\',\''+u.rol+'\','+(u.certificado_ambas?'true':'false')+')">Expediente</button><button class="btn-sm ex55-action-pin" onclick="renderCambiarPin(\''+u.id+'\',\''+ex54Esc(u.nombre).replace(/'/g,"\\'")+'\')">PIN</button><button class="btn-sm ex55-action-cred" onclick="renderCredencialId(\''+u.id+'\')">Credencial</button>'+(u.activo?'<button class="btn-sm ex55-action-baja" onclick="bajaUsuario(\''+u.id+'\')">Dar de baja</button>':'<button class="btn-sm btn-iniciar" onclick="altaUsuario(\''+u.id+'\')">Reactivar</button>')+'</div></div>';
     }).join('');
     body.innerHTML=html+'</div><button class="btn-back" style="margin-top:1rem;" onclick="renderEmpleadosMenu()">← Empleados</button>';
   });
@@ -11522,7 +11555,8 @@ function ex54FormHtml(mode,id,base,extra){
   base=base||{}; extra=extra||{};
   var isEdit=mode==='edit';
   var cargo=extra.cargo||base.cargo||'Labores';
-  var cargos=['Labores','Cosecha','Ingeniero','Eventual','Galerista','Auxiliar Galera','Transportista','Encargado'];
+  var cargos=['Labores','Cosecha','Ingeniero','Galerista','Auxiliar Galera','Transportista','Encargado'];
+  var tipoColab=extra.tipo_colaborador||(base.rol==='labores_eventual'?'Eventual':'Base');
   return '<div class="ex54-head"><div><div class="ex54-eyebrow">Administración · Empleados · Expedientes</div><div class="ex54-title">'+(isEdit?'Editar expediente':'Nuevo expediente')+'</div><div class="ex54-sub">Una sola ficha alimenta asistencia, nómina y operación del colaborador.</div></div></div>'+
   '<div class="ex54-form">'+
     '<div class="ex54-sec"><h3>Datos personales</h3><div class="ex54-grid">'+
@@ -11532,6 +11566,7 @@ function ex54FormHtml(mode,id,base,extra){
       '<div class="ex54-field span2"><label>Domicilio</label><input id="ex54-direccion" value="'+ex54Esc(extra.direccion||'')+'" placeholder="Calle, colonia, municipio"></div>'+
     '</div></div>'+
     '<div class="ex54-sec"><h3>Datos laborales y nómina</h3><div class="ex54-grid">'+
+      '<div class="ex54-field"><label>Tipo de colaborador</label><select id="ex58-tipo"><option'+(tipoColab==='Base'?' selected':'')+'>Base</option><option'+(tipoColab==='Eventual'?' selected':'')+'>Eventual</option></select></div>'+
       '<div class="ex54-field"><label>Cargo</label><select id="ex54-cargo">'+cargos.map(function(c){return '<option'+(c===cargo?' selected':'')+'>'+c+'</option>';}).join('')+'</select></div>'+
       '<div class="ex54-field"><label>Fecha de ingreso</label><input type="date" id="ex54-ingreso" value="'+ex54Esc(base.fecha_ingreso||fechaHoyLocal())+'"></div>'+
       '<div class="ex54-field"><label>Estatus</label><input value="'+(base.activo===false?'Inactivo':'Activo')+'" disabled></div>'+
@@ -11580,6 +11615,7 @@ function ex54Collect(){
     telefono:document.getElementById('ex54-telefono').value.trim(),
     direccion:document.getElementById('ex54-direccion').value.trim(),
     cargo:document.getElementById('ex54-cargo').value,
+    tipo_colaborador:document.getElementById('ex58-tipo').value,
     tarifa_hora_extra:parseFloat(document.getElementById('ex54-extra').value)||0,
     emergencia_nombre:document.getElementById('ex54-em-nombre').value.trim(),
     emergencia_parentesco:document.getElementById('ex54-em-parentesco').value.trim(),
@@ -11602,7 +11638,7 @@ function guardarNuevoUsuario(){
   var fechaNacimiento=document.getElementById('ex54-nacimiento').value||null;
   var sueldoBase=parseFloat(document.getElementById('ex54-sueldo').value)||null;
   var pin=String(document.getElementById('ex54-pin').value||'').padStart(4,'0');
-  var extra=ex54Collect(), rol=ex54CargoRol(extra.cargo);
+  var extra=ex54Collect(), rol=ex54CargoRol(extra.cargo,extra.tipo_colaborador);
   if(!nombre||pin.length!==4){alert('Captura nombre y PIN de 4 dígitos.');return;}
   var btn=document.getElementById('ex54-guardar');btn.disabled=true;btn.textContent='Guardando...';
   from('usuarios').insert({nombre:nombre,rol:rol,fecha_ingreso:fechaIngreso,fecha_nacimiento:fechaNacimiento,sueldo_base:sueldoBase,activo:true}).then(function(data){
@@ -11636,11 +11672,12 @@ function guardarEditarUsuario(id){
   var fechaNacimiento=document.getElementById('ex54-nacimiento').value||null;
   var sueldoBase=parseFloat(document.getElementById('ex54-sueldo').value)||null;
   var pinRaw=String(document.getElementById('ex54-pin').value||'');
-  var extra=ex54Collect(), rol=ex54CargoRol(extra.cargo);
+  var extra=ex54Collect(), rol=ex54CargoRol(extra.cargo,extra.tipo_colaborador);
   if(!nombre){alert('El nombre es obligatorio.');return;}
   var anteriorExtra=ex54Get(id), anteriorBase=null;
   var btn=document.getElementById('ex54-guardar');btn.disabled=true;btn.textContent='Guardando...';
   from('usuarios').select('rol,sueldo_base,activo').eq('id',id).get().then(function(rr){anteriorBase=(rr&&rr[0])||{};return from('usuarios').eq('id',id).update({nombre:nombre,rol:rol,fecha_ingreso:fechaIngreso,fecha_nacimiento:fechaNacimiento,sueldo_base:sueldoBase});}).then(function(){
+    if((anteriorExtra.tipo_colaborador||(anteriorBase.rol==='labores_eventual'?'Eventual':'Base'))!==extra.tipo_colaborador)ex57AddHist(id,'Tipo de colaborador',anteriorExtra.tipo_colaborador||(anteriorBase.rol==='labores_eventual'?'Eventual':'Base'),extra.tipo_colaborador);
     if((anteriorExtra.cargo||ROLES[anteriorBase.rol]||'')!==extra.cargo)ex57AddHist(id,'Cargo',anteriorExtra.cargo||ROLES[anteriorBase.rol]||'—',extra.cargo);
     if((parseFloat(anteriorBase.sueldo_base)||0)!==(parseFloat(sueldoBase)||0))ex57AddHist(id,'Sueldo base diario','$'+(parseFloat(anteriorBase.sueldo_base)||0).toFixed(2),'$'+(parseFloat(sueldoBase)||0).toFixed(2));
     if((parseFloat(anteriorExtra.tarifa_hora_extra)||0)!==(parseFloat(extra.tarifa_hora_extra)||0))ex57AddHist(id,'Hora extra','$'+(parseFloat(anteriorExtra.tarifa_hora_extra)||0).toFixed(2)+'/h','$'+(parseFloat(extra.tarifa_hora_extra)||0).toFixed(2)+'/h');
