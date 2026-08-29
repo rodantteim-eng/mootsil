@@ -740,7 +740,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ca22-op.nomina-gold{border-top:4px solid #c59a12!important}
 
 
-/* C049 — implementación visible de Nómina */
+/* C075 — Nómina C074 + Historial de Compras visible */
 .ca22-op.nomina-gold{border-top:4px solid #c59a12!important}
 .no49-paybox{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;padding:8px 10px;background:#fbfaf4;border:1px solid #eadfb7;border-radius:10px}
 .no49-payfield{display:flex;flex-direction:column;gap:3px}
@@ -871,7 +871,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .as61-field textarea{min-height:72px;resize:vertical}.sol61-section{margin-top:10px}.sol61-section-title{font-size:.72rem;font-weight:900;color:var(--verde);margin:7px 0}.sol61-section-title.pending{color:#a86200}.sol61-meta{font-size:.6rem;color:var(--gris-5);margin-top:3px}.sol61-resolved{opacity:.94}
 @media(max-width:700px){.as61-grid{grid-template-columns:1fr}.as61-field.full{grid-column:auto}}
 
-/* C072 — Empleados consolidado */
+/* C069 — Empleados consolidado */
 .em69-hint{font-size:.62rem;color:var(--gris-5);margin:6px 0 8px}
 .em69-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.42);display:flex;align-items:center;justify-content:center;z-index:11000;padding:16px}
 .em69-modal{background:#fff;border-radius:14px;width:min(640px,95vw);box-shadow:0 22px 70px rgba(0,0,0,.25);overflow:hidden}
@@ -5650,7 +5650,7 @@ function renderNuevaCompra(){
   var hoy=fechaHoyLocal();
   var provOpts=cats.proveedores.map(function(p){return '<option value="'+p.id+'">'+p.nombre+(p.giro?' — '+p.giro:'')+'</option>';}).join('');
   body.innerHTML='<div class="nc28-shell">'+
-    '<div class="nc28-head"><div><div class="nc28-eyebrow">Administración · Caja · Compras</div><div class="nc28-title">Nueva compra</div><div class="nc28-sub">Captura rápida de factura y productos.</div></div><button type="button" class="nc28-back" onclick="volverCompraContexto()">← Caja</button></div>'+
+    '<div class="nc28-head"><div><div class="nc28-eyebrow">Administración · Caja · Compras</div><div class="nc28-title">Nueva compra</div><div class="nc28-sub">Captura rápida de factura y productos.</div><div style="display:flex;gap:7px;margin-top:9px;"><button type="button" class="op-chip sel">＋ Nueva compra</button><button type="button" class="op-chip" onclick="renderHistorialCompras()">📜 Historial de compras</button></div></div><button type="button" class="nc28-back" onclick="volverCompraContexto()">← Caja</button></div>'+
     '<div class="nc30-card">'+
       '<div class="nc30-topgrid">'+
         '<div class="form-group"><label>Proveedor</label><div class="nc29-provider-wrap"><input type="text" id="nc-proveedor-buscar" autocomplete="off" placeholder="Escribe proveedor"><div id="nc-proveedor-resultados" class="nc29-provider-results nc30-provider-results"></div></div><select id="nc-proveedor" style="display:none"><option value="">Sin proveedor</option>'+provOpts+'<option value="_nuevo">+ Agregar nuevo proveedor...</option></select></div>'+
@@ -6147,6 +6147,68 @@ var nuevoProductoHtml=esNuevo?('<div class="form-group" style="margin-bottom:.5r
       volverCompraContexto();
     }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Registrar compra';});
   });
+}
+
+
+function renderHistorialCompras(mesStr){
+  var body=document.getElementById('enc-body');
+  var hoy=fechaHoyLocal();
+  mesStr=mesStr||hoy.slice(0,7);
+  var inicio=mesStr+'-01';
+  var fd=new Date(inicio+'T00:00:00'); fd.setMonth(fd.getMonth()+1); fd.setDate(0);
+  var fin=fd.toISOString().slice(0,10);
+
+  body.innerHTML='<div class="seccion-titulo">📜 Historial de compras</div><div class="loading">Cargando compras...</div>';
+
+  from('gastos')
+    .select('*,proveedor:proveedores(nombre),item:inventario_items(nombre,unidad),registrador:usuarios!registrado_por(nombre),compra:compras(numero_factura)')
+    .not('compra_id','is',null)
+    .gte('fecha',inicio).lte('fecha',fin)
+    .order('fecha',{ascending:false})
+    .get()
+    .then(function(rows){
+      rows=rows||[];
+      var grupos=agruparGastosPorCompra(rows);
+      var total=grupos.reduce(function(s,g){return s+(parseFloat(g.total)||0);},0);
+      var mesLbl=new Date(inicio+'T00:00:00').toLocaleDateString('es-MX',{month:'long',year:'numeric'});
+
+      var html='<style>'+
+        '.hc75-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px}.hc75-title{font-size:1.35rem;font-weight:850;color:var(--verde)}.hc75-sub{font-size:.74rem;color:var(--gris-5);margin-top:3px}.hc75-tabs{display:flex;gap:7px;margin-top:9px;flex-wrap:wrap}.hc75-tools{display:grid;grid-template-columns:180px 1fr;gap:10px;margin:10px 0}.hc75-search input,.hc75-tools input{width:100%;height:38px;border:1px solid var(--gris-2);border-radius:9px;padding:0 10px}.hc75-summary{display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid var(--gris-2);border-radius:10px;padding:10px 12px;margin-bottom:10px}.hc75-summary strong{font-size:1.05rem;color:var(--verde)}.hc75-summary span{font-size:.7rem;color:var(--gris-5)}'+
+        '</style>'+
+        '<div class="hc75-head"><div><div class="nc28-eyebrow">Administración · Caja · Compras</div><div class="hc75-title">Historial de compras</div><div class="hc75-sub">Consulta proveedor, factura, productos, cantidades y total. Desde aquí puedes abrir una compra para editarla.</div><div class="hc75-tabs"><button type="button" class="op-chip" onclick="renderNuevaCompra()">＋ Nueva compra</button><button type="button" class="op-chip sel">✓ Historial de compras</button></div></div><button type="button" class="nc28-back" onclick="volverCompraContexto()">← Caja</button></div>'+
+        '<div class="hc75-tools"><div><label style="font-size:.63rem;font-weight:800;color:var(--gris-5)">MES</label><input type="month" id="hc75-mes" value="'+mesStr+'"></div><div class="hc75-search"><label style="font-size:.63rem;font-weight:800;color:var(--gris-5)">BUSCAR</label><input type="search" id="hc75-buscar" placeholder="Proveedor, factura o producto..."></div></div>'+
+        '<div class="hc75-summary"><span>'+grupos.length+' compra'+(grupos.length===1?'':'s')+' · '+mesLbl+'</span><strong>$'+formatMonto(total)+'</strong></div>'+
+        '<div id="hc75-lista">'+(grupos.length?grupos.map(pintarGrupoCompraCard).join(''):'<div class="empty">No hay compras registradas en este mes.</div>')+'</div>';
+
+      body.innerHTML=html;
+
+      document.getElementById('hc75-mes').addEventListener('change',function(){renderHistorialCompras(this.value);});
+
+      function normalizar(s){return String(s||'').toLowerCase();}
+      var buscar=document.getElementById('hc75-buscar');
+      if(buscar){
+        buscar.addEventListener('input',function(){
+          var q=normalizar(this.value).trim();
+          var tarjetas=[].slice.call(document.querySelectorAll('#hc75-lista .orden-card'));
+          var visibles=0;
+          tarjetas.forEach(function(card){
+            var ok=!q||normalizar(card.textContent).indexOf(q)>=0;
+            card.style.display=ok?'':'none';
+            if(ok)visibles++;
+          });
+          var old=document.getElementById('hc75-sin-resultados');
+          if(old)old.remove();
+          if(q&&visibles===0){
+            var d=document.createElement('div'); d.id='hc75-sin-resultados'; d.className='empty';
+            d.textContent='No se encontraron compras con ese criterio.';
+            document.getElementById('hc75-lista').appendChild(d);
+          }
+        });
+      }
+
+      wireEventosGruposCompra(body,function(){renderHistorialCompras(mesStr);});
+    })
+    .catch(function(e){body.innerHTML='<div class="loading">Error al cargar Historial de compras: '+e.message+'</div>';});
 }
 
 function renderEditarCompra(compraId,volverFn){
@@ -9193,15 +9255,17 @@ function seleccionUnica(btn){
 function renderGenerarNomina(fechaRef){
   fechaRef=fechaRef||new Date();
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo">💰 Generar Nómina</div><div class="loading">Calculando...</div>';
+  body.innerHTML='<div class="seccion-titulo">💰 Nómina</div><div class="loading">Calculando nómina preliminar...</div>';
+
   var lunes=inicioDeSemana(fechaRef);
   var domingo=new Date(lunes); domingo.setDate(lunes.getDate()+6);
   var semanaInicio=lunes.toISOString().slice(0,10), semanaFin=domingo.toISOString().slice(0,10);
   var numSemana=numeroSemanaISO(lunes);
   var hoy=fechaHoyLocal();
   var esSemanaActual = hoy>=semanaInicio && hoy<=semanaFin;
+
   Promise.all([
-    from('usuarios').select('id,nombre,sueldo_base').eq('rol','operario').get(),
+    from('usuarios').select('id,nombre,rol,activo,sueldo_base').get(),
     from('asistencia_registros').select('*').gte('fecha',semanaInicio).lte('fecha',semanaFin).get(),
     from('pagos_semana_estado').select('*').eq('semana_inicio',semanaInicio).get(),
     from('pagos_extra_estado').select('*').eq('semana_inicio',semanaInicio).get(),
@@ -9214,25 +9278,32 @@ function renderGenerarNomina(fechaRef){
     from('horas_extra_asignadas').select('operario_id,fecha,horas_max').gte('fecha',semanaInicio).lte('fecha',semanaFin).get(),
     from('nomina_ajustes').select('*').eq('semana_inicio',semanaInicio).get()
   ]).then(function(r){
-    var operarios=r[0]||[], registros=r[1]||[], estados=r[2]||[], estadosExtra=r[3]||[];
+    var todosUsuarios=r[0]||[], registros=r[1]||[], estados=r[2]||[], estadosExtra=r[3]||[];
     var ajustesSemana=r[11]||[];
-    var ajustePorOp={}; ajustesSemana.forEach(function(a){ajustePorOp[a.operario_id]=a;});
     var cfg={}; (r[4]||[]).forEach(function(c){cfg[c.clave]=c.valor;});
     var tarifa=parseFloat(cfg.tarifa_hora_extra)||70;
-    var permisosAprobados=r[5]||[];
-    var bonosActivos=r[6]||[];
-    var bonoBeneficiarios=r[7]||[];
-    var prestamosActivos=r[8]||[];
-    var pagosSemanaPrestamos=r[9]||[];
-    var horasExtraAsignadas=r[10]||[];
+    var permisosAprobados=r[5]||[], bonosActivos=r[6]||[], bonoBeneficiarios=r[7]||[];
+    var prestamosActivos=r[8]||[], pagosSemanaPrestamos=r[9]||[], horasExtraAsignadas=r[10]||[];
+
+    var idsConAsistencia={}; registros.forEach(function(x){idsConAsistencia[x.usuario_id]=true;});
+    var rolesNomina={operario:true,labores_eventual:true,cosecha:true,cosechador:true,galerista:true,auxiliar_galera:true,transportista:true,encargado:true};
+    var operarios=todosUsuarios.filter(function(o){
+      if(o.activo===false)return false;
+      if(rolesNomina[o.rol])return true;
+      if(idsConAsistencia[o.id])return true;
+      return parseFloat(o.sueldo_base||0)>0;
+    });
+
+    var ajustePorOp={}; ajustesSemana.forEach(function(a){ajustePorOp[a.operario_id]=a;});
     var estadoPorOp={}; estados.forEach(function(e){estadoPorOp[e.operario_id]=e;});
     var estadoExtraPorOp={}; estadosExtra.forEach(function(e){estadoExtraPorOp[e.operario_id]=e;});
+
     var bonosDeLaSemana=bonosActivos.filter(function(b){return !(b.periodo_fin<semanaInicio||b.periodo_inicio>semanaFin);});
     var bonosSinUmbral=bonosDeLaSemana.filter(function(b){return b.tipo==='equipo'||!b.umbral_minimo;});
     var bonosConUmbral=bonosDeLaSemana.filter(function(b){return b.tipo==='individual'&&b.umbral_minimo;});
     var bonosYaOtorgadosPorOp={};
     bonoBeneficiarios.forEach(function(bb){
-      if(!bonosYaOtorgadosPorOp[bb.operario_id]) bonosYaOtorgadosPorOp[bb.operario_id]={};
+      if(!bonosYaOtorgadosPorOp[bb.operario_id])bonosYaOtorgadosPorOp[bb.operario_id]={};
       bonosYaOtorgadosPorOp[bb.operario_id][bb.bono_id]=true;
     });
 
@@ -9241,207 +9312,236 @@ function renderGenerarNomina(fechaRef){
         return calcularScoreOperario(o.id,b.periodo_inicio,b.periodo_fin).then(function(score){return {bono:b,score:score.final};});
       }));
     })).then(function(scoresPorOp){
-      var html='<style>'+
-        '.gn51-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px}.gn51-title{font-size:1.35rem;font-weight:800;color:var(--verde);line-height:1.1}.gn51-sub{font-size:.76rem;color:var(--gris-5);margin-top:3px}'+
-        '.gn51-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}.gn51-nav button{border:1px solid var(--gris-2);background:white;border-radius:18px;padding:.35rem .75rem;font-size:.74rem;cursor:pointer}.gn51-week{font-size:.76rem;color:var(--gris-5);margin-left:auto}'+
-        '.gn51-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0 12px}.gn51-kpi{background:white;border:1px solid var(--gris-2);border-radius:12px;padding:9px 12px}.gn51-kpi small{display:block;font-size:.62rem;text-transform:uppercase;letter-spacing:.04em;color:var(--gris-5);font-weight:700}.gn51-kpi strong{display:block;font-size:1.02rem;color:var(--verde);margin-top:2px}.gn51-kpi.pending strong{color:var(--tierra)}'+
-        '.gn51-list{display:flex;flex-direction:column;gap:7px}.gn51-card{background:white;border:1px solid var(--gris-2);border-left:4px solid var(--tierra);border-radius:12px;padding:9px 12px}.gn51-card.paid{border-left-color:var(--verde-mid)}'+
-        '.gn51-main{display:grid;grid-template-columns:minmax(150px,1.25fr) minmax(150px,1.1fr) minmax(105px,.65fr) minmax(300px,1.8fr);gap:10px;align-items:center}.gn51-name strong{font-size:.9rem}.gn51-meta{font-size:.68rem;color:var(--gris-5);margin-top:2px}.gn51-amount small{display:block;font-size:.61rem;color:var(--gris-5);text-transform:uppercase;font-weight:700}.gn51-amount strong{font-size:1rem;color:var(--tierra)}.gn51-card.paid .gn51-amount strong{color:var(--verde-mid)}'+
-        '.gn51-actions{display:flex;gap:6px;align-items:center;justify-content:flex-end}.gn51-actions select{height:34px;min-width:130px;border:1px solid var(--gris-2);border-radius:8px;padding:0 7px;font-size:.7rem;background:white}.gn51-actions button{height:34px;padding:0 10px;border-radius:8px;font-size:.7rem;white-space:nowrap}.gn51-pay{background:var(--verde-mid)!important;color:white!important;border:none!important;font-weight:700}.gn51-sec{background:white!important;color:var(--verde)!important;border:1px solid var(--gris-2)!important}.gn51-detail{display:flex;gap:12px;flex-wrap:wrap;margin-top:7px;padding-top:6px;border-top:1px dashed var(--gris-2);font-size:.66rem;color:var(--gris-5)}'+
-        '@media(max-width:900px){.gn51-summary{grid-template-columns:repeat(2,1fr)}.gn51-main{grid-template-columns:1fr 1fr}.gn51-actions{grid-column:1/-1;justify-content:flex-start}}'+
-        '</style>'+
-        '<div class="gn51-head"><div><div class="gn51-title">💰 Pago de Nómina</div><div class="gn51-sub">Revisa importes, selecciona la cuenta y registra cada pago en Caja.</div></div></div>';
-      html+='<div class="gn51-nav"><button type="button" id="gn-ant">← Semana anterior</button>'+(esSemanaActual?'':'<button type="button" id="gn-sig">Semana siguiente →</button>')+'<span class="gn51-week">Semana '+numSemana+' · '+semanaInicio+' a '+semanaFin+' · Hora extra según expediente</span></div>';
-
-      if(!operarios.length) html+='<div class="empty">No hay operarios registrados.</div>';
 
       var accionesPago={};
-      var gn51Total=0,gn51Pendiente=0,gn51Pagado=0,gn51Pendientes=0;
-      var gn51Tarjetas=operarios.map(function(o,idx){
+      var filas=[];
+      var totalSueldos=0,totalExtra=0,totalBonos=0,totalPrestamos=0,totalNeto=0,totalPendiente=0,totalPagado=0;
+      var pendientes=[];
+
+      operarios.forEach(function(o,idx){
         var regsOp=registros.filter(function(x){return x.usuario_id===o.id;});
         var permisosOp=permisosAprobados.filter(function(p){return p.usuario_id===o.id;});
         var resumen=calcularResumenAsistencia(regsOp,semanaInicio,permisosOp);
-        var sueldoBase=o.sueldo_base||0;
+        var sueldoBase=parseFloat(o.sueldo_base||0);
+
         var ajuste=ajustePorOp[o.id];
         var tieneAjusteDias=!!(ajuste&&ajuste.dias_trabajados_override!=null);
-        var diasPagados=tieneAjusteDias?parseFloat(ajuste.dias_trabajados_override):resumen.diasPagados;
-        var totalSueldo=diasPagados*sueldoBase;
-        var est=estadoPorOp[o.id];
-        var pagado=est&&est.estado==='pagado';
+        var diasPagados=tieneAjusteDias?parseFloat(ajuste.dias_trabajados_override||0):parseFloat(resumen.diasPagados||0);
+        var montoSueldo=diasPagados*sueldoBase;
 
         var mapaMaxOp=mapaHorasMaxPorFecha(horasExtraAsignadas.filter(function(h){return h.operario_id===o.id;}));
         var tieneAjusteExtra=!!(ajuste&&ajuste.horas_extra_override!=null);
-        var horasExtra=tieneAjusteExtra?parseFloat(ajuste.horas_extra_override):horasExtraCapadasDesdeRegistros(regsOp,mapaMaxOp);
+        var horasExtra=tieneAjusteExtra?parseFloat(ajuste.horas_extra_override||0):horasExtraCapadasDesdeRegistros(regsOp,mapaMaxOp);
         var ex54Op=ex54Get(o.id);
         var tarifaOp=(ex54Op.tarifa_hora_extra!=null&&parseFloat(ex54Op.tarifa_hora_extra)>=0)?parseFloat(ex54Op.tarifa_hora_extra):tarifa;
-        var totalExtra=horasExtra*tarifaOp;
-        var estExtra=estadoExtraPorOp[o.id];
-        var pagadoExtra=estExtra&&estExtra.estado==='pagado';
+        var montoExtra=horasExtra*tarifaOp;
 
         var yaOtorgados=bonosYaOtorgadosPorOp[o.id]||{};
-        var scoresOp=scoresPorOp[idx];
+        var scoresOp=scoresPorOp[idx]||[];
         var bonosUmbralCalifican=scoresOp.filter(function(x){return x.score>=parseFloat(x.bono.umbral_minimo);}).map(function(x){return x.bono;});
         var bonosQueCalifican=bonosSinUmbral.concat(bonosUmbralCalifican).filter(function(b){return !yaOtorgados[b.id];});
-        var totalBonos=bonosQueCalifican.reduce(function(s,b){return s+(parseFloat(b.monto)||0);},0);
+        var montoBonos=bonosQueCalifican.reduce(function(s,b){return s+(parseFloat(b.monto)||0);},0);
 
         var prestamosOp=prestamosActivos.filter(function(p){return p.operario_id===o.id;});
         var prestamoIdsOp={}; prestamosOp.forEach(function(p){prestamoIdsOp[p.id]=p;});
         var deduccionesOp=pagosSemanaPrestamos.filter(function(pp){return prestamoIdsOp[pp.prestamo_id]&&pp.estado==='pendiente';});
-        var totalDeducciones=deduccionesOp.reduce(function(s,d){return s+parseFloat(d.monto);},0);
+        var montoPrestamos=deduccionesOp.reduce(function(s,d){return s+parseFloat(d.monto||0);},0);
 
-        var granTotal=totalSueldo+totalExtra+totalBonos-totalDeducciones;
-        var nominaCompleta = pagado && (!horasExtra||pagadoExtra);
+        var neto=Math.max(0,montoSueldo+montoExtra+montoBonos-montoPrestamos);
+        var pagadoSueldo=estadoPorOp[o.id]&&estadoPorOp[o.id].estado==='pagado';
+        var pagadoHE=!horasExtra||(estadoExtraPorOp[o.id]&&estadoExtraPorOp[o.id].estado==='pagado');
+        var pagado=pagadoSueldo&&pagadoHE;
 
-        var idAccion='gn-acc-'+o.id;
-        accionesPago[idAccion]={operarioId:o.id,nombre:o.nombre,totalSueldo:totalSueldo,horasExtra:horasExtra,totalExtra:totalExtra,deducciones:deduccionesOp,bonosQueCalifican:bonosQueCalifican,scoresOp:scoresOp,nominaCompleta:nominaCompleta,granTotal:granTotal,
-          recibo:{nombre:o.nombre,numSemana:numSemana,semanaInicio:semanaInicio,semanaFin:semanaFin,resumen:resumen,sueldoBase:sueldoBase,totalSueldo:totalSueldo,tarifa:tarifaOp,horasExtra:horasExtra,totalExtra:totalExtra,bonos:bonosQueCalifican.map(function(b){return {descripcion:b.descripcion,monto:parseFloat(b.monto||0)};}),deducciones:deduccionesOp.map(function(d){var pr=prestamoIdsOp[d.prestamo_id];return {concepto:pr?pr.concepto:'Préstamo',numero:d.numero_pago,monto:parseFloat(d.monto)};}),granTotal:granTotal,nominaCompleta:nominaCompleta}};
+        var tipoTxt=(o.rol==='labores_eventual'?'EVENTUAL':'BASE');
+        var idAccion='nom74-'+o.id;
 
-        var diasLabelTxt=tieneAjusteDias?(diasPagados+' días ✏️'):(resumen.trabajados+' días'+(resumen.diasPermisoConGoce?' + '+resumen.diasPermisoConGoce+' permiso c/goce':''));
-        var filas='<div class="resumen-row"><span class="resumen-key">💵 Sueldo ('+diasLabelTxt+')</span><span class="resumen-val">+$'+totalSueldo.toFixed(2)+'</span></div>';
-        if(horasExtra>0) filas+='<div class="resumen-row"><span class="resumen-key">⏰ Horas extra ('+horasExtra.toFixed(1)+'h'+(tieneAjusteExtra?' ✏️':'')+')</span><span class="resumen-val">+$'+totalExtra.toFixed(2)+'</span></div>';
-        bonosQueCalifican.forEach(function(b){
-          filas+='<div class="resumen-row"><span class="resumen-key">🎁 '+b.descripcion+'</span><span class="resumen-val">+$'+parseFloat(b.monto||0).toFixed(2)+'</span></div>';
-        });
-        deduccionesOp.forEach(function(d){
-          var pr=prestamoIdsOp[d.prestamo_id];
-          filas+='<div class="resumen-row"><span class="resumen-key">📝 '+(pr?pr.concepto:'Préstamo')+' (pago '+d.numero_pago+')</span><span class="resumen-val" style="color:var(--rojo);">-$'+parseFloat(d.monto).toFixed(2)+'</span></div>';
-        });
+        accionesPago[idAccion]={
+          operarioId:o.id,nombre:o.nombre,tipo:tipoTxt,totalSueldo:montoSueldo,
+          horasExtra:horasExtra,totalExtra:montoExtra,bonosQueCalifican:bonosQueCalifican,
+          deducciones:deduccionesOp,scoresOp:scoresOp,granTotal:neto,pagado:pagado,
+          recibo:{nombre:o.nombre,numSemana:numSemana,semanaInicio:semanaInicio,semanaFin:semanaFin,resumen:resumen,sueldoBase:sueldoBase,totalSueldo:montoSueldo,tarifa:tarifaOp,horasExtra:horasExtra,totalExtra:montoExtra,bonos:bonosQueCalifican.map(function(b){return {descripcion:b.descripcion,monto:parseFloat(b.monto||0)};}),deducciones:deduccionesOp.map(function(d){var pr=prestamoIdsOp[d.prestamo_id];return {concepto:pr?pr.concepto:'Préstamo',numero:d.numero_pago,monto:parseFloat(d.monto||0)};}),granTotal:neto,nominaCompleta:pagado}
+        };
 
-        var metaExtra=[];
-        if(resumen.faltas) metaExtra.push('<span style="color:var(--rojo);">❌ '+resumen.faltas+' falta(s)</span>');
-        if(resumen.retardos) metaExtra.push('<span style="color:var(--tierra);">🕐 '+resumen.retardos+' retardo(s)</span>');
-        if(resumen.diasPermisoConGoce) metaExtra.push('🩺 '+resumen.diasPermisoConGoce+' permiso c/goce');
-        if(resumen.diasPermisoSinGoce) metaExtra.push('🩺 '+resumen.diasPermisoSinGoce+' permiso s/goce');
-        if(!sueldoBase) metaExtra.push('<span style="color:var(--rojo);">⚠️ sin sueldo base</span>');
-        if((tieneAjusteDias||tieneAjusteExtra)&&ajuste&&ajuste.motivo) metaExtra.push('<span style="color:var(--tierra);">✏️ '+ajuste.motivo+'</span>');
+        totalSueldos+=montoSueldo; totalExtra+=montoExtra; totalBonos+=montoBonos; totalPrestamos+=montoPrestamos; totalNeto+=neto;
+        if(pagado)totalPagado+=neto; else {totalPendiente+=neto; pendientes.push(accionesPago[idAccion]);}
 
-        gn51Total+=granTotal;
-        if(nominaCompleta){gn51Pagado+=granTotal;}else{gn51Pendiente+=granTotal;gn51Pendientes++;}
-        var incidencias=[];
-        if(resumen.faltas) incidencias.push('❌ '+resumen.faltas+' falta'+(resumen.faltas===1?'':'s'));
-        if(resumen.retardos) incidencias.push('🕐 '+resumen.retardos+' retardo'+(resumen.retardos===1?'':'s'));
-        if(resumen.diasPermisoConGoce) incidencias.push('🩺 '+resumen.diasPermisoConGoce+' permiso c/goce');
-        if(resumen.diasPermisoSinGoce) incidencias.push('🩺 '+resumen.diasPermisoSinGoce+' permiso s/goce');
-        var detalle=[];
-        detalle.push('Sueldo: $'+totalSueldo.toFixed(2)+' · '+diasLabelTxt);
-        if(ex54Op.banco||ex54Op.numero_tarjeta){var ult4=ex54Op.numero_tarjeta?String(ex54Op.numero_tarjeta).slice(-4):'';detalle.push('Banco: '+(ex54Op.banco||'—')+(ult4?' · •••• '+ult4:''));}
-        if(totalExtra>0) detalle.push('Extra: +$'+totalExtra.toFixed(2));
-        if(totalBonos>0) detalle.push('Bonos: +$'+totalBonos.toFixed(2));
-        if(totalDeducciones>0) detalle.push('Préstamos: -$'+totalDeducciones.toFixed(2));
-        return '<div class="gn51-card '+(nominaCompleta?'paid':'')+'">'+
-          '<div class="gn51-main">'+
-            '<div class="gn51-name"><strong>'+o.nombre+'</strong><div class="gn51-meta">'+(incidencias.length?incidencias.join(' · '):(resumen.trabajados+' días trabajados'))+'</div></div>'+
-            '<div class="gn51-meta">'+detalle.join(' · ')+'</div>'+
-            '<div class="gn51-amount"><small>'+(nominaCompleta?'Pagado':'Total a pagar')+'</small><strong>$'+granTotal.toFixed(2)+'</strong></div>'+
-            '<div class="gn51-actions">'+
-              (nominaCompleta?
-                '<button class="gn51-sec" data-despagar="'+idAccion+'">Marcar pendiente</button>':
-                '<select data-nomina-cuenta="'+idAccion+'"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="santander_pesos">Santander Pesos</option></select><button class="gn51-pay" data-pagar="'+idAccion+'">✓ Pagar</button>')+
-              '<button type="button" class="gn51-sec" data-recibo="'+idAccion+'">Recibo</button>'+
-              '<button type="button" class="gn51-sec" data-ajustar-nom="'+o.id+'" data-dias="'+diasPagados+'" data-horas="'+horasExtra+'" data-motivo="'+((ajuste&&ajuste.motivo)||'').replace(/"/g,'&quot;')+'">Ajustar</button>'+
+        var warning=!sueldoBase?'<span class="n74-warn">Sin jornal</span>':'';
+        var inc=[];
+        if(resumen.faltas)inc.push('F '+resumen.faltas);
+        if(resumen.retardos)inc.push('R '+resumen.retardos);
+        if(resumen.diasPermisoConGoce)inc.push('P '+resumen.diasPermisoConGoce);
+        var banco='';
+        if(ex54Op.banco||ex54Op.numero_tarjeta){
+          var ult4=ex54Op.numero_tarjeta?String(ex54Op.numero_tarjeta).slice(-4):'';
+          banco=(ex54Op.banco||'Banco')+(ult4?' •••• '+ult4:'');
+        }
+
+        filas.push(
+          '<div class="n74-row '+(pagado?'paid':'')+'">'+
+            '<div class="n74-person"><strong>'+o.nombre+'</strong><div><span class="n74-badge '+(tipoTxt==='EVENTUAL'?'ev':'')+'">'+tipoTxt+'</span> '+warning+'</div></div>'+
+            '<div class="n74-cell"><small>Días</small><b>'+diasPagados.toFixed(1)+'</b><span>'+inc.join(' · ')+'</span></div>'+
+            '<div class="n74-cell"><small>Jornal</small><b>$'+sueldoBase.toFixed(2)+'</b><span>$'+montoSueldo.toFixed(2)+'</span></div>'+
+            '<div class="n74-cell"><small>H.E.</small><b>'+horasExtra.toFixed(1)+' h</b><span>+$'+montoExtra.toFixed(2)+'</span></div>'+
+            '<div class="n74-cell"><small>Bonos</small><b>+$'+montoBonos.toFixed(2)+'</b></div>'+
+            '<div class="n74-cell"><small>Préstamos</small><b class="red">-$'+montoPrestamos.toFixed(2)+'</b></div>'+
+            '<div class="n74-net"><small>'+(pagado?'PAGADO':'NETO')+'</small><strong>$'+neto.toFixed(2)+'</strong><span>'+banco+'</span></div>'+
+            '<div class="n74-actions">'+
+              (pagado?'<button class="n74-soft" data-despagar="'+idAccion+'">Pendiente</button>':'<button class="n74-pay" data-pagar="'+idAccion+'">Pagar</button>')+
+              '<button class="n74-soft" data-recibo="'+idAccion+'">Recibo</button>'+
+              '<button class="n74-soft" data-ajustar-nom="'+o.id+'" data-dias="'+diasPagados+'" data-horas="'+horasExtra+'" data-motivo="'+((ajuste&&ajuste.motivo)||'').replace(/"/g,'&quot;')+'">Ajustar</button>'+
             '</div>'+
-          '</div>'+
-        '</div>';
+          '</div>'
+        );
       });
-      html+='<div class="gn51-summary">'+
-        '<div class="gn51-kpi"><small>Colaboradores</small><strong>'+operarios.length+'</strong></div>'+
-        '<div class="gn51-kpi"><small>Nómina total</small><strong>$'+gn51Total.toFixed(2)+'</strong></div>'+
-        '<div class="gn51-kpi pending"><small>Pendiente · '+gn51Pendientes+'</small><strong>$'+gn51Pendiente.toFixed(2)+'</strong></div>'+
-        '<div class="gn51-kpi"><small>Pagado</small><strong>$'+gn51Pagado.toFixed(2)+'</strong></div>'+
-      '</div><div class="gn51-list">'+gn51Tarjetas.join('')+'</div>';
+
+      var html='<style>'+
+        '.n74-title{font-size:1.35rem;font-weight:850;color:var(--verde)}.n74-sub{font-size:.76rem;color:var(--gris-5);margin-top:3px}'+
+        '.n74-nav{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:10px 0}.n74-nav button,.n74-nav select{border:1px solid var(--gris-2);background:#fff;border-radius:18px;padding:.38rem .72rem;font-size:.72rem}.n74-week{margin-left:auto;font-size:.73rem;color:var(--gris-5)}'+
+        '.n74-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;margin:10px 0}.n74-kpi{background:#fff;border:1px solid var(--gris-2);border-radius:11px;padding:8px 10px}.n74-kpi small{font-size:.58rem;text-transform:uppercase;color:var(--gris-5);font-weight:750;display:block}.n74-kpi strong{display:block;font-size:.92rem;color:var(--verde);margin-top:2px}.n74-kpi.red strong{color:var(--rojo)}.n74-kpi.gold strong{color:var(--tierra)}'+
+        '.n74-bulk{display:flex;gap:8px;align-items:center;justify-content:flex-end;background:#fff;border:1px solid var(--gris-2);border-radius:11px;padding:9px 10px;margin-bottom:10px}.n74-bulk span{margin-right:auto;font-size:.72rem;color:var(--gris-5)}.n74-bulk select{height:34px;border:1px solid var(--gris-2);border-radius:8px;padding:0 8px}.n74-bulk button{height:34px;border:0;border-radius:8px;padding:0 12px;background:var(--verde-mid);color:#fff;font-weight:750}'+
+        '.n74-list{display:flex;flex-direction:column;gap:6px}.n74-row{display:grid;grid-template-columns:1.35fr .6fr .75fr .68fr .65fr .72fr .9fr 1.25fr;gap:8px;align-items:center;background:#fff;border:1px solid var(--gris-2);border-left:4px solid var(--tierra);border-radius:10px;padding:8px 10px}.n74-row.paid{border-left-color:var(--verde-mid);opacity:.88}.n74-person strong{font-size:.82rem}.n74-badge{display:inline-block;margin-top:3px;padding:2px 6px;border-radius:999px;background:#e9f6ee;color:#237448;font-size:.54rem;font-weight:850}.n74-badge.ev{background:#fff1d7;color:#a26700}.n74-warn{font-size:.56rem;color:var(--rojo);font-weight:800;margin-left:4px}.n74-cell small,.n74-net small{display:block;font-size:.53rem;text-transform:uppercase;color:var(--gris-5);font-weight:750}.n74-cell b{display:block;font-size:.76rem;color:#1e2f26}.n74-cell span,.n74-net span{font-size:.56rem;color:var(--gris-5)}.n74-cell .red{color:var(--rojo)}.n74-net strong{display:block;font-size:.88rem;color:var(--tierra)}.n74-row.paid .n74-net strong{color:var(--verde-mid)}.n74-actions{display:flex;gap:4px;justify-content:flex-end;flex-wrap:wrap}.n74-actions button{height:29px;border-radius:7px;padding:0 7px;font-size:.61rem;white-space:nowrap}.n74-pay{border:0;background:var(--verde-mid);color:#fff;font-weight:750}.n74-soft{border:1px solid var(--gris-2);background:#fff;color:var(--verde)}'+
+        '.n74-foot{display:flex;justify-content:flex-end;gap:18px;margin-top:9px;font-size:.7rem;font-weight:750;color:var(--verde)}'+
+        '@media(max-width:1100px){.n74-kpis{grid-template-columns:repeat(3,1fr)}.n74-row{grid-template-columns:1.2fr repeat(3,.7fr) 1fr}.n74-row .n74-cell:nth-of-type(5),.n74-row .n74-cell:nth-of-type(6){display:none}.n74-actions{grid-column:1/-1;justify-content:flex-start}}'+
+        '</style>'+
+        '<div><div class="n74-title">💰 Pago de Nómina</div><div class="n74-sub">Preliminar semanal generado desde Expedientes, Asistencia, H.E., Bonos y Préstamos. Corrige el origen y vuelve a calcular antes de pagar.</div></div>'+
+        '<div class="n74-nav"><button id="n74-ant">← Semana anterior</button><button id="n74-hoy">Semana actual</button>'+(esSemanaActual?'':'<button id="n74-sig">Semana siguiente →</button>')+'<span class="n74-week">Semana '+numSemana+' · '+semanaInicio+' a '+semanaFin+'</span></div>'+
+        '<div class="n74-kpis">'+
+          '<div class="n74-kpi"><small>Sueldos</small><strong>$'+totalSueldos.toFixed(2)+'</strong></div>'+
+          '<div class="n74-kpi"><small>Horas extra</small><strong>+$'+totalExtra.toFixed(2)+'</strong></div>'+
+          '<div class="n74-kpi"><small>Bonos</small><strong>+$'+totalBonos.toFixed(2)+'</strong></div>'+
+          '<div class="n74-kpi red"><small>Préstamos</small><strong>-$'+totalPrestamos.toFixed(2)+'</strong></div>'+
+          '<div class="n74-kpi gold"><small>Neto semana</small><strong>$'+totalNeto.toFixed(2)+'</strong></div>'+
+          '<div class="n74-kpi"><small>Pagado</small><strong>$'+totalPagado.toFixed(2)+'</strong></div>'+
+        '</div>'+
+        '<div class="n74-bulk"><span><strong>'+pendientes.length+'</strong> pagos pendientes · $'+totalPendiente.toFixed(2)+'</span><select id="n74-cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="santander_pesos">Santander Pesos</option></select><button id="n74-pagar-todo" '+(!pendientes.length?'disabled style="opacity:.45"':'')+'>✓ Pagar nómina pendiente</button></div>'+
+        '<div class="n74-list">'+(filas.length?filas.join(''):'<div class="empty">Sin colaboradores con nómina en esta semana.</div>')+'</div>'+
+        '<div class="n74-foot"><span>Pendiente: $'+totalPendiente.toFixed(2)+'</span><span>Pagado: $'+totalPagado.toFixed(2)+'</span></div>';
 
       body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="no50VolverNomina()">← Volver a Caja</button>';
 
-      var btnAnt=document.getElementById('gn-ant');
-      if(btnAnt) btnAnt.addEventListener('click',function(){var d=new Date(lunes);d.setDate(d.getDate()-7);renderGenerarNomina(d);});
-      var btnSig=document.getElementById('gn-sig');
-      if(btnSig) btnSig.addEventListener('click',function(){var d=new Date(lunes);d.setDate(d.getDate()+7);renderGenerarNomina(d);});
+      function registrarEstados(acc){
+        var opId=acc.operarioId;
+        var existenteSueldo=estadoPorOp[opId];
+        var payloadSueldo={operario_id:opId,semana_inicio:semanaInicio,semana_fin:semanaFin,estado:'pagado',monto_pagado:acc.totalSueldo,pagado_por:usuario.id,pagado_en:new Date().toISOString()};
+        var pasos=[existenteSueldo?from('pagos_semana_estado').eq('id',existenteSueldo.id).update(payloadSueldo):from('pagos_semana_estado').insert(payloadSueldo)];
+
+        if(acc.horasExtra>0){
+          var existenteExtra=estadoExtraPorOp[opId];
+          var payloadExtra={operario_id:opId,semana_inicio:semanaInicio,semana_fin:semanaFin,estado:'pagado',horas:acc.horasExtra,monto_pagado:acc.totalExtra,pagado_por:usuario.id,pagado_en:new Date().toISOString()};
+          pasos.push(existenteExtra?from('pagos_extra_estado').eq('id',existenteExtra.id).update(payloadExtra):from('pagos_extra_estado').insert(payloadExtra));
+        }
+
+        acc.deducciones.forEach(function(d){
+          pasos.push(from('prestamo_pagos').eq('id',d.id).update({estado:'descontado',descontado_en:new Date().toISOString()}));
+        });
+
+        acc.bonosQueCalifican.forEach(function(b){
+          var scoreDe=acc.scoresOp.find(function(x){return x.bono.id===b.id;});
+          pasos.push(from('bono_beneficiarios').insert({bono_id:b.id,operario_id:opId,puntaje_obtenido:scoreDe?scoreDe.score:null}));
+        });
+
+        return Promise.all(pasos).then(function(){
+          var prestamoIds=Object.keys(acc.deducciones.reduce(function(s,d){s[d.prestamo_id]=true;return s;},{}));
+          return Promise.all(prestamoIds.map(function(pid){
+            return from('prestamo_pagos').select('*').eq('prestamo_id',pid).get().then(function(todos){
+              if(todos&&todos.length&&todos.every(function(x){return x.estado==='descontado';}))return from('prestamos').eq('id',pid).update({estado:'liquidado'});
+            });
+          }));
+        });
+      }
+
+      function agregarSalidaCaja(monto,cuenta,concepto,ref,persona){
+        var caja=ca21Load();
+        caja.movimientos=caja.movimientos.filter(function(m){return m.ref_nomina!==ref;});
+        caja.movimientos.push({
+          id:ref+'-'+Date.now(),ref_nomina:ref,fecha:fechaHoyLocal(),hora:ca21Now(),tipo:'salida',
+          cuenta:cuenta,monto:ca21Money(monto),categoria:'Nómina',concepto:concepto,
+          persona:persona||'Personal',forma:cuenta,origen:'Nómina',estado:'Pagado',
+          usuario:(usuario&&usuario.nombre)||'Usuario'
+        });
+        ca21Save(caja);
+      }
+
+      function saldoSuficiente(cuenta,monto){
+        var cajaActual=ca21Totals(fechaHoyLocal());
+        var disponible=ca35CuentaSaldo(cajaActual,cuenta);
+        if(monto>disponible){
+          alert('Saldo insuficiente en '+ca35CuentaLabel(cuenta)+'. Disponible: $'+formatMonto(disponible));
+          return false;
+        }
+        return true;
+      }
+
+      var ant=document.getElementById('n74-ant');
+      if(ant)ant.onclick=function(){var d=new Date(lunes);d.setDate(d.getDate()-7);renderGenerarNomina(d);};
+      var hoyBtn=document.getElementById('n74-hoy');
+      if(hoyBtn)hoyBtn.onclick=function(){renderGenerarNomina(new Date());};
+      var sig=document.getElementById('n74-sig');
+      if(sig)sig.onclick=function(){var d=new Date(lunes);d.setDate(d.getDate()+7);renderGenerarNomina(d);};
 
       body.querySelectorAll('[data-pagar]').forEach(function(btn){
         btn.addEventListener('click',function(){
-          var accionId=this.dataset.pagar;
-          var acc=accionesPago[accionId];
-          var selectorCuenta=body.querySelector('[data-nomina-cuenta="'+accionId+'"]');
-          var cuentaPago=selectorCuenta?selectorCuenta.value:'efectivo';
-          var cajaActual=ca21Totals(fechaHoyLocal());
-          var disponible=ca35CuentaSaldo(cajaActual,cuentaPago);
-          if(acc.granTotal>disponible){
-            alert('Saldo insuficiente en '+ca35CuentaLabel(cuentaPago)+'. Disponible: $'+formatMonto(disponible));
-            return;
-          }
-          btn.disabled=true; btn.textContent='Guardando...';
-          var opId=acc.operarioId;
-          var existenteSueldo=estadoPorOp[opId];
-          var payloadSueldo={operario_id:opId,semana_inicio:semanaInicio,semana_fin:semanaFin,estado:'pagado',monto_pagado:acc.totalSueldo,pagado_por:usuario.id,pagado_en:new Date().toISOString()};
-          var pasos=[existenteSueldo?from('pagos_semana_estado').eq('id',existenteSueldo.id).update(payloadSueldo):from('pagos_semana_estado').insert(payloadSueldo)];
-          if(acc.horasExtra>0){
-            var existenteExtra=estadoExtraPorOp[opId];
-            var payloadExtra={operario_id:opId,semana_inicio:semanaInicio,semana_fin:semanaFin,estado:'pagado',horas:acc.horasExtra,monto_pagado:acc.totalExtra,pagado_por:usuario.id,pagado_en:new Date().toISOString()};
-            pasos.push(existenteExtra?from('pagos_extra_estado').eq('id',existenteExtra.id).update(payloadExtra):from('pagos_extra_estado').insert(payloadExtra));
-          }
-          acc.deducciones.forEach(function(d){
-            pasos.push(from('prestamo_pagos').eq('id',d.id).update({estado:'descontado',descontado_en:new Date().toISOString()}));
-          });
-          acc.bonosQueCalifican.forEach(function(b){
-            var scoreDe=acc.scoresOp.find(function(x){return x.bono.id===b.id;});
-            pasos.push(from('bono_beneficiarios').insert({bono_id:b.id,operario_id:opId,puntaje_obtenido:scoreDe?scoreDe.score:null}));
-          });
-          Promise.all(pasos).then(function(){
-            var prestamoIds=Object.keys(acc.deducciones.reduce(function(s,d){s[d.prestamo_id]=true;return s;},{}));
-            return Promise.all(prestamoIds.map(function(pid){
-              return from('prestamo_pagos').select('*').eq('prestamo_id',pid).get().then(function(todos){
-                if(todos&&todos.length&&todos.every(function(x){return x.estado==='descontado';})) return from('prestamos').eq('id',pid).update({estado:'liquidado'});
-              });
-            }));
-          }).then(function(){
-            var caja=ca21Load();
-            var refNom='nomina-'+semanaInicio+'-'+opId;
-            caja.movimientos=caja.movimientos.filter(function(m){return m.ref_nomina!==refNom;});
-            caja.movimientos.push({
-              id:refNom+'-'+Date.now(),ref_nomina:refNom,
-              fecha:fechaHoyLocal(),hora:ca21Now(),tipo:'salida',
-              cuenta:cuentaPago,monto:ca21Money(acc.granTotal),
-              categoria:'Nómina',concepto:'Nómina semana '+numSemana+' · '+acc.nombre,
-              persona:acc.nombre,forma:cuentaPago,origen:'Nómina',
-              estado:'Pagado',usuario:(usuario&&usuario.nombre)||'Usuario'
-            });
-            ca21Save(caja);
-            return from('notificaciones').insert({titulo:'💳 Nómina pagada',cuerpo:'Tu nómina de la semana '+numSemana+' ($'+acc.granTotal.toFixed(2)+') fue marcada como pagada.',icono:'💳',leida:false,para_rol:'operario',para_usuario:opId});
-          }).then(function(){showToast('✅ Nómina de '+acc.nombre+' pagada · salida registrada en Caja');renderGenerarNomina(lunes);}).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='✅ Marcar nómina completa como pagada';});
+          var acc=accionesPago[this.dataset.pagar];
+          var cuenta=document.getElementById('n74-cuenta').value;
+          if(!saldoSuficiente(cuenta,acc.granTotal))return;
+          if(!confirm('Pagar a '+acc.nombre+' $'+acc.granTotal.toFixed(2)+' desde '+ca35CuentaLabel(cuenta)+'?'))return;
+          btn.disabled=true;btn.textContent='Guardando...';
+          registrarEstados(acc).then(function(){
+            agregarSalidaCaja(acc.granTotal,cuenta,'Nómina semana '+numSemana+' · '+acc.nombre,'nomina-'+semanaInicio+'-'+acc.operarioId,acc.nombre);
+            return from('notificaciones').insert({titulo:'💳 Nómina pagada',cuerpo:'Tu nómina de la semana '+numSemana+' ($'+acc.granTotal.toFixed(2)+') fue marcada como pagada.',icono:'💳',leida:false,para_rol:'operario',para_usuario:acc.operarioId});
+          }).then(function(){showToast('✅ Pago registrado en Caja');renderGenerarNomina(lunes);}).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Pagar';});
         });
       });
+
+      var pagarTodo=document.getElementById('n74-pagar-todo');
+      if(pagarTodo)pagarTodo.addEventListener('click',function(){
+        var cuenta=document.getElementById('n74-cuenta').value;
+        var total=pendientes.reduce(function(s,a){return s+a.granTotal;},0);
+        if(!pendientes.length)return;
+        if(!saldoSuficiente(cuenta,total))return;
+        if(!confirm('Confirmar pago de nómina pendiente de la semana '+numSemana+' por $'+total.toFixed(2)+' desde '+ca35CuentaLabel(cuenta)+'?'))return;
+        pagarTodo.disabled=true;pagarTodo.textContent='Registrando...';
+        Promise.all(pendientes.map(registrarEstados)).then(function(){
+          var ref='nomina-lote-'+semanaInicio;
+          agregarSalidaCaja(total,cuenta,'Nómina completa semana '+numSemana,ref,'Personal');
+          return Promise.all(pendientes.map(function(acc){
+            return from('notificaciones').insert({titulo:'💳 Nómina pagada',cuerpo:'Tu nómina de la semana '+numSemana+' ($'+acc.granTotal.toFixed(2)+') fue marcada como pagada.',icono:'💳',leida:false,para_rol:'operario',para_usuario:acc.operarioId});
+          }));
+        }).then(function(){showToast('✅ Nómina completa pagada · una salida registrada en Caja');renderGenerarNomina(lunes);}).catch(function(e){alert('Error: '+e.message);pagarTodo.disabled=false;pagarTodo.textContent='✓ Pagar nómina pendiente';});
+      });
+
       body.querySelectorAll('[data-despagar]').forEach(function(btn){
         btn.addEventListener('click',function(){
           var acc=accionesPago[this.dataset.despagar];
           var opId=acc.operarioId;
           var pasos=[];
-          var existenteSueldo=estadoPorOp[opId];
-          if(existenteSueldo) pasos.push(from('pagos_semana_estado').eq('id',existenteSueldo.id).update({estado:'pendiente'}));
-          var existenteExtra=estadoExtraPorOp[opId];
-          if(existenteExtra) pasos.push(from('pagos_extra_estado').eq('id',existenteExtra.id).update({estado:'pendiente'}));
+          var existenteSueldo=estadoPorOp[opId]; if(existenteSueldo)pasos.push(from('pagos_semana_estado').eq('id',existenteSueldo.id).update({estado:'pendiente'}));
+          var existenteExtra=estadoExtraPorOp[opId]; if(existenteExtra)pasos.push(from('pagos_extra_estado').eq('id',existenteExtra.id).update({estado:'pendiente'}));
           Promise.all(pasos).then(function(){
             var caja=ca21Load();
-            var refNom='nomina-'+semanaInicio+'-'+opId;
-            caja.movimientos=caja.movimientos.filter(function(m){return m.ref_nomina!==refNom;});
+            caja.movimientos=caja.movimientos.filter(function(m){
+              if(m.ref_nomina==='nomina-'+semanaInicio+'-'+opId)return false;
+              return true;
+            });
             ca21Save(caja);
-            showToast('Marcado como pendiente · movimiento retirado de Caja');
+            showToast('Marcado como pendiente. Si fue pagado dentro de una nómina completa, revisa manualmente el movimiento de Caja.');
             renderGenerarNomina(lunes);
           }).catch(function(e){alert('Error: '+e.message);});
         });
       });
+
       body.querySelectorAll('[data-recibo]').forEach(function(btn){
-        btn.addEventListener('click',function(){
-          var acc=accionesPago[this.dataset.recibo];
-          abrirRecibo(acc.recibo);
-        });
+        btn.onclick=function(){abrirRecibo(accionesPago[this.dataset.recibo].recibo);};
       });
+
       body.querySelectorAll('[data-ajustar-nom]').forEach(function(btn){
-        btn.addEventListener('click',function(){
-          renderAjustarNomina(this.dataset.ajustarNom,accionesPago['gn-acc-'+this.dataset.ajustarNom].nombre,semanaInicio,this.dataset.dias,this.dataset.horas,this.dataset.motivo,lunes);
-        });
+        btn.onclick=function(){
+          var acc=accionesPago['nom74-'+this.dataset.ajustarNom];
+          renderAjustarNomina(this.dataset.ajustarNom,acc.nombre,semanaInicio,this.dataset.dias,this.dataset.horas,this.dataset.motivo,lunes);
+        };
       });
-    }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
-  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+    }).catch(function(e){body.innerHTML='<div class="loading">Error al calcular bonos: '+e.message+'</div>';});
+  }).catch(function(e){body.innerHTML='<div class="loading">Error al generar nómina: '+e.message+'</div>';});
 }
 
 function renderAjustarNomina(operarioId,nombre,semanaInicio,diasActual,horasActual,motivoActual,lunesVolver){
@@ -11911,44 +12011,21 @@ function ex54Get(id){var x=ex54Load();return x[id]||{};}
 function ex54Put(id,data){var x=ex54Load();x[id]=Object.assign({},x[id]||{},data||{});ex54Save(x);}
 function ex54CargoRol(cargo,tipo){
   if(tipo==='Eventual')return 'labores_eventual';
-  return (cargo==='Cosecha'||cargo==='Cosechador')?'cosechador':
+  return cargo==='Cosecha'?'cosechador':
     cargo==='Ingeniero'?'ingeniero':
     cargo==='Galerista'?'galerista':
     cargo==='Encargado'?'encargado':'operario';
 }
 function ex54Esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
-
-function ex70MergeExtra(base,id){
-  var db=(base&&base.expediente_datos&&typeof base.expediente_datos==='object')?base.expediente_datos:{};
-  var local=ex54Get(id)||{};
-  var merged=Object.assign({},db,local);
-  if(!merged.cargo&&base&&base.cargo)merged.cargo=base.cargo;
-  if(!merged.tipo_colaborador&&base&&base.tipo_colaborador)merged.tipo_colaborador=base.tipo_colaborador;
-  return merged;
-}
-function ex70InjectPostulacionDocs(postulacionId){
-  if(!postulacionId)return;
-  var form=document.querySelector('.ex54-form'); if(!form)return;
-  from('postulacion_documentos').select('*').eq('postulacion_id',postulacionId).order('creado_en',{ascending:true}).get().then(function(rows){
-    rows=rows||[];if(!rows.length)return;
-    var actions=form.querySelector('.ex54-actions');if(!actions)return;
-    var sec=document.createElement('div');sec.className='ex54-sec';
-    sec.innerHTML='<h3>Documentos enviados en pre-registro</h3><div class="ex55-docgrid">'+rows.map(function(d){
-      return '<div class="ex55-docitem"><div class="ex55-docrow"><div><div class="ex55-docname">'+ex54Esc(d.tipo||'Documento')+'</div><div class="ex55-mini">'+ex54Esc(d.nombre_archivo||'Archivo recibido')+'</div></div><span class="ex55-status ex55-ok">Recibido</span></div><div style="margin-top:7px;"><a class="ex55-btn ex56-view" href="'+d.url_documento+'" target="_blank" rel="noopener">Ver documento</a></div></div>';
-    }).join('')+'</div><div class="ex55-mini" style="margin-top:7px;">Documentos capturados por el postulante. Administración puede completar o reemplazar archivos en el expediente.</div>';
-    form.insertBefore(sec,actions);
-  }).catch(function(){});
-}
 function renderAltasBajas(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="loading">Cargando expedientes...</div>';
-  from('usuarios').select('id,nombre,rol,activo,certificado_ambas,sueldo_base,fecha_ingreso,fecha_nacimiento,cargo,tipo_colaborador,expediente_datos,origen_postulacion,estatus_postulacion').order('nombre').get().then(function(users){
+  from('usuarios').select('id,nombre,rol,activo,certificado_ambas,sueldo_base,fecha_ingreso,fecha_nacimiento').order('nombre').get().then(function(users){
     users=users||[];
     var html='<div class="ex54-head"><div><div class="ex54-eyebrow">Administración · Empleados</div><div class="ex54-title">Expedientes</div><div class="ex54-sub">Información personal, laboral y condiciones de pago de cada colaborador.</div></div><div style="display:flex;gap:7px;align-items:center;"><button class="em59-back" onclick="renderAdministracionMenu()">← Empleados</button><button class="btn-sm btn-completar" onclick="renderNuevoUsuario()">+ Nuevo expediente</button></div></div><div class="ex54-list">';
     html+=users.map(function(u){
-      var ex=ex70MergeExtra(u,u.id), cargo=ex.cargo||u.cargo||(ROLES[u.rol]||u.rol), tipo=ex.tipo_colaborador||u.tipo_colaborador||(u.rol==='labores_eventual'?'Eventual':'Base');
-      var postBadge=u.origen_postulacion?'<span class="em58-badge em58-eventual" style="margin-left:5px;background:#fff1cf;color:#9a6200;">POSTULACIÓN</span>':'';
-      return '<div class="ex54-row"><div><div class="ex54-name">'+u.nombre+' <span class="em58-badge '+(tipo==='Eventual'?'em58-eventual':'em58-base')+'">'+tipo.toUpperCase()+'</span>'+postBadge+'</div><div class="ex54-role">'+cargo+(u.fecha_ingreso?' · Ingreso '+u.fecha_ingreso:'')+(u.estatus_postulacion?' · '+u.estatus_postulacion:'')+'</div></div><div><div class="ex54-status" style="color:'+(u.activo?'var(--verde-mid)':'var(--gris-3)')+';">'+(u.activo?'Activo':'Inactivo')+'</div><div class="ex54-role">Sueldo base: $'+(parseFloat(u.sueldo_base)||0).toFixed(2)+'</div></div><div class="orden-actions"><button class="btn-sm ex55-action-exp" onclick="renderEditarUsuario(\''+u.id+'\',\''+ex54Esc(u.nombre).replace(/'/g,"\\'")+'\',\''+u.rol+'\','+(u.certificado_ambas?'true':'false')+')">Expediente</button><button class="btn-sm ex55-action-pin" onclick="renderCambiarPin(\''+u.id+'\',\''+ex54Esc(u.nombre).replace(/'/g,"\\'")+'\')">PIN</button><button class="btn-sm ex55-action-cred" onclick="renderCredencialId(\''+u.id+'\')">Credencial</button>'+(u.activo?'<button class="btn-sm ex55-action-baja" onclick="bajaUsuario(\''+u.id+'\')">Dar de baja</button>':'<button class="btn-sm btn-iniciar" onclick="altaUsuario(\''+u.id+'\')">Reactivar</button>')+'</div></div>';
+      var ex=ex54Get(u.id), cargo=ex.cargo||(ROLES[u.rol]||u.rol), tipo=ex.tipo_colaborador||(u.rol==='labores_eventual'?'Eventual':'Base');
+      return '<div class="ex54-row"><div><div class="ex54-name">'+u.nombre+' <span class="em58-badge '+(tipo==='Eventual'?'em58-eventual':'em58-base')+'">'+tipo.toUpperCase()+'</span></div><div class="ex54-role">'+cargo+(u.fecha_ingreso?' · Ingreso '+u.fecha_ingreso:'')+'</div></div><div><div class="ex54-status" style="color:'+(u.activo?'var(--verde-mid)':'var(--gris-3)')+';">'+(u.activo?'Activo':'Inactivo')+'</div><div class="ex54-role">Sueldo base: $'+(parseFloat(u.sueldo_base)||0).toFixed(2)+'</div></div><div class="orden-actions"><button class="btn-sm ex55-action-exp" onclick="renderEditarUsuario(\''+u.id+'\',\''+ex54Esc(u.nombre).replace(/'/g,"\\'")+'\',\''+u.rol+'\','+(u.certificado_ambas?'true':'false')+')">Expediente</button><button class="btn-sm ex55-action-pin" onclick="renderCambiarPin(\''+u.id+'\',\''+ex54Esc(u.nombre).replace(/'/g,"\\'")+'\')">PIN</button><button class="btn-sm ex55-action-cred" onclick="renderCredencialId(\''+u.id+'\')">Credencial</button>'+(u.activo?'<button class="btn-sm ex55-action-baja" onclick="bajaUsuario(\''+u.id+'\')">Dar de baja</button>':'<button class="btn-sm btn-iniciar" onclick="altaUsuario(\''+u.id+'\')">Reactivar</button>')+'</div></div>';
     }).join('');
     body.innerHTML=html+'</div><button class="em59-back" style="margin-top:.8rem;" onclick="renderAdministracionMenu()">← Empleados</button>';
   });
@@ -12097,7 +12174,7 @@ function ex54FormHtml(mode,id,base,extra){
   base=base||{}; extra=extra||{};
   var isEdit=mode==='edit';
   var cargo=extra.cargo||base.cargo||'Labores';
-  var cargos=['Labores','Cosecha','Cosechador','Ingeniero','Galerista','Auxiliar Galera','Transportista','Encargado'];
+  var cargos=['Labores','Cosecha','Ingeniero','Galerista','Auxiliar Galera','Transportista','Encargado'];
   var tipoColab=extra.tipo_colaborador||(base.rol==='labores_eventual'?'Eventual':'Base');
   return '<div class="ex54-head"><div><div class="ex54-eyebrow">Administración · Empleados · Expedientes</div><div class="ex54-title">'+(isEdit?'Editar expediente':'Nuevo expediente')+'</div><div class="ex54-sub">Una sola ficha alimenta asistencia, nómina y operación del colaborador.</div></div></div>'+
   '<div class="ex54-form">'+
@@ -12183,7 +12260,7 @@ function guardarNuevoUsuario(){
   var extra=ex54Collect(), rol=ex54CargoRol(extra.cargo,extra.tipo_colaborador);
   if(!nombre||pin.length!==4){alert('Captura nombre y PIN de 4 dígitos.');return;}
   var btn=document.getElementById('ex54-guardar');btn.disabled=true;btn.textContent='Guardando...';
-  from('usuarios').insert({nombre:nombre,rol:rol,fecha_ingreso:fechaIngreso,fecha_nacimiento:fechaNacimiento,sueldo_base:sueldoBase,activo:true,cargo:extra.cargo,tipo_colaborador:extra.tipo_colaborador,expediente_datos:extra}).then(function(data){
+  from('usuarios').insert({nombre:nombre,rol:rol,fecha_ingreso:fechaIngreso,fecha_nacimiento:fechaNacimiento,sueldo_base:sueldoBase,activo:true}).then(function(data){
     var uid=Array.isArray(data)?data[0].id:data.id;
     ex54Put(uid,extra);
     ex57AddHist(uid,'Alta','—','Activo');
@@ -12200,11 +12277,10 @@ function guardarNuevoUsuario(){
 function renderEditarUsuario(id,nombre,rol,certAmbas){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="loading">Cargando expediente...</div>';
-  from('usuarios').select('nombre,rol,activo,sueldo_base,fecha_ingreso,fecha_nacimiento,cargo,tipo_colaborador,expediente_datos,origen_postulacion,estatus_postulacion').eq('id',id).get().then(function(rows){
+  from('usuarios').select('nombre,rol,activo,sueldo_base,fecha_ingreso,fecha_nacimiento').eq('id',id).get().then(function(rows){
     var base=(rows&&rows[0])||{nombre:nombre,rol:rol,activo:true};
-    var extra=ex70MergeExtra(base,id);
+    var extra=ex54Get(id);
     body.innerHTML=ex54FormHtml('edit',id,base,extra);
-    ex70InjectPostulacionDocs(base.origen_postulacion);
     document.getElementById('ex54-guardar').addEventListener('click',function(){guardarEditarUsuario(id);});
   });
 }
@@ -12219,7 +12295,7 @@ function guardarEditarUsuario(id){
   if(!nombre){alert('El nombre es obligatorio.');return;}
   var anteriorExtra=ex54Get(id), anteriorBase=null;
   var btn=document.getElementById('ex54-guardar');btn.disabled=true;btn.textContent='Guardando...';
-  from('usuarios').select('rol,sueldo_base,activo').eq('id',id).get().then(function(rr){anteriorBase=(rr&&rr[0])||{};return from('usuarios').eq('id',id).update({nombre:nombre,rol:rol,fecha_ingreso:fechaIngreso,fecha_nacimiento:fechaNacimiento,sueldo_base:sueldoBase,cargo:extra.cargo,tipo_colaborador:extra.tipo_colaborador,expediente_datos:extra,estatus_postulacion:'Expediente revisado'});}).then(function(){
+  from('usuarios').select('rol,sueldo_base,activo').eq('id',id).get().then(function(rr){anteriorBase=(rr&&rr[0])||{};return from('usuarios').eq('id',id).update({nombre:nombre,rol:rol,fecha_ingreso:fechaIngreso,fecha_nacimiento:fechaNacimiento,sueldo_base:sueldoBase});}).then(function(){
     if((anteriorExtra.tipo_colaborador||(anteriorBase.rol==='labores_eventual'?'Eventual':'Base'))!==extra.tipo_colaborador)ex57AddHist(id,'Tipo de colaborador',anteriorExtra.tipo_colaborador||(anteriorBase.rol==='labores_eventual'?'Eventual':'Base'),extra.tipo_colaborador);
     if((anteriorExtra.cargo||ROLES[anteriorBase.rol]||'')!==extra.cargo)ex57AddHist(id,'Cargo',anteriorExtra.cargo||ROLES[anteriorBase.rol]||'—',extra.cargo);
     if((parseFloat(anteriorBase.sueldo_base)||0)!==(parseFloat(sueldoBase)||0))ex57AddHist(id,'Sueldo base diario','$'+(parseFloat(anteriorBase.sueldo_base)||0).toFixed(2),'$'+(parseFloat(sueldoBase)||0).toFixed(2));
