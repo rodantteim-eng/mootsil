@@ -6840,20 +6840,49 @@ function as66Load(){try{return JSON.parse(localStorage.getItem(AS66_KEY)||'{}')|
 function as66Key(uid,fecha){return String(uid)+'|'+fecha;}
 function as66Get(uid,fecha){return as66Load()[as66Key(uid,fecha)]||null;}
 function as66Set(uid,fecha,val){var all=as66Load(),k=as66Key(uid,fecha);if(val)all[k]=val;else delete all[k];localStorage.setItem(AS66_KEY,JSON.stringify(all));}
+
+var HE68_KEY='mootsil_he_ajustes_admin_v1';
+function he68Load(){try{return JSON.parse(localStorage.getItem(HE68_KEY)||'{}')||{};}catch(e){return {};}}
+function he68Key(uid,fecha){return String(uid)+'|'+fecha;}
+function he68Get(uid,fecha){var a=he68Load(),k=he68Key(uid,fecha);return Object.prototype.hasOwnProperty.call(a,k)?parseFloat(a[k])||0:null;}
+function he68Set(uid,fecha,horas){var a=he68Load();a[he68Key(uid,fecha)]=Math.max(0,parseFloat(horas)||0);localStorage.setItem(HE68_KEY,JSON.stringify(a));}
+function he68Effective(uid,fecha,dbHoras){var a=he68Get(uid,fecha);return a===null?(parseFloat(dbHoras)||0):a;}
 function as61OpenEdit(u,fecha,reg,perm,heInfo){
   as61Close();reg=reg||{};perm=perm||{};heInfo=heInfo||{};
-  var ajuste=as66Get(u.id,fecha),he=parseFloat(heInfo.horas_max||0)||0;
+  var ajuste=as66Get(u.id,fecha);
+  var heDb=parseFloat(heInfo.horas_max||0)||0;
+  var he=he68Effective(u.id,fecha,heDb);
   var estado=ajuste?ajuste.estado:(perm&&perm.id?((String(perm.tipo||'').toLowerCase().indexOf('vac')>=0)?'vacaciones':'permiso'):(reg.entrada?(reg.retardo?'retardo':'presente'):'falta'));
-  var entrada=(ajuste&&ajuste.entrada)||reg.hora_entrada||'07:00',salida=(ajuste&&ajuste.salida)||reg.hora_salida||'16:00';
+  var entrada=(ajuste&&ajuste.entrada)||reg.hora_entrada||'07:00';
+  var salida=(ajuste&&ajuste.salida)||reg.hora_salida||'16:00';
   var bg=document.createElement('div');bg.className='as61-modal-bg';bg.id='as61-modal-bg';
-  var tieneRegistroHE=!!heInfo.id;
-  var heHtml=tieneRegistroHE?'<div class="as61-field full"><label>Hora extra autorizada</label><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--gris-2);border-radius:8px;padding:8px 10px;background:#fafbf9;"><strong style="color:var(--tierra);">'+he.toFixed(1)+' h</strong><button type="button" class="btn-sm" id="as63-corregir-he">Corregir H.E.</button></div><div class="hint" style="margin-top:4px;">Administración puede corregir una asignación existente, incluso si quedó en 0 h.</div></div>':'<div class="as61-field full"><label>Hora extra</label><div class="hint" style="padding:8px 0;">Sin asignación de H.E. para este día. La asignación nueva corresponde al Encargado.</div></div>';
-  bg.innerHTML='<div class="as61-modal"><div class="as61-modal-h"><div><strong>Editar asistencia</strong><div style="font-size:.65rem;color:var(--gris-5)">'+u.nombre+' · '+fecha+'</div></div><button class="em59-back" onclick="as61Close()">✕</button></div><div class="as61-modal-b"><div class="as61-grid"><div class="as61-field"><label>Estado</label><select id="as61-estado"><option value="presente">Presente</option><option value="falta">Falta</option><option value="retardo">Retardo</option><option value="permiso">Permiso</option><option value="vacaciones">Vacaciones</option></select></div><div></div><div class="as61-field"><label>Hora de entrada</label><input id="as61-entrada" type="time" value="'+entrada+'"></div><div class="as61-field"><label>Hora de salida</label><input id="as61-salida" type="time" value="'+salida+'"></div>'+heHtml+'</div></div><div class="as61-modal-f"><button class="btn-sm" onclick="as61Close()">Cancelar</button><button class="btn-sm btn-completar" id="as61-guardar">Guardar cambio</button></div></div>';
-  document.body.appendChild(bg);document.getElementById('as61-estado').value=estado;
-  var bhe=document.getElementById('as63-corregir-he');if(bhe)bhe.onclick=function(){as61Close();renderGestionHorasExtra(u.id,fecha,heInfo.tipo_labor_id||null,function(){renderControlAsistencias(fecha);});};
+  bg.innerHTML='<div class="as61-modal">'+
+    '<div class="as61-modal-h"><div><strong>Editar asistencia</strong><div style="font-size:.65rem;color:var(--gris-5)">'+u.nombre+' · '+fecha+'</div></div><button class="em59-back" onclick="as61Close()">✕</button></div>'+
+    '<div class="as61-modal-b"><div class="as61-grid">'+
+      '<div class="as61-field"><label>Estado</label><select id="as61-estado"><option value="presente">Presente</option><option value="falta">Falta</option><option value="retardo">Retardo</option><option value="permiso">Permiso</option><option value="vacaciones">Vacaciones</option></select></div>'+
+      '<div class="as61-field"><label>Horas extra del día</label><input id="as68-he" type="number" min="0" step="0.5" value="'+he.toFixed(1)+'"></div>'+
+      '<div class="as61-field"><label>Hora de entrada</label><input id="as61-entrada" type="time" value="'+entrada+'"></div>'+
+      '<div class="as61-field"><label>Hora de salida</label><input id="as61-salida" type="time" value="'+salida+'"></div>'+
+    '</div></div>'+
+    '<div class="as61-modal-f"><button class="btn-sm" onclick="as61Close()">Cancelar</button><button class="btn-sm btn-completar" id="as61-guardar">Guardar cambio</button></div>'+
+  '</div>';
+  document.body.appendChild(bg);
+  document.getElementById('as61-estado').value=estado;
   document.getElementById('as61-guardar').onclick=function(){
-    as66Set(u.id,fecha,{estado:document.getElementById('as61-estado').value,entrada:document.getElementById('as61-entrada').value||'07:00',salida:document.getElementById('as61-salida').value||'16:00',actualizado_en:new Date().toISOString()});
-    showToast('✅ Asistencia corregida');as61Close();renderControlAsistencias(fecha);
+    var nuevoEstado=document.getElementById('as61-estado').value;
+    var nuevasHE=parseFloat(document.getElementById('as68-he').value||0);
+    if(isNaN(nuevasHE)||nuevasHE<0){alert('Las horas extra no pueden ser negativas.');return;}
+    as66Set(u.id,fecha,{
+      estado:nuevoEstado,
+      entrada:document.getElementById('as61-entrada').value||'07:00',
+      salida:document.getElementById('as61-salida').value||'16:00',
+      actualizado_por:(usuario&&usuario.nombre)||'Administración',
+      actualizado_en:new Date().toISOString()
+    });
+    he68Set(u.id,fecha,nuevasHE);
+    showToast('✅ Asistencia y horas extra actualizadas');
+    as61Close();
+    renderControlAsistencias(fecha);
   };
 }
 function renderControlAsistencias(fecha){
@@ -6885,7 +6914,15 @@ function renderControlAsistencias(fecha){
     extras.forEach(function(x){
       var h=parseFloat(x.horas_max)||0;
       extraMap[x.operario_id]=(extraMap[x.operario_id]||0)+h;
-      extraDayMap[x.operario_id+'|'+x.fecha]=(extraDayMap[x.operario_id+'|'+x.fecha]||0)+h;if(!extraRecordMap[x.operario_id+'|'+x.fecha])extraRecordMap[x.operario_id+'|'+x.fecha]=x;
+      extraDayMap[x.operario_id+'|'+x.fecha]=(extraDayMap[x.operario_id+'|'+x.fecha]||0)+h;
+      if(!extraRecordMap[x.operario_id+'|'+x.fecha])extraRecordMap[x.operario_id+'|'+x.fecha]=x;
+    });
+    users.forEach(function(u){
+      dias.forEach(function(f){
+        var k=u.id+'|'+f,ajHE=he68Get(u.id,f);
+        if(ajHE!==null)extraDayMap[k]=ajHE;
+      });
+      extraMap[u.id]=dias.reduce(function(s,f){return s+(parseFloat(extraDayMap[u.id+'|'+f])||0);},0);
     });
     var dn=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
     function celda(u,f){
@@ -6912,10 +6949,28 @@ function renderControlAsistencias(fecha){
     html+='<div class="as61-edit-hint">Haz clic en cualquier día para corregir asistencia u horas extra.</div><div class="as58-wrap"><table class="as58-table"><thead><tr><th>Colaborador</th><th>Tipo</th>'+dn.map(function(x,i){return '<th>'+x+'<br><span style="font-weight:500">'+dias[i].slice(8,10)+'</span></th>';}).join('')+'<th>Días</th><th>H. extra</th></tr></thead><tbody>';
     html+=users.map(function(u){
       var ex=ex54Get(u.id),tipo=ex.tipo_colaborador||(u.rol==='labores_eventual'?'Eventual':'Base');
-      var diasTrab=dias.filter(function(f){var r=regMap[u.id+'|'+f],p=permMap[u.id+'|'+f];return (r&&r.entrada)||(p&&p.con_goce);}).length;
+      var diasTrab=dias.filter(function(f){
+        var r=regMap[u.id+'|'+f],p=permMap[u.id+'|'+f],aj=as66Get(u.id,f);
+        if(aj){
+          if(aj.estado==='presente'||aj.estado==='retardo')return true;
+          if(aj.estado==='permiso')return !!aj.con_goce;
+          return false;
+        }
+        return (r&&r.entrada)||(p&&p.con_goce);
+      }).length;
       return '<tr><td><div class="as58-name">'+u.nombre+'</div><div style="font-size:.58rem;color:var(--gris-5)">'+(ex.cargo||ROLES[u.rol]||u.rol)+'</div></td><td><span class="em58-badge '+(tipo==='Eventual'?'em58-eventual':'em58-base')+'">'+tipo.toUpperCase()+'</span></td>'+dias.map(function(f){return '<td>'+celda(u,f)+'</td>';}).join('')+'<td><strong>'+diasTrab+'</strong></td><td><strong>'+(extraMap[u.id]||0).toFixed(1)+' h</strong></td></tr>';
     }).join('');
-    var totalDias=users.reduce(function(s,u){return s+dias.filter(function(f){var r=regMap[u.id+'|'+f],p=permMap[u.id+'|'+f];return (r&&r.entrada)||(p&&p.con_goce);}).length;},0);
+    var totalDias=users.reduce(function(s,u){
+      return s+dias.filter(function(f){
+        var r=regMap[u.id+'|'+f],p=permMap[u.id+'|'+f],aj=as66Get(u.id,f);
+        if(aj){
+          if(aj.estado==='presente'||aj.estado==='retardo')return true;
+          if(aj.estado==='permiso')return !!aj.con_goce;
+          return false;
+        }
+        return (r&&r.entrada)||(p&&p.con_goce);
+      }).length;
+    },0);
     var totalHE=users.reduce(function(s,u){return s+(extraMap[u.id]||0);},0);
     html+='</tbody></table></div><div style="display:flex;gap:18px;justify-content:flex-end;margin:7px 4px 2px;font-size:.68rem;font-weight:800;color:var(--verde);"><span>Total semanal: '+totalDias+' días</span><span>H.E. equipo: '+totalHE.toFixed(1)+' h</span></div><div class="as58-legend"><span class="as58-p">✓ Presente</span><span class="as58-f">F Falta</span><span class="as58-r">R Retardo</span><span class="as58-per">P Permiso</span><span class="as58-v">V Vacaciones</span><span class="as58-na">— No aplica/futuro</span></div><button class="em59-back" style="margin-top:.7rem" onclick="renderAdministracionMenu()">← Empleados</button>';
     body.innerHTML=html;
