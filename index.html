@@ -740,7 +740,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ca22-op.nomina-gold{border-top:4px solid #c59a12!important}
 
 
-/* C079 — Nómina integrada exactamente con Asistencia + H.E. aprobadas + alta de bonos */
+/* C080 — Bonos individuales por beneficiario + Ajustar en modal + bono sin precarga */
 .ca22-op.nomina-gold{border-top:4px solid #c59a12!important}
 .no49-paybox{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;padding:8px 10px;background:#fbfaf4;border:1px solid #eadfb7;border-radius:10px}
 .no49-payfield{display:flex;flex-direction:column;gap:3px}
@@ -9425,7 +9425,9 @@ function renderGenerarNomina(fechaRef){
     var estadoExtraPorOp={}; estadosExtra.forEach(function(e){estadoExtraPorOp[e.operario_id]=e;});
 
     var bonosDeLaSemana=bonosActivos.filter(function(b){return !(b.periodo_fin<semanaInicio||b.periodo_inicio>semanaFin);});
-    var bonosSinUmbral=bonosDeLaSemana.filter(function(b){return b.tipo==='equipo'||!b.umbral_minimo;});
+    // C080: los bonos de EQUIPO sí aplican al equipo completo.
+    // Los bonos INDIVIDUALES, tengan o no umbral, sólo aplican al beneficiario autorizado.
+    var bonosSinUmbral=bonosDeLaSemana.filter(function(b){return b.tipo==='equipo';});
     var bonosConUmbral=bonosDeLaSemana.filter(function(b){return b.tipo==='individual'&&b.umbral_minimo;});
     var bonosYaOtorgadosPorOp={};
     bonoBeneficiarios.forEach(function(bb){
@@ -9682,7 +9684,7 @@ function renderGenerarNomina(fechaRef){
       body.querySelectorAll('[data-ajustar-nom]').forEach(function(btn){
         btn.onclick=function(){
           var acc=accionesPago['nom74-'+this.dataset.ajustarNom];
-          renderAjustarNomina(this.dataset.ajustarNom,acc.nombre,semanaInicio,this.dataset.dias,this.dataset.horas,this.dataset.motivo,lunes);
+          abrirAjusteNomina(this.dataset.ajustarNom,acc.nombre,semanaInicio,this.dataset.dias,this.dataset.horas,this.dataset.motivo,lunes);
         };
       });
     }).catch(function(e){body.innerHTML='<div class="loading">Error al calcular bonos: '+e.message+'</div>';});
@@ -9702,8 +9704,8 @@ function abrirBonoNomina(operarioId,nombre,semanaInicio,semanaFin,lunesVolver){
     '.bn79-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}.bn79-actions button{height:36px;border-radius:9px;padding:0 13px;font-weight:800}.bn79-cancel{border:1px solid var(--gris-2);background:#fff;color:var(--verde)}.bn79-save{border:0;background:var(--verde-mid);color:#fff}'+
   '</style>'+
   '<div class="bn79-card"><div class="bn79-title">Agregar bono a Nómina</div><div class="bn79-sub">'+nombre+' · Semana '+semanaInicio+' a '+semanaFin+'</div>'+
-    '<label>Concepto</label><input id="bn79-desc" value="Bono gasolina" placeholder="Ej. Bono gasolina">'+
-    '<label>Monto</label><input id="bn79-monto" type="number" min="0" step="1" value="200">'+
+    '<label>Concepto</label><input id="bn79-desc" placeholder="Ej. Bono gasolina">'+
+    '<label>Monto</label><input id="bn79-monto" type="number" min="0" step="1" placeholder="Ej. 200">'+
     '<div class="bn79-actions"><button class="bn79-cancel" id="bn79-cancel">Cancelar</button><button class="bn79-save" id="bn79-save">Autorizar bono</button></div>'+
   '</div>';
   document.body.appendChild(modal);
@@ -9742,6 +9744,61 @@ function abrirBonoNomina(operarioId,nombre,semanaInicio,semanaFin,lunesVolver){
       alert('Error al autorizar bono: '+e.message);
       btn.disabled=false;btn.textContent='Autorizar bono';
     });
+  };
+}
+
+
+function abrirAjusteNomina(operarioId,nombre,semanaInicio,diasActual,horasActual,motivoActual,lunesVolver){
+  var old=document.getElementById('an80-modal'); if(old)old.remove();
+  var modal=document.createElement('div');
+  modal.id='an80-modal';
+  modal.innerHTML='<style>'+
+    '#an80-modal{position:fixed;inset:0;background:rgba(10,35,24,.42);z-index:9999;display:flex;align-items:center;justify-content:center;padding:18px}'+
+    '.an80-card{width:min(500px,100%);background:#fff;border-radius:15px;padding:18px;box-shadow:0 18px 50px rgba(0,0,0,.22)}'+
+    '.an80-title{font-size:1rem;font-weight:850;color:var(--verde);margin-bottom:3px}.an80-sub{font-size:.7rem;color:var(--gris-5);margin-bottom:12px}'+
+    '.an80-card label{font-size:.62rem;text-transform:uppercase;font-weight:800;color:var(--gris-5);display:block;margin:8px 0 4px}.an80-card input{width:100%;height:40px;border:1px solid var(--gris-2);border-radius:9px;padding:0 10px}'+
+    '.an80-note{font-size:.64rem;color:var(--gris-5);margin-top:8px;line-height:1.35}.an80-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}.an80-actions button{height:36px;border-radius:9px;padding:0 13px;font-weight:800}.an80-cancel{border:1px solid var(--gris-2);background:#fff;color:var(--verde)}.an80-reset{border:1px solid #e1d8c7;background:#fffaf0;color:#8a5a00}.an80-save{border:0;background:var(--verde-mid);color:#fff}'+
+  '</style>'+
+  '<div class="an80-card"><div class="an80-title">Ajustar nómina</div><div class="an80-sub">'+nombre+' · Semana '+semanaInicio+'</div>'+
+    '<label>Días trabajados (pagados)</label><input id="an80-dias" type="number" min="0" step="0.5" value="'+diasActual+'">'+
+    '<label>Horas extra</label><input id="an80-horas" type="number" min="0" step="0.1" value="'+horasActual+'">'+
+    '<label>Motivo (opcional)</label><input id="an80-motivo" value="'+String(motivoActual||'').replace(/"/g,'&quot;')+'" placeholder="Ej. Corrección administrativa">'+
+    '<div class="an80-note">Este ajuste sólo afecta esta semana. No modifica la asistencia original.</div>'+
+    '<div class="an80-actions"><button class="an80-reset" id="an80-reset">↩ Quitar ajuste</button><button class="an80-cancel" id="an80-cancel">Cancelar</button><button class="an80-save" id="an80-save">Guardar ajuste</button></div>'+
+  '</div>';
+  document.body.appendChild(modal);
+
+  document.getElementById('an80-cancel').onclick=function(){modal.remove();};
+
+  document.getElementById('an80-save').onclick=function(){
+    var btn=this;
+    var dias=parseFloat(document.getElementById('an80-dias').value);
+    var horas=parseFloat(document.getElementById('an80-horas').value);
+    var motivo=(document.getElementById('an80-motivo').value||'').trim()||null;
+    if(isNaN(dias)||isNaN(horas)){alert('Captura valores válidos.');return;}
+    btn.disabled=true;btn.textContent='Guardando...';
+    var payload={operario_id:operarioId,semana_inicio:semanaInicio,dias_trabajados_override:dias,horas_extra_override:horas,motivo:motivo,creado_por:usuario.id,actualizado_en:new Date().toISOString()};
+    from('nomina_ajustes').select('id').eq('operario_id',operarioId).eq('semana_inicio',semanaInicio).get().then(function(rows){
+      var existente=rows&&rows[0];
+      return existente?from('nomina_ajustes').eq('id',existente.id).update(payload):from('nomina_ajustes').insert(payload);
+    }).then(function(){
+      modal.remove();
+      showToast('✅ Ajuste guardado');
+      renderGenerarNomina(new Date(semanaInicio+'T12:00:00'));
+    }).catch(function(e){
+      alert('Error: '+e.message);
+      btn.disabled=false;btn.textContent='Guardar ajuste';
+    });
+  };
+
+  document.getElementById('an80-reset').onclick=function(){
+    if(!confirm('¿Quitar el ajuste manual y volver al cálculo automático de esta semana?'))return;
+    var btn=this;btn.disabled=true;
+    from('nomina_ajustes').eq('operario_id',operarioId).eq('semana_inicio',semanaInicio).delete().then(function(){
+      modal.remove();
+      showToast('✅ Ajuste eliminado');
+      renderGenerarNomina(new Date(semanaInicio+'T12:00:00'));
+    }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;});
   };
 }
 
