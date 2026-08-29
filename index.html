@@ -740,7 +740,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ca22-op.nomina-gold{border-top:4px solid #c59a12!important}
 
 
-/* C077 — C076 + Historial de compras actualizado al diseño visual actual */
+/* C079 — Nómina integrada exactamente con Asistencia + H.E. aprobadas + alta de bonos */
 .ca22-op.nomina-gold{border-top:4px solid #c59a12!important}
 .no49-paybox{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;padding:8px 10px;background:#fbfaf4;border:1px solid #eadfb7;border-radius:10px}
 .no49-payfield{display:flex;flex-direction:column;gap:3px}
@@ -9404,7 +9404,7 @@ function renderGenerarNomina(fechaRef){
     from('bono_beneficiarios').select('*').get(),
     from('prestamos').select('*').eq('estado','activo').get(),
     from('prestamo_pagos').select('*').eq('semana_inicio',semanaInicio).get(),
-    from('horas_extra_asignadas').select('operario_id,fecha,horas_max').gte('fecha',semanaInicio).lte('fecha',semanaFin).get(),
+    from('horas_extra_asignadas').select('operario_id,fecha,horas_max,estado').gte('fecha',semanaInicio).lte('fecha',semanaFin).eq('estado','aprobada').get(),
     from('nomina_ajustes').select('*').eq('semana_inicio',semanaInicio).get()
   ]).then(function(r){
     var todosUsuarios=r[0]||[], registros=r[1]||[], estados=r[2]||[], estadosExtra=r[3]||[];
@@ -9414,13 +9414,10 @@ function renderGenerarNomina(fechaRef){
     var permisosAprobados=r[5]||[], bonosActivos=r[6]||[], bonoBeneficiarios=r[7]||[];
     var prestamosActivos=r[8]||[], pagosSemanaPrestamos=r[9]||[], horasExtraAsignadas=r[10]||[];
 
-    var idsConAsistencia={}; registros.forEach(function(x){idsConAsistencia[x.usuario_id]=true;});
-    var rolesNomina={operario:true,labores_eventual:true,cosecha:true,cosechador:true,galerista:true,auxiliar_galera:true,transportista:true,encargado:true};
+    // C079: usar exactamente el mismo universo de colaboradores que la pantalla Asistencia.
+    var rolesAsistencia=['operario','cosechador','galerista','labores_eventual'];
     var operarios=todosUsuarios.filter(function(o){
-      if(o.activo===false)return false;
-      if(rolesNomina[o.rol])return true;
-      if(idsConAsistencia[o.id])return true;
-      return parseFloat(o.sueldo_base||0)>0;
+      return o.activo!==false && rolesAsistencia.indexOf(o.rol)>=0;
     });
 
     var ajustePorOp={}; ajustesSemana.forEach(function(a){ajustePorOp[a.operario_id]=a;});
@@ -9458,9 +9455,11 @@ function renderGenerarNomina(fechaRef){
         var diasPagados=tieneAjusteDias?parseFloat(ajuste.dias_trabajados_override||0):parseFloat(resumen.diasPagados||0);
         var montoSueldo=diasPagados*sueldoBase;
 
-        var mapaMaxOp=mapaHorasMaxPorFecha(horasExtraAsignadas.filter(function(h){return h.operario_id===o.id;}));
         var tieneAjusteExtra=!!(ajuste&&ajuste.horas_extra_override!=null);
-        var horasExtra=tieneAjusteExtra?parseFloat(ajuste.horas_extra_override||0):horasExtraCapadasDesdeRegistros(regsOp,mapaMaxOp);
+        var horasExtraAsistencia=horasExtraAsignadas
+          .filter(function(h){return String(h.operario_id)===String(o.id);})
+          .reduce(function(s,h){return s+(parseFloat(h.horas_max)||0);},0);
+        var horasExtra=tieneAjusteExtra?parseFloat(ajuste.horas_extra_override||0):horasExtraAsistencia;
         var ex54Op=ex54Get(o.id);
         var tarifaOp=(ex54Op.tarifa_hora_extra!=null&&parseFloat(ex54Op.tarifa_hora_extra)>=0)?parseFloat(ex54Op.tarifa_hora_extra):tarifa;
         var montoExtra=horasExtra*tarifaOp;
@@ -9468,8 +9467,15 @@ function renderGenerarNomina(fechaRef){
         var yaOtorgados=bonosYaOtorgadosPorOp[o.id]||{};
         var scoresOp=scoresPorOp[idx]||[];
         var bonosUmbralCalifican=scoresOp.filter(function(x){return x.score>=parseFloat(x.bono.umbral_minimo);}).map(function(x){return x.bono;});
-        var bonosQueCalifican=bonosSinUmbral.concat(bonosUmbralCalifican).filter(function(b){return !yaOtorgados[b.id];});
+        var bonosAutorizados=bonosDeLaSemana.filter(function(b){return !!yaOtorgados[b.id];});
+        var bonosNuevos=bonosSinUmbral.concat(bonosUmbralCalifican).filter(function(b){return !yaOtorgados[b.id];});
+        var bonosQueCalifican=bonosAutorizados.concat(bonosNuevos.filter(function(b){return !bonosAutorizados.some(function(a){return a.id===b.id;});}));
         var montoBonos=bonosQueCalifican.reduce(function(s,b){return s+(parseFloat(b.monto)||0);},0);
+        var bonoGasolina=parseFloat(ex54Op.bono_gasolina!=null?ex54Op.bono_gasolina:(ex54Op.gasolina!=null?ex54Op.gasolina:(ex54Op.bono_transporte!=null?ex54Op.bono_transporte:0)))||0;
+        if(bonoGasolina>0 && !bonosQueCalifican.some(function(b){return String(b.descripcion||'').toLowerCase().indexOf('gasolina')>=0;})){
+          montoBonos+=bonoGasolina;
+          bonosQueCalifican=bonosQueCalifican.concat([{id:'gasolina-'+o.id,descripcion:'Bono gasolina',monto:bonoGasolina,_localGasolina:true}]);
+        }
 
         var prestamosOp=prestamosActivos.filter(function(p){return p.operario_id===o.id;});
         var prestamoIdsOp={}; prestamosOp.forEach(function(p){prestamoIdsOp[p.id]=p;});
@@ -9517,6 +9523,7 @@ function renderGenerarNomina(fechaRef){
             '<div class="n74-actions">'+
               (pagado?'<button class="n74-soft" data-despagar="'+idAccion+'">Pendiente</button>':'<button class="n74-pay" data-pagar="'+idAccion+'">Pagar</button>')+
               '<button class="n74-soft" data-recibo="'+idAccion+'">Recibo</button>'+
+              '<button class="n74-soft" data-bono-nom="'+o.id+'" data-nombre="'+String(o.nombre||'').replace(/"/g,'&quot;')+'">+ Bono</button>'+
               '<button class="n74-soft" data-ajustar-nom="'+o.id+'" data-dias="'+diasPagados+'" data-horas="'+horasExtra+'" data-motivo="'+((ajuste&&ajuste.motivo)||'').replace(/"/g,'&quot;')+'">Ajustar</button>'+
             '</div>'+
           '</div>'
@@ -9565,6 +9572,9 @@ function renderGenerarNomina(fechaRef){
         });
 
         acc.bonosQueCalifican.forEach(function(b){
+          if(b._localGasolina)return;
+          var ya=bonosYaOtorgadosPorOp[opId]&&bonosYaOtorgadosPorOp[opId][b.id];
+          if(ya)return;
           var scoreDe=acc.scoresOp.find(function(x){return x.bono.id===b.id;});
           pasos.push(from('bono_beneficiarios').insert({bono_id:b.id,operario_id:opId,puntaje_obtenido:scoreDe?scoreDe.score:null}));
         });
@@ -9663,6 +9673,12 @@ function renderGenerarNomina(fechaRef){
         btn.onclick=function(){abrirRecibo(accionesPago[this.dataset.recibo].recibo);};
       });
 
+      body.querySelectorAll('[data-bono-nom]').forEach(function(btn){
+        btn.onclick=function(){
+          abrirBonoNomina(this.dataset.bonoNom,this.dataset.nombre,semanaInicio,semanaFin,lunes);
+        };
+      });
+
       body.querySelectorAll('[data-ajustar-nom]').forEach(function(btn){
         btn.onclick=function(){
           var acc=accionesPago['nom74-'+this.dataset.ajustarNom];
@@ -9671,6 +9687,62 @@ function renderGenerarNomina(fechaRef){
       });
     }).catch(function(e){body.innerHTML='<div class="loading">Error al calcular bonos: '+e.message+'</div>';});
   }).catch(function(e){body.innerHTML='<div class="loading">Error al generar nómina: '+e.message+'</div>';});
+}
+
+
+function abrirBonoNomina(operarioId,nombre,semanaInicio,semanaFin,lunesVolver){
+  var old=document.getElementById('bn79-modal'); if(old)old.remove();
+  var modal=document.createElement('div');
+  modal.id='bn79-modal';
+  modal.innerHTML='<style>'+
+    '#bn79-modal{position:fixed;inset:0;background:rgba(10,35,24,.42);z-index:9999;display:flex;align-items:center;justify-content:center;padding:18px}'+
+    '.bn79-card{width:min(460px,100%);background:#fff;border-radius:15px;padding:18px;box-shadow:0 18px 50px rgba(0,0,0,.22)}'+
+    '.bn79-title{font-size:1rem;font-weight:850;color:var(--verde);margin-bottom:3px}.bn79-sub{font-size:.7rem;color:var(--gris-5);margin-bottom:12px}'+
+    '.bn79-card label{font-size:.62rem;text-transform:uppercase;font-weight:800;color:var(--gris-5);display:block;margin:8px 0 4px}.bn79-card input{width:100%;height:40px;border:1px solid var(--gris-2);border-radius:9px;padding:0 10px}'+
+    '.bn79-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}.bn79-actions button{height:36px;border-radius:9px;padding:0 13px;font-weight:800}.bn79-cancel{border:1px solid var(--gris-2);background:#fff;color:var(--verde)}.bn79-save{border:0;background:var(--verde-mid);color:#fff}'+
+  '</style>'+
+  '<div class="bn79-card"><div class="bn79-title">Agregar bono a Nómina</div><div class="bn79-sub">'+nombre+' · Semana '+semanaInicio+' a '+semanaFin+'</div>'+
+    '<label>Concepto</label><input id="bn79-desc" value="Bono gasolina" placeholder="Ej. Bono gasolina">'+
+    '<label>Monto</label><input id="bn79-monto" type="number" min="0" step="1" value="200">'+
+    '<div class="bn79-actions"><button class="bn79-cancel" id="bn79-cancel">Cancelar</button><button class="bn79-save" id="bn79-save">Autorizar bono</button></div>'+
+  '</div>';
+  document.body.appendChild(modal);
+
+  document.getElementById('bn79-cancel').onclick=function(){modal.remove();};
+  document.getElementById('bn79-save').onclick=function(){
+    var btn=this;
+    var desc=(document.getElementById('bn79-desc').value||'').trim();
+    var monto=parseFloat(document.getElementById('bn79-monto').value||0);
+    if(!desc||!(monto>0)){alert('Captura concepto y monto del bono.');return;}
+    btn.disabled=true;btn.textContent='Guardando...';
+
+    from('bonos').insert({
+      tipo:'individual',
+      tipo_recompensa:'economico',
+      descripcion:desc,
+      monto:monto,
+      umbral_minimo:null,
+      periodo_inicio:semanaInicio,
+      periodo_fin:semanaFin,
+      activado_por:usuario.id,
+      estado:'activo'
+    }).then(function(rows){
+      var bono=rows&&rows[0];
+      if(!bono||!bono.id)throw new Error('No se pudo obtener el bono creado.');
+      return from('bono_beneficiarios').insert({
+        bono_id:bono.id,
+        operario_id:operarioId,
+        puntaje_obtenido:null
+      });
+    }).then(function(){
+      modal.remove();
+      showToast('✅ Bono autorizado para '+nombre);
+      renderGenerarNomina(new Date(semanaInicio+'T12:00:00'));
+    }).catch(function(e){
+      alert('Error al autorizar bono: '+e.message);
+      btn.disabled=false;btn.textContent='Autorizar bono';
+    });
+  };
 }
 
 function renderAjustarNomina(operarioId,nombre,semanaInicio,diasActual,horasActual,motivoActual,lunesVolver){
