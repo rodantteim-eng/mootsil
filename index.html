@@ -740,7 +740,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ca22-op.nomina-gold{border-top:4px solid #c59a12!important}
 
 
-/* C076 — Edición de compras con cantidad visible y ajuste diferencial de inventario */
+/* C077 — C076 + Historial de compras actualizado al diseño visual actual */
 .ca22-op.nomina-gold{border-top:4px solid #c59a12!important}
 .no49-paybox{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;padding:8px 10px;background:#fbfaf4;border:1px solid #eadfb7;border-radius:10px}
 .no49-payfield{display:flex;flex-direction:column;gap:3px}
@@ -6158,7 +6158,7 @@ function renderHistorialCompras(mesStr){
   var fd=new Date(inicio+'T00:00:00'); fd.setMonth(fd.getMonth()+1); fd.setDate(0);
   var fin=fd.toISOString().slice(0,10);
 
-  body.innerHTML='<div class="seccion-titulo">📜 Historial de compras</div><div class="loading">Cargando compras...</div>';
+  body.innerHTML='<div class="loading">Cargando compras...</div>';
 
   from('gastos')
     .select('*,proveedor:proveedores(nombre),item:inventario_items(nombre,unidad),registrador:usuarios!registrado_por(nombre),compra:compras(numero_factura)')
@@ -6172,36 +6172,76 @@ function renderHistorialCompras(mesStr){
       var total=grupos.reduce(function(s,g){return s+(parseFloat(g.total)||0);},0);
       var mesLbl=new Date(inicio+'T00:00:00').toLocaleDateString('es-MX',{month:'long',year:'numeric'});
 
+      function compraCard(grp){
+        var hoyL=fechaHoyLocal();
+        var vencido=grp.formaPago==='credito'&&grp.estadoPago==='pendiente'&&grp.fechaVencimiento&&grp.fechaVencimiento<hoyL;
+        var estado=grp.formaPago==='credito'
+          ? (grp.estadoPago==='pagado'?'Pagado':(vencido?'Vencido':'Pendiente'))
+          : 'Pagado';
+        var badgeCls=estado==='Pagado'?'ok':(estado==='Vencido'?'bad':'wait');
+        var fp=grp.formaPago==='credito'?'Crédito':'Contado';
+        var items=grp.items.map(function(g){
+          var cat=GASTO_CATEGORIAS[g.categoria]||{ic:'💵',lbl:g.categoria};
+          var desc=g.item?(numFmt(g.cantidad)+' '+g.item.unidad+' · '+g.item.nombre):(g.concepto||cat.lbl);
+          return '<div class="hc77-item"><div class="hc77-item-main"><span class="hc77-item-ic">'+cat.ic+'</span><span>'+desc+'</span></div><strong>$'+formatMonto(g.monto)+'</strong></div>';
+        }).join('');
+
+        return '<div class="hc77-card">'+
+          '<div class="hc77-card-head">'+
+            '<div><div class="hc77-provider">'+grp.proveedorNombre+'</div><div class="hc77-meta">'+
+              '<span>📅 '+grp.fecha+'</span>'+
+              (grp.numeroFactura?'<span>🧾 Factura '+grp.numeroFactura+'</span>':'')+
+              '<span>'+fp+'</span>'+
+              '<span class="hc77-status '+badgeCls+'">'+estado+'</span>'+
+            '</div></div>'+
+            '<div class="hc77-total"><strong>$'+formatMonto(grp.total)+'</strong><button type="button" class="hc77-edit btn-editar-compra" data-compra-id="'+grp.compraId+'">✏️ Editar</button></div>'+
+          '</div>'+
+          (grp.comprobanteUrl
+            ? '<div class="hc77-doc"><a href="'+grp.comprobanteUrl+'" target="_blank">🧾 Ver comprobante</a></div>'
+            : '<div class="hc77-doc"><label for="cmp-'+grp.compraId+'">📎 Adjuntar comprobante</label><input type="file" id="cmp-'+grp.compraId+'" accept="image/*,.pdf" class="btn-adjuntar-comprobante" data-compra-id="'+grp.compraId+'" data-gasto-id="'+grp.items[0].id+'" style="display:none"><span class="hint" id="cmp-'+grp.compraId+'-status"></span></div>')+
+          '<div class="hc77-items">'+items+'</div>'+
+          (grp.formaPago==='credito'&&grp.estadoPago==='pendiente'
+            ? '<div class="hc77-card-foot"><button type="button" class="btn-sm btn-completar" data-marcar-pagado="'+grp.compraId+'">✓ Marcar como pagado</button></div>'
+            : '')+
+        '</div>';
+      }
+
       var html='<style>'+
-        '.hc75-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px}.hc75-title{font-size:1.35rem;font-weight:850;color:var(--verde)}.hc75-sub{font-size:.74rem;color:var(--gris-5);margin-top:3px}.hc75-tabs{display:flex;gap:7px;margin-top:9px;flex-wrap:wrap}.hc75-tools{display:grid;grid-template-columns:180px 1fr;gap:10px;margin:10px 0}.hc75-search input,.hc75-tools input{width:100%;height:38px;border:1px solid var(--gris-2);border-radius:9px;padding:0 10px}.hc75-summary{display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid var(--gris-2);border-radius:10px;padding:10px 12px;margin-bottom:10px}.hc75-summary strong{font-size:1.05rem;color:var(--verde)}.hc75-summary span{font-size:.7rem;color:var(--gris-5)}'+
+        '.hc77-shell{padding:2px 0 18px}.hc77-top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:12px}.hc77-eyebrow{font-size:.64rem;letter-spacing:.12em;text-transform:uppercase;font-weight:900;color:#ef8b00}.hc77-title{font-size:1.55rem;line-height:1.05;font-weight:900;color:var(--verde);margin-top:2px}.hc77-sub{font-size:.75rem;color:var(--gris-5);margin-top:5px}.hc77-back{border:1px solid var(--gris-2);background:#fff;border-radius:10px;padding:9px 14px;color:var(--verde);font-weight:800}.hc77-tabs{display:flex;gap:8px;margin-top:10px}.hc77-tabs button{height:34px;border-radius:18px;padding:0 14px;font-size:.72rem;font-weight:800}.hc77-tab-on{background:#eaf6ef;border:1.5px solid var(--verde-mid);color:var(--verde)}.hc77-tab-off{background:#fff;border:1px solid var(--gris-2);color:#23372d}'+
+        '.hc77-tools{display:grid;grid-template-columns:210px 1fr 190px;gap:10px;align-items:end;background:#fff;border:1px solid #e0e7e2;border-radius:13px;padding:12px;margin-bottom:12px}.hc77-tools label{display:block;font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;color:var(--gris-5);font-weight:850;margin-bottom:5px}.hc77-tools input{width:100%;height:40px;border:1px solid var(--gris-2);border-radius:9px;padding:0 11px;background:#fbfcfb}.hc77-summary{height:40px;border-radius:9px;background:#f2f8f4;border:1px solid #dcebe1;display:flex;align-items:center;justify-content:space-between;padding:0 12px}.hc77-summary span{font-size:.65rem;color:var(--gris-5)}.hc77-summary strong{font-size:.9rem;color:var(--verde)}'+
+        '.hc77-list{display:flex;flex-direction:column;gap:9px}.hc77-card{background:#fff;border:1px solid #e1e7e3;border-radius:13px;padding:12px 14px;box-shadow:0 1px 2px rgba(20,60,40,.03)}.hc77-card-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.hc77-provider{font-size:.9rem;font-weight:850;color:#1f2f27}.hc77-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;font-size:.62rem;color:var(--gris-5)}.hc77-status{font-weight:850;padding:2px 7px;border-radius:999px}.hc77-status.ok{background:#e8f5ec;color:#287348}.hc77-status.wait{background:#fff4d9;color:#9b6700}.hc77-status.bad{background:#fde9e8;color:#b42318}.hc77-total{display:flex;align-items:center;gap:9px}.hc77-total strong{font-size:1rem;color:var(--verde)}.hc77-edit{border:1px solid var(--gris-2);background:#fff;border-radius:8px;height:30px;padding:0 9px;color:var(--verde);font-size:.66rem;font-weight:800}.hc77-doc{margin-top:7px;font-size:.64rem}.hc77-doc a,.hc77-doc label{color:var(--verde-mid);font-weight:750;cursor:pointer}.hc77-items{margin-top:8px;border-top:1px solid #edf1ee}.hc77-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f2f1;font-size:.72rem}.hc77-item-main{display:flex;gap:7px;align-items:center;min-width:0}.hc77-item-ic{width:22px;height:22px;border-radius:6px;background:#f4f7f5;display:inline-flex;align-items:center;justify-content:center}.hc77-item strong{font-size:.72rem;color:#26362d}.hc77-card-foot{display:flex;justify-content:flex-end;margin-top:8px}.hc77-empty{background:#fff;border:1px dashed var(--gris-2);border-radius:12px;padding:28px;text-align:center;color:var(--gris-5);font-size:.75rem}'+
+        '@media(max-width:850px){.hc77-tools{grid-template-columns:1fr}.hc77-top{flex-direction:column}.hc77-back{align-self:flex-start}.hc77-card-head{flex-direction:column}.hc77-total{width:100%;justify-content:space-between}.hc77-tabs{flex-wrap:wrap}}'+
         '</style>'+
-        '<div class="hc75-head"><div><div class="nc28-eyebrow">Administración · Caja · Compras</div><div class="hc75-title">Historial de compras</div><div class="hc75-sub">Consulta proveedor, factura, productos, cantidades y total. Desde aquí puedes abrir una compra para editarla.</div><div class="hc75-tabs"><button type="button" class="op-chip" onclick="renderNuevaCompra()">＋ Nueva compra</button><button type="button" class="op-chip sel">✓ Historial de compras</button></div></div><button type="button" class="nc28-back" onclick="volverCompraContexto()">← Caja</button></div>'+
-        '<div class="hc75-tools"><div><label style="font-size:.63rem;font-weight:800;color:var(--gris-5)">MES</label><input type="month" id="hc75-mes" value="'+mesStr+'"></div><div class="hc75-search"><label style="font-size:.63rem;font-weight:800;color:var(--gris-5)">BUSCAR</label><input type="search" id="hc75-buscar" placeholder="Proveedor, factura o producto..."></div></div>'+
-        '<div class="hc75-summary"><span>'+grupos.length+' compra'+(grupos.length===1?'':'s')+' · '+mesLbl+'</span><strong>$'+formatMonto(total)+'</strong></div>'+
-        '<div id="hc75-lista">'+(grupos.length?grupos.map(pintarGrupoCompraCard).join(''):'<div class="empty">No hay compras registradas en este mes.</div>')+'</div>';
+        '<div class="hc77-shell">'+
+          '<div class="hc77-top"><div><div class="hc77-eyebrow">Administración · Caja · Compras</div><div class="hc77-title">Historial de compras</div><div class="hc77-sub">Consulta y administra las compras registradas sin salir del flujo de Caja.</div><div class="hc77-tabs"><button type="button" class="hc77-tab-off" onclick="renderNuevaCompra()">＋ Nueva compra</button><button type="button" class="hc77-tab-on">✓ Historial de compras</button></div></div><button type="button" class="hc77-back" onclick="volverCompraContexto()">← Caja</button></div>'+
+          '<div class="hc77-tools">'+
+            '<div><label>Mes</label><input type="month" id="hc77-mes" value="'+mesStr+'"></div>'+
+            '<div><label>Buscar</label><input type="search" id="hc77-buscar" placeholder="Proveedor, factura o producto..."></div>'+
+            '<div><label>Resumen</label><div class="hc77-summary"><span>'+grupos.length+' compras</span><strong>$'+formatMonto(total)+'</strong></div></div>'+
+          '</div>'+
+          '<div id="hc77-lista" class="hc77-list">'+(grupos.length?grupos.map(compraCard).join(''):'<div class="hc77-empty">No hay compras registradas en '+mesLbl+'.</div>')+'</div>'+
+        '</div>';
 
       body.innerHTML=html;
 
-      document.getElementById('hc75-mes').addEventListener('change',function(){renderHistorialCompras(this.value);});
+      document.getElementById('hc77-mes').addEventListener('change',function(){renderHistorialCompras(this.value);});
 
-      function normalizar(s){return String(s||'').toLowerCase();}
-      var buscar=document.getElementById('hc75-buscar');
+      var buscar=document.getElementById('hc77-buscar');
       if(buscar){
         buscar.addEventListener('input',function(){
-          var q=normalizar(this.value).trim();
-          var tarjetas=[].slice.call(document.querySelectorAll('#hc75-lista .orden-card'));
+          var q=String(this.value||'').toLowerCase().trim();
+          var cards=[].slice.call(document.querySelectorAll('#hc77-lista .hc77-card'));
           var visibles=0;
-          tarjetas.forEach(function(card){
-            var ok=!q||normalizar(card.textContent).indexOf(q)>=0;
+          cards.forEach(function(card){
+            var ok=!q||String(card.textContent||'').toLowerCase().indexOf(q)>=0;
             card.style.display=ok?'':'none';
             if(ok)visibles++;
           });
-          var old=document.getElementById('hc75-sin-resultados');
-          if(old)old.remove();
+          var old=document.getElementById('hc77-nores'); if(old)old.remove();
           if(q&&visibles===0){
-            var d=document.createElement('div'); d.id='hc75-sin-resultados'; d.className='empty';
+            var d=document.createElement('div'); d.id='hc77-nores'; d.className='hc77-empty';
             d.textContent='No se encontraron compras con ese criterio.';
-            document.getElementById('hc75-lista').appendChild(d);
+            document.getElementById('hc77-lista').appendChild(d);
           }
         });
       }
