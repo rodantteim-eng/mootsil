@@ -740,7 +740,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ca22-op.nomina-gold{border-top:4px solid #c59a12!important}
 
 
-/* C081 — Retardos informativos + Bonos administrables + Recibo modal/PDF con identidad */
+/* C082 — Nómina espejo empleado + Cargo en Asistencia + PDF media carta Semana_Nombre */
 .ca22-op.nomina-gold{border-top:4px solid #c59a12!important}
 .no49-paybox{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;padding:8px 10px;background:#fbfaf4;border:1px solid #eadfb7;border-radius:10px}
 .no49-payfield{display:flex;flex-direction:column;gap:3px}
@@ -7181,7 +7181,7 @@ function em69RenderAsistencia(fecha){
     var html='<div class="as58-head"><div><div class="as58-title">📋 Asistencia · Semana '+num+'</div><div class="as58-sub">'+inicio+' — '+fin+' · Sólo colaboradores activos</div></div><button class="em59-back" onclick="renderAdministracionMenu()">← Empleados</button></div>';
     html+='<div class="as58-nav"><button id="em69-prev">← Semana anterior</button><button id="em69-now">Semana actual</button><input type="date" id="em69-date" value="'+(fecha||hoy)+'" max="'+hoy+'"><button id="em69-next" '+(fin>=hoy?'disabled':'')+'>Semana siguiente →</button><span class="as58-week">Semana '+num+'</span></div>';
     html+='<div class="em69-hint">Administración puede corregir directamente estado, entrada, salida y horas extra de cualquier día.</div>';
-    html+='<div class="as58-wrap"><table class="as58-table"><thead><tr><th>Colaborador</th><th>Tipo</th>'+dn.map(function(x,i){return '<th>'+x+'<br><span style="font-weight:500">'+dias[i].slice(8,10)+'</span></th>';}).join('')+'<th>Días</th><th>H. extra</th></tr></thead><tbody>';
+    html+='<div class="as58-wrap"><table class="as58-table"><thead><tr><th>Colaborador</th><th>Tipo</th><th>Cargo</th>'+dn.map(function(x,i){return '<th>'+x+'<br><span style="font-weight:500">'+dias[i].slice(8,10)+'</span></th>';}).join('')+'<th>Días</th><th>H. extra</th></tr></thead><tbody>';
     html+=users.map(function(u){
       var ex=ex54Get(u.id),tipo=ex.tipo_colaborador||(u.rol==='labores_eventual'?'Eventual':'Base');
       var diasTrab=dias.filter(function(f){
@@ -7191,7 +7191,13 @@ function em69RenderAsistencia(fecha){
         return e==='permiso'&&p&&p.con_goce;
       }).length;
       var heTotal=dias.reduce(function(s,f){return s+heDia(u.id,f);},0);
-      return '<tr><td><div class="as58-name">'+u.nombre+'</div><div style="font-size:.58rem;color:var(--gris-5)">'+(ex.cargo||ROLES[u.rol]||u.rol)+'</div></td><td><span class="em58-badge '+(tipo==='Eventual'?'em58-eventual':'em58-base')+'">'+tipo.toUpperCase()+'</span></td>'+dias.map(function(f){return '<td>'+celda(u,f)+'</td>';}).join('')+'<td><strong>'+diasTrab+'</strong></td><td><strong>'+heTotal.toFixed(1)+' h</strong></td></tr>';
+      var cargo=ex.cargo||(
+        (u.rol==='operario'||u.rol==='labores_eventual')?'Labores':
+        (u.rol==='cosechador')?'Cosecha':
+        (u.rol==='galerista')?'Galera':
+        (ROLES[u.rol]||u.rol)
+      );
+      return '<tr><td><div class="as58-name">'+u.nombre+'</div></td><td><span class="em58-badge '+(tipo==='Eventual'?'em58-eventual':'em58-base')+'">'+tipo.toUpperCase()+'</span></td><td><strong style="font-size:.63rem;color:var(--verde);">'+cargo+'</strong></td>'+dias.map(function(f){return '<td>'+celda(u,f)+'</td>';}).join('')+'<td><strong>'+diasTrab+'</strong></td><td><strong>'+heTotal.toFixed(1)+' h</strong></td></tr>';
     }).join('');
     var totalDias=users.reduce(function(s,u){
       return s+dias.filter(function(f){
@@ -9943,27 +9949,27 @@ function generarPdfReciboNomina(d,folio,btn){
   cargarJsPDF(function(){
     try{
       var jsPDF=window.jspdf.jsPDF;
-      var doc=new jsPDF({unit:'mm',format:'letter'});
+      var doc=new jsPDF({unit:'mm',format:[139.7,215.9],orientation:'portrait'});
       var r=d.resumen||{}, y=18;
-      doc.setFillColor(14,81,55);doc.rect(0,0,216,34,'F');
+      doc.setFillColor(14,81,55);doc.rect(0,0,139.7,32,'F');
       doc.setTextColor(255);doc.setFont(undefined,'bold');doc.setFontSize(19);doc.text('Mootsil',15,15);
       doc.setFontSize(11);doc.setTextColor(255,208,128);doc.text('Rancho Sagrado Corazon · Zarzamora',15,22);
       doc.setFontSize(9);doc.setTextColor(235);doc.text('Recibo de Nomina',15,28);
-      doc.setFont(undefined,'normal');doc.setFontSize(8);doc.text(folio,201,15,{align:'right'});doc.text('Semana '+d.numSemana,201,21,{align:'right'});
+      doc.setFont(undefined,'normal');doc.setFontSize(8);doc.text(folio,124,15,{align:'right'});doc.text('Semana '+d.numSemana,124,21,{align:'right'});
 
       y=46;doc.setTextColor(30);doc.setFontSize(9);
       doc.setFont(undefined,'bold');doc.text('Colaborador:',15,y);doc.setFont(undefined,'normal');doc.text(d.nombre,43,y);
-      doc.setFont(undefined,'bold');doc.text('Periodo:',115,y);doc.setFont(undefined,'normal');doc.text(d.semanaInicio+' a '+d.semanaFin,135,y);
+      y+=7;doc.setFont(undefined,'bold');doc.text('Periodo:',15,y);doc.setFont(undefined,'normal');doc.text(d.semanaInicio+' a '+d.semanaFin,34,y);
       y+=8;
-      doc.setTextColor(90);doc.text('Dias pagados: '+(r.diasPagados||0)+'     H.E.: '+(d.horasExtra||0).toFixed(1)+' h     Retardos: '+(r.retardos||0)+' (informativo, sin descuento automatico)',15,y);
+      doc.setTextColor(90);doc.text('Dias pagados: '+(r.diasPagados||0)+'   H.E.: '+(d.horasExtra||0).toFixed(1)+' h   Retardos: '+(r.retardos||0),15,y); y+=5; doc.text('Retardos informativos; sin descuento automatico.',15,y);
 
-      y+=11;doc.setTextColor(40);doc.setFont(undefined,'bold');doc.text('Concepto',15,y);doc.text('Importe',195,y,{align:'right'});
-      doc.line(15,y+2,195,y+2);y+=9;doc.setFont(undefined,'normal');
+      y+=11;doc.setTextColor(40);doc.setFont(undefined,'bold');doc.text('Concepto',15,y);doc.text('Importe',124,y,{align:'right'});
+      doc.line(15,y+2,124,y+2);y+=9;doc.setFont(undefined,'normal');
 
       function linea(concepto,monto){
         if(y>245){doc.addPage();y=20;}
         doc.setTextColor(50);doc.text(concepto,15,y,{maxWidth:145});
-        doc.setTextColor(monto<0?170:25);doc.text((monto<0?'-':'')+'$'+Math.abs(monto).toFixed(2),195,y,{align:'right'});
+        doc.setTextColor(monto<0?170:25);doc.text((monto<0?'-':'')+'$'+Math.abs(monto).toFixed(2),124,y,{align:'right'});
         y+=8;
       }
       linea('Sueldo',d.totalSueldo||0);
@@ -9971,16 +9977,16 @@ function generarPdfReciboNomina(d,folio,btn){
       (d.bonos||[]).forEach(function(b){linea(b.descripcion,parseFloat(b.monto)||0);});
       (d.deducciones||[]).forEach(function(x){linea(x.concepto+' (pago '+x.numero+')',-(parseFloat(x.monto)||0));});
 
-      y+=2;doc.setDrawColor(200);doc.line(110,y,195,y);y+=9;
-      doc.setFont(undefined,'bold');doc.setTextColor(14,81,55);doc.setFontSize(12);doc.text('NETO A PAGAR',110,y);doc.text('$'+d.granTotal.toFixed(2),195,y,{align:'right'});
+      y+=2;doc.setDrawColor(200);doc.line(72,y,124,y);y+=9;
+      doc.setFont(undefined,'bold');doc.setTextColor(14,81,55);doc.setFontSize(12);doc.text('NETO A PAGAR',72,y);doc.text('$'+d.granTotal.toFixed(2),124,y,{align:'right'});
       y+=18;doc.setFontSize(8);doc.setTextColor(100);doc.setFont(undefined,'normal');
       doc.text('Estatus: '+(d.nominaCompleta?'Pagada':'Pendiente de pago'),15,y);
       y+=7;doc.text('Retardos: registro informativo; no genera descuento automatico en Nomina.',15,y);
-      y+=18;doc.line(20,y,85,y);doc.line(125,y,195,y);
-      y+=5;doc.text('Entrego',52,y,{align:'center'});doc.text('Recibi conforme · '+d.nombre,160,y,{align:'center'});
+      y+=18;doc.line(15,y,58,y);doc.line(80,y,124,y);
+      y+=5;doc.text('Entrego',36.5,y,{align:'center'});doc.text('Recibi conforme · '+d.nombre,102,y,{align:'center',maxWidth:42});
 
-      var safe=String(d.nombre||'colaborador').replace(/[^A-Za-z0-9_-]+/g,'_');
-      doc.save('Recibo_Nomina_'+safe+'_Semana_'+d.numSemana+'.pdf');
+      var safe=String(d.nombre||'colaborador').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9_-]+/g,'_').replace(/^_+|_+$/g,'');
+      doc.save('Semana_'+d.numSemana+'_'+safe+'.pdf');
       if(btn){btn.disabled=false;btn.textContent='✅ PDF generado';setTimeout(function(){btn.textContent=textoOriginal;},1800);}
     }catch(e){
       if(btn){btn.disabled=false;btn.textContent=textoOriginal;}
@@ -10879,7 +10885,8 @@ function renderCartera(fechaRef){
     from('prestamos').select('*').eq('operario_id',usuario.id).eq('estado','activo').get(),
     from('permisos').select('*').eq('usuario_id',usuario.id).eq('estado','aprobado').get(),
     from('bono_beneficiarios').select('*').eq('operario_id',usuario.id).get(),
-    from('horas_extra_asignadas').select('operario_id,fecha,horas_max').eq('operario_id',usuario.id).gte('fecha',semanaInicio).lte('fecha',semanaFin).get()
+    from('horas_extra_asignadas').select('operario_id,fecha,horas_max,estado').eq('operario_id',usuario.id).gte('fecha',semanaInicio).lte('fecha',semanaFin).eq('estado','aprobada').get(),
+    from('nomina_ajustes').select('*').eq('operario_id',usuario.id).eq('semana_inicio',semanaInicio).get()
   ]).then(function(r){
     var sueldoBase=(r[0]&&r[0][0]&&r[0][0].sueldo_base)||0;
     var registros=r[1]||[];
@@ -10892,26 +10899,32 @@ function renderCartera(fechaRef){
     var permisosAprobados=r[7]||[];
     var bonosYaOtorgadosIds={}; (r[8]||[]).forEach(function(bb){bonosYaOtorgadosIds[bb.bono_id]=true;});
     var horasExtraAsignadas=r[9]||[];
+    var ajuste=(r[10]&&r[10][0])||null;
 
     var resumen=calcularResumenAsistencia(registros,semanaInicio,permisosAprobados);
-    var totalSueldo=resumen.diasPagados*sueldoBase;
+    var diasPagados=(ajuste&&ajuste.dias_trabajados_override!=null)?parseFloat(ajuste.dias_trabajados_override||0):parseFloat(resumen.diasPagados||0);
+    var totalSueldo=diasPagados*sueldoBase;
     var pagadoSueldo=estSemana&&estSemana.estado==='pagado';
 
-    var mapaMaxOp=mapaHorasMaxPorFecha(horasExtraAsignadas);
-    var horasExtra=horasExtraCapadasDesdeRegistros(registros,mapaMaxOp);
-    var totalExtra=horasExtra*tarifa;
+    var horasExtraDB=horasExtraAsignadas.reduce(function(s,h){return s+(parseFloat(h.horas_max)||0);},0);
+    var horasExtra=(ajuste&&ajuste.horas_extra_override!=null)?parseFloat(ajuste.horas_extra_override||0):horasExtraDB;
+    var ex54Op=ex54Get(usuario.id);
+    var tarifaOp=(ex54Op.tarifa_hora_extra!=null&&parseFloat(ex54Op.tarifa_hora_extra)>=0)?parseFloat(ex54Op.tarifa_hora_extra):tarifa;
+    var totalExtra=horasExtra*tarifaOp;
     var hayExtra=horasExtra>0;
     var pagadoExtra=estExtra&&estExtra.estado==='pagado';
 
-    var bonosDeLaSemana=bonosActivos.filter(function(b){return !bonosYaOtorgadosIds[b.id]&&!(b.periodo_fin<semanaInicio||b.periodo_inicio>semanaFin);});
-    var bonosSinUmbral=bonosDeLaSemana.filter(function(b){return b.tipo==='equipo'||!b.umbral_minimo;});
+    var bonosDeLaSemana=bonosActivos.filter(function(b){return !(b.periodo_fin<semanaInicio||b.periodo_inicio>semanaFin);});
+    var bonosAutorizados=bonosDeLaSemana.filter(function(b){return !!bonosYaOtorgadosIds[b.id];});
+    var bonosSinUmbral=bonosDeLaSemana.filter(function(b){return b.tipo==='equipo';});
     var bonosConUmbral=bonosDeLaSemana.filter(function(b){return b.tipo==='individual'&&b.umbral_minimo;});
 
     Promise.all(bonosConUmbral.map(function(b){
       return calcularScoreOperario(usuario.id,b.periodo_inicio,b.periodo_fin).then(function(score){return {bono:b,score:score};});
     })).then(function(resultadosUmbral){
       var bonosUmbralCalifican=resultadosUmbral.filter(function(r){return r.score.final>=parseFloat(r.bono.umbral_minimo);}).map(function(r){return r.bono;});
-      var bonosQueCalifican=bonosSinUmbral.concat(bonosUmbralCalifican);
+      var bonosNuevos=bonosSinUmbral.concat(bonosUmbralCalifican).filter(function(b){return !bonosYaOtorgadosIds[b.id];});
+      var bonosQueCalifican=bonosAutorizados.concat(bonosNuevos.filter(function(b){return !bonosAutorizados.some(function(a){return a.id===b.id;});}));
       var totalBonos=bonosQueCalifican.reduce(function(s,b){return s+(parseFloat(b.monto)||0);},0);
 
       return from('prestamo_pagos').select('*').in('prestamo_id',prestamosActivos.map(function(p){return p.id;})||['00000000-0000-0000-0000-000000000000']).eq('semana_inicio',semanaInicio).get().then(function(deduccionesRows){
@@ -10938,7 +10951,8 @@ function renderCartera(fechaRef){
       html+='</div>';
 
       html+='<div class="form-card" style="margin-top:.75rem;">';
-      html+='<div class="resumen-row"><span class="resumen-key">💵 Sueldo ('+resumen.trabajados+' días'+(resumen.diasPermisoConGoce?' + '+resumen.diasPermisoConGoce+' permiso c/goce':'')+')</span><span class="resumen-val" style="color:var(--verde-mid);">+$'+totalSueldo.toFixed(2)+' '+(pagadoSueldo?'✅':'⏳')+'</span></div>';
+      html+='<div class="resumen-row"><span class="resumen-key">💵 Sueldo ('+diasPagados.toFixed(1)+' días pagados)</span><span class="resumen-val" style="color:var(--verde-mid);">+$'+totalSueldo.toFixed(2)+' '+(pagadoSueldo?'✅':'⏳')+'</span></div>';
+      if(resumen.retardos) html+='<div class="resumen-row"><span class="resumen-key">🕐 Retardos</span><span class="resumen-val" style="color:var(--gris-3);">'+resumen.retardos+' · informativo, sin descuento automático</span></div>';
       if(resumen.diasPermisoSinGoce) html+='<div class="resumen-row"><span class="resumen-key">🩺 Permiso sin goce</span><span class="resumen-val" style="color:var(--gris-3);">'+resumen.diasPermisoSinGoce+' día(s) no pagado(s)</span></div>';
       if(hayExtra) html+='<div class="resumen-row"><span class="resumen-key">⏰ Horas extra ('+horasExtra.toFixed(1)+'h)</span><span class="resumen-val" style="color:var(--verde-mid);">+$'+totalExtra.toFixed(2)+' '+(pagadoExtra?'✅':'⏳')+'</span></div>';
       bonosQueCalifican.forEach(function(b){
@@ -10948,14 +10962,28 @@ function renderCartera(fechaRef){
         var pr=prestamosActivos.find(function(p){return p.id===d.prestamo_id;});
         html+='<div class="resumen-row"><span class="resumen-key">📝 '+(pr?pr.concepto:'Préstamo')+' (pago '+d.numero_pago+')</span><span class="resumen-val" style="color:var(--rojo);">-$'+parseFloat(d.monto).toFixed(2)+'</span></div>';
       });
-      html+='<div class="resumen-row" style="border-top:2px solid var(--gris-1);margin-top:.4rem;padding-top:.6rem;"><span class="resumen-key" style="font-weight:800;">Total a tu Cartera</span><span class="resumen-val" style="font-weight:800;font-size:1rem;">$'+total.toFixed(2)+'</span></div>';
+      html+='<div class="resumen-row" style="border-top:2px solid var(--gris-1);margin-top:.4rem;padding-top:.6rem;"><span class="resumen-key" style="font-weight:800;">Neto de la semana</span><span class="resumen-val" style="font-weight:800;font-size:1rem;">$'+total.toFixed(2)+'</span></div>';
       html+='</div>';
+      html+='<button type="button" id="cart-recibo" class="btn-primary" style="margin-top:.7rem;">📄 Ver recibo de nómina</button>';
 
       body.innerHTML=html;
       var btnAnt=document.getElementById('cart-ant');
       if(btnAnt) btnAnt.addEventListener('click',function(){var d=new Date(lunes);d.setDate(d.getDate()-7);renderCartera(d);});
       var btnSig=document.getElementById('cart-sig');
       if(btnSig) btnSig.addEventListener('click',function(){var d=new Date(lunes);d.setDate(d.getDate()+7);renderCartera(d);});
+      var btnRec=document.getElementById('cart-recibo');
+      if(btnRec)btnRec.onclick=function(){
+        abrirRecibo({
+          nombre:(usuario&&usuario.nombre)||'Colaborador',
+          numSemana:numSemana,semanaInicio:semanaInicio,semanaFin:semanaFin,
+          resumen:Object.assign({},resumen,{diasPagados:diasPagados}),
+          sueldoBase:sueldoBase,totalSueldo:totalSueldo,tarifa:tarifaOp,
+          horasExtra:horasExtra,totalExtra:totalExtra,
+          bonos:bonosQueCalifican.map(function(b){return {id:b.id,descripcion:b.descripcion,monto:parseFloat(b.monto||0)};}),
+          deducciones:deducciones.map(function(d){var pr=prestamosActivos.find(function(p){return p.id===d.prestamo_id;});return {concepto:pr?pr.concepto:'Préstamo',numero:d.numero_pago,monto:parseFloat(d.monto||0)};}),
+          granTotal:total,nominaCompleta:todoLoAplicablePagado
+        });
+      };
     });
     });
   }).catch(function(e){body.innerHTML='<div class="empty">No se pudo calcular tu cartera.<br/><span style="font-size:.7rem;color:var(--gris-3);">('+e.message+')</span></div><button class="btn-back" style="margin-top:1rem;" onclick="renderPagosMenu()">← Volver a Pagos</button>';});
