@@ -870,6 +870,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .as61-field input,.as61-field select,.as61-field textarea{border:1px solid var(--gris-2);border-radius:8px;padding:8px 9px;font-size:.74rem;background:#fafbf9}
 .as61-field textarea{min-height:72px;resize:vertical}.sol61-section{margin-top:10px}.sol61-section-title{font-size:.72rem;font-weight:900;color:var(--verde);margin:7px 0}.sol61-section-title.pending{color:#a86200}.sol61-meta{font-size:.6rem;color:var(--gris-5);margin-top:3px}.sol61-resolved{opacity:.94}
 @media(max-width:700px){.as61-grid{grid-template-columns:1fr}.as61-field.full{grid-column:auto}}
+
+/* C069 — Empleados consolidado */
+.em69-hint{font-size:.62rem;color:var(--gris-5);margin:6px 0 8px}
+.em69-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.42);display:flex;align-items:center;justify-content:center;z-index:11000;padding:16px}
+.em69-modal{background:#fff;border-radius:14px;width:min(640px,95vw);box-shadow:0 22px 70px rgba(0,0,0,.25);overflow:hidden}
+.em69-modal-h{padding:14px 16px;border-bottom:1px solid var(--gris-2);display:flex;justify-content:space-between;align-items:center;gap:10px}
+.em69-modal-b{padding:14px 16px}.em69-modal-f{padding:12px 16px;border-top:1px solid var(--gris-2);display:flex;justify-content:flex-end;gap:8px}
+.em69-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.em69-field{display:flex;flex-direction:column;gap:4px}.em69-field.full{grid-column:1/-1}
+.em69-field label{font-size:.62rem;font-weight:800;color:#67736c;text-transform:uppercase}
+.em69-field input,.em69-field select,.em69-field textarea{border:1px solid var(--gris-2);border-radius:8px;padding:8px 9px;font-size:.74rem;background:#fafbf9}
+.em69-field textarea{min-height:76px;resize:vertical}
+.em69-day{cursor:pointer;border-radius:6px;padding:3px 2px}.em69-day:hover{background:#f0f6f2}
+.em69-adjusted{display:block;font-size:.49rem;color:#2d6d4e;font-weight:850;margin-top:2px}
+.em69-sec{margin-top:10px}.em69-sec-title{font-size:.72rem;font-weight:900;margin:7px 0;color:var(--verde)}.em69-sec-title.pending{color:#a86200}
+.em69-resolved{opacity:.94}.em69-meta{font-size:.58rem;color:var(--gris-5);margin-top:3px}
+.em69-error{background:#fff2f0;border:1px solid #efc0b7;color:#9a2c1f;border-radius:8px;padding:8px 10px;font-size:.67rem;margin-top:8px}
+@media(max-width:700px){.em69-grid{grid-template-columns:1fr}.em69-field.full{grid-column:auto}}
+
 </style>
 </head>
 <body>
@@ -6885,101 +6903,446 @@ function as61OpenEdit(u,fecha,reg,perm,heInfo){
     renderControlAsistencias(fecha);
   };
 }
-function renderControlAsistencias(fecha){
+
+var EM69_VOLVER_SOLICITUDES='todas';
+
+function em69Close(){
+  var x=document.getElementById('em69-modal-bg');
+  if(x)x.remove();
+}
+function em69IsoDateTime(fecha,hora){
+  return new Date(fecha+'T'+(hora||'07:00')+':00').toISOString();
+}
+function em69Hora(iso){
+  if(!iso)return '';
+  try{return new Date(iso).toTimeString().slice(0,5);}catch(e){return '';}
+}
+function em69NombreUsuario(id,usuarios){
+  var u=(usuarios||[]).find(function(x){return String(x.id)===String(id);});
+  return u?u.nombre:'Administración';
+}
+function em69EstadoDia(reg,p){
+  if(reg&&reg.entrada)return reg.retardo?'retardo':'presente';
+  if(p){
+    var pt=String(p.tipo||'').toLowerCase();
+    return pt.indexOf('vac')>=0?'vacaciones':'permiso';
+  }
+  return 'falta';
+}
+
+/* ==========================================================
+   FLUJO 1 + 2: ASISTENCIA + HORAS EXTRA ADMINISTRATIVAS
+   Fuente única: tablas reales asistencia_registros,
+   permisos y horas_extra_asignadas.
+   ========================================================== */
+function em69RenderAsistencia(fecha){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="loading">Cargando asistencia semanal...</div>';
   var hoy=fechaHoyLocal(),ref=new Date((fecha||hoy)+'T12:00:00');
-  var dia=ref.getDay(), dif=(dia===0?-6:1-dia), lunes=new Date(ref); lunes.setDate(ref.getDate()+dif);
-  var domingo=new Date(lunes); domingo.setDate(lunes.getDate()+6);
+  var dia=ref.getDay(),dif=(dia===0?-6:1-dia),lunes=new Date(ref);lunes.setDate(ref.getDate()+dif);
+  var domingo=new Date(lunes);domingo.setDate(lunes.getDate()+6);
   function iso(d){var y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');return y+'-'+m+'-'+dd;}
-  var inicio=iso(lunes),fin=iso(domingo),num=numeroSemanaISO(lunes);
-  var dias=[];for(var i=0;i<7;i++){var d=new Date(lunes);d.setDate(lunes.getDate()+i);dias.push(iso(d));}
+  var inicio=iso(lunes),fin=iso(domingo),num=numeroSemanaISO(lunes),dias=[];
+  for(var i=0;i<7;i++){var d=new Date(lunes);d.setDate(lunes.getDate()+i);dias.push(iso(d));}
+
   Promise.all([
     from('usuarios').select('id,nombre,rol,activo').eq('activo',true).get(),
     from('asistencia_registros').select('*').gte('fecha',inicio).lte('fecha',fin).eq('modalidad','labores').get(),
     from('permisos').select('*').eq('estado','aprobado').lte('fecha_inicio',fin).gte('fecha_fin',inicio).get(),
-    from('horas_extra_asignadas').select('id,operario_id,fecha,horas_max,tipo_labor_id').gte('fecha',inicio).lte('fecha',fin).eq('estado','aprobada').get()
+    from('horas_extra_asignadas').select('id,operario_id,fecha,horas_max,tipo_labor_id,motivo,estado').gte('fecha',inicio).lte('fecha',fin).eq('estado','aprobada').get()
   ]).then(function(rr){
     var users=(rr[0]||[]).filter(function(u){return ['operario','cosechador','galerista','labores_eventual'].indexOf(u.rol)>=0;});
-    var regs=rr[1]||[], permisos=rr[2]||[], extras=rr[3]||[];
-    var regMap={},permMap={},extraMap={},extraDayMap={},extraRecordMap={};
+    var regs=rr[1]||[],permisos=rr[2]||[],extras=rr[3]||[];
+    var regMap={},permMap={},heRows={};
+
     regs.forEach(function(r){
-      var k=r.usuario_id+'|'+r.fecha;if(!regMap[k])regMap[k]={entrada:false,salida:false,retardo:false,entrada_id:null,salida_id:null,hora_entrada:null,hora_salida:null};
-      if(r.tipo==='entrada'){regMap[k].entrada=true;regMap[k].entrada_id=r.id||regMap[k].entrada_id;regMap[k].hora_entrada=(r.registrado_en?new Date(r.registrado_en).toTimeString().slice(0,5):null);if(r.retardo)regMap[k].retardo=true;}
-      if(r.tipo==='salida'){regMap[k].salida=true;regMap[k].salida_id=r.id||regMap[k].salida_id;regMap[k].hora_salida=(r.registrado_en?new Date(r.registrado_en).toTimeString().slice(0,5):null);}
+      var k=r.usuario_id+'|'+r.fecha;
+      if(!regMap[k])regMap[k]={entrada:false,salida:false,retardo:false,entradaRow:null,salidaRow:null};
+      if(r.tipo==='entrada'){regMap[k].entrada=true;regMap[k].retardo=!!r.retardo;regMap[k].entradaRow=r;}
+      if(r.tipo==='salida'){regMap[k].salida=true;regMap[k].salidaRow=r;}
     });
     permisos.forEach(function(p){
       dias.forEach(function(f){if(f>=p.fecha_inicio&&f<=p.fecha_fin)permMap[p.usuario_id+'|'+f]=p;});
     });
-    extras.forEach(function(x){
-      var h=parseFloat(x.horas_max)||0;
-      extraMap[x.operario_id]=(extraMap[x.operario_id]||0)+h;
-      extraDayMap[x.operario_id+'|'+x.fecha]=(extraDayMap[x.operario_id+'|'+x.fecha]||0)+h;
-      if(!extraRecordMap[x.operario_id+'|'+x.fecha])extraRecordMap[x.operario_id+'|'+x.fecha]=x;
+    extras.forEach(function(h){
+      var k=h.operario_id+'|'+h.fecha;
+      if(!heRows[k])heRows[k]=[];
+      heRows[k].push(h);
     });
-    users.forEach(function(u){
-      dias.forEach(function(f){
-        var k=u.id+'|'+f,ajHE=he68Get(u.id,f);
-        if(ajHE!==null)extraDayMap[k]=ajHE;
-      });
-      extraMap[u.id]=dias.reduce(function(s,f){return s+(parseFloat(extraDayMap[u.id+'|'+f])||0);},0);
-    });
-    var dn=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
-    function celda(u,f){
-      var r=regMap[u.id+'|'+f],p=permMap[u.id+'|'+f],he=extraDayMap[u.id+'|'+f]||0,base='',aj=as66Get(u.id,f);
-      if(aj){
-        if(aj.estado==='presente'||aj.estado==='retardo'){r={entrada:true,salida:true,retardo:aj.estado==='retardo',hora_entrada:aj.entrada,hora_salida:aj.salida};p=null;}
-        else if(aj.estado==='permiso'||aj.estado==='vacaciones'){r=null;p={id:'ajuste',tipo:aj.estado==='vacaciones'?'vacaciones':'personal',con_goce:false};}
-        else {r=null;p=null;}
-      }
-      if(f>hoy)base='<span class="as58-cell as58-na">—</span>';
-      else if(p){
-        var pt=(p.tipo||'').toLowerCase();
-        if(pt.indexOf('vac')>=0)base='<span class="as58-cell as58-v" title="Vacaciones">V</span>';
-        else base='<span class="as58-cell as58-per" title="Permiso '+(p.con_goce?'con goce':'sin goce')+'">P</span>';
-      }else if(r&&r.entrada)base=r.retardo?'<span class="as58-cell as58-r" title="Retardo">R</span>':'<span class="as58-cell as58-p" title="Presente">✓</span>';
-      else if(f===hoy)base='<span class="as58-cell as58-na" title="Sin registro todavía">·</span>';
-      else base='<span class="as58-cell as58-f" title="Falta">F</span>';
-      if(aj)base+='<span style="display:block;font-size:.5rem;color:#2d6d4e;font-weight:800;">AJUSTE ADMIN</span>';if(he>0)base+='<span class="as59-he">H.E. '+he.toFixed(1)+' h</span>';
-      else base+='<span class="as60-he0">H.E. 0.0 h</span>';
-      return '<div class="as61-editable" data-uid="'+u.id+'" data-fecha="'+f+'" title="Editar asistencia">'+base+'</div>';
+
+    function heDia(uid,f){
+      return (heRows[uid+'|'+f]||[]).reduce(function(s,h){return s+(parseFloat(h.horas_max)||0);},0);
     }
+    function celda(u,f){
+      var r=regMap[u.id+'|'+f],p=permMap[u.id+'|'+f],estado=em69EstadoDia(r,p),base='';
+      if(f>hoy)base='<span class="as58-cell as58-na">—</span>';
+      else if(estado==='vacaciones')base='<span class="as58-cell as58-v">V</span>';
+      else if(estado==='permiso')base='<span class="as58-cell as58-per">P</span>';
+      else if(estado==='retardo')base='<span class="as58-cell as58-r">R</span>';
+      else if(estado==='presente')base='<span class="as58-cell as58-p">✓</span>';
+      else if(f===hoy)base='<span class="as58-cell as58-na">·</span>';
+      else base='<span class="as58-cell as58-f">F</span>';
+      var he=heDia(u.id,f);
+      base+=he>0?'<span class="as59-he">H.E. '+he.toFixed(1)+' h</span>':'<span class="as60-he0">H.E. 0.0 h</span>';
+      return '<div class="em69-day" data-uid="'+u.id+'" data-fecha="'+f+'">'+base+'</div>';
+    }
+    var dn=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
     var html='<div class="as58-head"><div><div class="as58-title">📋 Asistencia · Semana '+num+'</div><div class="as58-sub">'+inicio+' — '+fin+' · Sólo colaboradores activos</div></div><button class="em59-back" onclick="renderAdministracionMenu()">← Empleados</button></div>';
-    html+='<div class="as58-nav"><button id="as58-prev">← Semana anterior</button><button id="as58-now">Semana actual</button><input type="date" id="as58-date" value="'+(fecha||hoy)+'" max="'+hoy+'"><button id="as58-next" '+(fin>=hoy?'disabled':'')+'>Semana siguiente →</button><span class="as58-week">Semana '+num+'</span></div>';
-    html+='<div class="as61-edit-hint">Haz clic en cualquier día para corregir asistencia u horas extra.</div><div class="as58-wrap"><table class="as58-table"><thead><tr><th>Colaborador</th><th>Tipo</th>'+dn.map(function(x,i){return '<th>'+x+'<br><span style="font-weight:500">'+dias[i].slice(8,10)+'</span></th>';}).join('')+'<th>Días</th><th>H. extra</th></tr></thead><tbody>';
+    html+='<div class="as58-nav"><button id="em69-prev">← Semana anterior</button><button id="em69-now">Semana actual</button><input type="date" id="em69-date" value="'+(fecha||hoy)+'" max="'+hoy+'"><button id="em69-next" '+(fin>=hoy?'disabled':'')+'>Semana siguiente →</button><span class="as58-week">Semana '+num+'</span></div>';
+    html+='<div class="em69-hint">Administración puede corregir directamente estado, entrada, salida y horas extra de cualquier día.</div>';
+    html+='<div class="as58-wrap"><table class="as58-table"><thead><tr><th>Colaborador</th><th>Tipo</th>'+dn.map(function(x,i){return '<th>'+x+'<br><span style="font-weight:500">'+dias[i].slice(8,10)+'</span></th>';}).join('')+'<th>Días</th><th>H. extra</th></tr></thead><tbody>';
     html+=users.map(function(u){
       var ex=ex54Get(u.id),tipo=ex.tipo_colaborador||(u.rol==='labores_eventual'?'Eventual':'Base');
       var diasTrab=dias.filter(function(f){
-        var r=regMap[u.id+'|'+f],p=permMap[u.id+'|'+f],aj=as66Get(u.id,f);
-        if(aj){
-          if(aj.estado==='presente'||aj.estado==='retardo')return true;
-          if(aj.estado==='permiso')return !!aj.con_goce;
-          return false;
-        }
-        return (r&&r.entrada)||(p&&p.con_goce);
+        var e=em69EstadoDia(regMap[u.id+'|'+f],permMap[u.id+'|'+f]);
+        if(e==='presente'||e==='retardo')return true;
+        var p=permMap[u.id+'|'+f];
+        return e==='permiso'&&p&&p.con_goce;
       }).length;
-      return '<tr><td><div class="as58-name">'+u.nombre+'</div><div style="font-size:.58rem;color:var(--gris-5)">'+(ex.cargo||ROLES[u.rol]||u.rol)+'</div></td><td><span class="em58-badge '+(tipo==='Eventual'?'em58-eventual':'em58-base')+'">'+tipo.toUpperCase()+'</span></td>'+dias.map(function(f){return '<td>'+celda(u,f)+'</td>';}).join('')+'<td><strong>'+diasTrab+'</strong></td><td><strong>'+(extraMap[u.id]||0).toFixed(1)+' h</strong></td></tr>';
+      var heTotal=dias.reduce(function(s,f){return s+heDia(u.id,f);},0);
+      return '<tr><td><div class="as58-name">'+u.nombre+'</div><div style="font-size:.58rem;color:var(--gris-5)">'+(ex.cargo||ROLES[u.rol]||u.rol)+'</div></td><td><span class="em58-badge '+(tipo==='Eventual'?'em58-eventual':'em58-base')+'">'+tipo.toUpperCase()+'</span></td>'+dias.map(function(f){return '<td>'+celda(u,f)+'</td>';}).join('')+'<td><strong>'+diasTrab+'</strong></td><td><strong>'+heTotal.toFixed(1)+' h</strong></td></tr>';
     }).join('');
     var totalDias=users.reduce(function(s,u){
       return s+dias.filter(function(f){
-        var r=regMap[u.id+'|'+f],p=permMap[u.id+'|'+f],aj=as66Get(u.id,f);
-        if(aj){
-          if(aj.estado==='presente'||aj.estado==='retardo')return true;
-          if(aj.estado==='permiso')return !!aj.con_goce;
-          return false;
-        }
-        return (r&&r.entrada)||(p&&p.con_goce);
+        var e=em69EstadoDia(regMap[u.id+'|'+f],permMap[u.id+'|'+f]);
+        if(e==='presente'||e==='retardo')return true;
+        var p=permMap[u.id+'|'+f];
+        return e==='permiso'&&p&&p.con_goce;
       }).length;
     },0);
-    var totalHE=users.reduce(function(s,u){return s+(extraMap[u.id]||0);},0);
-    html+='</tbody></table></div><div style="display:flex;gap:18px;justify-content:flex-end;margin:7px 4px 2px;font-size:.68rem;font-weight:800;color:var(--verde);"><span>Total semanal: '+totalDias+' días</span><span>H.E. equipo: '+totalHE.toFixed(1)+' h</span></div><div class="as58-legend"><span class="as58-p">✓ Presente</span><span class="as58-f">F Falta</span><span class="as58-r">R Retardo</span><span class="as58-per">P Permiso</span><span class="as58-v">V Vacaciones</span><span class="as58-na">— No aplica/futuro</span></div><button class="em59-back" style="margin-top:.7rem" onclick="renderAdministracionMenu()">← Empleados</button>';
+    var totalHE=users.reduce(function(s,u){return s+dias.reduce(function(x,f){return x+heDia(u.id,f);},0);},0);
+    html+='</tbody></table></div><div style="display:flex;gap:18px;justify-content:flex-end;margin:7px 4px 2px;font-size:.68rem;font-weight:800;color:var(--verde);"><span>Total semanal: '+totalDias+' días</span><span>H.E. equipo: '+totalHE.toFixed(1)+' h</span></div>';
+    html+='<div class="as58-legend"><span class="as58-p">✓ Presente</span><span class="as58-f">F Falta</span><span class="as58-r">R Retardo</span><span class="as58-per">P Permiso</span><span class="as58-v">V Vacaciones</span><span class="as58-na">— No aplica/futuro</span></div>';
+    html+='<button class="em59-back" style="margin-top:.7rem" onclick="renderAdministracionMenu()">← Empleados</button>';
     body.innerHTML=html;
-    document.getElementById('as58-date').addEventListener('change',function(){renderControlAsistencias(this.value);});
-    document.getElementById('as58-now').addEventListener('click',function(){renderControlAsistencias(hoy);});
-    document.getElementById('as58-prev').addEventListener('click',function(){var d=new Date(lunes);d.setDate(d.getDate()-7);renderControlAsistencias(iso(d));});
-    var nx=document.getElementById('as58-next');if(!nx.disabled)nx.addEventListener('click',function(){var d=new Date(lunes);d.setDate(d.getDate()+7);renderControlAsistencias(iso(d));});body.querySelectorAll('.as61-editable').forEach(function(el){el.onclick=function(){var uid=this.dataset.uid,f=this.dataset.fecha,u=users.find(function(x){return String(x.id)===String(uid);});if(u)as61OpenEdit(u,f,regMap[uid+'|'+f]||{},permMap[uid+'|'+f]||{},extraRecordMap[uid+'|'+f]||{});};});
+
+    document.getElementById('em69-date').onchange=function(){em69RenderAsistencia(this.value);};
+    document.getElementById('em69-now').onclick=function(){em69RenderAsistencia(hoy);};
+    document.getElementById('em69-prev').onclick=function(){var d=new Date(lunes);d.setDate(d.getDate()-7);em69RenderAsistencia(iso(d));};
+    var nx=document.getElementById('em69-next');if(!nx.disabled)nx.onclick=function(){var d=new Date(lunes);d.setDate(d.getDate()+7);em69RenderAsistencia(iso(d));};
+
+    body.querySelectorAll('.em69-day').forEach(function(el){
+      el.onclick=function(){
+        var uid=this.dataset.uid,f=this.dataset.fecha,u=users.find(function(x){return String(x.id)===String(uid);});
+        if(!u)return;
+        em69EditarDia({
+          usuario:u,fecha:f,
+          reg:regMap[uid+'|'+f]||{},
+          permiso:permMap[uid+'|'+f]||null,
+          heRows:heRows[uid+'|'+f]||[]
+        });
+      };
+    });
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
+
+function em69EditarDia(ctx){
+  em69Close();
+  var u=ctx.usuario,f=ctx.fecha,r=ctx.reg||{},p=ctx.permiso||null,hrs=ctx.heRows||[];
+  var estado=em69EstadoDia(r,p);
+  var entrada=r.entradaRow?em69Hora(r.entradaRow.registrado_en):'07:00';
+  var salida=r.salidaRow?em69Hora(r.salidaRow.registrado_en):'16:00';
+  var he=hrs.reduce(function(s,h){return s+(parseFloat(h.horas_max)||0);},0);
+
+  var bg=document.createElement('div');bg.className='em69-modal-bg';bg.id='em69-modal-bg';
+  bg.innerHTML='<div class="em69-modal"><div class="em69-modal-h"><div><strong>Editar día</strong><div style="font-size:.65rem;color:var(--gris-5)">'+u.nombre+' · '+f+'</div></div><button class="em59-back" onclick="em69Close()">✕</button></div>'+
+  '<div class="em69-modal-b"><div class="em69-grid">'+
+    '<div class="em69-field"><label>Estado</label><select id="em69-estado"><option value="presente">Presente</option><option value="falta">Falta</option><option value="retardo">Retardo</option><option value="permiso">Permiso</option><option value="vacaciones">Vacaciones</option></select></div>'+
+    '<div class="em69-field"><label>Horas extra del día</label><input id="em69-he" type="number" min="0" step="0.5" value="'+he.toFixed(1)+'"></div>'+
+    '<div class="em69-field"><label>Hora de entrada</label><input id="em69-in" type="time" value="'+entrada+'"></div>'+
+    '<div class="em69-field"><label>Hora de salida</label><input id="em69-out" type="time" value="'+salida+'"></div>'+
+  '</div><div id="em69-msg"></div></div>'+
+  '<div class="em69-modal-f"><button class="btn-sm" onclick="em69Close()">Cancelar</button><button class="btn-sm btn-completar" id="em69-save">Guardar cambio</button></div></div>';
+  document.body.appendChild(bg);
+  document.getElementById('em69-estado').value=estado;
+
+  document.getElementById('em69-save').onclick=function(){
+    var btn=this,est=document.getElementById('em69-estado').value,
+        entradaNueva=document.getElementById('em69-in').value||'07:00',
+        salidaNueva=document.getElementById('em69-out').value||'16:00',
+        heNueva=parseFloat(document.getElementById('em69-he').value||0);
+    if(isNaN(heNueva)||heNueva<0){alert('Las horas extra no pueden ser negativas.');return;}
+    btn.disabled=true;btn.textContent='Guardando...';
+
+    var ops=[];
+
+    /* ASISTENCIA: sólo columnas reales que ya usa la plataforma */
+    if(est==='presente'||est==='retardo'){
+      if(r.entradaRow&&r.entradaRow.id){
+        ops.push(from('asistencia_registros').eq('id',r.entradaRow.id).update({registrado_en:em69IsoDateTime(f,entradaNueva),retardo:est==='retardo'}));
+      }else{
+        ops.push(from('asistencia_registros').insert({usuario_id:u.id,tipo:'entrada',modalidad:'labores',registrado_en:em69IsoDateTime(f,entradaNueva),fecha:f,retardo:est==='retardo'}));
+      }
+      if(r.salidaRow&&r.salidaRow.id){
+        ops.push(from('asistencia_registros').eq('id',r.salidaRow.id).update({registrado_en:em69IsoDateTime(f,salidaNueva),retardo:false}));
+      }else{
+        ops.push(from('asistencia_registros').insert({usuario_id:u.id,tipo:'salida',modalidad:'labores',registrado_en:em69IsoDateTime(f,salidaNueva),fecha:f,retardo:false}));
+      }
+      if(p&&p.id&&p.fecha_inicio===f&&p.fecha_fin===f){
+        ops.push(from('permisos').eq('id',p.id).update({estado:'cancelado',revisado_por:usuario.id,revisado_en:new Date().toISOString()}));
+      }
+    }else{
+      if(r.entradaRow&&r.entradaRow.id)ops.push(from('asistencia_registros').eq('id',r.entradaRow.id).delete());
+      if(r.salidaRow&&r.salidaRow.id)ops.push(from('asistencia_registros').eq('id',r.salidaRow.id).delete());
+      if(est==='permiso'||est==='vacaciones'){
+        if(p&&p.id&&p.fecha_inicio===f&&p.fecha_fin===f){
+          ops.push(from('permisos').eq('id',p.id).update({tipo:est==='vacaciones'?'vacaciones':'personal',estado:'aprobado',revisado_por:usuario.id,revisado_en:new Date().toISOString()}));
+        }else if(!p){
+          ops.push(from('permisos').insert({usuario_id:u.id,tipo:est==='vacaciones'?'vacaciones':'personal',fecha_inicio:f,fecha_fin:f,estado:'aprobado',con_goce:false,revisado_por:usuario.id,revisado_en:new Date().toISOString()}));
+        }
+      }else if(est==='falta'&&p&&p.id&&p.fecha_inicio===f&&p.fecha_fin===f){
+        ops.push(from('permisos').eq('id',p.id).update({estado:'cancelado',revisado_por:usuario.id,revisado_en:new Date().toISOString()}));
+      }
+    }
+
+    /* H.E.: una sola suma efectiva por día. Se conserva la primera
+       asignación y las adicionales se llevan a 0 para evitar duplicados. */
+    if(hrs.length){
+      var first=hrs[0];
+      ops.push(from('horas_extra_asignadas').eq('id',first.id).update({horas_max:heNueva}));
+      for(var i=1;i<hrs.length;i++)ops.push(from('horas_extra_asignadas').eq('id',hrs[i].id).update({horas_max:0}));
+    }else if(heNueva>0){
+      ops.push(from('horas_extra_asignadas').insert({
+        operario_id:u.id,asignado_por:usuario.id,fecha:f,motivo:'Ajuste administrativo',
+        tipo_labor_id:null,estado:'aprobada',horas_max:heNueva
+      }));
+    }
+
+    Promise.all(ops).then(function(){
+      /* Verificación real: no mostrar éxito si la BD no refleja el cambio. */
+      return Promise.all([
+        from('asistencia_registros').select('*').eq('usuario_id',u.id).eq('fecha',f).eq('modalidad','labores').get(),
+        from('horas_extra_asignadas').select('id,horas_max').eq('operario_id',u.id).eq('fecha',f).eq('estado','aprobada').get()
+      ]);
+    }).then(function(v){
+      var vr=v[0]||[],vh=v[1]||[];
+      var entradaOk=vr.some(function(x){return x.tipo==='entrada';});
+      var heReal=vh.reduce(function(s,x){return s+(parseFloat(x.horas_max)||0);},0);
+      if((est==='presente'||est==='retardo')&&!entradaOk)throw new Error('La base no confirmó la asistencia.');
+      if((est==='falta'||est==='permiso'||est==='vacaciones')&&vr.length)throw new Error('La base todavía conserva una marcación de asistencia.');
+      if(Math.abs(heReal-heNueva)>0.001)throw new Error('La base no confirmó las horas extra solicitadas.');
+      showToast('✅ Día actualizado');
+      em69Close();
+      em69RenderAsistencia(f);
+    }).catch(function(e){
+      var msg=document.getElementById('em69-msg');
+      if(msg)msg.innerHTML='<div class="em69-error">No se guardó el cambio: '+e.message+'</div>';
+      btn.disabled=false;btn.textContent='Guardar cambio';
+    });
+  };
+}
+
+/* ==========================================================
+   FLUJO 3: SOLICITUDES CONSOLIDADAS
+   Aprobar/rechazar siempre desde la misma bandeja.
+   ========================================================== */
+function em69RenderSolicitudes(filtro){
+  filtro=filtro||EM69_VOLVER_SOLICITUDES||'todas';
+  EM69_VOLVER_SOLICITUDES=filtro;
+  var body=document.getElementById('enc-body');
+  body.innerHTML='<div class="loading">Cargando solicitudes...</div>';
+
+  Promise.all([
+    from('solicitudes_operario').select('*,operario:usuarios!operario_id(nombre)').order('creado_en',{ascending:false}).get(),
+    from('permisos').select('*,operario:usuarios!usuario_id(nombre)').order('creado_en',{ascending:false}).get(),
+    from('usuarios').select('id,nombre').get()
+  ]).then(function(rr){
+    var sols=rr[0]||[],pers=rr[1]||[],usuarios=rr[2]||[],items=[];
+    sols.forEach(function(s){
+      var tipo=String(s.tipo||'otro').toLowerCase();
+      items.push({
+        origen:'sol',id:s.id,uid:s.operario_id,nombre:s.operario?s.operario.nombre:'',
+        tipo:tipo,grupo:tipo==='prestamo'?'prestamos':'otras',
+        fecha:s.creado_en||'',detalle:(s.monto_solicitado?'$'+parseFloat(s.monto_solicitado).toFixed(2)+' · ':'')+(s.mensaje||''),
+        estado:s.estado||'pendiente',resolverId:s.atendido_por,resueltoEn:s.atendido_en,respuesta:s.respuesta||'',raw:s
+      });
+    });
+    pers.forEach(function(p){
+      var pt=String(p.tipo||'personal').toLowerCase(),grupo='permisos';
+      if(pt.indexOf('med')>=0)grupo='medicas';
+      else if(pt.indexOf('vac')>=0)grupo='vacaciones';
+      else if(pt==='llegada_tarde'||pt==='salida_temprana')grupo='movimientos';
+      items.push({
+        origen:'perm',id:p.id,uid:p.usuario_id,nombre:p.operario?p.operario.nombre:'',
+        tipo:pt,grupo:grupo,fecha:p.creado_en||p.fecha_inicio||'',
+        detalle:(p.fecha_inicio||'')+(p.fecha_fin&&p.fecha_fin!==p.fecha_inicio?' a '+p.fecha_fin:'')+(p.motivo?' · '+p.motivo:''),
+        estado:p.estado||'pendiente',resolverId:p.revisado_por,resueltoEn:p.revisado_en,respuesta:'',raw:p
+      });
+    });
+
+    var counts={todas:items.length,prestamos:0,permisos:0,medicas:0,vacaciones:0,movimientos:0};
+    items.forEach(function(x){if(counts[x.grupo]!=null)counts[x.grupo]++;});
+    var visibles=filtro==='todas'?items:items.filter(function(x){return x.grupo===filtro;});
+    var pendientes=visibles.filter(function(x){return x.estado==='pendiente';});
+    var resueltas=visibles.filter(function(x){return x.estado!=='pendiente';});
+    var tipoLbl={prestamo:'💰 Préstamo',medico:'🩺 Permiso médico',permiso_medico:'🩺 Permiso médico',personal:'👤 Permiso personal',vacaciones:'🏖️ Vacaciones',llegada_tarde:'🕐 Llegada tarde',salida_temprana:'🚪 Salida anticipada',otro:'💬 Otro'};
+
+    function row(x){
+      var rechaz=x.estado==='rechazada'||x.estado==='rechazado';
+      var aprob=x.estado==='atendida'||x.estado==='aprobado';
+      var st=x.estado==='pendiente'?'Pendiente':(rechaz?'Rechazada':'Aprobada/Atendida');
+      var color=x.estado==='pendiente'?'var(--tierra)':(rechaz?'var(--rojo)':'var(--verde-mid)');
+      var actions='';
+      if(x.estado==='pendiente'){
+        if(x.origen==='perm'){
+          actions='<button class="btn-sm btn-completar" data-pa="'+x.id+'">Aprobar</button><button class="btn-sm btn-cancelar" data-rj="'+x.id+'" data-origen="perm">Rechazar</button>';
+        }else if(x.tipo==='prestamo'){
+          actions='<button class="btn-sm btn-completar" data-la="'+x.id+'">Aprobar</button><button class="btn-sm btn-cancelar" data-rj="'+x.id+'" data-origen="sol">Rechazar</button>';
+        }else{
+          actions='<button class="btn-sm btn-completar" data-sa="'+x.id+'">Atender</button><button class="btn-sm btn-cancelar" data-rj="'+x.id+'" data-origen="sol">Rechazar</button>';
+        }
+      }
+      var meta='';
+      if(x.estado!=='pendiente'){
+        meta='<div class="em69-meta">'+(rechaz?'Rechazó: ':'Autorizó: ')+em69NombreUsuario(x.resolverId,usuarios)+(x.resueltoEn?' · '+new Date(x.resueltoEn).toLocaleString('es-MX'):'')+(x.respuesta?' · '+x.respuesta:'')+'</div>';
+      }
+      return '<div class="sol58-row '+(x.estado!=='pendiente'?'em69-resolved':'')+'" style="border-left-color:'+color+'"><div class="sol58-main"><div><div class="sol58-type">'+(tipoLbl[x.tipo]||x.tipo)+'</div><div class="sol58-person">'+x.nombre+'</div>'+meta+'</div><div class="sol58-detail">'+(x.fecha?new Date(x.fecha).toLocaleDateString('es-MX'):'')+'</div><div class="sol58-detail">'+x.detalle+'</div><div class="sol58-state" style="color:'+color+'">'+st+'</div><div class="sol58-actions">'+actions+'</div></div></div>';
+    }
+
+    var html='<div class="as58-head"><div><div class="as58-title">📨 Solicitudes</div><div class="as58-sub">Autorizaciones e historial del personal en una sola bandeja.</div></div><button class="em59-back" onclick="renderAdministracionMenu()">← Empleados</button></div>';
+    html+='<div class="sol59-filters"><button class="sol59-filter '+(filtro==='todas'?'active':'')+'" data-filter="todas">Todas '+counts.todas+'</button><button class="sol59-filter '+(filtro==='prestamos'?'active':'')+'" data-filter="prestamos">Préstamos '+counts.prestamos+'</button><button class="sol59-filter '+(filtro==='permisos'?'active':'')+'" data-filter="permisos">Permisos '+counts.permisos+'</button><button class="sol59-filter '+(filtro==='medicas'?'active':'')+'" data-filter="medicas">Médicas '+counts.medicas+'</button><button class="sol59-filter '+(filtro==='vacaciones'?'active':'')+'" data-filter="vacaciones">Vacaciones '+counts.vacaciones+'</button><button class="sol59-filter '+(filtro==='movimientos'?'active':'')+'" data-filter="movimientos">Llegadas/Salidas '+counts.movimientos+'</button></div>';
+    html+='<div class="em69-sec"><div class="em69-sec-title pending">POR REVISAR · '+pendientes.length+'</div>'+(pendientes.length?pendientes.map(row).join(''):'<div class="hint">No hay solicitudes por revisar.</div>')+'</div>';
+    html+='<div class="em69-sec"><div class="em69-sec-title">RESUELTAS · '+resueltas.length+'</div>'+(resueltas.length?resueltas.map(row).join(''):'<div class="hint">No hay solicitudes resueltas.</div>')+'</div>';
+    html+='<button class="em59-back" style="margin-top:1rem" onclick="renderAdministracionMenu()">← Empleados</button>';
+    body.innerHTML=html;
+
+    body.querySelectorAll('[data-filter]').forEach(function(b){b.onclick=function(){em69RenderSolicitudes(this.dataset.filter);};});
+    body.querySelectorAll('[data-rj]').forEach(function(b){b.onclick=function(){em69Rechazar(this.dataset.rj,this.dataset.origen);};});
+    body.querySelectorAll('[data-pa]').forEach(function(b){b.onclick=function(){em69AprobarPermiso(this.dataset.pa);};});
+    body.querySelectorAll('[data-sa]').forEach(function(b){b.onclick=function(){em69AtenderSolicitud(this.dataset.sa);};});
+    body.querySelectorAll('[data-la]').forEach(function(b){
+      b.onclick=function(){
+        var id=this.dataset.la,x=items.find(function(y){return String(y.id)===String(id)&&y.origen==='sol';});
+        if(x)em69AprobarPrestamo(x);
+      };
+    });
+  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+}
+
+function em69Rechazar(id,origen){
+  em69Close();
+  var bg=document.createElement('div');bg.className='em69-modal-bg';bg.id='em69-modal-bg';
+  bg.innerHTML='<div class="em69-modal"><div class="em69-modal-h"><strong>Rechazar solicitud</strong><button class="em59-back" onclick="em69Close()">✕</button></div><div class="em69-modal-b"><div class="em69-field full"><label>Motivo del rechazo</label><textarea id="em69-reason" placeholder="Motivo que recibirá el colaborador"></textarea></div><div id="em69-msg"></div></div><div class="em69-modal-f"><button class="btn-sm" onclick="em69Close()">Cancelar</button><button class="btn-sm btn-cancelar" id="em69-reject-ok">Confirmar rechazo</button></div></div>';
+  document.body.appendChild(bg);
+  document.getElementById('em69-reject-ok').onclick=function(){
+    var motivo=document.getElementById('em69-reason').value.trim(),btn=this;
+    if(!motivo){alert('Captura el motivo del rechazo.');return;}
+    btn.disabled=true;btn.textContent='Guardando...';
+    var prom;
+    if(origen==='perm'){
+      prom=from('permisos').select('*').eq('id',id).single().then(function(p){
+        return from('permisos').eq('id',id).update({estado:'rechazado',revisado_por:usuario.id,revisado_en:new Date().toISOString()}).then(function(){
+          return from('notificaciones').insert({titulo:'❌ Permiso rechazado',cuerpo:'Tu solicitud fue rechazada: '+motivo,icono:'❌',leida:false,para_rol:'operario',para_usuario:p.usuario_id});
+        });
+      });
+    }else{
+      prom=from('solicitudes_operario').select('*').eq('id',id).single().then(function(s){
+        return from('solicitudes_operario').eq('id',id).update({estado:'rechazada',respuesta:motivo,atendido_por:usuario.id,atendido_en:new Date().toISOString()}).then(function(){
+          return from('notificaciones').insert({titulo:'❌ Solicitud rechazada',cuerpo:'Tu solicitud fue rechazada: '+motivo,icono:'❌',leida:false,para_rol:'operario',para_usuario:s.operario_id});
+        });
+      });
+    }
+    prom.then(function(){showToast('✅ Solicitud rechazada');em69Close();em69RenderSolicitudes(EM69_VOLVER_SOLICITUDES);})
+        .catch(function(e){var m=document.getElementById('em69-msg');if(m)m.innerHTML='<div class="em69-error">No se pudo rechazar: '+e.message+'</div>';btn.disabled=false;btn.textContent='Confirmar rechazo';});
+  };
+}
+
+function em69AprobarPermiso(id){
+  em69Close();
+  var bg=document.createElement('div');bg.className='em69-modal-bg';bg.id='em69-modal-bg';
+  bg.innerHTML='<div class="em69-modal"><div class="em69-modal-h"><strong>Aprobar permiso</strong><button class="em59-back" onclick="em69Close()">✕</button></div><div class="em69-modal-b"><div class="em69-field"><label>Tratamiento de pago</label><select id="em69-goce"><option value="1">Con goce de sueldo</option><option value="0">Sin goce de sueldo</option></select></div><div id="em69-msg"></div></div><div class="em69-modal-f"><button class="btn-sm" onclick="em69Close()">Cancelar</button><button class="btn-sm btn-completar" id="em69-perm-ok">Aprobar</button></div></div>';
+  document.body.appendChild(bg);
+  document.getElementById('em69-perm-ok').onclick=function(){
+    var btn=this,goce=document.getElementById('em69-goce').value==='1';
+    btn.disabled=true;btn.textContent='Guardando...';
+    from('permisos').select('*').eq('id',id).single().then(function(p){
+      return from('permisos').eq('id',id).update({estado:'aprobado',con_goce:goce,revisado_por:usuario.id,revisado_en:new Date().toISOString()}).then(function(){
+        return from('notificaciones').insert({titulo:'✅ Permiso aprobado',cuerpo:'Tu permiso fue aprobado '+(goce?'con':'sin')+' goce de sueldo.',icono:'✅',leida:false,para_rol:'operario',para_usuario:p.usuario_id});
+      });
+    }).then(function(){showToast('✅ Permiso aprobado');em69Close();em69RenderSolicitudes(EM69_VOLVER_SOLICITUDES);})
+      .catch(function(e){var m=document.getElementById('em69-msg');if(m)m.innerHTML='<div class="em69-error">No se pudo aprobar: '+e.message+'</div>';btn.disabled=false;btn.textContent='Aprobar';});
+  };
+}
+
+function em69AtenderSolicitud(id){
+  if(!confirm('¿Marcar esta solicitud como atendida?'))return;
+  from('solicitudes_operario').select('*').eq('id',id).single().then(function(s){
+    return from('solicitudes_operario').eq('id',id).update({estado:'atendida',respuesta:'Atendida por Administración.',atendido_por:usuario.id,atendido_en:new Date().toISOString()}).then(function(){
+      return from('notificaciones').insert({titulo:'✅ Solicitud atendida',cuerpo:'Administración atendió tu solicitud.',icono:'✅',leida:false,para_rol:'operario',para_usuario:s.operario_id});
+    });
+  }).then(function(){showToast('✅ Solicitud atendida');em69RenderSolicitudes(EM69_VOLVER_SOLICITUDES);})
+    .catch(function(e){alert('No se pudo atender: '+e.message);});
+}
+
+function em69AprobarPrestamo(x){
+  em69Close();
+  Promise.all([
+    from('config_app').select('*').get(),
+    from('prestamos').select('*').eq('operario_id',x.uid).eq('estado','activo').get()
+  ]).then(function(rr){
+    var cfg={};(rr[0]||[]).forEach(function(c){cfg[c.clave]=c.valor;});
+    var activos=rr[1]||[];
+    var montoMax=(cfg.prestamo_monto_max!==undefined&&cfg.prestamo_monto_max!==null&&cfg.prestamo_monto_max!=='')?parseFloat(cfg.prestamo_monto_max):null;
+    var monto=parseFloat(x.raw.monto_solicitado||0)||0;
+    var bg=document.createElement('div');bg.className='em69-modal-bg';bg.id='em69-modal-bg';
+    if(activos.length){
+      bg.innerHTML='<div class="em69-modal"><div class="em69-modal-h"><strong>Préstamo · '+x.nombre+'</strong><button class="em59-back" onclick="em69Close()">✕</button></div><div class="em69-modal-b"><div class="em69-error">El colaborador ya tiene un préstamo activo. Debe liquidarse antes de aprobar otro.</div></div><div class="em69-modal-f"><button class="btn-sm" onclick="em69Close()">Cerrar</button></div></div>';
+      document.body.appendChild(bg);return;
+    }
+    bg.innerHTML='<div class="em69-modal"><div class="em69-modal-h"><strong>Aprobar préstamo · '+x.nombre+'</strong><button class="em59-back" onclick="em69Close()">✕</button></div><div class="em69-modal-b"><div class="em69-grid">'+
+      '<div class="em69-field"><label>Monto</label><input id="em69-loan-monto" type="number" min="1" step="1" value="'+monto+'"></div>'+
+      '<div class="em69-field"><label>Pagos semanales</label><input id="em69-loan-pagos" type="number" min="1" step="1" value="1"></div>'+
+      '<div class="em69-field"><label>Inicio descuento</label><input id="em69-loan-fecha" type="date" value="'+fechaHoyLocal()+'"></div>'+
+      '<div class="em69-field"><label>Cuenta de entrega</label><select id="em69-loan-cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="santander_pesos">Santander Pesos</option></select></div>'+
+      '<div class="em69-field full"><label>Concepto</label><input id="em69-loan-concepto" value="'+String(x.raw.mensaje||'Préstamo personal').replace(/"/g,'&quot;')+'"></div>'+
+    '</div><div id="em69-msg"></div></div><div class="em69-modal-f"><button class="btn-sm" onclick="em69Close()">Cancelar</button><button class="btn-sm btn-completar" id="em69-loan-ok">Aprobar y entregar</button></div></div>';
+    document.body.appendChild(bg);
+
+    document.getElementById('em69-loan-ok').onclick=function(){
+      var btn=this,m=parseFloat(document.getElementById('em69-loan-monto').value),
+          pagos=parseInt(document.getElementById('em69-loan-pagos').value,10),
+          fechaIni=document.getElementById('em69-loan-fecha').value,
+          cuenta=document.getElementById('em69-loan-cuenta').value,
+          concepto=document.getElementById('em69-loan-concepto').value.trim();
+      if(!m||m<=0||!pagos||pagos<1||!concepto){alert('Completa monto, pagos y concepto.');return;}
+      if(montoMax!=null&&m>montoMax){alert('El monto máximo autorizable es $'+montoMax.toFixed(2));return;}
+      var caja=ca21Totals(fechaHoyLocal()),disponible=ca35CuentaSaldo(caja,cuenta);
+      if(m>disponible){alert('Saldo insuficiente en '+ca35CuentaLabel(cuenta)+'. Disponible: $'+formatMonto(disponible));return;}
+
+      btn.disabled=true;btn.textContent='Guardando...';
+      var prestamo=null;
+      from('prestamos').insert({operario_id:x.uid,concepto:concepto,monto_total:m,num_pagos:pagos,fecha_inicio:fechaIni,estado:'activo',creado_por:usuario.id})
+      .then(function(){
+        return from('prestamos').select('*').eq('operario_id',x.uid).order('creado_en',{ascending:false}).limit(1).get();
+      }).then(function(rows){
+        prestamo=rows&&rows[0];if(!prestamo)throw new Error('No se pudo confirmar el préstamo.');
+        var montoPago=Math.round((m/pagos)*100)/100,lunes=inicioDeSemana(new Date(fechaIni+'T00:00:00')),arr=[];
+        for(var i=0;i<pagos;i++){
+          var sem=new Date(lunes);sem.setDate(sem.getDate()+i*7);
+          var montoEste=i===pagos-1?Math.round((m-montoPago*(pagos-1))*100)/100:montoPago;
+          arr.push({prestamo_id:prestamo.id,numero_pago:i+1,semana_inicio:sem.toISOString().slice(0,10),monto:montoEste,estado:'pendiente'});
+        }
+        return Promise.all(arr.map(function(p){return from('prestamo_pagos').insert(p);}));
+      }).then(function(){
+        return from('solicitudes_operario').eq('id',x.id).update({estado:'atendida',respuesta:'Préstamo aprobado y entregado.',atendido_por:usuario.id,atendido_en:new Date().toISOString()});
+      }).then(function(){
+        var cj=ca21Load(),ref='prestamo-'+prestamo.id;
+        cj.movimientos=cj.movimientos.filter(function(mm){return mm.ref_prestamo!==ref;});
+        cj.movimientos.push({id:ref+'-'+Date.now(),ref_prestamo:ref,fecha:fechaHoyLocal(),hora:ca21Now(),tipo:'salida',cuenta:cuenta,monto:ca21Money(m),categoria:'Préstamo personal',concepto:concepto,persona:x.nombre,forma:cuenta,origen:'Personal · Préstamo',estado:'Entregado',usuario:(usuario&&usuario.nombre)||'Usuario'});
+        ca21Save(cj);
+        return from('notificaciones').insert({titulo:'✅ Préstamo aprobado',cuerpo:'Administración aprobó tu préstamo por $'+m.toFixed(2)+'.',icono:'✅',leida:false,para_rol:'operario',para_usuario:x.uid});
+      }).then(function(){
+        showToast('✅ Préstamo aprobado · salida registrada en Caja');
+        em69Close();
+        em69RenderSolicitudes(EM69_VOLVER_SOLICITUDES);
+      }).catch(function(e){
+        var msg=document.getElementById('em69-msg');if(msg)msg.innerHTML='<div class="em69-error">No se pudo completar: '+e.message+'</div>';
+        btn.disabled=false;btn.textContent='Aprobar y entregar';
+      });
+    };
+  }).catch(function(e){alert('No se pudo cargar la solicitud: '+e.message);});
+}
+function renderControlAsistencias(fecha){return em69RenderAsistencia(fecha);}
 
 function renderGestionHorasExtra(focusOperarioId,focusFecha,focusTipoLaborId,volverFn){
   GESTION_HORAS_EXTRA_VOLVER=volverFn||renderTablero;
@@ -7471,8 +7834,8 @@ function renderAdministracionMenu(){
   '</div></div>';
   body.querySelector('[data-admin="caja"]').addEventListener('click',function(){renderCajaMootsil('dia',fechaHoyLocal());});
   body.querySelector('[data-empgo="expedientes"]').addEventListener('click',function(e){e.stopPropagation();renderAltasBajas();});
-  body.querySelector('[data-empgo="asistencia"]').addEventListener('click',function(e){e.stopPropagation();renderControlAsistencias(fechaHoyLocal());});
-  body.querySelector('[data-empgo="solicitudes"]').addEventListener('click',function(e){e.stopPropagation();renderSolicitudesOperarioRevision();});
+  body.querySelector('[data-empgo="asistencia"]').addEventListener('click',function(e){e.stopPropagation();em69RenderAsistencia(fechaHoyLocal());});
+  body.querySelector('[data-empgo="solicitudes"]').addEventListener('click',function(e){e.stopPropagation();em69RenderSolicitudes();});
   body.querySelector('[data-admin="compensaciones"]').addEventListener('click',renderCompensacionesMenu);
   body.querySelector('[data-admin="gastos"]').addEventListener('click',renderComprasMenu);
   body.querySelector('[data-admin="eventual"]').addEventListener('click',function(){renderPagosEventuales(fechaHoyLocal());});
@@ -7903,8 +8266,8 @@ function renderEmpleadosMenu(){
     '<div class="labor-tile" data-emp="solicitudes"><div class="labor-tile-ic">📨</div><div class="labor-tile-lbl">Solicitudes</div></div>'+
   '</div>';
   body.querySelector('[data-emp="expedientes"]').addEventListener('click',renderAltasBajas);
-  body.querySelector('[data-emp="asistencia"]').addEventListener('click',function(){renderControlAsistencias(fechaHoyLocal());});
-  body.querySelector('[data-emp="solicitudes"]').addEventListener('click',renderSolicitudesOperarioRevision);
+  body.querySelector('[data-emp="asistencia"]').addEventListener('click',function(){em69RenderAsistencia(fechaHoyLocal());});
+  body.querySelector('[data-emp="solicitudes"]').addEventListener('click',function(){em69RenderSolicitudes();});
 }
 
 
@@ -8016,57 +8379,7 @@ function sol59AprobarPrestamo(data){
     };
   });
 }
-function renderSolicitudesOperarioRevision(filtro){
-  filtro=filtro||'todas';
-  var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="loading">Cargando solicitudes...</div>';
-  Promise.all([
-    from('solicitudes_operario').select('*,operario:usuarios!operario_id(nombre)').order('creado_en',{ascending:false}).get(),
-    from('permisos').select('*,operario:usuarios!usuario_id(nombre)').order('creado_en',{ascending:false}).get()
-  ]).then(function(rr){
-    var sols=rr[0]||[], pers=rr[1]||[], items=[];
-    sols.forEach(function(s){
-      items.push({origen:'sol',id:s.id,operario_id:s.operario_id,nombre:s.operario?s.operario.nombre:'',tipo:s.tipo,grupo:(s.tipo==='prestamo'?'prestamos':'otras'),resuelto_por:s.resuelto_por||s.autorizado_por||s.aprobado_por||'',resuelto_en:s.resuelto_en||s.aprobado_en||'',detalle:(s.monto_solicitado?'$'+parseFloat(s.monto_solicitado).toFixed(2)+' · ':'')+(s.mensaje||''),estado:s.estado||'pendiente',fecha:s.creado_en||'',raw:s});
-    });
-    pers.forEach(function(p){
-      var pt=(p.tipo||'personal').toLowerCase(),lbl=pt.indexOf('med')>=0?'permiso_medico':pt.indexOf('vac')>=0?'vacaciones':pt;
-      var grupo=lbl==='permiso_medico'?'medicas':lbl==='vacaciones'?'vacaciones':(lbl==='llegada_tarde'||lbl==='salida_temprana'?'movimientos':'permisos');
-      items.push({origen:'perm',id:p.id,operario_id:p.usuario_id,nombre:p.operario?p.operario.nombre:'',tipo:lbl,grupo:grupo,resuelto_por:p.resuelto_por||p.autorizado_por||p.aprobado_por||p.modificado_por||'',resuelto_en:p.resuelto_en||p.aprobado_en||p.modificado_en||'',detalle:(p.fecha_inicio||'')+(p.fecha_fin&&p.fecha_fin!==p.fecha_inicio?' a '+p.fecha_fin:'')+(p.motivo?' · '+p.motivo:''),estado:p.estado||'pendiente',fecha:p.creado_en||'',raw:p});
-    });
-    var counts={todas:items.length,prestamos:0,permisos:0,medicas:0,vacaciones:0,movimientos:0};
-    items.forEach(function(x){if(counts[x.grupo]!=null)counts[x.grupo]++;});
-    var visibles=filtro==='todas'?items:items.filter(function(x){return x.grupo===filtro;});
-    visibles.sort(function(a,b){return (a.estado==='pendiente'?0:1)-(b.estado==='pendiente'?0:1)||String(b.fecha).localeCompare(String(a.fecha));});
-    var tipoLbl={prestamo:'💰 Préstamo',permiso_medico:'🩺 Permiso médico',personal:'👤 Permiso personal',permiso_personal:'👤 Permiso personal',falta:'📅 Permiso de falta',salida_temprana:'🚪 Salida anticipada',llegada_tarde:'🕐 Llegada tarde',vacaciones:'🏖️ Vacaciones',herramienta:'🧰 Herramienta',otro:'💬 Otro',mantenimiento:'🔧 Mantenimiento',insumo:'📦 Insumo'};
-    function row(x){
-      var isPend=x.estado==='pendiente',st=x.estado==='aprobado'||x.estado==='atendida'?'Aprobada/Atendida':x.estado==='rechazado'||x.estado==='rechazada'?'Rechazada':'Pendiente';
-      var color=isPend?'var(--tierra)':(st==='Rechazada'?'var(--rojo)':'var(--verde-mid)'),actions='';
-      if(isPend){
-        if(x.origen==='perm'){
-          actions='<button class="btn-sm btn-completar" data-pg="'+x.id+'">Con goce</button><button class="btn-sm" data-ps="'+x.id+'">Sin goce</button><button class="btn-sm btn-cancelar" data-rj="'+x.id+'" data-origen="perm">Rechazar</button>';
-        }else if(x.tipo==='prestamo'){
-          actions='<button class="btn-sm btn-completar" data-ap="'+x.id+'" data-op="'+x.operario_id+'" data-nombre="'+String(x.nombre).replace(/"/g,'&quot;')+'" data-monto="'+(x.raw.monto_solicitado||0)+'" data-motivo="'+String(x.raw.mensaje||'').replace(/"/g,'&quot;')+'">Aprobar</button><button class="btn-sm btn-cancelar" data-rj="'+x.id+'" data-origen="sol">Rechazar</button>';
-        }else{
-          actions='<button class="btn-sm btn-completar" data-sa="'+x.id+'">Atender</button><button class="btn-sm btn-cancelar" data-rj="'+x.id+'" data-origen="sol">Rechazar</button>';
-        }
-      }
-      var meta=!isPend?('<div class="sol61-meta">'+(st==='Rechazada'?'Rechazó: ':'Autorizó: ')+(x.resuelto_por||'Administración')+(x.resuelto_en?' · '+new Date(x.resuelto_en).toLocaleString('es-MX'):'')+'</div>'):'';
-      return '<div class="sol58-row '+(!isPend?'sol61-resolved':'')+'" style="border-left-color:'+color+'"><div class="sol58-main"><div><div class="sol58-type">'+(tipoLbl[x.tipo]||x.tipo)+'</div><div class="sol58-person">'+x.nombre+'</div>'+meta+'</div><div class="sol58-detail">'+(x.fecha?new Date(x.fecha).toLocaleDateString('es-MX'):'')+'</div><div class="sol58-detail">'+x.detalle+'</div><div class="sol58-state" style="color:'+color+'">'+st+'</div><div class="sol58-actions">'+actions+'</div></div></div>';
-    }
-    var html='<div class="as58-head"><div><div class="as58-title">📨 Solicitudes</div><div class="as58-sub">Bandeja única de solicitudes del personal.</div></div><button class="em59-back" onclick="renderAdministracionMenu()">← Empleados</button></div>';
-    html+='<div class="sol59-filters"><button class="sol59-filter '+(filtro==='todas'?'active':'')+'" data-filter="todas">Todas '+counts.todas+'</button><button class="sol59-filter '+(filtro==='prestamos'?'active':'')+'" data-filter="prestamos">Préstamos '+counts.prestamos+'</button><button class="sol59-filter '+(filtro==='permisos'?'active':'')+'" data-filter="permisos">Permisos '+counts.permisos+'</button><button class="sol59-filter '+(filtro==='medicas'?'active':'')+'" data-filter="medicas">Médicas '+counts.medicas+'</button><button class="sol59-filter '+(filtro==='vacaciones'?'active':'')+'" data-filter="vacaciones">Vacaciones '+counts.vacaciones+'</button><button class="sol59-filter '+(filtro==='movimientos'?'active':'')+'" data-filter="movimientos">Llegadas/Salidas '+counts.movimientos+'</button></div>';
-    var pendientes=visibles.filter(function(x){return x.estado==='pendiente';}),resueltas=visibles.filter(function(x){return x.estado!=='pendiente';});
-    html+='<div class="sol61-section"><div class="sol61-section-title pending">POR REVISAR · '+pendientes.length+'</div><div class="sol58-list">'+(pendientes.length?pendientes.map(row).join(''):'<div class="hint">No hay solicitudes por revisar en este filtro.</div>')+'</div></div>';
-    html+='<div class="sol61-section"><div class="sol61-section-title">RESUELTAS · '+resueltas.length+'</div><div class="sol58-list">'+(resueltas.length?resueltas.map(row).join(''):'<div class="hint">No hay solicitudes resueltas en este filtro.</div>')+'</div></div><button class="em59-back" style="margin-top:1rem" onclick="renderAdministracionMenu()">← Empleados</button>';
-    body.innerHTML=html;
-    body.querySelectorAll('[data-filter]').forEach(function(b){b.onclick=function(){renderSolicitudesOperarioRevision(this.dataset.filter);};});
-    body.querySelectorAll('[data-pg]').forEach(function(b){b.onclick=function(){resolverPermiso(this.dataset.pg,'aprobado',true);};});
-    body.querySelectorAll('[data-ps]').forEach(function(b){b.onclick=function(){resolverPermiso(this.dataset.ps,'aprobado',false);};});
-    body.querySelectorAll('[data-rj]').forEach(function(b){b.onclick=function(){sol59RejectSolicitud(this.dataset.rj,this.dataset.origen);};});
-    body.querySelectorAll('[data-ap]').forEach(function(b){b.onclick=function(){sol59AprobarPrestamo({id:this.dataset.ap,operarioId:this.dataset.op,nombre:this.dataset.nombre,monto:this.dataset.monto,motivo:this.dataset.motivo});};});
-    body.querySelectorAll('[data-sa]').forEach(function(b){b.onclick=function(){resolverSolicitudOperario(this.dataset.sa,'atendida');};});
-  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
-}
+function renderSolicitudesOperarioRevision(filtro){return em69RenderSolicitudes(filtro);}
 
 function resolverSolicitudOperario(id,estado){
   var respuesta=prompt(estado==='atendida'?'¿Algún comentario para el colaborador? (opcional)':'¿Por qué se rechaza? (se le va a mostrar)');
