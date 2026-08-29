@@ -740,7 +740,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ca22-op.nomina-gold{border-top:4px solid #c59a12!important}
 
 
-/* C080 — Bonos individuales por beneficiario + Ajustar en modal + bono sin precarga */
+/* C081 — Retardos informativos + Bonos administrables + Recibo modal/PDF con identidad */
 .ca22-op.nomina-gold{border-top:4px solid #c59a12!important}
 .no49-paybox{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;padding:8px 10px;background:#fbfaf4;border:1px solid #eadfb7;border-radius:10px}
 .no49-payfield{display:flex;flex-direction:column;gap:3px}
@@ -9496,7 +9496,7 @@ function renderGenerarNomina(fechaRef){
           operarioId:o.id,nombre:o.nombre,tipo:tipoTxt,totalSueldo:montoSueldo,
           horasExtra:horasExtra,totalExtra:montoExtra,bonosQueCalifican:bonosQueCalifican,
           deducciones:deduccionesOp,scoresOp:scoresOp,granTotal:neto,pagado:pagado,
-          recibo:{nombre:o.nombre,numSemana:numSemana,semanaInicio:semanaInicio,semanaFin:semanaFin,resumen:resumen,sueldoBase:sueldoBase,totalSueldo:montoSueldo,tarifa:tarifaOp,horasExtra:horasExtra,totalExtra:montoExtra,bonos:bonosQueCalifican.map(function(b){return {descripcion:b.descripcion,monto:parseFloat(b.monto||0)};}),deducciones:deduccionesOp.map(function(d){var pr=prestamoIdsOp[d.prestamo_id];return {concepto:pr?pr.concepto:'Préstamo',numero:d.numero_pago,monto:parseFloat(d.monto||0)};}),granTotal:neto,nominaCompleta:pagado}
+          recibo:{nombre:o.nombre,numSemana:numSemana,semanaInicio:semanaInicio,semanaFin:semanaFin,resumen:resumen,sueldoBase:sueldoBase,totalSueldo:montoSueldo,tarifa:tarifaOp,horasExtra:horasExtra,totalExtra:montoExtra,bonos:bonosQueCalifican.map(function(b){return {id:b.id,tipo:b.tipo||'individual',descripcion:b.descripcion,monto:parseFloat(b.monto||0),_localGasolina:!!b._localGasolina};}),deducciones:deduccionesOp.map(function(d){var pr=prestamoIdsOp[d.prestamo_id];return {concepto:pr?pr.concepto:'Préstamo',numero:d.numero_pago,monto:parseFloat(d.monto||0)};}),granTotal:neto,nominaCompleta:pagado}
         };
 
         totalSueldos+=montoSueldo; totalExtra+=montoExtra; totalBonos+=montoBonos; totalPrestamos+=montoPrestamos; totalNeto+=neto;
@@ -9519,7 +9519,7 @@ function renderGenerarNomina(fechaRef){
             '<div class="n74-cell"><small>Días</small><b>'+diasPagados.toFixed(1)+'</b><span>'+inc.join(' · ')+'</span></div>'+
             '<div class="n74-cell"><small>Jornal</small><b>$'+sueldoBase.toFixed(2)+'</b><span>$'+montoSueldo.toFixed(2)+'</span></div>'+
             '<div class="n74-cell"><small>H.E.</small><b>'+horasExtra.toFixed(1)+' h</b><span>+$'+montoExtra.toFixed(2)+'</span></div>'+
-            '<div class="n74-cell"><small>Bonos</small><b>+$'+montoBonos.toFixed(2)+'</b></div>'+
+            '<div class="n74-cell"><small>Bonos</small><button type="button" class="n81-bonos-link" data-bonos-nom="'+idAccion+'" style="border:0;background:none;padding:0;color:var(--verde);font-weight:850;font-size:.76rem;cursor:pointer;text-decoration:'+(montoBonos>0?'underline':'none')+';">+$'+montoBonos.toFixed(2)+'</button></div>'+
             '<div class="n74-cell"><small>Préstamos</small><b class="red">-$'+montoPrestamos.toFixed(2)+'</b></div>'+
             '<div class="n74-net"><small>'+(pagado?'PAGADO':'NETO')+'</small><strong>$'+neto.toFixed(2)+'</strong><span>'+banco+'</span></div>'+
             '<div class="n74-actions">'+
@@ -9551,6 +9551,7 @@ function renderGenerarNomina(fechaRef){
           '<div class="n74-kpi gold"><small>Neto semana</small><strong>$'+totalNeto.toFixed(2)+'</strong></div>'+
           '<div class="n74-kpi"><small>Pagado</small><strong>$'+totalPagado.toFixed(2)+'</strong></div>'+
         '</div>'+
+        '<div style="background:#fffaf0;border:1px solid #ead8b5;border-radius:10px;padding:8px 10px;margin-bottom:9px;font-size:.68rem;color:#745315;"><strong>Retardos:</strong> se muestran como información de asistencia y no generan descuento automático en Nómina.</div>'+
         '<div class="n74-bulk"><span><strong>'+pendientes.length+'</strong> pagos pendientes · $'+totalPendiente.toFixed(2)+'</span><select id="n74-cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="santander_pesos">Santander Pesos</option></select><button id="n74-pagar-todo" '+(!pendientes.length?'disabled style="opacity:.45"':'')+'>✓ Pagar nómina pendiente</button></div>'+
         '<div class="n74-list">'+(filas.length?filas.join(''):'<div class="empty">Sin colaboradores con nómina en esta semana.</div>')+'</div>'+
         '<div class="n74-foot"><span>Pendiente: $'+totalPendiente.toFixed(2)+'</span><span>Pagado: $'+totalPagado.toFixed(2)+'</span></div>';
@@ -9675,6 +9676,13 @@ function renderGenerarNomina(fechaRef){
         btn.onclick=function(){abrirRecibo(accionesPago[this.dataset.recibo].recibo);};
       });
 
+      body.querySelectorAll('[data-bonos-nom]').forEach(function(btn){
+        btn.onclick=function(){
+          var acc=accionesPago[this.dataset.bonosNom];
+          abrirBonosAutorizadosNomina(acc,semanaInicio,semanaFin);
+        };
+      });
+
       body.querySelectorAll('[data-bono-nom]').forEach(function(btn){
         btn.onclick=function(){
           abrirBonoNomina(this.dataset.bonoNom,this.dataset.nombre,semanaInicio,semanaFin,lunes);
@@ -9691,6 +9699,64 @@ function renderGenerarNomina(fechaRef){
   }).catch(function(e){body.innerHTML='<div class="loading">Error al generar nómina: '+e.message+'</div>';});
 }
 
+
+
+function abrirBonosAutorizadosNomina(acc,semanaInicio,semanaFin){
+  var old=document.getElementById('bn81-manage'); if(old)old.remove();
+  var bonos=(acc&&acc.bonosQueCalifican)||[];
+  var modal=document.createElement('div');
+  modal.id='bn81-manage';
+  var rows=bonos.length?bonos.map(function(b,idx){
+    var equipo=b.tipo==='equipo';
+    return '<div class="bn81-row" data-idx="'+idx+'">'+
+      '<div class="bn81-grid"><div><label>Concepto</label><input class="bn81-desc" value="'+String(b.descripcion||'').replace(/"/g,'&quot;')+'" '+(equipo?'disabled':'')+'></div>'+
+      '<div><label>Monto</label><input class="bn81-monto" type="number" min="0" step="1" value="'+(parseFloat(b.monto)||0)+'" '+(equipo?'disabled':'')+'></div></div>'+
+      '<div class="bn81-foot"><span>'+(equipo?'Bono de equipo · se administra desde Bonos':'Bono individual autorizado')+'</span>'+
+      (!equipo&&!b._localGasolina?'<button type="button" class="bn81-del" data-idx="'+idx+'">Quitar</button>':'')+
+      '</div>'+
+    '</div>';
+  }).join(''):'<div class="bn81-empty">Este colaborador no tiene bonos autorizados en esta semana.</div>';
+
+  modal.innerHTML='<style>'+
+    '#bn81-manage{position:fixed;inset:0;background:rgba(10,35,24,.42);z-index:9999;display:flex;align-items:center;justify-content:center;padding:18px}.bn81-card{width:min(560px,100%);max-height:80vh;overflow:auto;background:#fff;border-radius:15px;padding:18px;box-shadow:0 18px 50px rgba(0,0,0,.22)}.bn81-title{font-size:1rem;font-weight:850;color:var(--verde)}.bn81-sub{font-size:.7rem;color:var(--gris-5);margin:3px 0 12px}.bn81-row{border:1px solid var(--gris-2);border-radius:10px;padding:10px;margin-bottom:8px}.bn81-grid{display:grid;grid-template-columns:1fr 120px;gap:8px}.bn81-row label{display:block;font-size:.58rem;text-transform:uppercase;font-weight:800;color:var(--gris-5);margin-bottom:4px}.bn81-row input{width:100%;height:36px;border:1px solid var(--gris-2);border-radius:8px;padding:0 9px}.bn81-foot{display:flex;justify-content:space-between;align-items:center;margin-top:7px;font-size:.62rem;color:var(--gris-5)}.bn81-del{border:0;background:none;color:var(--rojo);font-weight:800;cursor:pointer}.bn81-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}.bn81-actions button{height:36px;border-radius:9px;padding:0 13px;font-weight:800}.bn81-close{background:#fff;border:1px solid var(--gris-2);color:var(--verde)}.bn81-save{background:var(--verde-mid);border:0;color:#fff}.bn81-empty{padding:20px;text-align:center;color:var(--gris-5);font-size:.72rem}@media(max-width:560px){.bn81-grid{grid-template-columns:1fr}}'+
+  '</style><div class="bn81-card"><div class="bn81-title">Bonos autorizados</div><div class="bn81-sub">'+acc.nombre+' · '+semanaInicio+' a '+semanaFin+'</div>'+rows+
+  '<div class="bn81-actions"><button class="bn81-close" id="bn81-close">Cerrar</button>'+(bonos.some(function(b){return b.tipo!=='equipo'&&!b._localGasolina;})?'<button class="bn81-save" id="bn81-save">Guardar cambios</button>':'')+'</div></div>';
+  document.body.appendChild(modal);
+
+  document.getElementById('bn81-close').onclick=function(){modal.remove();};
+
+  modal.querySelectorAll('.bn81-del').forEach(function(btn){
+    btn.onclick=function(){
+      var b=bonos[parseInt(this.dataset.idx)];
+      if(!b||!confirm('¿Quitar el bono "'+b.descripcion+'" de '+acc.nombre+'?'))return;
+      this.closest('.bn81-row').dataset.eliminar='1';
+      this.closest('.bn81-row').style.opacity='.38';
+    };
+  });
+
+  var save=document.getElementById('bn81-save');
+  if(save)save.onclick=function(){
+    var btn=this; btn.disabled=true;btn.textContent='Guardando...';
+    var tareas=[];
+    modal.querySelectorAll('.bn81-row').forEach(function(row){
+      var idx=parseInt(row.dataset.idx),b=bonos[idx];
+      if(!b||b.tipo==='equipo'||b._localGasolina)return;
+      if(row.dataset.eliminar==='1'){
+        tareas.push(from('bono_beneficiarios').eq('bono_id',b.id).eq('operario_id',acc.operarioId).delete());
+        return;
+      }
+      var desc=(row.querySelector('.bn81-desc').value||'').trim();
+      var monto=parseFloat(row.querySelector('.bn81-monto').value||0);
+      if(desc&&monto>0&&(desc!==b.descripcion||monto!==parseFloat(b.monto||0))){
+        tareas.push(from('bonos').eq('id',b.id).update({descripcion:desc,monto:monto}));
+      }
+    });
+    Promise.all(tareas).then(function(){
+      modal.remove();showToast('✅ Bonos actualizados');
+      renderGenerarNomina(new Date(semanaInicio+'T12:00:00'));
+    }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Guardar cambios';});
+  };
+}
 
 function abrirBonoNomina(operarioId,nombre,semanaInicio,semanaFin,lunesVolver){
   var old=document.getElementById('bn79-modal'); if(old)old.remove();
@@ -9832,34 +9898,95 @@ function renderAjustarNomina(operarioId,nombre,semanaInicio,diasActual,horasActu
 }
 
 function abrirRecibo(d){
+  var old=document.getElementById('rn81-modal'); if(old)old.remove();
   var folio='NOM-'+d.semanaInicio.replace(/-/g,'')+'-S'+d.numSemana;
-  var hoyD=new Date();
-  var fechaEmision=hoyD.toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'});
-  var r=d.resumen;
-  var filas='<div class="recibo-fila"><span>💵 Sueldo ('+r.trabajados+' día'+(r.trabajados===1?'':'s')+' × $'+d.sueldoBase.toFixed(2)+(r.diasPermisoConGoce?' + '+r.diasPermisoConGoce+' permiso c/goce':'')+')</span><span>$'+d.totalSueldo.toFixed(2)+'</span></div>';
-  if(r.diasPermisoSinGoce) filas+='<div class="recibo-fila"><span>🩺 Permiso sin goce (no pagado)</span><span>'+r.diasPermisoSinGoce+' día(s)</span></div>';
-  if(r.faltas) filas+='<div class="recibo-fila"><span>❌ Faltas</span><span>'+r.faltas+'</span></div>';
-  if(r.retardos) filas+='<div class="recibo-fila"><span>🕐 Retardos</span><span>'+r.retardos+'</span></div>';
-  if(d.horasExtra>0) filas+='<div class="recibo-fila"><span>⏰ Horas extra ('+d.horasExtra.toFixed(1)+'h × $'+d.tarifa.toFixed(2)+')</span><span>$'+d.totalExtra.toFixed(2)+'</span></div>';
-  d.bonos.forEach(function(b){
-    filas+='<div class="recibo-fila"><span>🎁 '+b.descripcion+'</span><span>+$'+b.monto.toFixed(2)+'</span></div>';
-  });
-  d.deducciones.forEach(function(x){
-    filas+='<div class="recibo-fila"><span>📝 '+x.concepto+' (pago '+x.numero+')</span><span>-$'+x.monto.toFixed(2)+'</span></div>';
-  });
-  filas+='<div class="recibo-fila recibo-total"><span>Total a pagar</span><span>$'+d.granTotal.toFixed(2)+'</span></div>';
+  var r=d.resumen||{};
+  var totalBonos=(d.bonos||[]).reduce(function(s,b){return s+(parseFloat(b.monto)||0);},0);
+  var totalDed=(d.deducciones||[]).reduce(function(s,x){return s+(parseFloat(x.monto)||0);},0);
 
-  var html='<div class="recibo-encabezado"><h2>🫐 Mootsil</h2><div style="font-size:.85rem;color:#444;">Recibo de Nómina</div><div class="recibo-folio">Folio '+folio+' · Emitido el '+fechaEmision+'</div></div>'+
-    '<div class="recibo-datos"><div><strong>Colaborador:</strong> '+d.nombre+'</div><div><strong>Periodo:</strong> Semana '+d.numSemana+' · '+d.semanaInicio+' a '+d.semanaFin+'</div><div><strong>Estatus:</strong> '+(d.nominaCompleta?'✅ Pagada':'⏳ Pendiente de pago')+'</div></div>'+
-    filas+
-    '<div class="recibo-firmas"><div>Entregó</div><div>Recibí conforme<br>'+d.nombre+'</div></div>'+
-    '<div class="recibo-nota">Generado por Mootsil · Administración · '+fechaEmision+'</div>';
+  var detalle=[
+    ['Sueldo',d.totalSueldo],
+    ['Horas extra ('+(d.horasExtra||0).toFixed(1)+' h)',d.totalExtra]
+  ];
+  (d.bonos||[]).forEach(function(b){detalle.push([b.descripcion,parseFloat(b.monto)||0]);});
+  (d.deducciones||[]).forEach(function(x){detalle.push([x.concepto+' (pago '+x.numero+')',-(parseFloat(x.monto)||0)]);});
 
-  document.getElementById('recibo-contenido').innerHTML=html;
-  document.getElementById('recibo-overlay').classList.add('active');
-  window._tituloOriginal = window._tituloOriginal || document.title;
-  var nombreArchivo=d.nombre.replace(/[^\p{L}0-9]+/gu,'_').replace(/^_+|_+$/g,'');
-  document.title='Recibo_'+nombreArchivo+'_Semana'+d.numSemana+'_'+d.semanaInicio;
+  var filas=detalle.map(function(x){
+    return '<div class="rn81-row"><span>'+x[0]+'</span><strong class="'+(x[1]<0?'neg':'')+'">'+(x[1]<0?'−':'')+'$'+Math.abs(x[1]).toFixed(2)+'</strong></div>';
+  }).join('');
+
+  var modal=document.createElement('div');
+  modal.id='rn81-modal';
+  modal._reciboData=d;
+  modal.innerHTML='<style>'+
+    '#rn81-modal{position:fixed;inset:0;background:rgba(10,35,24,.42);z-index:9999;display:flex;align-items:center;justify-content:center;padding:18px}.rn81-card{width:min(620px,100%);max-height:88vh;overflow:auto;background:#fff;border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.24)}.rn81-brand{background:#0e5137;color:#fff;padding:16px 18px;border-radius:16px 16px 0 0}.rn81-brand-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.rn81-brand h2{margin:0;font-size:1.18rem}.rn81-rancho{margin-top:3px;font-size:.76rem;color:#ffd080;font-weight:750}.rn81-folio{font-size:.6rem;color:#d8eee3;text-align:right}.rn81-body{padding:16px 18px}.rn81-person{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#f6f9f7;border:1px solid #e0e8e3;border-radius:10px;padding:10px;margin-bottom:10px;font-size:.68rem}.rn81-person strong{display:block;color:var(--verde);font-size:.78rem}.rn81-att{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 11px;font-size:.65rem;color:var(--gris-5)}.rn81-att span{background:#f4f6f5;padding:4px 7px;border-radius:999px}.rn81-ret{background:#fff7e8!important;color:#835b08!important}.rn81-row{display:flex;justify-content:space-between;gap:12px;padding:8px 2px;border-bottom:1px solid #edf1ee;font-size:.74rem}.rn81-row strong{color:var(--verde)}.rn81-row strong.neg{color:var(--rojo)}.rn81-total{display:flex;justify-content:space-between;align-items:center;background:#eef7f1;border:1px solid #d3e7d9;border-radius:10px;padding:11px 12px;margin-top:10px}.rn81-total span{font-size:.7rem;font-weight:800;color:var(--verde)}.rn81-total strong{font-size:1.15rem;color:var(--verde)}.rn81-note{margin-top:10px;font-size:.61rem;color:var(--gris-5);line-height:1.4}.rn81-actions{display:flex;justify-content:flex-end;gap:8px;padding:0 18px 16px}.rn81-actions button{height:38px;border-radius:9px;padding:0 14px;font-weight:800}.rn81-close{background:#fff;border:1px solid var(--gris-2);color:var(--verde)}.rn81-pdf{background:var(--verde-mid);border:0;color:#fff}@media(max-width:560px){.rn81-person{grid-template-columns:1fr}.rn81-brand-top{flex-direction:column}.rn81-folio{text-align:left}}'+
+  '</style>'+
+  '<div class="rn81-card">'+
+    '<div class="rn81-brand"><div class="rn81-brand-top"><div><h2>Mootsil</h2><div class="rn81-rancho">Rancho Sagrado Corazón · Zarzamora</div><div style="font-size:.7rem;margin-top:4px">Recibo de Nómina</div></div><div class="rn81-folio">'+folio+'<br>Semana '+d.numSemana+'</div></div></div>'+
+    '<div class="rn81-body">'+
+      '<div class="rn81-person"><div><span>COLABORADOR</span><strong>'+d.nombre+'</strong></div><div><span>PERIODO</span><strong>'+d.semanaInicio+' a '+d.semanaFin+'</strong></div></div>'+
+      '<div class="rn81-att"><span>Días pagados: '+(r.diasPagados||0)+'</span><span>H.E.: '+(d.horasExtra||0).toFixed(1)+' h</span><span class="rn81-ret">Retardos: '+(r.retardos||0)+' · informativo, sin descuento automático</span></div>'+
+      filas+
+      '<div class="rn81-total"><span>NETO A PAGAR</span><strong>$'+d.granTotal.toFixed(2)+'</strong></div>'+
+      '<div class="rn81-note">El registro de retardos es informativo y no genera descuento automático de salario. El recibo refleja la información registrada en Mootsil para esta semana. Estatus: '+(d.nominaCompleta?'Pagada':'Pendiente de pago')+'.</div>'+
+    '</div>'+
+    '<div class="rn81-actions"><button class="rn81-close" id="rn81-close">Cerrar</button><button class="rn81-pdf" id="rn81-pdf">📄 Generar PDF</button></div>'+
+  '</div>';
+  document.body.appendChild(modal);
+  document.getElementById('rn81-close').onclick=function(){modal.remove();};
+  document.getElementById('rn81-pdf').onclick=function(){generarPdfReciboNomina(d,folio,this);};
+}
+
+function generarPdfReciboNomina(d,folio,btn){
+  var textoOriginal=btn?btn.textContent:'';
+  if(btn){btn.disabled=true;btn.textContent='Generando...';}
+  cargarJsPDF(function(){
+    try{
+      var jsPDF=window.jspdf.jsPDF;
+      var doc=new jsPDF({unit:'mm',format:'letter'});
+      var r=d.resumen||{}, y=18;
+      doc.setFillColor(14,81,55);doc.rect(0,0,216,34,'F');
+      doc.setTextColor(255);doc.setFont(undefined,'bold');doc.setFontSize(19);doc.text('Mootsil',15,15);
+      doc.setFontSize(11);doc.setTextColor(255,208,128);doc.text('Rancho Sagrado Corazon · Zarzamora',15,22);
+      doc.setFontSize(9);doc.setTextColor(235);doc.text('Recibo de Nomina',15,28);
+      doc.setFont(undefined,'normal');doc.setFontSize(8);doc.text(folio,201,15,{align:'right'});doc.text('Semana '+d.numSemana,201,21,{align:'right'});
+
+      y=46;doc.setTextColor(30);doc.setFontSize(9);
+      doc.setFont(undefined,'bold');doc.text('Colaborador:',15,y);doc.setFont(undefined,'normal');doc.text(d.nombre,43,y);
+      doc.setFont(undefined,'bold');doc.text('Periodo:',115,y);doc.setFont(undefined,'normal');doc.text(d.semanaInicio+' a '+d.semanaFin,135,y);
+      y+=8;
+      doc.setTextColor(90);doc.text('Dias pagados: '+(r.diasPagados||0)+'     H.E.: '+(d.horasExtra||0).toFixed(1)+' h     Retardos: '+(r.retardos||0)+' (informativo, sin descuento automatico)',15,y);
+
+      y+=11;doc.setTextColor(40);doc.setFont(undefined,'bold');doc.text('Concepto',15,y);doc.text('Importe',195,y,{align:'right'});
+      doc.line(15,y+2,195,y+2);y+=9;doc.setFont(undefined,'normal');
+
+      function linea(concepto,monto){
+        if(y>245){doc.addPage();y=20;}
+        doc.setTextColor(50);doc.text(concepto,15,y,{maxWidth:145});
+        doc.setTextColor(monto<0?170:25);doc.text((monto<0?'-':'')+'$'+Math.abs(monto).toFixed(2),195,y,{align:'right'});
+        y+=8;
+      }
+      linea('Sueldo',d.totalSueldo||0);
+      if((d.horasExtra||0)>0)linea('Horas extra ('+d.horasExtra.toFixed(1)+' h)',d.totalExtra||0);
+      (d.bonos||[]).forEach(function(b){linea(b.descripcion,parseFloat(b.monto)||0);});
+      (d.deducciones||[]).forEach(function(x){linea(x.concepto+' (pago '+x.numero+')',-(parseFloat(x.monto)||0));});
+
+      y+=2;doc.setDrawColor(200);doc.line(110,y,195,y);y+=9;
+      doc.setFont(undefined,'bold');doc.setTextColor(14,81,55);doc.setFontSize(12);doc.text('NETO A PAGAR',110,y);doc.text('$'+d.granTotal.toFixed(2),195,y,{align:'right'});
+      y+=18;doc.setFontSize(8);doc.setTextColor(100);doc.setFont(undefined,'normal');
+      doc.text('Estatus: '+(d.nominaCompleta?'Pagada':'Pendiente de pago'),15,y);
+      y+=7;doc.text('Retardos: registro informativo; no genera descuento automatico en Nomina.',15,y);
+      y+=18;doc.line(20,y,85,y);doc.line(125,y,195,y);
+      y+=5;doc.text('Entrego',52,y,{align:'center'});doc.text('Recibi conforme · '+d.nombre,160,y,{align:'center'});
+
+      var safe=String(d.nombre||'colaborador').replace(/[^A-Za-z0-9_-]+/g,'_');
+      doc.save('Recibo_Nomina_'+safe+'_Semana_'+d.numSemana+'.pdf');
+      if(btn){btn.disabled=false;btn.textContent='✅ PDF generado';setTimeout(function(){btn.textContent=textoOriginal;},1800);}
+    }catch(e){
+      if(btn){btn.disabled=false;btn.textContent=textoOriginal;}
+      alert('Error al generar PDF: '+e.message);
+    }
+  });
 }
 
 function cerrarRecibo(){
