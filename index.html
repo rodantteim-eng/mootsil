@@ -740,7 +740,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ca22-op.nomina-gold{border-top:4px solid #c59a12!important}
 
 
-/* C075 — Nómina C074 + Historial de Compras visible */
+/* C076 — Edición de compras con cantidad visible y ajuste diferencial de inventario */
 .ca22-op.nomina-gold{border-top:4px solid #c59a12!important}
 .no49-paybox{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;padding:8px 10px;background:#fbfaf4;border:1px solid #eadfb7;border-radius:10px}
 .no49-payfield{display:flex;flex-direction:column;gap:3px}
@@ -6245,7 +6245,20 @@ function renderEditarCompra(compraId,volverFn){
       '<button class="btn-back" style="margin-top:1rem;" id="ec-cancelar-bottom">← Cancelar</button>';
 
     var comprobanteUrl=compra.comprobante_url||null;
-    var existentes=gastosRows.map(function(g){return {id:g.id,categoria:g.categoria,monto:g.monto,concepto:g.concepto||'',itemNombre:g.item?g.item.nombre:null,eliminar:false};});
+    var existentes=gastosRows.map(function(g){
+      return {
+        id:g.id,
+        categoria:g.categoria,
+        monto:g.monto,
+        concepto:g.concepto||'',
+        itemId:g.inventario_item_id||null,
+        itemNombre:g.item?g.item.nombre:null,
+        unidad:g.item?g.item.unidad:null,
+        cantidad:(g.cantidad==null?'':parseFloat(g.cantidad)),
+        cantidadOriginal:(g.cantidad==null?0:parseFloat(g.cantidad)),
+        eliminar:false
+      };
+    });
     var filaSeq=0;
     var nuevas=[];
 
@@ -6262,8 +6275,12 @@ function renderEditarCompra(compraId,volverFn){
       var catOpts=function(sel){return Object.keys(GASTO_CATEGORIAS).map(function(k){var c=GASTO_CATEGORIAS[k];return '<option value="'+k+'"'+(sel===k?' selected':'')+'>'+c.ic+' '+c.lbl+'</option>';}).join('');};
       cont.innerHTML=existentes.map(function(e,idx){
         if(e.eliminar) return '';
+        var productoHtml=e.itemId
+          ? '<div class="form-group" style="margin-bottom:.5rem;"><label>Producto de inventario</label><div style="padding:.65rem .75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);background:#f7faf8;font-weight:750;color:var(--verde);">📦 '+(e.itemNombre||'Producto')+'</div></div>'+
+            '<div class="form-group" style="margin-bottom:.5rem;"><label>Cantidad comprada ('+(e.unidad||'unidad')+')</label><input type="number" class="ec-ex-cantidad" data-idx="'+idx+'" min="0" step="any" value="'+(e.cantidad===''?'':e.cantidad)+'"><p class="hint" style="margin:.25rem 0 0;">Cantidad original: '+numFmt(e.cantidadOriginal)+' '+(e.unidad||'')+'. Al guardar, Inventario ajustará sólo la diferencia.</p></div>'
+          : '<p class="hint" style="margin:0 0 .5rem;">Este renglón no está vinculado a Inventario.</p>';
         return '<div class="form-card" style="margin-bottom:.5rem;padding:.75rem;" data-idx="'+idx+'">'+
-          (e.itemNombre?'<p class="hint" style="margin:0 0 .5rem;">📦 Vinculado a inventario: '+e.itemNombre+' (el producto y la cantidad no se pueden cambiar aquí)</p>':'')+
+          productoHtml+
           '<div class="form-group" style="margin-bottom:.5rem;"><label>Categoría</label><select class="ec-ex-cat" data-idx="'+idx+'">'+catOpts(e.categoria)+'</select></div>'+
           '<div class="form-group" style="margin-bottom:.5rem;"><label>Monto ($)</label><input type="number" class="ec-ex-monto" data-idx="'+idx+'" min="0" step="any" value="'+e.monto+'"></div>'+
           '<div class="form-group" style="margin-bottom:0;"><label>Concepto / descripción (opcional)</label><input type="text" class="ec-ex-concepto" data-idx="'+idx+'" value="'+(e.concepto?e.concepto.replace(/"/g,'&quot;'):'')+'"></div>'+
@@ -6271,12 +6288,17 @@ function renderEditarCompra(compraId,volverFn){
           '</div>';
       }).join('');
       cont.querySelectorAll('.ec-ex-cat').forEach(function(sel){sel.addEventListener('change',function(){existentes[this.dataset.idx].categoria=this.value;});});
+      cont.querySelectorAll('.ec-ex-cantidad').forEach(function(inp){inp.addEventListener('input',function(){existentes[this.dataset.idx].cantidad=this.value;});});
       cont.querySelectorAll('.ec-ex-monto').forEach(function(inp){inp.addEventListener('input',function(){existentes[this.dataset.idx].monto=this.value;calcularTotal();});});
       cont.querySelectorAll('.ec-ex-concepto').forEach(function(inp){inp.addEventListener('input',function(){existentes[this.dataset.idx].concepto=this.value;});});
       cont.querySelectorAll('.ec-ex-quitar').forEach(function(btn){
         btn.addEventListener('click',function(){
-          if(!confirm('¿Quitar este producto de la compra? Si generó una entrada de inventario, el stock no se revierte automáticamente.')) return;
-          existentes[this.dataset.idx].eliminar=true;
+          var e=existentes[this.dataset.idx];
+          var msg=e.itemId
+            ? '¿Quitar este producto de la compra? Al guardar se descontarán '+numFmt(e.cantidadOriginal)+' '+(e.unidad||'')+' del Inventario.'
+            : '¿Quitar este producto de la compra?';
+          if(!confirm(msg)) return;
+          e.eliminar=true;
           pintarExistentes();
           calcularTotal();
         });
@@ -6447,6 +6469,13 @@ function renderEditarCompra(compraId,volverFn){
         }
       }
       var lineasExistentesActivas=existentes.filter(function(e){return !e.eliminar;});
+      for(var ei=0;ei<lineasExistentesActivas.length;ei++){
+        var ex=lineasExistentesActivas[ei];
+        if(ex.itemId && !(parseFloat(ex.cantidad)>0)){
+          alert('Captura una cantidad mayor a 0 para "'+(ex.itemNombre||'producto')+'".');
+          return;
+        }
+      }
       if(!lineasExistentesActivas.length && !lineasNuevasValidas.length){alert('La compra debe tener al menos un producto con monto mayor a 0.');return;}
       var total=lineasExistentesActivas.reduce(function(s,e){return s+(parseFloat(e.monto)||0);},0)+lineasNuevasValidas.reduce(function(s,f){return s+(parseFloat(f.monto)||0);},0);
       var estadoPago=esCredito?(compra.forma_pago==='credito'?compra.estado_pago:'pendiente'):'pagado';
@@ -6474,7 +6503,46 @@ function renderEditarCompra(compraId,volverFn){
         });
       }
 
+      function ajustarInventarioExistentes(){
+        var cambios=existentes.filter(function(e){return !!e.itemId;});
+        return cambios.reduce(function(p,e){
+          return p.then(function(){
+            var nuevaCantidad=e.eliminar?0:parseFloat(e.cantidad||0);
+            var delta=nuevaCantidad-parseFloat(e.cantidadOriginal||0);
+            if(Math.abs(delta)<0.0000001) return;
+
+            var it=cats.inventario.find(function(x){return x.id===e.itemId;});
+            if(!it) throw new Error('No se encontró en Inventario el producto "'+(e.itemNombre||'')+'".');
+            var stockAntes=parseFloat(it.stock_actual||0);
+            var stockPosterior=stockAntes+delta;
+            if(stockPosterior<0){
+              throw new Error('No se puede reducir la compra de "'+e.itemNombre+'" porque el stock quedaría negativo. Stock actual: '+numFmt(stockAntes)+' '+(e.unidad||'')+'.');
+            }
+
+            var motivo=delta>0
+              ? 'Ajuste por edición de compra · +'+numFmt(delta)+' '+(e.unidad||'')
+              : 'Ajuste por edición de compra · '+numFmt(delta)+' '+(e.unidad||'');
+
+            return from('movimientos_inventario').insert({
+              item_id:e.itemId,
+              tipo:delta>0?'entrada':'salida',
+              cantidad:Math.abs(delta),
+              motivo:motivo,
+              usuario_id:usuario.id,
+              stock_anterior:stockAntes,
+              stock_posterior:stockPosterior
+            }).then(function(){
+              return from('inventario_items').eq('id',e.itemId).update({stock_actual:stockPosterior});
+            }).then(function(){
+              it.stock_actual=stockPosterior;
+            });
+          });
+        },Promise.resolve());
+      }
+
       resolverNuevosProductos().then(function(){
+        return ajustarInventarioExistentes();
+      }).then(function(){
         return from('compras').eq('id',compraId).update(compraPayload);
       }).then(function(){
         var eliminadas=existentes.filter(function(e){return e.eliminar;});
@@ -6482,7 +6550,18 @@ function renderEditarCompra(compraId,volverFn){
       }).then(function(){
         return lineasExistentesActivas.reduce(function(p,e){
           return p.then(function(){
-            return from('gastos').eq('id',e.id).update({categoria:e.categoria,monto:parseFloat(e.monto),concepto:e.concepto||null,fecha:fecha,proveedor_id:proveedorId,forma_pago:formaPagoSel,fecha_vencimiento:vencimiento,estado_pago:estadoPago,comprobante_url:comprobanteUrl});
+            return from('gastos').eq('id',e.id).update({
+              categoria:e.categoria,
+              monto:parseFloat(e.monto),
+              concepto:e.concepto||null,
+              cantidad:e.itemId?parseFloat(e.cantidad||0):null,
+              fecha:fecha,
+              proveedor_id:proveedorId,
+              forma_pago:formaPagoSel,
+              fecha_vencimiento:vencimiento,
+              estado_pago:estadoPago,
+              comprobante_url:comprobanteUrl
+            });
           });
         },Promise.resolve());
       }).then(function(){
@@ -6508,7 +6587,17 @@ function renderEditarCompra(compraId,volverFn){
           });
         },Promise.resolve());
       }).then(function(){
-        showToast('✅ Compra actualizada');
+        if(formaPagoSel!=='credito'){
+          var caja=ca21Load();
+          var mov=caja.movimientos.find(function(m){return m.compra_id===compraId&&m.origen==='Compras';});
+          if(mov){
+            mov.monto=total;
+            mov.fecha=fecha;
+            mov.concepto='Compra'+(numeroFactura?' · Factura '+numeroFactura:'');
+            ca21Save(caja);
+          }
+        }
+        showToast('✅ Compra actualizada · Inventario ajustado por diferencia');
         volver();
       }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Guardar cambios';});
     });
