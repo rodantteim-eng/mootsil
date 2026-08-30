@@ -9617,9 +9617,9 @@ function renderGenerarNomina(fechaRef){
         var montoSueldo=diasPagados*sueldoBase;
 
         var tieneAjusteExtra=!!(ajuste&&ajuste.horas_extra_override!=null);
-        var horasExtraAsistencia=horasExtraAsignadas
-          .filter(function(h){return String(h.operario_id)===String(o.id);})
-          .reduce(function(s,h){return s+(parseFloat(h.horas_max)||0);},0);
+        var horasExtraOp=horasExtraAsignadas.filter(function(h){return String(h.operario_id)===String(o.id);});
+        var horasExtraAsistencia=horasExtraOp.reduce(function(s,h){return s+(parseFloat(h.horas_max)||0);},0);
+        var diasHorasExtra=horasExtraOp.map(function(h){return h.fecha;}).filter(function(v,i,a){return v&&a.indexOf(v)===i;}).sort();
         var horasExtra=tieneAjusteExtra?parseFloat(ajuste.horas_extra_override||0):horasExtraAsistencia;
         var ex54Op=ex54Get(o.id);
         var tarifaOp=(ex54Op.tarifa_hora_extra!=null&&parseFloat(ex54Op.tarifa_hora_extra)>=0)?parseFloat(ex54Op.tarifa_hora_extra):tarifa;
@@ -9660,7 +9660,7 @@ function renderGenerarNomina(fechaRef){
           operarioId:o.id,nombre:o.nombre,tipo:tipoTxt,totalSueldo:montoSueldo,
           horasExtra:horasExtra,totalExtra:montoExtra,bonosQueCalifican:bonosQueCalifican,apoyos:apoyosOp,totalApoyos:montoApoyos,
           deducciones:deduccionesOp,scoresOp:scoresOp,granTotal:neto,pagado:pagado,
-          recibo:{nombre:o.nombre,numSemana:numSemana,semanaInicio:semanaInicio,semanaFin:semanaFin,resumen:resumen,sueldoBase:sueldoBase,totalSueldo:montoSueldo,tarifa:tarifaOp,horasExtra:horasExtra,totalExtra:montoExtra,bonos:bonosQueCalifican.map(function(b){return {id:b.id,tipo:b.tipo||'individual',descripcion:bo97ConceptoBono(b),monto:parseFloat(b.monto||0),_localGasolina:!!b._localGasolina};}),apoyos:apoyosOp.map(function(g){return {id:g.id,concepto:ap98Concepto(g),monto:parseFloat(g.monto||0)};}),deducciones:deduccionesOp.map(function(d){var pr=prestamoIdsOp[d.prestamo_id];return {concepto:pr?pr.concepto:'Préstamo',numero:d.numero_pago,monto:parseFloat(d.monto||0)};}),granTotal:neto,nominaCompleta:pagado}
+          recibo:{nombre:o.nombre,numSemana:numSemana,semanaInicio:semanaInicio,semanaFin:semanaFin,resumen:resumen,sueldoBase:sueldoBase,totalSueldo:montoSueldo,tarifa:tarifaOp,horasExtra:horasExtra,diasHorasExtra:diasHorasExtra,totalExtra:montoExtra,bonos:bonosQueCalifican.map(function(b){return {id:b.id,tipo:b.tipo||'individual',descripcion:bo97ConceptoBono(b),monto:parseFloat(b.monto||0),_localGasolina:!!b._localGasolina};}),apoyos:apoyosOp.map(function(g){return {id:g.id,concepto:ap98Concepto(g),descripcion:ap99Descripcion(g),monto:parseFloat(g.monto||0)};}),deducciones:deduccionesOp.map(function(d){var pr=prestamoIdsOp[d.prestamo_id];return {concepto:pr?pr.concepto:'Préstamo',numero:d.numero_pago,monto:parseFloat(d.monto||0)};}),granTotal:neto,nominaCompleta:pagado}
         };
 
         totalSueldos+=montoSueldo; totalExtra+=montoExtra; totalBonos+=montoBonos; totalApoyos+=montoApoyos; totalPrestamos+=montoPrestamos; totalNeto+=neto;
@@ -10064,36 +10064,30 @@ function renderAjustarNomina(operarioId,nombre,semanaInicio,diasActual,horasActu
   });
 }
 
+function rn99FechaCorta(fecha){if(!fecha)return '';var p=String(fecha).split('-'),meses=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];return p.length===3?(parseInt(p[2],10)+' '+meses[parseInt(p[1],10)-1]):fecha;}
 function abrirRecibo(d){
   d=d||{};
   d.bonos=(d.bonos||[]).map(function(b){return Object.assign({},b,{descripcion:bo97ConceptoBono({descripcion:b.descripcion})});});
-  d.apoyos=(d.apoyos||[]).map(function(a){return Object.assign({},a,{concepto:a.concepto||'Apoyo'});});
+  d.apoyos=(d.apoyos||[]).map(function(a){return Object.assign({},a,{concepto:a.concepto||'Apoyo',descripcion:a.descripcion||''});});
   var old=document.getElementById('rn81-modal'); if(old)old.remove();
   var folio='NOM-'+d.semanaInicio.replace(/-/g,'')+'-S'+d.numSemana;
   var r=d.resumen||{};
   var totalBonos=(d.bonos||[]).reduce(function(s,b){return s+(parseFloat(b.monto)||0);},0); var totalApoyos=(d.apoyos||[]).reduce(function(s,a){return s+(parseFloat(a.monto)||0);},0);
   var totalDed=(d.deducciones||[]).reduce(function(s,x){return s+(parseFloat(x.monto)||0);},0);
 
-  var detalle=[
-    ['Sueldo',d.totalSueldo],
-    ['Horas extra ('+(d.horasExtra||0).toFixed(1)+' h)',d.totalExtra]
-  ];
-  (d.bonos||[]).forEach(function(b){
-    var bd={descripcion:b.descripcion};
-    detalle.push(['Bono · '+bo97ConceptoBono(bd),parseFloat(b.monto)||0]);
-  });
-  (d.apoyos||[]).forEach(function(a){detalle.push(['Apoyo · '+(a.concepto||'Apoyo'),parseFloat(a.monto)||0]);});
-  (d.deducciones||[]).forEach(function(x){detalle.push([x.concepto+' (pago '+x.numero+')',-(parseFloat(x.monto)||0)]);});
-
-  var filas=detalle.map(function(x){
-    return '<div class="rn81-row"><span>'+x[0]+'</span><strong class="'+(x[1]<0?'neg':'')+'">'+(x[1]<0?'−':'')+'$'+Math.abs(x[1]).toFixed(2)+'</strong></div>';
-  }).join('');
+  var heDias=(d.diasHorasExtra||[]).map(rn99FechaCorta).join(', ');
+  var detalle=[['Sueldo',(d.resumen&&d.resumen.diasPagados||0)+' días pagados · Jornal $'+parseFloat(d.sueldoBase||0).toFixed(2),d.totalSueldo]];
+  if((d.horasExtra||0)>0)detalle.push(['Horas extra',(d.horasExtra||0).toFixed(1)+' h'+(heDias?' · '+heDias:''),d.totalExtra]);
+  (d.bonos||[]).forEach(function(b){detalle.push(['Bono','Campaña: '+(b.descripcion||'Bono'),parseFloat(b.monto)||0]);});
+  (d.apoyos||[]).forEach(function(a){detalle.push(['Apoyo',(a.concepto||'Apoyo')+(a.descripcion?' · '+a.descripcion:''),parseFloat(a.monto)||0]);});
+  (d.deducciones||[]).forEach(function(x){detalle.push(['Préstamo',(x.concepto||'Préstamo')+' · pago '+x.numero,-(parseFloat(x.monto)||0)]);});
+  var filas='<div class="rn99-head"><span>Concepto</span><span>Descripción</span><span>Importe</span></div>'+detalle.map(function(x){return '<div class="rn81-row rn99-row"><span>'+x[0]+'</span><span class="rn99-desc">'+x[1]+'</span><strong class="'+(x[2]<0?'neg':'')+'">'+(x[2]<0?'−':'')+'$'+Math.abs(x[2]).toFixed(2)+'</strong></div>';}).join('');
 
   var modal=document.createElement('div');
   modal.id='rn81-modal';
   modal._reciboData=d;
   modal.innerHTML='<style>'+
-    '#rn81-modal{position:fixed;inset:0;background:rgba(10,35,24,.42);z-index:9999;display:flex;align-items:center;justify-content:center;padding:18px}.rn81-card{width:min(620px,100%);max-height:88vh;overflow:auto;background:#fff;border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.24)}.rn81-brand{background:#0e5137;color:#fff;padding:16px 18px;border-radius:16px 16px 0 0}.rn81-brand-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.rn81-brand h2{margin:0;font-size:1.18rem}.rn81-rancho{margin-top:3px;font-size:.76rem;color:#ffd080;font-weight:750}.rn81-folio{font-size:.6rem;color:#d8eee3;text-align:right}.rn81-body{padding:16px 18px}.rn81-person{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#f6f9f7;border:1px solid #e0e8e3;border-radius:10px;padding:10px;margin-bottom:10px;font-size:.68rem}.rn81-person strong{display:block;color:var(--verde);font-size:.78rem}.rn81-att{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 11px;font-size:.65rem;color:var(--gris-5)}.rn81-att span{background:#f4f6f5;padding:4px 7px;border-radius:999px}.rn81-ret{background:#fff7e8!important;color:#835b08!important}.rn81-row{display:flex;justify-content:space-between;gap:12px;padding:8px 2px;border-bottom:1px solid #edf1ee;font-size:.74rem}.rn81-row strong{color:var(--verde)}.rn81-row strong.neg{color:var(--rojo)}.rn81-total{display:flex;justify-content:space-between;align-items:center;background:#eef7f1;border:1px solid #d3e7d9;border-radius:10px;padding:11px 12px;margin-top:10px}.rn81-total span{font-size:.7rem;font-weight:800;color:var(--verde)}.rn81-total strong{font-size:1.15rem;color:var(--verde)}.rn81-note{margin-top:10px;font-size:.61rem;color:var(--gris-5);line-height:1.4}.rn81-actions{display:flex;justify-content:flex-end;gap:8px;padding:0 18px 16px}.rn81-actions button{height:38px;border-radius:9px;padding:0 14px;font-weight:800}.rn81-close{background:#fff;border:1px solid var(--gris-2);color:var(--verde)}.rn81-pdf{background:var(--verde-mid);border:0;color:#fff}@media(max-width:560px){.rn81-person{grid-template-columns:1fr}.rn81-brand-top{flex-direction:column}.rn81-folio{text-align:left}}'+
+    '#rn81-modal{position:fixed;inset:0;background:rgba(10,35,24,.42);z-index:9999;display:flex;align-items:center;justify-content:center;padding:18px}.rn81-card{width:min(620px,100%);max-height:88vh;overflow:auto;background:#fff;border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.24)}.rn81-brand{background:#0e5137;color:#fff;padding:16px 18px;border-radius:16px 16px 0 0}.rn81-brand-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.rn81-brand h2{margin:0;font-size:1.18rem}.rn81-rancho{margin-top:3px;font-size:.76rem;color:#ffd080;font-weight:750}.rn81-folio{font-size:.6rem;color:#d8eee3;text-align:right}.rn81-body{padding:16px 18px}.rn81-person{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#f6f9f7;border:1px solid #e0e8e3;border-radius:10px;padding:10px;margin-bottom:10px;font-size:.68rem}.rn81-person strong{display:block;color:var(--verde);font-size:.78rem}.rn81-att{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 11px;font-size:.65rem;color:var(--gris-5)}.rn81-att span{background:#f4f6f5;padding:4px 7px;border-radius:999px}.rn81-ret{background:#fff7e8!important;color:#835b08!important}.rn81-row{display:flex;justify-content:space-between;gap:12px;padding:8px 2px;border-bottom:1px solid #edf1ee;font-size:.74rem}.rn99-head,.rn99-row{display:grid;grid-template-columns:.72fr 1.8fr .65fr;gap:9px;align-items:start}.rn99-head{padding:5px 2px;border-bottom:1px solid #dfe6e2;font-size:.61rem;font-weight:800;color:var(--gris-5);text-transform:uppercase}.rn99-row strong{text-align:right}.rn99-desc{color:var(--gris-5);font-size:.68rem}.rn81-row strong{color:var(--verde)}.rn81-row strong.neg{color:var(--rojo)}.rn81-total{display:flex;justify-content:space-between;align-items:center;background:#eef7f1;border:1px solid #d3e7d9;border-radius:10px;padding:11px 12px;margin-top:10px}.rn81-total span{font-size:.7rem;font-weight:800;color:var(--verde)}.rn81-total strong{font-size:1.15rem;color:var(--verde)}.rn81-note{margin-top:10px;font-size:.61rem;color:var(--gris-5);line-height:1.4}.rn81-actions{display:flex;justify-content:flex-end;gap:8px;padding:0 18px 16px}.rn81-actions button{height:38px;border-radius:9px;padding:0 14px;font-weight:800}.rn81-close{background:#fff;border:1px solid var(--gris-2);color:var(--verde)}.rn81-pdf{background:var(--verde-mid);border:0;color:#fff}@media(max-width:560px){.rn81-person{grid-template-columns:1fr}.rn81-brand-top{flex-direction:column}.rn81-folio{text-align:left}}'+
   '</style>'+
   '<div class="rn81-card">'+
     '<div class="rn81-brand"><div class="rn81-brand-top"><div><h2>Mootsil</h2><div class="rn81-rancho">Rancho Sagrado Corazón · Zarzamora</div><div style="font-size:.7rem;margin-top:4px">Recibo de Nómina</div></div><div class="rn81-folio">'+folio+'<br>Semana '+d.numSemana+'</div></div></div>'+
@@ -10152,23 +10146,20 @@ function dibujarReciboMediaCartaHorizontal(doc,d,folio,offsetY,copia){
   y+=7;doc.setTextColor(90);doc.setFontSize(7.2);
   doc.text('Dias pagados: '+(r.diasPagados||0)+'   H.E.: '+(d.horasExtra||0).toFixed(1)+' h   Retardos: '+(r.retardos||0)+' (informativo)',x0+5,y);
 
-  y+=8;doc.setTextColor(40);doc.setFont(undefined,'bold');doc.setFontSize(7.7);
-  doc.text('Concepto',x0+5,y);doc.text('Importe',x0+ancho-7,y,{align:'right'});
-  doc.setDrawColor(205);doc.line(x0+5,y+2,x0+ancho-7,y+2);y+=7;
-  doc.setFont(undefined,'normal');
-
-  function linea(concepto,monto){
-    doc.setTextColor(50);doc.setFontSize(7.4);
-    doc.text(concepto,x0+5,y,{maxWidth:135});
-    doc.setTextColor(monto<0?170:25);
-    doc.text((monto<0?'-':'')+'$'+Math.abs(monto).toFixed(2),x0+ancho-7,y,{align:'right'});
-    y+=6;
+  y+=8;doc.setTextColor(40);doc.setFont(undefined,'bold');doc.setFontSize(7.4);
+  doc.text('Concepto',x0+5,y);doc.text('Descripcion',x0+42,y);doc.text('Importe',x0+ancho-7,y,{align:'right'});
+  doc.setDrawColor(205);doc.line(x0+5,y+2,x0+ancho-7,y+2);y+=7;doc.setFont(undefined,'normal');
+  function linea(concepto,descripcion,monto){
+    doc.setTextColor(50);doc.setFontSize(6.9);doc.text(concepto,x0+5,y,{maxWidth:34});
+    doc.setTextColor(75);doc.setFontSize(6.6);doc.text(descripcion||'—',x0+42,y,{maxWidth:112});
+    doc.setTextColor(monto<0?170:25);doc.setFontSize(6.9);doc.text((monto<0?'-':'')+'$'+Math.abs(monto).toFixed(2),x0+ancho-7,y,{align:'right'});y+=6;
   }
-
-  linea('Sueldo',d.totalSueldo||0);
-  if((d.horasExtra||0)>0)linea('Horas extra ('+d.horasExtra.toFixed(1)+' h)',d.totalExtra||0);
-  (d.bonos||[]).forEach(function(b){linea(b.descripcion,parseFloat(b.monto)||0);});
-  (d.deducciones||[]).forEach(function(x){linea(x.concepto+' (pago '+x.numero+')',-(parseFloat(x.monto)||0));});
+  var heDias=(d.diasHorasExtra||[]).map(rn99FechaCorta).join(', ');
+  linea('Sueldo',(r.diasPagados||0)+' dias pagados · Jornal $'+parseFloat(d.sueldoBase||0).toFixed(2),d.totalSueldo||0);
+  if((d.horasExtra||0)>0)linea('Horas extra',d.horasExtra.toFixed(1)+' h'+(heDias?' · '+heDias:''),d.totalExtra||0);
+  (d.bonos||[]).forEach(function(b){linea('Bono','Campana: '+(b.descripcion||'Bono'),parseFloat(b.monto)||0);});
+  (d.apoyos||[]).forEach(function(a){linea('Apoyo',(a.concepto||'Apoyo')+(a.descripcion?' · '+a.descripcion:''),parseFloat(a.monto)||0);});
+  (d.deducciones||[]).forEach(function(x){linea('Prestamo',(x.concepto||'Prestamo')+' · pago '+x.numero,-(parseFloat(x.monto)||0));});
 
   y+=1;doc.setDrawColor(200);doc.line(x0+112,y,x0+ancho-7,y);y+=7;
   doc.setFont(undefined,'bold');doc.setTextColor(14,81,55);doc.setFontSize(10.5);
@@ -10349,6 +10340,7 @@ function ap98Concepto(g){
  var limpio=String((g&&g.concepto)||'').replace(/\[APOYO98\].*?\[\/APOYO98\]\s*/,'').trim();
  return limpio||m.tipo||'Apoyo';
 }
+function ap99Descripcion(g){var m=ap98Meta((g&&g.concepto)||'')||{};return m.descripcion||'';}
 function ap98EsApoyo(g){return !!ap98Meta((g&&g.concepto)||'');}
 function bo97ConceptoBono(b){
  var m=bo92Meta((b&&b.descripcion)||'')||{};
@@ -10538,43 +10530,45 @@ function renderApoyosC092(){
  var body=document.getElementById('no89-body')||document.getElementById('enc-body');
  body.innerHTML='<div class="seccion-titulo">⛽ Apoyos</div><div class="hint" style="margin-bottom:10px;">Gasolina, transporte, alimentos u otros apoyos económicos. Son independientes de Bonos y se reflejan en Nómina, Cartera y Recibo.</div>'+
  '<div class="form-card">'+
- '<div class="form-group"><label>Colaborador</label><select id="ap98-op"><option value="">Selecciona...</option></select></div>'+
- '<div class="form-group"><label>Concepto</label><select id="ap98-tipo"><option>Gasolina</option><option>Transporte</option><option>Alimentos</option><option>Otro apoyo</option></select></div>'+
- '<div class="form-group" id="ap98-otro-wrap" style="display:none;"><label>Describe el apoyo</label><input id="ap98-otro" placeholder="Ej. Traslado a parcela"></div>'+
+ '<div class="form-group"><label>Colaborador</label><select id="ap98-op"><option value="">Cargando personal...</option></select></div>'+
+ '<div class="form-group"><label>Concepto</label><select id="ap98-tipo"><option>Gasolina</option><option>Transporte</option><option>Alimentos</option><option>Hospedaje</option><option>Viáticos</option><option>Herramientas / equipo personal</option><option>Otro</option></select></div>'+
+ '<div class="form-group"><label>Descripción</label><input id="ap99-desc" placeholder="Ej. Gasolina para traslado al rancho"></div>'+
+ '<div class="hint" style="margin:-3px 0 10px;">Autorizado / registrado por: <b>'+((usuario&&usuario.nombre)||'Administración')+'</b></div>'+
  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><div class="form-group"><label>Monto ($)</label><input id="ap98-monto" type="number" min="0" step="1" placeholder="Ej. 200"></div><div class="form-group"><label>Fecha</label><input id="ap98-fecha" type="date" value="'+fechaHoyLocal()+'"></div></div>'+
  '<button class="btn-sm btn-completar" id="ap98-guardar">Registrar apoyo</button></div>'+
  '<div style="font-size:.68rem;font-weight:850;color:var(--verde);text-transform:uppercase;margin:16px 0 7px;">Apoyos recientes</div><div id="ap98-list"><div class="loading">Cargando...</div></div>';
 
  function cargarLista(){
   Promise.all([
-   from('usuarios').select('id,nombre,rol,activo').get(),
+   from('usuarios').select('*').get(),
    from('gastos').select('*').order('fecha',{ascending:false}).limit(80).get()
   ]).then(function(rr){
-   var us=(rr[0]||[]).filter(function(u){return u.activo!==false&&['admin','dueño','inversionista'].indexOf(u.rol)<0;});
+   var us=(rr[0]||[]).filter(function(u){return u.nombre&&['admin','dueño','dueno','inversionista'].indexOf(String(u.rol||'').toLowerCase())<0;});
    var sel=document.getElementById('ap98-op');
    if(sel&&sel.options.length<=1)sel.innerHTML='<option value="">Selecciona...</option>'+us.map(function(u){return '<option value="'+u.id+'">'+u.nombre+'</option>';}).join('');
    var apoyos=(rr[1]||[]).filter(ap98EsApoyo).slice(0,30),list=document.getElementById('ap98-list');
    if(!list)return;
    list.innerHTML=apoyos.length?apoyos.map(function(g){
     var m=ap98Meta(g.concepto)||{},nom=m.nombre||'Colaborador';
-    return '<div class="orden-card" style="padding:.7rem .85rem;"><div style="display:flex;justify-content:space-between;gap:8px;"><div><strong>⛽ '+nom+'</strong><div class="orden-meta">'+ap98Concepto(g)+' · '+g.fecha+'</div></div><strong style="color:var(--verde);">+$'+parseFloat(g.monto||0).toFixed(2)+'</strong></div></div>';
+    return '<div class="orden-card" style="padding:.7rem .85rem;"><div style="display:flex;justify-content:space-between;gap:8px;"><div><strong>⛽ '+nom+'</strong><div class="orden-meta">'+ap98Concepto(g)+(ap99Descripcion(g)?' · '+ap99Descripcion(g):'')+' · '+g.fecha+(m.autorizado_por_nombre?'<br>Registrado por: '+m.autorizado_por_nombre:'')+'</div></div><strong style="color:var(--verde);">+$'+parseFloat(g.monto||0).toFixed(2)+'</strong></div></div>';
    }).join(''):'<div class="empty">No hay apoyos registrados.</div>';
   }).catch(function(e){var l=document.getElementById('ap98-list');if(l)l.innerHTML='<div class="empty">Error: '+e.message+'</div>';});
  }
- document.getElementById('ap98-tipo').onchange=function(){document.getElementById('ap98-otro-wrap').style.display=this.value==='Otro apoyo'?'block':'none';};
+
  document.getElementById('ap98-guardar').onclick=function(){
   var op=document.getElementById('ap98-op'),opId=op.value,nombre=op.options[op.selectedIndex]?op.options[op.selectedIndex].text:'';
   var tipo=document.getElementById('ap98-tipo').value;
-  var concepto=tipo==='Otro apoyo'?(document.getElementById('ap98-otro').value||'').trim():tipo;
+  var concepto=tipo;
+  var descripcion=(document.getElementById('ap99-desc').value||'').trim();
   var monto=parseFloat(document.getElementById('ap98-monto').value||0),fecha=document.getElementById('ap98-fecha').value;
   if(!opId){alert('Selecciona al colaborador.');return;}
-  if(!concepto){alert('Describe el apoyo.');return;}
+  if(!descripcion){alert('Captura la descripción del apoyo.');return;}
   if(!monto||monto<=0){alert('Captura el monto.');return;}
   if(!fecha){alert('Captura la fecha.');return;}
-  var meta={operario_id:opId,nombre:nombre,tipo:concepto,origen:'nomina_apoyo'};
+  var meta={operario_id:opId,nombre:nombre,tipo:concepto,descripcion:descripcion,origen:'nomina_apoyo',autorizado_por:(usuario&&usuario.id)||null,autorizado_por_nombre:(usuario&&usuario.nombre)||'Administración'};
   var btn=this;btn.disabled=true;btn.textContent='Guardando...';
   from('gastos').insert({categoria:'otros',monto:monto,fecha:fecha,proveedor_id:null,concepto:ap98Desc(meta,concepto),inventario_item_id:null,cantidad:null,comprobante_url:null,registrado_por:usuario.id,forma_pago:'Nómina',fecha_vencimiento:null,estado_pago:'pendiente',notificado_vencimiento:false,compra_id:null})
-   .then(function(){showToast('✅ Apoyo registrado · se reflejará en Nómina');document.getElementById('ap98-monto').value='';btn.disabled=false;btn.textContent='Registrar apoyo';cargarLista();})
+   .then(function(){showToast('✅ Apoyo registrado · se reflejará en Nómina');document.getElementById('ap98-monto').value='';document.getElementById('ap99-desc').value='';btn.disabled=false;btn.textContent='Registrar apoyo';cargarLista();})
    .catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Registrar apoyo';});
  };
  cargarLista();
@@ -11336,6 +11330,7 @@ function renderCartera(fechaRef){
     var pagadoSueldo=estSemana&&estSemana.estado==='pagado';
 
     var horasExtraDB=horasExtraAsignadas.reduce(function(s,h){return s+(parseFloat(h.horas_max)||0);},0);
+    var diasHorasExtra=horasExtraAsignadas.map(function(h){return h.fecha;}).filter(function(v,i,a){return v&&a.indexOf(v)===i;}).sort();
     var horasExtra=(ajuste&&ajuste.horas_extra_override!=null)?parseFloat(ajuste.horas_extra_override||0):horasExtraDB;
     var ex54Op=ex54Get(usuario.id);
     var tarifaOp=(ex54Op.tarifa_hora_extra!=null&&parseFloat(ex54Op.tarifa_hora_extra)>=0)?parseFloat(ex54Op.tarifa_hora_extra):tarifa;
@@ -11416,8 +11411,8 @@ function renderCartera(fechaRef){
           numSemana:numSemana,semanaInicio:semanaInicio,semanaFin:semanaFin,
           resumen:Object.assign({},resumen,{diasPagados:diasPagados}),
           sueldoBase:sueldoBase,totalSueldo:totalSueldo,tarifa:tarifaOp,
-          horasExtra:horasExtra,totalExtra:totalExtra,
-          bonos:bonosQueCalifican.map(function(b){return {id:b.id,descripcion:bo97ConceptoBono(b),monto:parseFloat(b.monto||0)};}),apoyos:apoyosOp.map(function(g){return {id:g.id,concepto:ap98Concepto(g),monto:parseFloat(g.monto||0)};}),
+          horasExtra:horasExtra,diasHorasExtra:diasHorasExtra,totalExtra:totalExtra,
+          bonos:bonosQueCalifican.map(function(b){return {id:b.id,descripcion:bo97ConceptoBono(b),monto:parseFloat(b.monto||0)};}),apoyos:apoyosOp.map(function(g){return {id:g.id,concepto:ap98Concepto(g),descripcion:ap99Descripcion(g),monto:parseFloat(g.monto||0)};}),
           deducciones:deducciones.map(function(d){var pr=prestamosActivos.find(function(p){return p.id===d.prestamo_id;});return {concepto:pr?pr.concepto:'Préstamo',numero:d.numero_pago,monto:parseFloat(d.monto||0)};}),
           granTotal:total,nominaCompleta:todoLoAplicablePagado
         });
