@@ -127,7 +127,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
    Selector compuesto ".stats-row.rpt-resumen-grid" (mayor especificidad que ".stats-row" sola) para
    sobreescribir de forma confiable el grid-template-columns:repeat(3,1fr) por defecto de la clase
    compartida, sin tener que tocar esa regla base ni afectar sus otros 3 usos en la app. */
-.stats-row.rpt-resumen-grid{grid-template-columns:repeat(6,minmax(0,1fr));row-gap:8px;}
+.stats-row.rpt-resumen-grid{grid-template-columns:repeat(7,minmax(0,1fr));row-gap:8px;}
 .stats-row.rpt-resumen-grid>*:nth-child(1),.stats-row.rpt-resumen-grid>*:nth-child(2),.stats-row.rpt-resumen-grid>*:nth-child(3){grid-column:span 2;}
 .stats-row.rpt-resumen-grid>*:nth-child(4),.stats-row.rpt-resumen-grid>*:nth-child(5){grid-column:span 3;}
 @media (min-width:768px){
@@ -8474,7 +8474,10 @@ function renderCajaMootsil(periodo,fechaBase){
   ]).then(function(r){
     var externos=[],gastos=r[0]||[],nom=r[1]||[],extras=r[2]||[],eventuales=r[3]||[],prestamos=r[4]||[],inversiones=r[5]||[],invMovs=r[6]||[];
 
-    gastos.forEach(function(g){externos.push({id:'db-g-'+g.id,fecha:g.fecha,hora:'—',tipo:'salida',cuenta:/efectivo/i.test(g.forma_pago||'')?'efectivo':'bancos',categoria:'Compra / gasto',concepto:g.concepto||'Gasto',persona:g.proveedor?g.proveedor.nombre:'Sin proveedor',monto:cajaMonto(g.monto),forma:g.forma_pago||'—',origen:'Compra',estado:'Pagado',db:true});});
+    gastos.forEach(function(g){
+      var esAp=ap98EsApoyo(g),am=esAp?(ap98Meta(g.concepto)||{}):{};
+      externos.push({id:'db-g-'+g.id,fecha:g.fecha,hora:'—',tipo:'salida',cuenta:/efectivo/i.test(g.forma_pago||'')?'efectivo':'bancos',categoria:esAp?'Apoyo':'Compra / gasto',concepto:esAp?ap98Concepto(g):(g.concepto||'Gasto'),persona:esAp?(am.nombre||'Colaborador'):(g.proveedor?g.proveedor.nombre:'Sin proveedor'),monto:cajaMonto(g.monto),forma:g.forma_pago||'—',origen:esAp?'Apoyos':'Compra',estado:'Pagado',db:true});
+    });
     nom.forEach(function(p){externos.push({id:'db-n-'+p.id,fecha:p.semana_inicio,hora:'—',tipo:'salida',cuenta:'efectivo',categoria:'Personal',concepto:'Nómina personal fijo',persona:p.operario?p.operario.nombre:'Colaborador',monto:cajaMonto(p.monto_pagado),forma:'—',origen:'Nómina',estado:'Pagado',db:true});});
     extras.forEach(function(p){externos.push({id:'db-x-'+p.id,fecha:p.semana_inicio,hora:'—',tipo:'salida',cuenta:'efectivo',categoria:'Personal',concepto:'Horas extra',persona:p.operario?p.operario.nombre:'Colaborador',monto:cajaMonto(p.monto_pagado),forma:'—',origen:'Nómina',estado:'Pagado',db:true});});
     eventuales.forEach(function(p){externos.push({id:'db-e-'+p.id,fecha:p.fecha,hora:'—',tipo:'salida',cuenta:'efectivo',categoria:'Personal',concepto:p.concepto||'Pago personal eventual',persona:p.operario?p.operario.nombre:'Eventual',monto:cajaMonto(p.monto),forma:'—',origen:'Eventuales',estado:'Pagado',db:true});});
@@ -9541,7 +9544,8 @@ function renderGenerarNomina(fechaRef){
     from('prestamos').select('*').eq('estado','activo').get(),
     from('prestamo_pagos').select('*').eq('semana_inicio',semanaInicio).get(),
     from('horas_extra_asignadas').select('operario_id,fecha,horas_max,estado').gte('fecha',semanaInicio).lte('fecha',semanaFin).eq('estado','aprobada').get(),
-    from('nomina_ajustes').select('*').eq('semana_inicio',semanaInicio).get()
+    from('nomina_ajustes').select('*').eq('semana_inicio',semanaInicio).get(),
+    from('gastos').select('*').gte('fecha',semanaInicio).lte('fecha',semanaFin).get()
   ]).then(function(r){
     var todosUsuarios=r[0]||[], registros=r[1]||[], estados=r[2]||[], estadosExtra=r[3]||[];
     var ajustesSemana=r[11]||[];
@@ -9549,6 +9553,7 @@ function renderGenerarNomina(fechaRef){
     var tarifa=parseFloat(cfg.tarifa_hora_extra)||70;
     var permisosAprobados=r[5]||[], bonosActivos=r[6]||[], bonoBeneficiarios=r[7]||[];
     var prestamosActivos=r[8]||[], pagosSemanaPrestamos=r[9]||[], horasExtraAsignadas=r[10]||[];
+    var apoyosSemana=(r[12]||[]).filter(ap98EsApoyo);
 
     // C079: usar exactamente el mismo universo de colaboradores que la pantalla Asistencia.
     var rolesAsistencia=['operario','cosechador','galerista','labores_eventual'];
@@ -9597,7 +9602,7 @@ function renderGenerarNomina(fechaRef){
 
       var accionesPago={};
       var filas=[];
-      var totalSueldos=0,totalExtra=0,totalBonos=0,totalPrestamos=0,totalNeto=0,totalPendiente=0,totalPagado=0;
+      var totalSueldos=0,totalExtra=0,totalBonos=0,totalApoyos=0,totalPrestamos=0,totalNeto=0,totalPendiente=0,totalPagado=0;
       var pendientes=[];
 
       operarios.forEach(function(o,idx){
@@ -9635,12 +9640,15 @@ function renderGenerarNomina(fechaRef){
           return s+(b.tipo_recompensa==='economico'?(parseFloat(b.monto)||0):0);
         },0);
 
+        var apoyosOp=apoyosSemana.filter(function(g){var am=ap98Meta(g.concepto)||{};return String(am.operario_id)===String(o.id);});
+        var montoApoyos=apoyosOp.reduce(function(s,g){return s+(parseFloat(g.monto)||0);},0);
+
         var prestamosOp=prestamosActivos.filter(function(p){return p.operario_id===o.id;});
         var prestamoIdsOp={}; prestamosOp.forEach(function(p){prestamoIdsOp[p.id]=p;});
         var deduccionesOp=pagosSemanaPrestamos.filter(function(pp){return prestamoIdsOp[pp.prestamo_id]&&pp.estado==='pendiente';});
         var montoPrestamos=deduccionesOp.reduce(function(s,d){return s+parseFloat(d.monto||0);},0);
 
-        var neto=Math.max(0,montoSueldo+montoExtra+montoBonos-montoPrestamos);
+        var neto=Math.max(0,montoSueldo+montoExtra+montoBonos+montoApoyos-montoPrestamos);
         var pagadoSueldo=estadoPorOp[o.id]&&estadoPorOp[o.id].estado==='pagado';
         var pagadoHE=!horasExtra||(estadoExtraPorOp[o.id]&&estadoExtraPorOp[o.id].estado==='pagado');
         var pagado=pagadoSueldo&&pagadoHE;
@@ -9650,12 +9658,12 @@ function renderGenerarNomina(fechaRef){
 
         accionesPago[idAccion]={
           operarioId:o.id,nombre:o.nombre,tipo:tipoTxt,totalSueldo:montoSueldo,
-          horasExtra:horasExtra,totalExtra:montoExtra,bonosQueCalifican:bonosQueCalifican,
+          horasExtra:horasExtra,totalExtra:montoExtra,bonosQueCalifican:bonosQueCalifican,apoyos:apoyosOp,totalApoyos:montoApoyos,
           deducciones:deduccionesOp,scoresOp:scoresOp,granTotal:neto,pagado:pagado,
-          recibo:{nombre:o.nombre,numSemana:numSemana,semanaInicio:semanaInicio,semanaFin:semanaFin,resumen:resumen,sueldoBase:sueldoBase,totalSueldo:montoSueldo,tarifa:tarifaOp,horasExtra:horasExtra,totalExtra:montoExtra,bonos:bonosQueCalifican.map(function(b){return {id:b.id,tipo:b.tipo||'individual',descripcion:b.descripcion,monto:parseFloat(b.monto||0),_localGasolina:!!b._localGasolina};}),deducciones:deduccionesOp.map(function(d){var pr=prestamoIdsOp[d.prestamo_id];return {concepto:pr?pr.concepto:'Préstamo',numero:d.numero_pago,monto:parseFloat(d.monto||0)};}),granTotal:neto,nominaCompleta:pagado}
+          recibo:{nombre:o.nombre,numSemana:numSemana,semanaInicio:semanaInicio,semanaFin:semanaFin,resumen:resumen,sueldoBase:sueldoBase,totalSueldo:montoSueldo,tarifa:tarifaOp,horasExtra:horasExtra,totalExtra:montoExtra,bonos:bonosQueCalifican.map(function(b){return {id:b.id,tipo:b.tipo||'individual',descripcion:bo97ConceptoBono(b),monto:parseFloat(b.monto||0),_localGasolina:!!b._localGasolina};}),apoyos:apoyosOp.map(function(g){return {id:g.id,concepto:ap98Concepto(g),monto:parseFloat(g.monto||0)};}),deducciones:deduccionesOp.map(function(d){var pr=prestamoIdsOp[d.prestamo_id];return {concepto:pr?pr.concepto:'Préstamo',numero:d.numero_pago,monto:parseFloat(d.monto||0)};}),granTotal:neto,nominaCompleta:pagado}
         };
 
-        totalSueldos+=montoSueldo; totalExtra+=montoExtra; totalBonos+=montoBonos; totalPrestamos+=montoPrestamos; totalNeto+=neto;
+        totalSueldos+=montoSueldo; totalExtra+=montoExtra; totalBonos+=montoBonos; totalApoyos+=montoApoyos; totalPrestamos+=montoPrestamos; totalNeto+=neto;
         if(pagado)totalPagado+=neto; else {totalPendiente+=neto; pendientes.push(accionesPago[idAccion]);}
 
         var warning=!sueldoBase?'<span class="n74-warn">Sin jornal</span>':'';
@@ -9676,6 +9684,7 @@ function renderGenerarNomina(fechaRef){
             '<div class="n74-cell"><small>Jornal</small><b>$'+sueldoBase.toFixed(2)+'</b><span>$'+montoSueldo.toFixed(2)+'</span></div>'+
             '<div class="n74-cell"><small>H.E.</small><b>'+horasExtra.toFixed(1)+' h</b><span>+$'+montoExtra.toFixed(2)+'</span></div>'+
             '<div class="n74-cell"><small>Bonos</small><button type="button" class="n81-bonos-link" data-bonos-nom="'+idAccion+'" style="border:0;background:none;padding:0;color:var(--verde);font-weight:850;font-size:.76rem;cursor:pointer;text-decoration:'+(montoBonos>0?'underline':'none')+';">+$'+montoBonos.toFixed(2)+'</button></div>'+
+            '<div class="n74-cell"><small>Apoyos</small><b>+$'+montoApoyos.toFixed(2)+'</b></div>'+
             '<div class="n74-cell"><small>Préstamos</small><b class="red">-$'+montoPrestamos.toFixed(2)+'</b></div>'+
             '<div class="n74-net"><small>'+(pagado?'PAGADO':'NETO')+'</small><strong>$'+neto.toFixed(2)+'</strong><span>'+banco+'</span></div>'+
             '<div class="n74-actions">'+
@@ -9693,16 +9702,17 @@ function renderGenerarNomina(fechaRef){
         '.n74-nav{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:10px 0}.n74-nav button,.n74-nav select{border:1px solid var(--gris-2);background:#fff;border-radius:18px;padding:.38rem .72rem;font-size:.72rem}.n74-week{margin-left:auto;font-size:.73rem;color:var(--gris-5)}'+
         '.n74-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;margin:10px 0}.n74-kpi{background:#fff;border:1px solid var(--gris-2);border-radius:11px;padding:8px 10px}.n74-kpi small{font-size:.58rem;text-transform:uppercase;color:var(--gris-5);font-weight:750;display:block}.n74-kpi strong{display:block;font-size:.92rem;color:var(--verde);margin-top:2px}.n74-kpi.red strong{color:var(--rojo)}.n74-kpi.gold strong{color:var(--tierra)}'+
         '.n74-bulk{display:flex;gap:8px;align-items:center;justify-content:flex-end;background:#fff;border:1px solid var(--gris-2);border-radius:11px;padding:9px 10px;margin-bottom:10px}.n74-bulk span{margin-right:auto;font-size:.72rem;color:var(--gris-5)}.n74-bulk select{height:34px;border:1px solid var(--gris-2);border-radius:8px;padding:0 8px}.n74-bulk button{height:34px;border:0;border-radius:8px;padding:0 12px;background:var(--verde-mid);color:#fff;font-weight:750}'+
-        '.n74-list{display:flex;flex-direction:column;gap:6px}.n74-row{display:grid;grid-template-columns:1.35fr .6fr .75fr .68fr .65fr .72fr .9fr 1.25fr;gap:8px;align-items:center;background:#fff;border:1px solid var(--gris-2);border-left:4px solid var(--tierra);border-radius:10px;padding:8px 10px}.n74-row.paid{border-left-color:var(--verde-mid);opacity:.88}.n74-person strong{font-size:.82rem}.n74-badge{display:inline-block;margin-top:3px;padding:2px 6px;border-radius:999px;background:#e9f6ee;color:#237448;font-size:.54rem;font-weight:850}.n74-badge.ev{background:#fff1d7;color:#a26700}.n74-warn{font-size:.56rem;color:var(--rojo);font-weight:800;margin-left:4px}.n74-cell small,.n74-net small{display:block;font-size:.53rem;text-transform:uppercase;color:var(--gris-5);font-weight:750}.n74-cell b{display:block;font-size:.76rem;color:#1e2f26}.n74-cell span,.n74-net span{font-size:.56rem;color:var(--gris-5)}.n74-cell .red{color:var(--rojo)}.n74-net strong{display:block;font-size:.88rem;color:var(--tierra)}.n74-row.paid .n74-net strong{color:var(--verde-mid)}.n74-actions{display:flex;gap:4px;justify-content:flex-end;flex-wrap:wrap}.n74-actions button{height:29px;border-radius:7px;padding:0 7px;font-size:.61rem;white-space:nowrap}.n74-pay{border:0;background:var(--verde-mid);color:#fff;font-weight:750}.n74-soft{border:1px solid var(--gris-2);background:#fff;color:var(--verde)}'+
+        '.n74-list{display:flex;flex-direction:column;gap:6px}.n74-row{display:grid;grid-template-columns:1.3fr .55fr .72fr .63fr .6fr .6fr .68fr .86fr 1.2fr;gap:8px;align-items:center;background:#fff;border:1px solid var(--gris-2);border-left:4px solid var(--tierra);border-radius:10px;padding:8px 10px}.n74-row.paid{border-left-color:var(--verde-mid);opacity:.88}.n74-person strong{font-size:.82rem}.n74-badge{display:inline-block;margin-top:3px;padding:2px 6px;border-radius:999px;background:#e9f6ee;color:#237448;font-size:.54rem;font-weight:850}.n74-badge.ev{background:#fff1d7;color:#a26700}.n74-warn{font-size:.56rem;color:var(--rojo);font-weight:800;margin-left:4px}.n74-cell small,.n74-net small{display:block;font-size:.53rem;text-transform:uppercase;color:var(--gris-5);font-weight:750}.n74-cell b{display:block;font-size:.76rem;color:#1e2f26}.n74-cell span,.n74-net span{font-size:.56rem;color:var(--gris-5)}.n74-cell .red{color:var(--rojo)}.n74-net strong{display:block;font-size:.88rem;color:var(--tierra)}.n74-row.paid .n74-net strong{color:var(--verde-mid)}.n74-actions{display:flex;gap:4px;justify-content:flex-end;flex-wrap:wrap}.n74-actions button{height:29px;border-radius:7px;padding:0 7px;font-size:.61rem;white-space:nowrap}.n74-pay{border:0;background:var(--verde-mid);color:#fff;font-weight:750}.n74-soft{border:1px solid var(--gris-2);background:#fff;color:var(--verde)}'+
         '.n74-foot{display:flex;justify-content:flex-end;gap:18px;margin-top:9px;font-size:.7rem;font-weight:750;color:var(--verde)}'+
         '@media(max-width:1100px){.n74-kpis{grid-template-columns:repeat(3,1fr)}.n74-row{grid-template-columns:1.2fr repeat(3,.7fr) 1fr}.n74-row .n74-cell:nth-of-type(5),.n74-row .n74-cell:nth-of-type(6){display:none}.n74-actions{grid-column:1/-1;justify-content:flex-start}}'+
         '</style>'+
-        '<div><div class="n74-title">💰 Pago de Nómina</div><div class="n74-sub">Preliminar semanal generado desde Expedientes, Asistencia, H.E., Bonos y Préstamos. Corrige el origen y vuelve a calcular antes de pagar.</div></div>'+
+        '<div><div class="n74-title">💰 Pago de Nómina</div><div class="n74-sub">Preliminar semanal generado desde Expedientes, Asistencia, H.E., Bonos, Apoyos y Préstamos. Corrige el origen y vuelve a calcular antes de pagar.</div></div>'+
         '<div class="n74-nav"><button id="n74-ant">← Semana anterior</button><button id="n74-hoy">Semana actual</button>'+(esSemanaActual?'':'<button id="n74-sig">Semana siguiente →</button>')+'<span class="n74-week">Semana '+numSemana+' · '+semanaInicio+' a '+semanaFin+'</span></div>'+
         '<div class="n74-kpis">'+
           '<div class="n74-kpi"><small>Sueldos</small><strong>$'+totalSueldos.toFixed(2)+'</strong></div>'+
           '<div class="n74-kpi"><small>Horas extra</small><strong>+$'+totalExtra.toFixed(2)+'</strong></div>'+
           '<div class="n74-kpi"><small>Bonos</small><strong>+$'+totalBonos.toFixed(2)+'</strong></div>'+
+        '<div class="n74-kpi"><small>Apoyos</small><strong>+$'+totalApoyos.toFixed(2)+'</strong></div>'+
           '<div class="n74-kpi red"><small>Préstamos</small><strong>-$'+totalPrestamos.toFixed(2)+'</strong></div>'+
           '<div class="n74-kpi gold"><small>Neto semana</small><strong>$'+totalNeto.toFixed(2)+'</strong></div>'+
           '<div class="n74-kpi"><small>Pagado</small><strong>$'+totalPagado.toFixed(2)+'</strong></div>'+
@@ -9738,6 +9748,7 @@ function renderGenerarNomina(fechaRef){
           pasos.push(from('bono_beneficiarios').insert({bono_id:b.id,operario_id:opId,puntaje_obtenido:scoreDe?scoreDe.score:null}));
         });
 
+        (acc.apoyos||[]).forEach(function(g){pasos.push(from('gastos').eq('id',g.id).update({estado_pago:'pagado'}));});
         return Promise.all(pasos).then(function(){
           var prestamoIds=Object.keys(acc.deducciones.reduce(function(s,d){s[d.prestamo_id]=true;return s;},{}));
           return Promise.all(prestamoIds.map(function(pid){
@@ -9865,7 +9876,7 @@ function abrirBonosAutorizadosNomina(acc,semanaInicio,semanaFin){
   var rows=bonos.length?bonos.map(function(b,idx){
     var equipo=b.tipo==='equipo';
     return '<div class="bn81-row" data-idx="'+idx+'">'+
-      '<div class="bn81-grid"><div><label>Concepto</label><input class="bn81-desc" value="'+String(b.descripcion||'').replace(/"/g,'&quot;')+'" '+(equipo?'disabled':'')+'></div>'+
+      '<div class="bn81-grid"><div><label>Concepto</label><input class="bn81-desc" value="'+String(bo97ConceptoBono(b)||'').replace(/"/g,'&quot;')+'" '+(equipo?'disabled':'')+'></div>'+
       '<div><label>Monto</label><input class="bn81-monto" type="number" min="0" step="1" value="'+(parseFloat(b.monto)||0)+'" '+(equipo?'disabled':'')+'></div></div>'+
       '<div class="bn81-foot"><span>'+(equipo?'Bono de equipo · se administra desde Bonos':'Bono individual autorizado')+'</span>'+
       (!equipo&&!b._localGasolina?'<button type="button" class="bn81-del" data-idx="'+idx+'">Quitar</button>':'')+
@@ -10054,17 +10065,24 @@ function renderAjustarNomina(operarioId,nombre,semanaInicio,diasActual,horasActu
 }
 
 function abrirRecibo(d){
+  d=d||{};
+  d.bonos=(d.bonos||[]).map(function(b){return Object.assign({},b,{descripcion:bo97ConceptoBono({descripcion:b.descripcion})});});
+  d.apoyos=(d.apoyos||[]).map(function(a){return Object.assign({},a,{concepto:a.concepto||'Apoyo'});});
   var old=document.getElementById('rn81-modal'); if(old)old.remove();
   var folio='NOM-'+d.semanaInicio.replace(/-/g,'')+'-S'+d.numSemana;
   var r=d.resumen||{};
-  var totalBonos=(d.bonos||[]).reduce(function(s,b){return s+(parseFloat(b.monto)||0);},0);
+  var totalBonos=(d.bonos||[]).reduce(function(s,b){return s+(parseFloat(b.monto)||0);},0); var totalApoyos=(d.apoyos||[]).reduce(function(s,a){return s+(parseFloat(a.monto)||0);},0);
   var totalDed=(d.deducciones||[]).reduce(function(s,x){return s+(parseFloat(x.monto)||0);},0);
 
   var detalle=[
     ['Sueldo',d.totalSueldo],
     ['Horas extra ('+(d.horasExtra||0).toFixed(1)+' h)',d.totalExtra]
   ];
-  (d.bonos||[]).forEach(function(b){detalle.push([b.descripcion,parseFloat(b.monto)||0]);});
+  (d.bonos||[]).forEach(function(b){
+    var bd={descripcion:b.descripcion};
+    detalle.push(['Bono · '+bo97ConceptoBono(bd),parseFloat(b.monto)||0]);
+  });
+  (d.apoyos||[]).forEach(function(a){detalle.push(['Apoyo · '+(a.concepto||'Apoyo'),parseFloat(a.monto)||0]);});
   (d.deducciones||[]).forEach(function(x){detalle.push([x.concepto+' (pago '+x.numero+')',-(parseFloat(x.monto)||0)]);});
 
   var filas=detalle.map(function(x){
@@ -10320,6 +10338,26 @@ function bo91FmtFecha(f){if(!f)return '—';try{return new Date(f+'T12:00:00').t
 function bo92Meta(desc){var m=String(desc||'').match(/\[C092\](.*?)\[\/C092\]/);if(!m)return null;try{return JSON.parse(decodeURIComponent(m[1]));}catch(e){return null;}}
 function bo92Desc(meta,mensaje){return '[C092]'+encodeURIComponent(JSON.stringify(meta))+'[/C092] '+(mensaje||meta.objetivo||'Campaña de bono');}
 function bo92Texto(desc){return String(desc||'').replace(/\[C092\].*?\[\/C092\]\s*/,'');}
+function ap98Desc(meta,concepto){return '[APOYO98]'+encodeURIComponent(JSON.stringify(meta))+'[/APOYO98] '+(concepto||'Apoyo');}
+function ap98Meta(desc){
+ var m=String(desc||'').match(/\[APOYO98\](.*?)\[\/APOYO98\]/);
+ if(!m)return null;
+ try{return JSON.parse(decodeURIComponent(m[1]));}catch(e){return null;}
+}
+function ap98Concepto(g){
+ var m=ap98Meta((g&&g.concepto)||'')||{};
+ var limpio=String((g&&g.concepto)||'').replace(/\[APOYO98\].*?\[\/APOYO98\]\s*/,'').trim();
+ return limpio||m.tipo||'Apoyo';
+}
+function ap98EsApoyo(g){return !!ap98Meta((g&&g.concepto)||'');}
+function bo97ConceptoBono(b){
+ var m=bo92Meta((b&&b.descripcion)||'')||{};
+ var limpio=bo92Texto((b&&b.descripcion)||'').trim();
+ if(limpio && limpio.indexOf('[C092]')<0)return limpio;
+ if(m.objetivo_libre)return m.objetivo_libre;
+ var nombres={actividad:'Actividad de labores',semanal:'Objetivo semanal de labores',mayor_cajas:'Mayor número de cajas cosechadas del día',meta_cajas:'Alcanzar cajas programadas del día',cajas:'Meta de cajas',meta_cosecha:'Meta de cosecha',viajes:'Viajes satisfactorios',tareas:'Cumplimiento de tareas',manual:'Objetivo definido por Administración'};
+ return nombres[m.objetivo]||'Campaña de bono';
+}
 function bo91ToggleForm(){var x=document.getElementById('bo91-form-wrap');if(x)x.style.display=(x.style.display==='none'||!x.style.display)?'block':'none';}
 function bo92ObjetivosRol(){
  var rol=document.getElementById('bo92-rol').value,sel=document.getElementById('bo92-objetivo');
@@ -10440,35 +10478,106 @@ function renderBonos(){
  Promise.all([from('bonos').select('*').order('creado_en',{ascending:false}).get(),from('bono_beneficiarios').select('*').get()]).then(function(rr){
   var rows=(rr[0]||[]).filter(function(b){return !!bo92Meta(b.descripcion);}),benef=rr[1]||[],list=document.getElementById('bo91-list');
   if(!rows.length){list.innerHTML='<div class="empty">No hay campañas creadas todavía.</div>';return;}
-  list.innerHTML=rows.map(function(b){
+
+  function datosCampaña(b){
    var m=bo92Meta(b.descripcion)||{},ot=benef.filter(function(x){return String(x.bono_id)===String(b.id);});
+   var estadoRaw=String(b.estado||'activo').toLowerCase();
+   var estado=ot.length?'aplicada':(estadoRaw==='cancelada'?'cancelada':(estadoRaw==='aplicada'?'aplicada':'activa'));
    var rec=m.recompensa==='especie'?(m.premio||'En especie'):(m.recompensa==='cajas_extra'?((m.cajas_extra||1)+' caja(s) extra'):'$'+parseFloat(b.monto||0).toFixed(2));
-   return '<div class="orden-card"><div style="display:flex;justify-content:space-between;gap:10px;"><div><strong>🎯 '+String(m.rol||'').replace(/_/g,' ')+' · '+((m.participantes||[]).length)+' participante(s)</strong><div class="orden-meta">'+bo92Texto(b.descripcion)+'<br><b>Objetivo:</b> '+(m.objetivo_libre||String(m.objetivo||'').replace(/_/g,' '))+(m.meta?' · <b>Meta:</b> '+m.meta:'')+'<br><b>Recompensa:</b> '+rec+'<br><b>Decisión:</b> '+(ot.length?('Otorgado a '+ot.length+' participante(s)'):'Pendiente de Administración')+'</div></div><span style="font-size:.7rem;font-weight:800;color:var(--verde-mid);">'+String(b.estado||'activo').toUpperCase()+'</span></div><div style="display:flex;gap:7px;margin-top:8px;flex-wrap:wrap;">'+(b.estado==='activo'?'<button class="btn-sm btn-completar" data-decidir="'+b.id+'">Decidir entrega</button><button class="btn-sm btn-cancelar" data-cerrar="'+b.id+'">Cerrar</button>':'')+(m.recompensa==='especie'&&ot.length?'<button class="btn-sm" data-compras="1">Compras y Gastos</button>':'')+'</div></div>';
-  }).join('');
+   return {b:b,m:m,ot:ot,estado:estado,rec:rec};
+  }
+  function tarjeta(d){
+   var b=d.b,m=d.m,ot=d.ot,estado=d.estado,rec=d.rec;
+   var color=estado==='aplicada'?'#237448':(estado==='cancelada'?'#a44':'var(--verde-mid)');
+   var decision=estado==='cancelada'?'Cancelada sin recompensa':(ot.length?('Otorgado a '+ot.length+' participante(s)'):'Pendiente de Administración');
+   var acciones='';
+   if(estado==='activa')acciones='<button class="btn-sm btn-completar" data-decidir="'+b.id+'">Decidir entrega</button><button class="btn-sm btn-cancelar" data-cancelar="'+b.id+'">Cancelar campaña</button>';
+   if(m.recompensa==='especie'&&ot.length)acciones+='<button class="btn-sm" data-compras="1">Compras y Gastos</button>';
+   return '<div class="orden-card"><div style="display:flex;justify-content:space-between;gap:10px;"><div><strong>🎯 '+String(m.rol||'').replace(/_/g,' ')+' · '+((m.participantes||[]).length)+' participante(s)</strong><div class="orden-meta">'+bo97ConceptoBono(b)+'<br><b>Objetivo:</b> '+(m.objetivo_libre||String(m.objetivo||'').replace(/_/g,' '))+(m.meta?' · <b>Meta:</b> '+m.meta:'')+'<br><b>Recompensa:</b> '+rec+'<br><b>Decisión:</b> '+decision+'</div></div><span style="font-size:.7rem;font-weight:800;color:'+color+';">'+estado.toUpperCase()+'</span></div><div style="display:flex;gap:7px;margin-top:8px;flex-wrap:wrap;">'+acciones+'</div></div>';
+  }
+
+  var datos=rows.map(datosCampaña);
+  var activas=datos.filter(function(d){return d.estado==='activa';});
+  var hist=datos.filter(function(d){return d.estado!=='activa';});
+  var html='';
+  html+='<div style="font-size:.68rem;font-weight:850;color:var(--verde);text-transform:uppercase;margin:4px 0 7px;">Campañas activas</div>';
+  html+=activas.length?activas.map(tarjeta).join(''):'<div class="empty" style="padding:.8rem;">No hay campañas activas.</div>';
+  html+='<div style="font-size:.68rem;font-weight:850;color:var(--verde);text-transform:uppercase;margin:16px 0 7px;">Historial de campañas</div>';
+  html+=hist.length?hist.map(tarjeta).join(''):'<div class="empty" style="padding:.8rem;">Todavía no hay campañas aplicadas o canceladas.</div>';
+  list.innerHTML=html;
+
   list.querySelectorAll('[data-decidir]').forEach(function(x){x.onclick=function(){bo92Decidir(this.dataset.decidir,rows,benef);};});
-  list.querySelectorAll('[data-cerrar]').forEach(function(x){x.onclick=function(){var id=this.dataset.cerrar;if(confirm('¿Cerrar esta campaña?'))from('bonos').eq('id',id).update({estado:'cerrado'}).then(renderBonos);};});
+  list.querySelectorAll('[data-cancelar]').forEach(function(x){x.onclick=function(){
+   var id=this.dataset.cancelar;
+   if(!confirm('¿Cancelar esta campaña? No se otorgará ninguna recompensa.'))return;
+   from('bonos').eq('id',id).update({estado:'cancelada'}).then(function(){showToast('Campaña cancelada');renderBonos();}).catch(function(e){alert('Error: '+e.message);});
+  };});
   list.querySelectorAll('[data-compras]').forEach(function(x){x.onclick=function(){no89CerrarModal();renderComprasMenu();};});
- });
+ });;
 }
 function bo92Decidir(id,rows,benef){
  var b=(rows||[]).find(function(x){return String(x.id)===String(id);});if(!b)return;
  var m=bo92Meta(b.descripcion)||{},ops=m.participantes||[],ya=(benef||[]).filter(function(x){return String(x.bono_id)===String(id);}).map(function(x){return String(x.operario_id);});
  var old=document.getElementById('bo92-decidir');if(old)old.remove();
- var bg=document.createElement('div');bg.id='bo92-decidir';bg.className='sol59-modal-bg';
+ var bg=document.createElement('div');bg.id='bo92-decidir';bg.className='sol59-modal-bg';bg.style.zIndex='10080';
  bg.innerHTML='<div class="sol59-modal"><div class="sol59-modal-h"><strong>Decidir entrega de recompensa</strong><button class="em59-back" id="bo92-x">✕</button></div><div class="sol59-modal-b"><div class="hint" style="margin-bottom:8px;">Administración confirma quién recibe la recompensa.</div>'+ops.map(function(o){return '<label style="display:flex;align-items:center;gap:8px;padding:.55rem;border-bottom:1px solid var(--gris-2);"><input type="checkbox" data-bo92-award="'+o.id+'" '+(ya.indexOf(String(o.id))>=0?'checked disabled':'')+'> <b>'+o.nombre+'</b>'+(ya.indexOf(String(o.id))>=0?' <span class="hint">Ya otorgado</span>':'')+'</label>';}).join('')+'</div><div class="sol59-modal-f"><button class="btn-sm" id="bo92-cancel">Cancelar</button><button class="btn-sm btn-completar" id="bo92-confirmar">Otorgar seleccionados</button></div></div>';
  document.body.appendChild(bg);
  document.getElementById('bo92-x').onclick=document.getElementById('bo92-cancel').onclick=function(){bg.remove();};
  document.getElementById('bo92-confirmar').onclick=function(){
   var ids=[].slice.call(bg.querySelectorAll('[data-bo92-award]:checked:not(:disabled)')).map(function(x){return x.dataset.bo92Award;});
   if(!ids.length){alert('Selecciona al menos una persona nueva.');return;}
-  Promise.all(ids.map(function(op){return from('bono_beneficiarios').insert({bono_id:id,operario_id:op,puntaje_obtenido:null});})).then(function(){bg.remove();showToast('✅ Recompensa otorgada');renderBonos();}).catch(function(e){alert('Error: '+e.message);});
+  var btn=this;btn.disabled=true;btn.textContent='Aplicando...';
+  Promise.all(ids.map(function(op){return from('bono_beneficiarios').insert({bono_id:id,operario_id:op,puntaje_obtenido:null});}))
+   .then(function(){return from('bonos').eq('id',id).update({estado:'aplicada'});})
+   .then(function(){bg.remove();showToast('✅ Campaña aplicada · recompensa otorgada');renderBonos();})
+   .catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Otorgar seleccionados';});
  };
 }
 function renderNuevoBono(){renderBonos();setTimeout(bo91ToggleForm,80);}
 function renderApoyosC092(){
  var body=document.getElementById('no89-body')||document.getElementById('enc-body');
- body.innerHTML='<div class="seccion-titulo">⛽ Apoyos operativos</div><div class="form-card"><strong>Gasolina, transporte, alimentos y apoyos similares</strong><p class="hint" style="margin-top:.4rem;">No son bonos porque no dependen de alcanzar una meta. Los $200 entregados para gasolina a Eduardo o Miguel corresponden aquí.</p><p class="hint"><b>Regla:</b> no incrementan automáticamente Nómina. La salida debe quedar en Caja/Gastos con beneficiario y concepto.</p><button class="btn-sm btn-completar" id="bo92-ir-gastos">Registrar en Compras y Gastos</button></div><div class="form-card" style="margin-top:10px;"><strong>Pendiente de integración compartida</strong><p class="hint">No se guardan Apoyos en localStorage. Para que celular y computadora coincidan, la captura definitiva requerirá persistencia compartida de beneficiario, concepto, monto, fecha, cuenta y comprobante.</p></div>';
- document.getElementById('bo92-ir-gastos').onclick=function(){no89CerrarModal();renderComprasMenu();};
+ body.innerHTML='<div class="seccion-titulo">⛽ Apoyos</div><div class="hint" style="margin-bottom:10px;">Gasolina, transporte, alimentos u otros apoyos económicos. Son independientes de Bonos y se reflejan en Nómina, Cartera y Recibo.</div>'+
+ '<div class="form-card">'+
+ '<div class="form-group"><label>Colaborador</label><select id="ap98-op"><option value="">Selecciona...</option></select></div>'+
+ '<div class="form-group"><label>Concepto</label><select id="ap98-tipo"><option>Gasolina</option><option>Transporte</option><option>Alimentos</option><option>Otro apoyo</option></select></div>'+
+ '<div class="form-group" id="ap98-otro-wrap" style="display:none;"><label>Describe el apoyo</label><input id="ap98-otro" placeholder="Ej. Traslado a parcela"></div>'+
+ '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><div class="form-group"><label>Monto ($)</label><input id="ap98-monto" type="number" min="0" step="1" placeholder="Ej. 200"></div><div class="form-group"><label>Fecha</label><input id="ap98-fecha" type="date" value="'+fechaHoyLocal()+'"></div></div>'+
+ '<button class="btn-sm btn-completar" id="ap98-guardar">Registrar apoyo</button></div>'+
+ '<div style="font-size:.68rem;font-weight:850;color:var(--verde);text-transform:uppercase;margin:16px 0 7px;">Apoyos recientes</div><div id="ap98-list"><div class="loading">Cargando...</div></div>';
+
+ function cargarLista(){
+  Promise.all([
+   from('usuarios').select('id,nombre,rol,activo').get(),
+   from('gastos').select('*').order('fecha',{ascending:false}).limit(80).get()
+  ]).then(function(rr){
+   var us=(rr[0]||[]).filter(function(u){return u.activo!==false&&['admin','dueño','inversionista'].indexOf(u.rol)<0;});
+   var sel=document.getElementById('ap98-op');
+   if(sel&&sel.options.length<=1)sel.innerHTML='<option value="">Selecciona...</option>'+us.map(function(u){return '<option value="'+u.id+'">'+u.nombre+'</option>';}).join('');
+   var apoyos=(rr[1]||[]).filter(ap98EsApoyo).slice(0,30),list=document.getElementById('ap98-list');
+   if(!list)return;
+   list.innerHTML=apoyos.length?apoyos.map(function(g){
+    var m=ap98Meta(g.concepto)||{},nom=m.nombre||'Colaborador';
+    return '<div class="orden-card" style="padding:.7rem .85rem;"><div style="display:flex;justify-content:space-between;gap:8px;"><div><strong>⛽ '+nom+'</strong><div class="orden-meta">'+ap98Concepto(g)+' · '+g.fecha+'</div></div><strong style="color:var(--verde);">+$'+parseFloat(g.monto||0).toFixed(2)+'</strong></div></div>';
+   }).join(''):'<div class="empty">No hay apoyos registrados.</div>';
+  }).catch(function(e){var l=document.getElementById('ap98-list');if(l)l.innerHTML='<div class="empty">Error: '+e.message+'</div>';});
+ }
+ document.getElementById('ap98-tipo').onchange=function(){document.getElementById('ap98-otro-wrap').style.display=this.value==='Otro apoyo'?'block':'none';};
+ document.getElementById('ap98-guardar').onclick=function(){
+  var op=document.getElementById('ap98-op'),opId=op.value,nombre=op.options[op.selectedIndex]?op.options[op.selectedIndex].text:'';
+  var tipo=document.getElementById('ap98-tipo').value;
+  var concepto=tipo==='Otro apoyo'?(document.getElementById('ap98-otro').value||'').trim():tipo;
+  var monto=parseFloat(document.getElementById('ap98-monto').value||0),fecha=document.getElementById('ap98-fecha').value;
+  if(!opId){alert('Selecciona al colaborador.');return;}
+  if(!concepto){alert('Describe el apoyo.');return;}
+  if(!monto||monto<=0){alert('Captura el monto.');return;}
+  if(!fecha){alert('Captura la fecha.');return;}
+  var meta={operario_id:opId,nombre:nombre,tipo:concepto,origen:'nomina_apoyo'};
+  var btn=this;btn.disabled=true;btn.textContent='Guardando...';
+  from('gastos').insert({categoria:'otros',monto:monto,fecha:fecha,proveedor_id:null,concepto:ap98Desc(meta,concepto),inventario_item_id:null,cantidad:null,comprobante_url:null,registrado_por:usuario.id,forma_pago:'Nómina',fecha_vencimiento:null,estado_pago:'pendiente',notificado_vencimiento:false,compra_id:null})
+   .then(function(){showToast('✅ Apoyo registrado · se reflejará en Nómina');document.getElementById('ap98-monto').value='';btn.disabled=false;btn.textContent='Registrar apoyo';cargarLista();})
+   .catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Registrar apoyo';});
+ };
+ cargarLista();
 }
 
 var cosecha={plantacionId:null,tablaId:null,surcos:[],operarios:[],fecha:null,notas:null};
@@ -11203,7 +11312,8 @@ function renderCartera(fechaRef){
     from('permisos').select('*').eq('usuario_id',usuario.id).eq('estado','aprobado').get(),
     from('bono_beneficiarios').select('*').eq('operario_id',usuario.id).get(),
     from('horas_extra_asignadas').select('operario_id,fecha,horas_max,estado').eq('operario_id',usuario.id).gte('fecha',semanaInicio).lte('fecha',semanaFin).eq('estado','aprobada').get(),
-    from('nomina_ajustes').select('*').eq('operario_id',usuario.id).eq('semana_inicio',semanaInicio).get()
+    from('nomina_ajustes').select('*').eq('operario_id',usuario.id).eq('semana_inicio',semanaInicio).get(),
+    from('gastos').select('*').gte('fecha',semanaInicio).lte('fecha',semanaFin).get()
   ]).then(function(r){
     var sueldoBase=(r[0]&&r[0][0]&&r[0][0].sueldo_base)||0;
     var registros=r[1]||[];
@@ -11217,6 +11327,8 @@ function renderCartera(fechaRef){
     var bonosYaOtorgadosIds={}; (r[8]||[]).forEach(function(bb){bonosYaOtorgadosIds[bb.bono_id]=true;});
     var horasExtraAsignadas=r[9]||[];
     var ajuste=(r[10]&&r[10][0])||null;
+    var apoyosOp=(r[11]||[]).filter(function(g){var am=ap98Meta(g.concepto)||{};return String(am.operario_id)===String(usuario.id);});
+    var totalApoyos=apoyosOp.reduce(function(s,g){return s+(parseFloat(g.monto)||0);},0);
 
     var resumen=calcularResumenAsistencia(registros,semanaInicio,permisosAprobados);
     var diasPagados=(ajuste&&ajuste.dias_trabajados_override!=null)?parseFloat(ajuste.dias_trabajados_override||0):parseFloat(resumen.diasPagados||0);
@@ -11252,7 +11364,7 @@ function renderCartera(fechaRef){
       var deducciones=(deduccionesRows||[]).filter(function(d){return d.estado==='pendiente';});
       var totalDeducciones=deducciones.reduce(function(s,d){return s+(parseFloat(d.monto)||0);},0);
 
-      var total=totalSueldo+totalExtra+totalBonos-totalDeducciones;
+      var total=totalSueldo+totalExtra+totalBonos+totalApoyos-totalDeducciones;
       var todoLoAplicablePagado = pagadoSueldo && (!hayExtra||pagadoExtra);
 
       var mesInicio=lunes.toLocaleDateString('es-MX',{month:'long'});
@@ -11278,7 +11390,11 @@ function renderCartera(fechaRef){
       if(resumen.diasPermisoSinGoce) html+='<div class="resumen-row"><span class="resumen-key">🩺 Permiso sin goce</span><span class="resumen-val" style="color:var(--gris-3);">'+resumen.diasPermisoSinGoce+' día(s) no pagado(s)</span></div>';
       if(hayExtra) html+='<div class="resumen-row"><span class="resumen-key">⏰ Horas extra ('+horasExtra.toFixed(1)+'h)</span><span class="resumen-val" style="color:var(--verde-mid);">+$'+totalExtra.toFixed(2)+' '+(pagadoExtra?'✅':'⏳')+'</span></div>';
       bonosQueCalifican.forEach(function(b){
-        html+='<div class="resumen-row"><span class="resumen-key">🎁 '+b.descripcion+(b.umbral_minimo?' (cumpliste '+b.umbral_minimo+'/10)':'')+'</span><span class="resumen-val" style="color:var(--verde-mid);">+$'+parseFloat(b.monto||0).toFixed(2)+'</span></div>';
+        var conceptoBono=bo97ConceptoBono(b);
+        html+='<div class="resumen-row"><span class="resumen-key">🎁 Bono · '+conceptoBono+(b.umbral_minimo?' (cumpliste '+b.umbral_minimo+'/10)':'')+'</span><span class="resumen-val" style="color:var(--verde-mid);">+$'+parseFloat(b.monto||0).toFixed(2)+'</span></div>';
+      });
+      apoyosOp.forEach(function(g){
+        html+='<div class="resumen-row"><span class="resumen-key">⛽ Apoyo · '+ap98Concepto(g)+'</span><span class="resumen-val" style="color:var(--verde-mid);">+$'+parseFloat(g.monto||0).toFixed(2)+'</span></div>';
       });
       deducciones.forEach(function(d){
         var pr=prestamosActivos.find(function(p){return p.id===d.prestamo_id;});
@@ -11301,7 +11417,7 @@ function renderCartera(fechaRef){
           resumen:Object.assign({},resumen,{diasPagados:diasPagados}),
           sueldoBase:sueldoBase,totalSueldo:totalSueldo,tarifa:tarifaOp,
           horasExtra:horasExtra,totalExtra:totalExtra,
-          bonos:bonosQueCalifican.map(function(b){return {id:b.id,descripcion:b.descripcion,monto:parseFloat(b.monto||0)};}),
+          bonos:bonosQueCalifican.map(function(b){return {id:b.id,descripcion:bo97ConceptoBono(b),monto:parseFloat(b.monto||0)};}),apoyos:apoyosOp.map(function(g){return {id:g.id,concepto:ap98Concepto(g),monto:parseFloat(g.monto||0)};}),
           deducciones:deducciones.map(function(d){var pr=prestamosActivos.find(function(p){return p.id===d.prestamo_id;});return {concepto:pr?pr.concepto:'Préstamo',numero:d.numero_pago,monto:parseFloat(d.monto||0)};}),
           granTotal:total,nominaCompleta:todoLoAplicablePagado
         });
