@@ -740,7 +740,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ca22-op.nomina-gold{border-top:4px solid #c59a12!important}
 
 
-/* C085 — Cartera empleado espejo de cálculo Administración/Nómina */
+/* C086 — App empleado refleja Nómina oficial; ignora bonos económicos locales del dispositivo */
 .ca22-op.nomina-gold{border-top:4px solid #c59a12!important}
 .no49-paybox{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;padding:8px 10px;background:#fbfaf4;border:1px solid #eadfb7;border-radius:10px}
 .no49-payfield{display:flex;flex-direction:column;gap:3px}
@@ -11062,23 +11062,9 @@ function renderCartera(fechaRef){
       var bonosQueCalifican=bonosAutorizados.concat(bonosNuevos.filter(function(b){return !bonosAutorizados.some(function(a){return a.id===b.id;});}));
       var totalBonos=bonosQueCalifican.reduce(function(s,b){return s+(parseFloat(b.monto)||0);},0);
 
-      // C085: espejo exacto de Administración/Nómina para complementos locales del expediente.
-      var bonoGasolina=parseFloat(
-        ex54Op.bono_gasolina!=null?ex54Op.bono_gasolina:
-        (ex54Op.gasolina!=null?ex54Op.gasolina:
-        (ex54Op.bono_transporte!=null?ex54Op.bono_transporte:0))
-      )||0;
-      if(bonoGasolina>0 && !bonosQueCalifican.some(function(b){
-        return String(b.descripcion||'').toLowerCase().indexOf('gasolina')>=0;
-      })){
-        totalBonos+=bonoGasolina;
-        bonosQueCalifican=bonosQueCalifican.concat([{
-          id:'gasolina-'+usuario.id,
-          descripcion:'Bono gasolina',
-          monto:bonoGasolina,
-          _localGasolina:true
-        }]);
-      }
+      // C086: la aplicación del empleado NO incorpora bonos económicos locales.
+      // Sólo muestra bonos compartidos/autorizados en la nómina oficial.
+      // Esto evita que localStorage de un celular altere el neto frente a Administración.
 
       return from('prestamo_pagos').select('*').in('prestamo_id',prestamosActivos.map(function(p){return p.id;})||['00000000-0000-0000-0000-000000000000']).eq('semana_inicio',semanaInicio).get().then(function(deduccionesRows){
       var deducciones=(deduccionesRows||[]).filter(function(d){return d.estado==='pendiente';});
@@ -11103,7 +11089,7 @@ function renderCartera(fechaRef){
       html+='<div style="display:inline-block;margin-top:.5rem;padding:.3rem 1rem;border-radius:20px;background:'+(todoLoAplicablePagado?'var(--verde-tenue)':'var(--tierra-tenue)')+';color:'+(todoLoAplicablePagado?'var(--verde-mid)':'var(--tierra)')+';font-weight:700;font-size:.8rem;">'+(todoLoAplicablePagado?'✅ Depositado':'⏳ Pendiente de depósito')+'</div>';
       html+='</div>';
 
-      html+='<div style="margin-top:.7rem;padding:.55rem .7rem;border-radius:9px;background:#eef7f1;border:1px solid #d2e6d9;color:#315849;font-size:.64rem;"><strong>Nómina sincronizada:</strong> esta vista usa el mismo cálculo de Administración para días pagados, H.E., bonos, préstamos y ajustes de la semana.</div>';
+      html+='<div style="margin-top:.7rem;padding:.55rem .7rem;border-radius:9px;background:#eef7f1;border:1px solid #d2e6d9;color:#315849;font-size:.64rem;"><strong>Nómina oficial:</strong> esta vista refleja Administración → Caja → Nómina. Los bonos guardados sólo en este dispositivo no se consideran.</div>';
       html+='<div class="form-card" style="margin-top:.75rem;">';
       html+='<div class="resumen-row"><span class="resumen-key">💵 Sueldo ('+diasPagados.toFixed(1)+' días pagados)</span><span class="resumen-val" style="color:var(--verde-mid);">+$'+totalSueldo.toFixed(2)+' '+(pagadoSueldo?'✅':'⏳')+'</span></div>';
       if(resumen.retardos) html+='<div class="resumen-row"><span class="resumen-key">🕐 Retardos</span><span class="resumen-val" style="color:var(--gris-3);">'+resumen.retardos+' · informativo, sin descuento automático</span></div>';
