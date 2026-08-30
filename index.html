@@ -8126,7 +8126,7 @@ function renderEditarInversion(inversionId){
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
-/* C090 — Sueldos por personal activo + separación Inversionistas/Dueños de Expedientes */
+/* C091 — Compensaciones con 3 accesos + Bonos como campañas de objetivos */
 
 function no89CerrarModal(){var x=document.getElementById('no89-overlay');if(x)x.remove();}
 function no89AbrirModal(titulo,tamano){
@@ -8144,7 +8144,7 @@ function renderAdministracionMenu(){
   body.innerHTML='<div class="ad17-shell"><div class="ad17-head"><div><div class="ad17-eyebrow">Administración</div><div class="ad17-title">Control del Rancho</div><div class="ad17-sub">Finanzas, personal, compras y operación administrativa de Mootsil.</div></div></div><div class="ad17-grid">'+
     '<div class="ad17-card primary" data-admin="caja"><div class="ic">💵</div><h3>Caja</h3><p>Entradas, salidas, pagos, movimientos y control financiero operativo.</p></div>'+
     '<div class="ad17-card blue em60-card" data-admin="empleados"><div class="ic">👥</div><h3>Empleados</h3><p>Expedientes, asistencia y solicitudes del personal.</p><div class="em60-actions"><button type="button" data-empgo="expedientes">👤 Expedientes</button><button type="button" data-empgo="asistencia">📋 Asistencia</button><button type="button" data-empgo="solicitudes">📨 Solicitudes</button></div></div>'+
-    '<div class="ad17-card gold em60-card" data-admin="compensaciones"><div class="ic">💰</div><h3>Nómina y Compensaciones</h3><p>Sueldos, bonos, préstamos e historial de nómina.</p><div class="em60-actions"><button type="button" data-compgo="sueldos">💵 Sueldos</button><button type="button" data-compgo="bonos">🎁 Bonos</button><button type="button" data-compgo="prestamos">📝 Préstamos</button><button type="button" data-compgo="historial">📊 Historial</button></div></div>'+
+    '<div class="ad17-card gold em60-card" data-admin="compensaciones"><div class="ic">💰</div><h3>Nómina y Compensaciones</h3><p>Bonos, préstamos e historial de nómina.</p><div class="em60-actions"><button type="button" data-compgo="bonos">🎁 Bonos</button><button type="button" data-compgo="prestamos">📝 Préstamos</button><button type="button" data-compgo="historial">📊 Historial</button></div></div>'+
     '<div class="ad17-card orange" data-admin="gastos"><div class="ic">🧾</div><h3>Compras y Gastos</h3><p>Compras, proveedores, cuentas por pagar e historial.</p></div>'+
     '<div class="ad17-card primary" data-admin="eventual"><div class="ic">🧑‍🌾</div><h3>Labores Eventual</h3><p>Registro y pago del personal eventual por día.</p></div>'+
     '<div class="ad17-card purple" data-admin="inversionistas"><div class="ic">💼</div><h3>Inversionistas y Dueños</h3><p>Perfiles patrimoniales, aportaciones, contratos, movimientos y devoluciones.</p></div>'+
@@ -8153,8 +8153,7 @@ function renderAdministracionMenu(){
   body.querySelector('[data-empgo="expedientes"]').addEventListener('click',function(e){e.stopPropagation();renderAltasBajas();});
   body.querySelector('[data-empgo="asistencia"]').addEventListener('click',function(e){e.stopPropagation();em69RenderAsistencia(fechaHoyLocal());});
   body.querySelector('[data-empgo="solicitudes"]').addEventListener('click',function(e){e.stopPropagation();em69RenderSolicitudes();});
-  body.querySelector('[data-compgo="sueldos"]').addEventListener('click',function(e){e.stopPropagation();no89AbrirModal('💵 Sueldos');renderPersonalSueldos();});
-  body.querySelector('[data-compgo="bonos"]').addEventListener('click',function(e){e.stopPropagation();no89AbrirModal('🎁 Bonos','compact');renderBonos();});
+  body.querySelector('[data-compgo="bonos"]').addEventListener('click',function(e){e.stopPropagation();no89AbrirModal('🎁 Bonos');renderBonos();});
   body.querySelector('[data-compgo="prestamos"]').addEventListener('click',function(e){e.stopPropagation();no89AbrirModal('📝 Préstamos');renderPrestamos();});
   body.querySelector('[data-compgo="historial"]').addEventListener('click',function(e){e.stopPropagation();no89AbrirModal('📊 Historial de nómina');renderResumenNomina();});
   body.querySelector('[data-admin="gastos"]').addEventListener('click',renderComprasMenu);
@@ -9563,19 +9562,32 @@ function renderGenerarNomina(fechaRef){
     var bonosDeLaSemana=bonosActivos.filter(function(b){return !(b.periodo_fin<semanaInicio||b.periodo_inicio>semanaFin);});
     // C080: los bonos de EQUIPO sí aplican al equipo completo.
     // Los bonos INDIVIDUALES, tengan o no umbral, sólo aplican al beneficiario autorizado.
-    var bonosSinUmbral=bonosDeLaSemana.filter(function(b){return b.tipo==='equipo';});
+    var bonosSinUmbral=bonosDeLaSemana.filter(function(b){return b.tipo==='equipo'&&!b.umbral_minimo;});
     var bonosConUmbral=bonosDeLaSemana.filter(function(b){return b.tipo==='individual'&&b.umbral_minimo;});
+    var bonosEquipoConUmbral=bonosDeLaSemana.filter(function(b){return b.tipo==='equipo'&&b.umbral_minimo;});
     var bonosYaOtorgadosPorOp={};
     bonoBeneficiarios.forEach(function(bb){
       if(!bonosYaOtorgadosPorOp[bb.operario_id])bonosYaOtorgadosPorOp[bb.operario_id]={};
       bonosYaOtorgadosPorOp[bb.operario_id][bb.bono_id]=true;
     });
 
-    Promise.all(operarios.map(function(o){
-      return Promise.all(bonosConUmbral.map(function(b){
-        return calcularScoreOperario(o.id,b.periodo_inicio,b.periodo_fin).then(function(score){return {bono:b,score:score.final};});
-      }));
-    })).then(function(scoresPorOp){
+    Promise.all([
+      Promise.all(operarios.map(function(o){
+        return Promise.all(bonosConUmbral.map(function(b){
+          return calcularScoreOperario(o.id,b.periodo_inicio,b.periodo_fin).then(function(score){return {bono:b,score:score.final};});
+        }));
+      })),
+      Promise.all(bonosEquipoConUmbral.map(function(b){
+        return Promise.all(operarios.map(function(o){return calcularScoreOperario(o.id,b.periodo_inicio,b.periodo_fin);})).then(function(scores){
+          var vals=scores.map(function(s){return parseFloat(s.final)||0;});
+          var promedio=vals.length?vals.reduce(function(a,v){return a+v;},0)/vals.length:0;
+          return {bono:b,score:promedio};
+        });
+      }))
+    ]).then(function(scorePack){
+      var scoresPorOp=scorePack[0]||[];
+      var scoresEquipo=scorePack[1]||[];
+      var bonosEquipoCalifican=scoresEquipo.filter(function(x){return x.score>=parseFloat(x.bono.umbral_minimo);}).map(function(x){return x.bono;});
 
       var accionesPago={};
       var filas=[];
@@ -9606,9 +9618,9 @@ function renderGenerarNomina(fechaRef){
         var scoresOp=scoresPorOp[idx]||[];
         var bonosUmbralCalifican=scoresOp.filter(function(x){return x.score>=parseFloat(x.bono.umbral_minimo);}).map(function(x){return x.bono;});
         var bonosAutorizados=bonosDeLaSemana.filter(function(b){return !!yaOtorgados[b.id];});
-        var bonosNuevos=bonosSinUmbral.concat(bonosUmbralCalifican).filter(function(b){return !yaOtorgados[b.id];});
+        var bonosNuevos=bonosSinUmbral.concat(bonosUmbralCalifican).concat(bonosEquipoCalifican).filter(function(b){return !yaOtorgados[b.id];});
         var bonosQueCalifican=bonosAutorizados.concat(bonosNuevos.filter(function(b){return !bonosAutorizados.some(function(a){return a.id===b.id;});}));
-        var montoBonos=bonosQueCalifican.reduce(function(s,b){return s+(parseFloat(b.monto)||0);},0);
+        var montoBonos=bonosQueCalifican.reduce(function(s,b){return s+(b.tipo_recompensa==='economico'?(parseFloat(b.monto)||0):0);},0);
         var bonoGasolina=parseFloat(ex54Op.bono_gasolina!=null?ex54Op.bono_gasolina:(ex54Op.gasolina!=null?ex54Op.gasolina:(ex54Op.bono_transporte!=null?ex54Op.bono_transporte:0)))||0;
         if(bonoGasolina>0 && !bonosQueCalifican.some(function(b){return String(b.descripcion||'').toLowerCase().indexOf('gasolina')>=0;})){
           montoBonos+=bonoGasolina;
@@ -10294,45 +10306,138 @@ function renderNuevoPrestamo(prefill){
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
+
+function bo91FmtFecha(f){
+  if(!f)return '—';
+  try{return new Date(f+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});}catch(e){return f;}
+}
+function bo91ToggleForm(){
+  var x=document.getElementById('bo91-form-wrap');
+  if(!x)return;
+  x.style.display=(x.style.display==='none'||!x.style.display)?'block':'none';
+  if(x.style.display==='block'){var d=document.getElementById('bo91-objetivo');if(d)d.focus();}
+}
+function bo91CambiarRecompensa(){
+  var rec=document.querySelector('#no89-body [data-rec].sel');
+  if(!rec)return;
+  var econ=document.getElementById('bo91-economico');
+  var esp=document.getElementById('bo91-especie');
+  if(econ)econ.style.display=rec.dataset.rec==='economico'?'block':'none';
+  if(esp)esp.style.display=rec.dataset.rec==='especie'?'block':'none';
+}
 function renderBonos(){
   var body=document.getElementById('no89-body')||document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🎁 Bonos<button type="button" onclick="renderNuevoBono()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo bono</button></div><div class="loading">Cargando...</div>';
+  var hoy=fechaHoyLocal();
+  var dHoy=new Date(hoy+'T12:00:00'), dow=dHoy.getDay(), delta=(dow===0?-6:1-dow);
+  var lunes=new Date(dHoy);lunes.setDate(lunes.getDate()+delta);
+  var domingo=new Date(lunes);domingo.setDate(domingo.getDate()+6);
+  function iso(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+  var desdeDef=iso(lunes), hastaDef=iso(domingo);
+
+  body.innerHTML=
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px;">'+
+      '<div><div class="seccion-titulo" style="margin:0;">🎁 Campañas de Bonos</div><div class="hint" style="margin-top:.25rem;">Administración publica objetivos individuales o de equipo. La recompensa económica entra a Nómina al cumplirse; en especie se atiende mediante Compras y Gastos.</div></div>'+
+      '<button type="button" class="btn-sm btn-completar" onclick="bo91ToggleForm()">+ Nueva campaña</button>'+
+    '</div>'+
+    '<div id="bo91-form-wrap" style="display:none;margin-bottom:12px;">'+
+      '<div class="form-card" style="margin:0;padding:1rem;">'+
+        '<div style="font-weight:850;color:var(--verde);margin-bottom:.75rem;">Nueva campaña</div>'+
+        '<div class="form-group"><label>Modalidad</label><div style="display:flex;gap:8px;flex-wrap:wrap;"><button type="button" class="op-chip sel" data-tipo="individual" onclick="seleccionUnica(this)">👤 Individual</button><button type="button" class="op-chip" data-tipo="equipo" onclick="seleccionUnica(this)">🤝 Equipo</button></div><p class="hint">Individual: cada colaborador alcanza la meta por su propio resultado. Equipo: se evalúa el promedio del equipo y, si alcanza la meta, todos obtienen la recompensa.</p></div>'+
+        '<div class="form-group"><label>Objetivo claro y alcanzable</label><input type="text" id="bo91-objetivo" placeholder="Ej. Mantener rendimiento semanal mínimo de 8.5/10"></div>'+
+        '<div class="form-group"><label>Meta de rendimiento (1 a 10)</label><input type="number" id="bo91-meta" min="1" max="10" step="0.5" placeholder="Ej. 8.5"><p class="hint">Mootsil usa el indicador de rendimiento registrado en la plataforma para validar automáticamente el cumplimiento.</p></div>'+
+        '<div class="form-group"><label>Tipo de recompensa</label><div style="display:flex;gap:8px;flex-wrap:wrap;"><button type="button" class="op-chip sel" data-rec="economico" onclick="seleccionUnica(this);bo91CambiarRecompensa()">💰 Económico</button><button type="button" class="op-chip" data-rec="especie" onclick="seleccionUnica(this);bo91CambiarRecompensa()">🎁 En especie</button></div></div>'+
+        '<div class="form-group" id="bo91-economico"><label>Monto por colaborador ($)</label><input type="number" id="bo91-monto" min="0" step="1" placeholder="Ej. 500"><p class="hint">Cuando la meta se cumple, el importe se refleja en Nómina de la semana correspondiente.</p></div>'+
+        '<div class="form-group" id="bo91-especie" style="display:none;"><label>Recompensa en especie</label><input type="text" id="bo91-premio" placeholder="Ej. Bocina Bluetooth / Termo / Herramienta"><p class="hint">No suma dinero a Nómina. Al alcanzarse queda pendiente de compra/entrega en Compras y Gastos.</p></div>'+
+        '<div class="form-group"><label>Periodo de la campaña</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><input type="date" id="bo91-desde" value="'+desdeDef+'"><input type="date" id="bo91-hasta" value="'+hastaDef+'"></div></div>'+
+        '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;"><button type="button" class="btn-sm" onclick="bo91ToggleForm()">Cancelar</button><button type="button" class="btn-primary" id="bo91-publicar" style="width:auto;padding:.65rem 1rem;">Publicar campaña</button></div>'+
+      '</div>'+
+    '</div>'+
+    '<div id="bo91-list"><div class="loading">Cargando campañas...</div></div>';
+
+  document.getElementById('bo91-publicar').addEventListener('click',function(){
+    var tipo=document.querySelector('#no89-body [data-tipo].sel');
+    var rec=document.querySelector('#no89-body [data-rec].sel');
+    var objetivo=(document.getElementById('bo91-objetivo').value||'').trim();
+    var meta=parseFloat(document.getElementById('bo91-meta').value);
+    var desde=document.getElementById('bo91-desde').value, hasta=document.getElementById('bo91-hasta').value;
+    if(!objetivo){alert('Describe el objetivo de la campaña.');return;}
+    if(isNaN(meta)||meta<1||meta>10){alert('Define una meta de rendimiento entre 1 y 10.');return;}
+    if(!desde||!hasta||hasta<desde){alert('Revisa el periodo de la campaña.');return;}
+    var monto=null, premio='';
+    if(rec.dataset.rec==='economico'){
+      monto=parseFloat(document.getElementById('bo91-monto').value);
+      if(isNaN(monto)||monto<=0){alert('Captura el monto de la recompensa económica.');return;}
+    }else{
+      premio=(document.getElementById('bo91-premio').value||'').trim();
+      if(!premio){alert('Describe la recompensa en especie.');return;}
+    }
+    var descripcion=rec.dataset.rec==='especie'?(objetivo+' · Recompensa: '+premio):objetivo;
+    var btn=this;btn.disabled=true;btn.textContent='Publicando...';
+    from('bonos').insert({
+      tipo:tipo.dataset.tipo,
+      tipo_recompensa:rec.dataset.rec,
+      descripcion:descripcion,
+      monto:monto,
+      umbral_minimo:meta,
+      periodo_inicio:desde,
+      periodo_fin:hasta,
+      activado_por:usuario.id,
+      estado:'activo'
+    }).then(function(){
+      return from('notificaciones').insert({
+        titulo:'🎯 Nueva campaña de bono',
+        cuerpo:objetivo+' · '+(rec.dataset.rec==='economico'?('$'+monto):premio)+' · '+bo91FmtFecha(desde)+' a '+bo91FmtFecha(hasta),
+        icono:'🎁',leida:false,para_rol:'operario'
+      });
+    }).then(function(){
+      showToast('✅ Campaña publicada');
+      renderBonos();
+    }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Publicar campaña';});
+  });
+
   from('bonos').select('*').order('creado_en',{ascending:false}).get().then(function(rows){
-    if(!rows||!rows.length){body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🎁 Bonos<button type="button" onclick="renderNuevoBono()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo bono</button></div><div class="empty">Sin bonos registrados.</div><button class="btn-back" style="margin-top:1rem;" onclick="no89CerrarModal()">← Cerrar</button>';return;}
-    var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🎁 Bonos<button type="button" onclick="renderNuevoBono()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo bono</button></div>';
-    html+=rows.map(function(b){
-      return '<div class="orden-card" style="border-left-color:'+(b.estado==='activo'?'var(--verde-mid)':'var(--gris-3)')+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(b.tipo==='equipo'?'🤝 Equipo':'👤 Individual')+' · '+(b.tipo_recompensa==='economico'?'💰 Económico':'🎁 En especie')+(b.monto?' · $'+b.monto:'')+'</strong><span style="font-size:.72rem;font-weight:700;color:'+(b.estado==='activo'?'var(--verde-mid)':'var(--gris-3)')+';">'+(b.estado==='activo'?'Activo':'Cerrado')+'</span></div><div class="orden-meta">'+b.descripcion+(b.umbral_minimo?'<br/>Requiere '+b.umbral_minimo+'/10 de rendimiento':'')+'<br/>📅 '+b.periodo_inicio+' a '+b.periodo_fin+'</div>'+(b.estado==='activo'?'<button class="btn-sm btn-cancelar" data-cerrar="'+b.id+'" style="margin-top:.5rem;">Cerrar bono</button>':'')+'</div>';
-    }).join('');
-    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="no89CerrarModal()">← Cerrar</button>';
-    body.querySelectorAll('[data-cerrar]').forEach(function(btn){btn.addEventListener('click',function(){
-      from('bonos').eq('id',this.dataset.cerrar).update({estado:'cerrado'}).then(function(){showToast('Bono cerrado');renderBonos();});
-    });});
-  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+    rows=rows||[];
+    var list=document.getElementById('bo91-list');if(!list)return;
+    var activas=rows.filter(function(b){return b.estado==='activo';});
+    var cerradas=rows.filter(function(b){return b.estado!=='activo';});
+    function card(b){
+      var esEco=b.tipo_recompensa==='economico';
+      var recompensa=esEco?('$'+parseFloat(b.monto||0).toFixed(2)):(String(b.descripcion||'').indexOf('Recompensa:')>=0?String(b.descripcion).split('Recompensa:')[1].trim():'En especie');
+      var objetivo=String(b.descripcion||'');
+      if(!esEco&&objetivo.indexOf(' · Recompensa:')>=0)objetivo=objetivo.split(' · Recompensa:')[0];
+      return '<div class="orden-card" style="border-left-color:'+(b.estado==='activo'?'var(--verde-mid)':'var(--gris-3)')+';">'+
+        '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;"><div><strong style="font-size:.9rem;">'+(b.tipo==='equipo'?'🤝 Equipo':'👤 Individual')+' · '+(esEco?'💰 Económico':'🎁 En especie')+'</strong><div class="orden-meta" style="margin-top:.25rem;"><b>Objetivo:</b> '+objetivo+'<br><b>Meta:</b> '+(b.umbral_minimo||'—')+'/10 · <b>Recompensa:</b> '+recompensa+'<br>📅 '+bo91FmtFecha(b.periodo_inicio)+' a '+bo91FmtFecha(b.periodo_fin)+'</div></div><span style="font-size:.72rem;font-weight:800;color:'+(b.estado==='activo'?'var(--verde-mid)':'var(--gris-3)')+';">'+(b.estado==='activo'?'ACTIVA':'CERRADA')+'</span></div>'+
+        '<div style="display:flex;gap:8px;margin-top:.6rem;flex-wrap:wrap;">'+
+          (b.estado==='activo'?'<button class="btn-sm btn-cancelar" data-cerrar="'+b.id+'">Cerrar campaña</button>':'')+
+          (!esEco?'<button class="btn-sm" data-compras="1">Ir a Compras y Gastos</button>':'')+
+        '</div></div>';
+    }
+    var h='<div class="seccion-titulo" style="margin-top:.2rem;">Campañas activas</div>';
+    h+=activas.length?activas.map(card).join(''):'<div class="empty">No hay campañas activas.</div>';
+    if(cerradas.length){
+      h+='<div class="seccion-titulo" style="margin-top:1rem;">Historial</div>'+cerradas.map(card).join('');
+    }
+    list.innerHTML=h;
+    list.querySelectorAll('[data-cerrar]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        if(!confirm('¿Cerrar esta campaña de bono?'))return;
+        from('bonos').eq('id',this.dataset.cerrar).update({estado:'cerrado'}).then(function(){showToast('Campaña cerrada');renderBonos();});
+      });
+    });
+    list.querySelectorAll('[data-compras]').forEach(function(btn){
+      btn.addEventListener('click',function(){no89CerrarModal();renderComprasMenu();});
+    });
+  }).catch(function(e){
+    var list=document.getElementById('bo91-list');if(list)list.innerHTML='<div class="loading">Error: '+e.message+'</div>';
+  });
 }
 
+/* Alias conservado por compatibilidad con enlaces anteriores */
 function renderNuevoBono(){
-  var body=document.getElementById('no89-body')||document.getElementById('enc-body');
-  var hoyD=new Date();
-  var primerDiaMes=new Date(hoyD.getFullYear(),hoyD.getMonth(),1).toISOString().slice(0,10);
-  var ultimoDiaMes=new Date(hoyD.getFullYear(),hoyD.getMonth()+1,0).toISOString().slice(0,10);
-  body.innerHTML='<div class="seccion-titulo">+ Nuevo bono</div><div class="form-card"><div class="form-group"><label>Tipo</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip sel" data-tipo="individual" onclick="seleccionUnica(this)">👤 Individual</button><button type="button" class="op-chip" data-tipo="equipo" onclick="seleccionUnica(this)">🤝 Equipo</button></div></div><div class="form-group"><label>Tipo de recompensa</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip sel" data-rec="economico" onclick="seleccionUnica(this)">💰 Económico</button><button type="button" class="op-chip" data-rec="especie" onclick="seleccionUnica(this)">🎁 En especie</button></div></div><div class="form-group" id="bo-monto-wrap"><label>Monto ($)</label><input type="number" id="bo-monto" min="0" step="1" placeholder="Ej. 500"><p class="hint">Se sumará automáticamente a su Cartera cuando califique.</p></div><div class="form-group"><label>Descripción</label><input type="text" id="bo-desc" placeholder="Ej. Bono de productividad / Día libre adicional"></div><div class="form-group"><label>Rendimiento mínimo requerido (opcional)</label><input type="number" id="bo-umbral" min="1" max="10" step="0.5" placeholder="Ej. 8.5"></div><div class="form-group"><label>Periodo</label><div style="display:flex;gap:8px;"><input type="date" id="bo-desde" value="'+primerDiaMes+'"><input type="date" id="bo-hasta" value="'+ultimoDiaMes+'"></div></div><button class="btn-primary" id="bo-guardar">Activar bono</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderBonos()">← Volver a Bonos</button>';
-  document.querySelectorAll('[data-rec]').forEach(function(b){b.addEventListener('click',function(){
-    document.getElementById('bo-monto-wrap').style.display=this.dataset.rec==='economico'?'':'none';
-  });});
-  document.getElementById('bo-guardar').addEventListener('click',function(){
-    var tipoBtn=document.querySelector('[data-tipo].sel'), recBtn=document.querySelector('[data-rec].sel');
-    var desc=document.getElementById('bo-desc').value.trim();
-    if(!desc){alert('Describe el bono.');return;}
-    var monto=recBtn.dataset.rec==='economico'?(parseFloat(document.getElementById('bo-monto').value)||null):null;
-    var umbral=document.getElementById('bo-umbral').value||null;
-    var desde=document.getElementById('bo-desde').value, hasta=document.getElementById('bo-hasta').value;
-    from('bonos').insert({tipo:tipoBtn.dataset.tipo,tipo_recompensa:recBtn.dataset.rec,descripcion:desc,monto:monto,umbral_minimo:umbral,periodo_inicio:desde,periodo_fin:hasta,activado_por:usuario.id,estado:'activo'}).then(function(){
-      return from('notificaciones').insert({titulo:'🎁 Nuevo bono activo',cuerpo:usuario.nombre+' activó un bono: '+desc+(monto?' ($'+monto+')':''),icono:'🎁',leida:false,para_rol:'operario'});
-    }).then(function(){
-      showToast('✅ Bono activado');
-      renderBonos();
-    }).catch(function(e){alert('Error: '+e.message);});
-  });
+  var x=document.getElementById('bo91-form-wrap');
+  if(!x){renderBonos();setTimeout(function(){bo91ToggleForm();},100);return;}
+  x.style.display='block';
+  var d=document.getElementById('bo91-objetivo');if(d)d.focus();
 }
 
 var cosecha={plantacionId:null,tablaId:null,surcos:[],operarios:[],fecha:null,notas:null};
