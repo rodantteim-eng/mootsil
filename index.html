@@ -8178,7 +8178,7 @@ function renderAdministracionMenu(){
     '<div class="ad17-card primary" data-admin="caja"><div class="ic">💵</div><h3>Caja</h3><p>Entradas, salidas, pagos, movimientos y control financiero operativo.</p></div>'+
     '<div class="ad17-card blue em60-card" data-admin="empleados"><div class="ic">👥</div><h3>Empleados</h3><p>Expedientes, asistencia y solicitudes del personal.</p><div class="em60-actions"><button type="button" data-empgo="expedientes">👤 Expedientes</button><button type="button" data-empgo="asistencia">📋 Asistencia</button><button type="button" data-empgo="solicitudes">📨 Solicitudes</button></div></div>'+
     '<div class="ad17-card gold em60-card" data-admin="compensaciones"><div class="ic">💰</div><h3>Nómina y Compensaciones</h3><p>Bonos por objetivos y apoyos económicos al personal.</p><div class="em60-actions"><button type="button" data-compgo="bonos">🎯 Bonos</button><button type="button" data-compgo="apoyos">⛽ Apoyos</button></div></div>'+
-    '<div class="ad17-card orange" data-admin="gastos"><div class="ic">🧾</div><h3>Compras y Proveedores</h3><p>Compras, proveedores, cuentas por pagar, órdenes e historial.</p></div>'+
+    '<div class="ad17-card orange em60-card" data-admin="gastos"><div class="ic">🧾</div><h3>Compras y Proveedores</h3><p>Compras, proveedores, cuentas por pagar, órdenes e historial.</p><div class="em60-actions"><button type="button" data-comprago="nuevo">🧾 Nueva compra</button><button type="button" data-comprago="historial">📜 Historial</button><button type="button" data-comprago="proveedores">🏢 Proveedores</button><button type="button" data-comprago="cuentas">📆 Cuentas por pagar</button><button type="button" data-comprago="orden">🛒 Orden de compra</button></div></div>'+
     '<div class="ad17-card primary" data-admin="eventual"><div class="ic">🧑‍🌾</div><h3>Labores Eventual</h3><p>Registro y pago del personal eventual por día.</p></div>'+
     '<div class="ad17-card purple" data-admin="inversionistas"><div class="ic">💼</div><h3>Inversionistas y Dueños</h3><p>Perfiles patrimoniales, aportaciones, contratos, movimientos y devoluciones.</p></div>'+
   '</div></div>';
@@ -8188,6 +8188,11 @@ function renderAdministracionMenu(){
   body.querySelector('[data-empgo="solicitudes"]').addEventListener('click',function(e){e.stopPropagation();em69RenderSolicitudes();});
   body.querySelector('[data-compgo="bonos"]').addEventListener('click',function(e){e.stopPropagation();no89AbrirModal('🎯 Bonos');renderBonos();});
   body.querySelector('[data-compgo="apoyos"]').addEventListener('click',function(e){e.stopPropagation();no89AbrirModal('⛽ Apoyos');renderApoyosC092();});
+  body.querySelector('[data-comprago="nuevo"]').addEventListener('click',function(e){e.stopPropagation();C027_COMPRA_DESDE_CAJA=false;renderNuevaCompra();});
+  body.querySelector('[data-comprago="historial"]').addEventListener('click',function(e){e.stopPropagation();renderHistorialCompras105();});
+  body.querySelector('[data-comprago="proveedores"]').addEventListener('click',function(e){e.stopPropagation();renderProveedores();});
+  body.querySelector('[data-comprago="cuentas"]').addEventListener('click',function(e){e.stopPropagation();renderCuentasPorPagar();});
+  body.querySelector('[data-comprago="orden"]').addEventListener('click',function(e){e.stopPropagation();renderOrdenCompra();});
   body.querySelector('[data-admin="gastos"]').addEventListener('click',renderComprasMenu);
   body.querySelector('[data-admin="eventual"]').addEventListener('click',function(){renderPagosEventuales(fechaHoyLocal());});
   body.querySelector('[data-admin="inversionistas"]').addEventListener('click',renderInversionistasMenu);
