@@ -5697,7 +5697,15 @@ var C027_COMPRA_DESDE_CAJA=false;
 function renderNuevaCompraDesdeCaja(){C027_COMPRA_DESDE_CAJA=true;renderNuevaCompra();}
 function volverCompraContexto(){
   if(C027_COMPRA_DESDE_CAJA){C027_COMPRA_DESDE_CAJA=false;renderCajaMootsil('dia',CAJA_FECHA_BASE||fechaHoyLocal());}
-  else renderComprasMenu();
+  else renderAdministracionMenu();
+}
+function volverCompraCaja(){
+  C027_COMPRA_DESDE_CAJA=false;
+  renderCajaMootsil('dia',CAJA_FECHA_BASE||fechaHoyLocal());
+}
+function volverCompraAdministracion(){
+  C027_COMPRA_DESDE_CAJA=false;
+  renderAdministracionMenu();
 }
 var GA37_FILTRO='todos';
 var GA37_CATS={
@@ -5781,11 +5789,10 @@ function renderNuevaCompra(){
   var body=document.getElementById('enc-body');
   var hoy=fechaHoyLocal();
   var compraDesdeCaja=!!C027_COMPRA_DESDE_CAJA;
-  var compraRuta=compraDesdeCaja?'Administración · Caja · Compras':'Administración · Compras y Proveedores';
-  var compraVolver=compraDesdeCaja?'← Caja':'← Compras y Proveedores';
+  var compraRuta=compraDesdeCaja?'Administración · Caja · Compras':'Administración · Compras';
   var provOpts=cats.proveedores.map(function(p){return '<option value="'+p.id+'">'+p.nombre+(p.giro?' — '+p.giro:'')+'</option>';}).join('');
   body.innerHTML='<div class="nc28-shell">'+
-    '<div class="nc28-head"><div><div class="nc28-eyebrow">'+compraRuta+'</div><div class="nc28-title">Nueva compra</div><div class="nc28-sub">Captura rápida de factura y productos.</div><div style="display:flex;gap:7px;margin-top:9px;"><button type="button" class="op-chip sel">＋ Nueva compra</button><button type="button" class="op-chip" onclick="renderHistorialCompras()">📜 Historial de compras</button></div></div><button type="button" class="nc28-back" onclick="volverCompraContexto()">'+compraVolver+'</button></div>'+
+    '<div class="nc28-head"><div><div class="nc28-eyebrow">'+compraRuta+'</div><div class="nc28-title">Nueva compra</div><div class="nc28-sub">Captura rápida de factura y productos.</div><div style="display:flex;gap:7px;margin-top:9px;"><button type="button" class="op-chip sel">＋ Nueva compra</button><button type="button" class="op-chip" onclick="renderHistorialCompras()">📜 Historial de compras</button></div></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;"><button type="button" class="nc28-back" onclick="volverCompraCaja()">← Caja</button><button type="button" class="nc28-back" onclick="volverCompraAdministracion()">← Administración</button></div></div>'+
     '<div class="nc30-card">'+
       '<div class="nc30-topgrid">'+
         '<div class="form-group"><label>Proveedor</label><div class="nc29-provider-wrap"><input type="text" id="nc-proveedor-buscar" autocomplete="off" placeholder="Escribe proveedor"><div id="nc-proveedor-resultados" class="nc29-provider-results nc30-provider-results"></div></div><select id="nc-proveedor" style="display:none"><option value="">Sin proveedor</option>'+provOpts+'<option value="_nuevo">+ Agregar nuevo proveedor...</option></select></div>'+
@@ -6348,7 +6355,7 @@ function renderHistorialCompras(mesStr){
         '@media(max-width:850px){.hc77-tools{grid-template-columns:1fr}.hc77-top{flex-direction:column}.hc77-back{align-self:flex-start}.hc77-card-head{flex-direction:column}.hc77-total{width:100%;justify-content:space-between}.hc77-tabs{flex-wrap:wrap}}'+
         '</style>'+
         '<div class="hc77-shell">'+
-          '<div class="hc77-top"><div><div class="hc77-eyebrow">Administración · Caja · Compras</div><div class="hc77-title">Historial de compras</div><div class="hc77-sub">Consulta y administra las compras registradas sin salir del flujo de Caja.</div><div class="hc77-tabs"><button type="button" class="hc77-tab-off" onclick="renderNuevaCompra()">＋ Nueva compra</button><button type="button" class="hc77-tab-on">✓ Historial de compras</button></div></div><button type="button" class="hc77-back" onclick="volverCompraContexto()">← Caja</button></div>'+
+          '<div class="hc77-top"><div><div class="hc77-eyebrow">Administración · Compras</div><div class="hc77-title">Historial de compras</div><div class="hc77-sub">Consulta las compras registradas y vuelve directamente a Caja o Administración.</div><div class="hc77-tabs"><button type="button" class="hc77-tab-off" onclick="renderNuevaCompra()">＋ Nueva compra</button><button type="button" class="hc77-tab-on">✓ Historial de compras</button></div></div><div style="display:flex;gap:6px;flex-wrap:wrap;"><button type="button" class="hc77-back" onclick="volverCompraCaja()">← Caja</button><button type="button" class="hc77-back" onclick="volverCompraAdministracion()">← Administración</button></div></div>'+
           '<div class="hc77-tools">'+
             '<div><label>Mes</label><input type="month" id="hc77-mes" value="'+mesStr+'"></div>'+
             '<div><label>Buscar</label><input type="search" id="hc77-buscar" placeholder="Proveedor, factura o producto..."></div>'+
