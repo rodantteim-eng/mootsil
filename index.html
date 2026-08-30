@@ -8316,44 +8316,39 @@ function sumarMesesFecha(fechaStr,meses){
 
 function renderInversionistasMenu(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo">💼 Inversionistas y Dueños</div><div class="loading">Cargando...</div>';
+  body.innerHTML='<div class="loading">Cargando expedientes patrimoniales...</div>';
   Promise.all([
-    from('usuarios').select('id,nombre,rol,activo').in('rol',['inversionista','dueño']).order('nombre').get(),
-    from('inversiones').select('*').get()
+    from('usuarios').select('id,nombre,rol,activo,certificado_ambas').in('rol',['inversionista','dueño']).order('nombre').get(),
+    from('inversiones').select('*').get(),
+    from('inversion_movimientos').select('*').get()
   ]).then(function(r){
-    var personas=r[0]||[], inversiones=r[1]||[];
-    var inversionistas=personas.filter(function(p){return p.rol==='inversionista';});
-    var duenos=personas.filter(function(p){return p.rol==='dueño';});
-    var porInversionista={};
-    inversiones.forEach(function(inv){(porInversionista[inv.inversionista_id]=porInversionista[inv.inversionista_id]||[]).push(inv);});
-    var headerHtml='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">💼 Inversionistas y Dueños<button type="button" onclick="renderAdministracionMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Administración</button></div>';
-    var html=headerHtml+'<p class="hint" style="margin-bottom:.8rem;">Estos perfiles se administran aquí y no forman parte de Empleados, Sueldos ni Nómina laboral.</p>';
-    html+='<div class="seccion-titulo" style="margin-top:.4rem;">Inversionistas</div>';
-    if(!inversionistas.length){
-      html+='<div class="empty">Sin inversionistas registrados.</div>';
-    }else{
-      html+=inversionistas.map(function(iv){
-        var contratos=porInversionista[iv.id]||[];
-        var activos=contratos.filter(function(c){return c.estado==='activo';});
-        var totalActivo=activos.reduce(function(s,c){return s+parseFloat(c.monto_invertido);},0);
-        return '<div class="orden-card" data-ver-inversionista="'+iv.id+'" style="cursor:pointer;"><div style="display:flex;justify-content:space-between;gap:10px;"><strong style="font-size:.92rem;">'+iv.nombre+'</strong><span style="font-size:.7rem;color:'+(iv.activo?'var(--verde-mid)':'var(--gris-3)')+';">'+(iv.activo?'Activo':'Inactivo')+'</span></div><div class="orden-meta">'+(contratos.length?(activos.length+' contrato(s) activo(s) · $'+formatMonto(totalActivo)+' invertido'):'Sin contratos registrados')+'</div></div>';
-      }).join('');
-    }
-    html+='<div class="seccion-titulo" style="margin-top:1rem;">Dueños</div>';
-    if(!duenos.length){
-      html+='<div class="empty">Sin dueños registrados.</div>';
-    }else{
-      html+=duenos.map(function(d){
-        return '<div class="orden-card" data-ver-inversionista="'+d.id+'" style="cursor:pointer;border-left-color:var(--purple,#6f2c91);"><div style="display:flex;justify-content:space-between;gap:10px;"><strong style="font-size:.92rem;">'+d.nombre+'</strong><span style="font-size:.7rem;color:'+(d.activo?'var(--verde-mid)':'var(--gris-3)')+';">'+(d.activo?'Activo':'Inactivo')+'</span></div><div class="orden-meta">Perfil patrimonial de Dueño · expediente, contratos e historial.</div></div>';
-      }).join('');
-    }
-    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderAdministracionMenu()">← Volver a Administración</button>';
-    body.querySelectorAll('[data-ver-inversionista]').forEach(function(card){
-      card.addEventListener('click',function(){renderInversionistaDetalle(this.dataset.verInversionista);});
+    var personas=r[0]||[], inversiones=r[1]||[], movimientos=r[2]||[];
+    var porPersona={}, porInv={};
+    inversiones.forEach(function(inv){
+      (porPersona[inv.inversionista_id]=porPersona[inv.inversionista_id]||[]).push(inv);
+      porInv[inv.id]=inv;
     });
+    var devueltoPorPersona={};
+    movimientos.forEach(function(m){
+      var inv=porInv[m.inversion_id];
+      if(inv && m.tipo==='devolucion_capital'){
+        devueltoPorPersona[inv.inversionista_id]=(devueltoPorPersona[inv.inversionista_id]||0)+(parseFloat(m.monto)||0);
+      }
+    });
+    var html='<div class="ex54-head"><div><div class="ex54-eyebrow">Administración · Inversionistas y Dueños</div><div class="ex54-title">Expedientes</div><div class="ex54-sub">Información patrimonial, contratos, aportaciones, devoluciones y utilidades de cada perfil.</div></div><div style="display:flex;gap:7px;align-items:center;"><button class="em59-back" onclick="renderAdministracionMenu()">← Administración</button><button class="btn-sm btn-completar" onclick="renderNuevoUsuario()">+ Nuevo expediente</button></div></div><div class="ex54-list">';
+    html+=personas.map(function(u){
+      var contratos=porPersona[u.id]||[];
+      var aportado=contratos.reduce(function(s,c){return s+(parseFloat(c.monto_invertido)||0);},0);
+      var devuelto=devueltoPorPersona[u.id]||0;
+      var vigente=Math.max(0,aportado-devuelto);
+      var tipo=u.rol==='dueño'?'DUEÑO':'INVERSIONISTA';
+      var badgeClass=u.rol==='dueño'?'em58-eventual':'em58-base';
+      return '<div class="ex54-row"><div><div class="ex54-name">'+ex54Esc(u.nombre)+' <span class="em58-badge '+badgeClass+'">'+tipo+'</span></div><div class="ex54-role">'+contratos.length+' contrato(s) · Capital aportado: $'+formatMonto(aportado)+'</div></div><div><div class="ex54-status" style="color:'+(u.activo?'var(--verde-mid)':'var(--gris-3)')+';">'+(u.activo?'Activo':'Inactivo')+'</div><div class="ex54-role">Capital vigente: $'+formatMonto(vigente)+'</div></div><div class="orden-actions"><button class="btn-sm ex55-action-exp" onclick="renderInversionistaDetalle(\''+u.id+'\')">Expediente</button><button class="btn-sm ex55-action-pin" onclick="renderCambiarPin(\''+u.id+'\',\''+ex54Esc(u.nombre).replace(/'/g,"\\'")+'\')">PIN</button><button class="btn-sm ex55-action-cred" onclick="renderCredencialId(\''+u.id+'\')">Credencial</button>'+(u.activo?'<button class="btn-sm ex55-action-baja" onclick="bajaUsuario(\''+u.id+'\')">Dar de baja</button>':'<button class="btn-sm btn-iniciar" onclick="altaUsuario(\''+u.id+'\')">Reactivar</button>')+'</div></div>';
+    }).join('');
+    if(!personas.length)html+='<div class="empty">Sin inversionistas o dueños registrados.</div>';
+    body.innerHTML=html+'</div><button class="em59-back" style="margin-top:.8rem;" onclick="renderAdministracionMenu()">← Administración</button>';
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
-
 function renderInversionistaDetalle(usuarioId){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo">💼 Expediente de inversionista</div><div class="loading">Cargando...</div>';
