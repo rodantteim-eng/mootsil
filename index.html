@@ -8351,9 +8351,9 @@ function renderInversionistasMenu(){
 }
 function renderInversionistaDetalle(usuarioId){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo">💼 Expediente de inversionista</div><div class="loading">Cargando...</div>';
+  body.innerHTML='<div class="loading">Cargando expediente patrimonial...</div>';
   Promise.all([
-    from('usuarios').select('id,nombre,rol,activo').eq('id',usuarioId).get(),
+    from('usuarios').select('id,nombre,rol,activo,fecha_nacimiento').eq('id',usuarioId).get(),
     from('inversiones').select('*').eq('inversionista_id',usuarioId).order('fecha_inicio',{ascending:false}).get()
   ]).then(function(r){
     var iv=r[0]&&r[0][0];
@@ -8369,38 +8369,79 @@ function renderInversionistaDetalle(usuarioId){
       var vigente=Math.max(0,aportado-devuelto);
       var activos=contratos.filter(function(c){return c.estado==='activo';}).length;
       var extra=inv124Get(usuarioId);
-      var header='<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px;"><div><div class="seccion-titulo" style="margin:0;">💼 '+ex54Esc(iv?iv.nombre:'Inversionista')+'</div><div class="hint">Expediente patrimonial · contratos, aportaciones, devoluciones, utilidades e historial.</div></div><div style="display:flex;gap:7px;flex-wrap:wrap;"><button type="button" class="btn-secondary" id="inv124-editar" style="width:auto;margin:0;">✏️ Información</button><button type="button" class="btn-primary" id="inv-nuevo-btn" style="width:auto;margin:0;">＋ Nuevo contrato</button><button type="button" class="btn-back" onclick="renderInversionistasMenu()" style="width:auto;margin:0;">← Inversionistas</button></div></div>';
-      var kpis='<div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin-bottom:10px;">'+
-        '<div class="form-card" style="margin:0;padding:.7rem;"><div class="hint">CAPITAL APORTADO</div><strong>$'+formatMonto(aportado)+'</strong></div>'+
-        '<div class="form-card" style="margin:0;padding:.7rem;"><div class="hint">CAPITAL DEVUELTO</div><strong>$'+formatMonto(devuelto)+'</strong></div>'+
-        '<div class="form-card" style="margin:0;padding:.7rem;"><div class="hint">CAPITAL VIGENTE</div><strong style="color:var(--verde);">$'+formatMonto(vigente)+'</strong></div>'+
-        '<div class="form-card" style="margin:0;padding:.7rem;"><div class="hint">UTILIDADES PAGADAS</div><strong>$'+formatMonto(utilidades)+'</strong></div>'+
-        '<div class="form-card" style="margin:0;padding:.7rem;"><div class="hint">CONTRATOS ACTIVOS</div><strong>'+activos+'</strong></div></div>';
-      var info='<div class="form-card" style="margin:0 0 10px;padding:.8rem;"><div class="seccion-titulo" style="margin:0 0 7px;">Información general</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:.76rem;">'+
-        '<div><span class="hint">Tipo</span><br><strong>'+ex54Esc(iv&&iv.rol==='dueño'?'Dueño':'Inversionista')+'</strong></div>'+
-        '<div><span class="hint">Estatus</span><br><strong>'+(iv&&iv.activo===false?'Inactivo':'Activo')+'</strong></div>'+
-        '<div><span class="hint">Teléfono</span><br><strong>'+ex54Esc(extra.telefono||'—')+'</strong></div>'+
-        '<div><span class="hint">Correo</span><br><strong>'+ex54Esc(extra.correo||'—')+'</strong></div>'+
-        '<div><span class="hint">RFC / identificación</span><br><strong>'+ex54Esc(extra.rfc||'—')+'</strong></div>'+
-        '<div><span class="hint">Banco / cuenta</span><br><strong>'+ex54Esc([extra.banco,extra.cuenta].filter(Boolean).join(' · ')||'—')+'</strong></div>'+
-        '</div>'+(extra.direccion?'<div class="hint" style="margin-top:8px;">Domicilio: '+ex54Esc(extra.direccion)+'</div>':'')+(extra.notas?'<div class="hint" style="margin-top:4px;">Notas: '+ex54Esc(extra.notas)+'</div>':'')+'</div>';
-      var contratosHtml='<div class="seccion-titulo" style="margin-top:10px;">Contratos</div>';
-      if(!contratos.length)contratosHtml+='<div class="empty">Aún no tiene contratos de inversión registrados.</div>';
-      else contratosHtml+=contratos.map(function(c){
+      var tipo=(iv&&iv.rol==='dueño')?'Dueño':'Inversionista';
+      var primeraFecha=contratos.length?contratos.slice().sort(function(a,b){return String(a.fecha_inicio||'').localeCompare(String(b.fecha_inicio||''));})[0].fecha_inicio:'';
+      var docs=extra.documentos||[];
+      var eventos=[];
+      contratos.forEach(function(c){eventos.push({fecha:c.fecha_inicio,tipo:'Aportación de capital',descripcion:'Contrato '+(c.condiciones||'de inversión'),monto:c.monto_invertido});});
+      movs.forEach(function(m){eventos.push({fecha:m.fecha,tipo:m.tipo==='rendimiento'?'Utilidad pagada':'Devolución de capital',descripcion:m.concepto||'',monto:m.monto});});
+      eventos.sort(function(a,b){return String(b.fecha||'').localeCompare(String(a.fecha||''));});
+
+      var contratosRows=contratos.length?contratos.map(function(c,i){
         var cm=porContrato[c.id]||[];
         var rend=cm.filter(function(m){return m.tipo==='rendimiento';}).reduce(function(s,m){return s+(parseFloat(m.monto)||0);},0);
         var dev=cm.filter(function(m){return m.tipo==='devolucion_capital';}).reduce(function(s,m){return s+(parseFloat(m.monto)||0);},0);
         var saldo=Math.max(0,(parseFloat(c.monto_invertido)||0)-dev);
-        return '<div class="orden-card" data-ver-inversion="'+c.id+'" style="cursor:pointer;border-left-color:'+(c.estado==='activo'?'var(--verde-mid)':'var(--gris-3)')+';"><div style="display:flex;justify-content:space-between;gap:10px;"><div><strong>$'+formatMonto(c.monto_invertido)+' · '+ex54Esc(c.condiciones||'Contrato de inversión')+'</strong><div class="orden-meta">Desde '+ex54Esc(c.fecha_inicio||'—')+(c.fecha_fin_estimada?' · vence '+ex54Esc(c.fecha_fin_estimada):'')+'</div></div><span class="hint">'+(c.estado==='activo'?'Activo':'Cerrado')+'</span></div><div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:7px;font-size:.72rem;"><span>Capital vigente <strong>$'+formatMonto(saldo)+'</strong></span><span>Capital devuelto <strong>$'+formatMonto(dev)+'</strong></span><span>Utilidades <strong>$'+formatMonto(rend)+'</strong></span></div></div>';
-      }).join('');
-      var hist='<div class="seccion-titulo" style="margin-top:12px;">Historial patrimonial</div>';
-      var eventos=[];
-      contratos.forEach(function(c){eventos.push({fecha:c.fecha_inicio,tipo:'Aportación / contrato',texto:'Capital aportado $'+formatMonto(c.monto_invertido),monto:c.monto_invertido});});
-      movs.forEach(function(m){eventos.push({fecha:m.fecha,tipo:m.tipo==='rendimiento'?'Utilidad pagada':'Devolución de capital',texto:m.concepto||'',monto:m.monto});});
-      eventos.sort(function(a,b){return String(b.fecha||'').localeCompare(String(a.fecha||''));});
-      hist+=eventos.length?'<div class="form-card" style="margin:0;padding:.75rem;">'+eventos.map(function(x){return '<div style="display:grid;grid-template-columns:110px 150px 1fr 120px;gap:8px;padding:.48rem 0;border-bottom:1px solid var(--gris-2);align-items:center;font-size:.73rem;"><span class="hint">'+ex54Esc(x.fecha||'—')+'</span><strong>'+ex54Esc(x.tipo)+'</strong><span>'+ex54Esc(x.texto||'—')+'</span><strong style="text-align:right;">$'+formatMonto(x.monto||0)+'</strong></div>';}).join('')+'</div>':'<div class="empty">Sin movimientos patrimoniales.</div>';
-      body.innerHTML=header+kpis+info+contratosHtml+hist;
-      document.getElementById('inv124-editar').onclick=function(){inv124EditarInfo(usuarioId,iv?iv.nombre:'Inversionista');};
+        return '<div class="ex55-subcard" style="margin-bottom:7px;"><div class="ex55-contract-row" style="grid-template-columns:70px 1.4fr 1fr 1fr 1fr 100px;"><strong>#'+(i+1)+'</strong><span>'+ex54Esc(c.condiciones||'Inversión de capital')+'</span><span>'+ex54Esc(c.fecha_inicio||'—')+'</span><span>'+ex54Esc(c.fecha_fin_estimada||'Sin fin')+'</span><span>$'+formatMonto(c.monto_invertido||0)+'</span><span class="ex55-status '+(c.estado==='activo'?'ex55-ok':'ex55-pend')+'">'+(c.estado==='activo'?'Vigente':'Cerrado')+'</span></div><div class="ex55-mini" style="margin-top:5px;">Capital vigente: $'+formatMonto(saldo)+' · Capital devuelto: $'+formatMonto(dev)+' · Utilidades: $'+formatMonto(rend)+'</div><div style="margin-top:6px;"><button type="button" class="ex55-btn ex56-view" data-ver-inversion="'+c.id+'">Ver contrato</button></div></div>';
+      }).join(''):'<div class="ex55-mini">Sin contratos registrados.</div>';
+
+      var histRows=eventos.length?eventos.map(function(x){
+        return '<div class="ex55-subcard" style="display:grid;grid-template-columns:120px 170px 1fr 130px;gap:8px;align-items:center;"><span class="ex55-mini">'+ex54Esc(x.fecha||'—')+'</span><strong>'+ex54Esc(x.tipo)+'</strong><span>'+ex54Esc(x.descripcion||'—')+'</span><strong style="text-align:right;">$'+formatMonto(x.monto||0)+'</strong></div>';
+      }).join(''):'<div class="ex55-mini">Sin movimientos patrimoniales registrados.</div>';
+
+      var html=
+      '<div class="ex54-wrap">'+
+        '<div class="ex54-head"><div><div class="ex54-eyebrow">Administración · Inversionistas y Dueños · Expedientes</div><div class="ex54-title">Editar expediente</div><div class="ex54-sub">Una sola ficha concentra información patrimonial, contratos y movimientos del '+tipo.toLowerCase()+'.</div></div><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;"><button class="em59-back" onclick="renderInversionistasMenu()">← Inversionistas y Dueños</button><button class="btn-sm btn-completar" id="inv124-editar">✏️ Editar información</button></div></div>'+
+
+        '<div class="ex54-sec"><h3>Datos personales</h3><div class="ex54-grid">'+
+          '<div class="ex54-field span2"><label>Nombre completo</label><input value="'+ex54Esc(iv?iv.nombre:'')+'" disabled></div>'+
+          '<div class="ex54-field"><label>Fecha de nacimiento</label><input type="date" value="'+ex54Esc(iv&&iv.fecha_nacimiento?iv.fecha_nacimiento:'')+'" disabled></div>'+
+          '<div class="ex54-field"><label>Teléfono</label><input value="'+ex54Esc(extra.telefono||'')+'" disabled placeholder="Teléfono"></div>'+
+          '<div class="ex54-field"><label>Correo electrónico</label><input value="'+ex54Esc(extra.correo||'')+'" disabled placeholder="Correo"></div>'+
+          '<div class="ex54-field span2"><label>Domicilio</label><input value="'+ex54Esc(extra.direccion||'')+'" disabled placeholder="Calle, colonia, municipio"></div>'+
+          '<div class="ex54-field"><label>RFC / identificación</label><input value="'+ex54Esc(extra.rfc||'')+'" disabled placeholder="RFC / identificación"></div>'+
+        '</div></div>'+
+
+        '<div class="ex54-sec"><h3>Datos patrimoniales</h3><div class="ex54-grid">'+
+          '<div class="ex54-field"><label>Tipo</label><input value="'+tipo+'" disabled></div>'+
+          '<div class="ex54-field"><label>Estatus</label><input value="'+(iv&&iv.activo===false?'Inactivo':'Activo')+'" disabled></div>'+
+          '<div class="ex54-field"><label>Fecha de incorporación</label><input type="date" value="'+ex54Esc(primeraFecha||'')+'" disabled></div>'+
+          '<div class="ex54-field"><label>Capital aportado</label><input value="$'+formatMonto(aportado)+'" disabled></div>'+
+          '<div class="ex54-field"><label>Capital devuelto</label><input value="$'+formatMonto(devuelto)+'" disabled></div>'+
+          '<div class="ex54-field"><label>Capital vigente</label><input value="$'+formatMonto(vigente)+'" disabled></div>'+
+          '<div class="ex54-field"><label>Utilidades pagadas</label><input value="$'+formatMonto(utilidades)+'" disabled></div>'+
+          '<div class="ex54-field"><label>Contratos activos</label><input value="'+activos+'" disabled></div>'+
+        '</div></div>'+
+
+        '<div class="ex54-sec"><h3>Datos bancarios</h3><div class="ex54-grid">'+
+          '<div class="ex54-field"><label>Banco</label><input value="'+ex54Esc(extra.banco||'')+'" disabled placeholder="Ej. Banamex"></div>'+
+          '<div class="ex54-field span2"><label>Número de cuenta / CLABE</label><input value="'+ex54Esc(extra.cuenta||'')+'" disabled placeholder="Cuenta / CLABE"></div>'+
+          '<div class="ex54-field span3"><div class="ex56-banknote">Referencia para pagos de utilidades, devoluciones de capital y movimientos patrimoniales.</div></div>'+
+        '</div></div>'+
+
+        '<div class="ex54-sec"><h3>Documentos</h3>'+
+          '<div class="ex55-docgrid">'+
+            ['INE','RFC','Comprobante domicilio','Contrato de inversión','Comprobantes de aportaciones'].map(function(tp){
+              return '<div class="ex55-docitem"><div class="ex55-docrow"><div><div class="ex55-docname">'+tp+'</div><div class="ex55-mini">'+(docs.some(function(d){return d.tipo===tp;})?'Cargado':'Pendiente')+'</div></div><span class="ex55-status '+(docs.some(function(d){return d.tipo===tp;})?'ex55-ok':'ex55-pend')+'">'+(docs.some(function(d){return d.tipo===tp;})?'Cargado':'Pendiente')+'</span></div></div>';
+            }).join('')+
+          '</div><div class="ex55-mini" style="margin-top:7px;">La administración documental completa se habilitará al persistir el expediente patrimonial en la etapa multiusuario.</div>'+
+        '</div>'+
+
+        '<div class="ex54-sec"><h3>Contratos</h3>'+contratosRows+
+          '<div style="margin-top:8px;"><button type="button" class="ex55-btn primary" id="inv-nuevo-btn">+ Nuevo contrato</button></div>'+
+        '</div>'+
+
+        '<div class="ex54-sec"><h3>Notas administrativas</h3><div class="ex54-grid"><div class="ex54-field span3"><textarea disabled style="min-height:80px;">'+ex54Esc(extra.notas||'')+'</textarea></div></div></div>'+
+
+        '<div class="ex54-sec"><h3>Historial patrimonial</h3><div style="display:flex;flex-direction:column;gap:6px;">'+histRows+'</div></div>'+
+
+        '<div class="ex54-actions"><button class="btn-back" onclick="renderInversionistasMenu()">← Volver</button><button class="btn-next" id="inv124-editar-bottom">Editar expediente</button></div>'+
+      '</div>';
+
+      body.innerHTML=html;
+      var abrir=function(){inv124EditarInfo(usuarioId,iv?iv.nombre:tipo);};
+      document.getElementById('inv124-editar').onclick=abrir;
+      document.getElementById('inv124-editar-bottom').onclick=abrir;
       document.getElementById('inv-nuevo-btn').onclick=function(){renderNuevaInversion(usuarioId);};
       body.querySelectorAll('[data-ver-inversion]').forEach(function(card){card.onclick=function(){renderInversionDetalle(this.dataset.verInversion);};});
     });
@@ -14132,7 +14173,7 @@ document.addEventListener('click',function(e){
   if((e.target.textContent||'').trim()==='Otros')setTimeout(ca45MontarDecisionOtros,0);
 });
 
-/* C124 — Expediente patrimonial de inversionistas + movimientos directos desde Caja */
+/* C126 — Expediente patrimonial con visual homologado a Empleados */
 </script>
 
 <input type="file" id="cam-input" accept="image/*,video/*" capture="environment" style="display:none" onchange="capturaEjec.foto=true;renderEjec();">
