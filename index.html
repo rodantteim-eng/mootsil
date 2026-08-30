@@ -8103,12 +8103,13 @@ function renderEditarInversion(inversionId){
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
+/* C088 — Nómina y Compensaciones compacta dentro de Administración */
 function renderAdministracionMenu(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="ad17-shell"><div class="ad17-head"><div><div class="ad17-eyebrow">Administración</div><div class="ad17-title">Control del Rancho</div><div class="ad17-sub">Finanzas, personal, compras y operación administrativa de Mootsil.</div></div></div><div class="ad17-grid">'+
     '<div class="ad17-card primary" data-admin="caja"><div class="ic">💵</div><h3>Caja</h3><p>Entradas, salidas, pagos, movimientos y control financiero operativo.</p></div>'+
     '<div class="ad17-card blue em60-card" data-admin="empleados"><div class="ic">👥</div><h3>Empleados</h3><p>Expedientes, asistencia y solicitudes del personal.</p><div class="em60-actions"><button type="button" data-empgo="expedientes">👤 Expedientes</button><button type="button" data-empgo="asistencia">📋 Asistencia</button><button type="button" data-empgo="solicitudes">📨 Solicitudes</button></div></div>'+
-    '<div class="ad17-card gold" data-admin="compensaciones"><div class="ic">💰</div><h3>Nómina y Compensaciones</h3><p>Sueldos, bonos, préstamos e historial de nómina.</p></div>'+
+    '<div class="ad17-card gold em60-card" data-admin="compensaciones"><div class="ic">💰</div><h3>Nómina y Compensaciones</h3><p>Sueldos, bonos, préstamos e historial de nómina.</p><div class="em60-actions"><button type="button" data-compgo="sueldos">💵 Sueldos</button><button type="button" data-compgo="bonos">🎁 Bonos</button><button type="button" data-compgo="prestamos">📝 Préstamos</button><button type="button" data-compgo="historial">📊 Historial</button></div></div>'+
     '<div class="ad17-card orange" data-admin="gastos"><div class="ic">🧾</div><h3>Compras y Gastos</h3><p>Compras, proveedores, cuentas por pagar e historial.</p></div>'+
     '<div class="ad17-card primary" data-admin="eventual"><div class="ic">🧑‍🌾</div><h3>Labores Eventual</h3><p>Registro y pago del personal eventual por día.</p></div>'+
     '<div class="ad17-card purple" data-admin="inversionistas"><div class="ic">💼</div><h3>Inversionistas</h3><p>Aportaciones, contratos, movimientos y devoluciones.</p></div>'+
@@ -8117,7 +8118,10 @@ function renderAdministracionMenu(){
   body.querySelector('[data-empgo="expedientes"]').addEventListener('click',function(e){e.stopPropagation();renderAltasBajas();});
   body.querySelector('[data-empgo="asistencia"]').addEventListener('click',function(e){e.stopPropagation();em69RenderAsistencia(fechaHoyLocal());});
   body.querySelector('[data-empgo="solicitudes"]').addEventListener('click',function(e){e.stopPropagation();em69RenderSolicitudes();});
-  body.querySelector('[data-admin="compensaciones"]').addEventListener('click',renderCompensacionesMenu);
+  body.querySelector('[data-compgo="sueldos"]').addEventListener('click',function(e){e.stopPropagation();renderPersonalSueldos();});
+  body.querySelector('[data-compgo="bonos"]').addEventListener('click',function(e){e.stopPropagation();renderBonos();});
+  body.querySelector('[data-compgo="prestamos"]').addEventListener('click',function(e){e.stopPropagation();renderPrestamos();});
+  body.querySelector('[data-compgo="historial"]').addEventListener('click',function(e){e.stopPropagation();renderResumenNomina();});
   body.querySelector('[data-admin="gastos"]').addEventListener('click',renderComprasMenu);
   body.querySelector('[data-admin="eventual"]').addEventListener('click',function(){renderPagosEventuales(fechaHoyLocal());});
   body.querySelector('[data-admin="inversionistas"]').addEventListener('click',renderInversionistasMenu);
@@ -8588,18 +8592,9 @@ function renderPersonalSueldos(){
 
 
 function renderCompensacionesMenu(){
-  var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">💰 NÓMINA Y COMPENSACIONES<button type="button" onclick="renderAdministracionMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Administración</button></div>'+
-  '<div class="labor-grid" style="grid-template-columns:repeat(2,1fr);">'+
-    '<div class="labor-tile" data-comp="sueldos"><div class="labor-tile-ic">💵</div><div class="labor-tile-lbl">Sueldos</div></div>'+
-    '<div class="labor-tile" data-comp="bonos"><div class="labor-tile-ic">🎁</div><div class="labor-tile-lbl">Bonos</div></div>'+
-    '<div class="labor-tile" data-comp="prestamos"><div class="labor-tile-ic">📝</div><div class="labor-tile-lbl">Préstamos</div></div>'+
-    '<div class="labor-tile" data-comp="historial"><div class="labor-tile-ic">📊</div><div class="labor-tile-lbl">Historial de nómina</div></div>'+
-  '</div>';
-  body.querySelector('[data-comp="sueldos"]').addEventListener('click',renderPersonalSueldos);
-  body.querySelector('[data-comp="bonos"]').addEventListener('click',renderBonos);
-  body.querySelector('[data-comp="prestamos"]').addEventListener('click',renderPrestamos);
-  body.querySelector('[data-comp="historial"]').addEventListener('click',renderResumenNomina);
+  // C088: se elimina la pantalla intermedia grande.
+  // Nómina y Compensaciones se opera directamente desde Administración.
+  renderAdministracionMenu();
 }
 
 var NO50_NOMINA_DESDE_CAJA=false;
@@ -8617,7 +8612,7 @@ function no50VolverNomina(){
 }
 function renderNominasMenu(){
   NO50_NOMINA_DESDE_CAJA=false;
-  renderCompensacionesMenu();
+  renderAdministracionMenu();
 }
 
 
