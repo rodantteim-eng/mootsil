@@ -5788,11 +5788,12 @@ function ca30SeleccionarCuentaCompra(total,callback){
 function renderNuevaCompra(){
   var body=document.getElementById('enc-body');
   var hoy=fechaHoyLocal();
+  var ordenOrigen=window.OC118_COMPRA_DESDE_ORDEN||null;
   var compraDesdeCaja=!!C027_COMPRA_DESDE_CAJA;
   var compraRuta=compraDesdeCaja?'Administración · Caja · Compras':'Administración · Compras';
   var provOpts=cats.proveedores.map(function(p){return '<option value="'+p.id+'">'+p.nombre+(p.giro?' — '+p.giro:'')+'</option>';}).join('');
   body.innerHTML='<div class="nc28-shell">'+
-    '<div class="nc28-head"><div><div class="nc28-eyebrow">'+compraRuta+'</div><div class="nc28-title">Nueva compra</div><div class="nc28-sub">Captura rápida de factura y productos.</div><div style="display:flex;gap:7px;margin-top:9px;"><button type="button" class="op-chip sel">＋ Nueva compra</button><button type="button" class="op-chip" onclick="renderHistorialCompras()">📜 Historial de compras</button></div></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;"><button type="button" class="nc28-back" onclick="volverCompraCaja()">← Caja</button><button type="button" class="nc28-back" onclick="volverCompraAdministracion()">← Administración</button></div></div>'+
+    '<div class="nc28-head"><div><div class="nc28-eyebrow">'+compraRuta+'</div><div class="nc28-title">Nueva compra</div><div class="nc28-sub">Captura rápida de factura y productos.</div><div style="display:flex;gap:7px;margin-top:9px;"><button type="button" class="op-chip sel">＋ Nueva compra</button><button type="button" class="op-chip" onclick="renderHistorialCompras()">📜 Historial de compras</button></div></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;"><button type="button" class="nc28-back" onclick="volverCompraCaja()">← Caja</button><button type="button" class="nc28-back" onclick="volverCompraAdministracion()">← Administración</button></div></div>'+    (ordenOrigen?'<div class="form-card" style="margin:.7rem 0;padding:.7rem;border-left:4px solid var(--verde-mid);"><strong>Orden '+oc113Esc(ordenOrigen.id)+' recibida</strong><div class="hint">Proveedor: '+oc113Esc(ordenOrigen.proveedor)+' · Total adjudicado: $'+formatMonto(ordenOrigen.total||0)+' · Completa factura y forma de pago para registrar la compra.</div></div>':'')+
     '<div class="nc30-card">'+
       '<div class="nc30-topgrid">'+
         '<div class="form-group"><label>Proveedor</label><div class="nc29-provider-wrap"><input type="text" id="nc-proveedor-buscar" autocomplete="off" placeholder="Escribe proveedor"><div id="nc-proveedor-resultados" class="nc29-provider-results nc30-provider-results"></div></div><select id="nc-proveedor" style="display:none"><option value="">Sin proveedor</option>'+provOpts+'<option value="_nuevo">+ Agregar nuevo proveedor...</option></select></div>'+
@@ -7204,6 +7205,11 @@ function oc113Pintar(body,necesidades,porCaducar,hoy){
   body.querySelectorAll('[data-oc113-tab]').forEach(function(b){b.onclick=function(){OC113_TAB=this.dataset.oc113Tab;renderOrdenCompra();};});
   var nuevoGlobal=body.querySelector('#oc113-nueva-global');if(nuevoGlobal)nuevoGlobal.onclick=oc113NuevaNecesidad;
   var sol=body.querySelector('#oc113-solicitar');if(sol)sol.onclick=function(){oc113SolicitarCotizacion(necesidades);};
+  body.querySelectorAll('[data-oc118-detalle]').forEach(function(b){b.onclick=function(){oc118DetalleSolicitud(this.dataset.oc118Detalle);};});
+  body.querySelectorAll('[data-oc118-adjudicar]').forEach(function(b){b.onclick=function(){oc118Adjudicar(this.dataset.oc118Adjudicar);};});
+  body.querySelectorAll('[data-oc118-orden]').forEach(function(b){b.onclick=function(){oc118DetalleOrden(this.dataset.oc118Orden);};});
+  body.querySelectorAll('[data-oc118-avanzar]').forEach(function(b){b.onclick=function(){oc118AvanzarOrden(this.dataset.oc118Avanzar);};});
+  body.querySelectorAll('[data-oc118-convertir]').forEach(function(b){b.onclick=function(){oc118ConvertirCompra(this.dataset.oc118Convertir);};});
 }
 
 function oc113NecesidadesHtml(necesidades,porCaducar,hoy){
@@ -7319,20 +7325,115 @@ function oc114VerAjustarProveedores(sugeridos){
   bg.querySelector('#oc114-ok').onclick=oc113Close;
 }
 
+
+function oc118DetalleSolicitud(id){
+  var s=(window.OC113_SOLICITUDES||[]).find(function(x){return String(x.id)===String(id);}); if(!s)return;
+  var ps=(window.OC113_PROPUESTAS||[]).filter(function(p){return String(p.solicitud_id)===String(id);});
+  var items=(s.items||[]).map(function(x){return '<tr><td style="padding:.45rem;">'+oc113Esc(x.nombre)+'</td><td style="padding:.45rem;text-align:right;">'+numFmt(x.cantidad)+'</td><td style="padding:.45rem;">'+oc113Esc(x.unidad||'')+'</td><td style="padding:.45rem;">'+oc113Esc(x.especificacion||'—')+'</td></tr>';}).join('');
+  var bg=oc113Modal('<div style="display:flex;justify-content:space-between;gap:8px;"><div><div class="seccion-titulo" style="margin:0;">📄 '+oc113Esc(s.id)+'</div><div class="hint">Detalle de solicitud y trazabilidad.</div></div><button id="oc118-x" style="border:none;background:none;font-size:1.35rem;cursor:pointer;">×</button></div>'+
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:10px 0;"><div class="form-card" style="margin:0;padding:.65rem;"><div class="hint">ESTADO</div><strong>'+oc113Esc(s.estado||'Publicada')+'</strong></div><div class="form-card" style="margin:0;padding:.65rem;"><div class="hint">PROVEEDORES</div><strong>'+(s.proveedores_sugeridos||0)+'</strong></div><div class="form-card" style="margin:0;padding:.65rem;"><div class="hint">PROPUESTAS</div><strong>'+ps.length+'</strong></div><div class="form-card" style="margin:0;padding:.65rem;"><div class="hint">ENTREGA</div><strong>'+oc113Esc(s.fecha_requerida||'—')+'</strong></div></div>'+
+    '<div style="overflow:auto;"><table style="width:100%;border-collapse:collapse;font-size:.75rem;"><thead><tr><th>Producto</th><th>Cantidad</th><th>Unidad</th><th>Especificación</th></tr></thead><tbody>'+items+'</tbody></table></div>'+
+    '<div class="form-card" style="margin-top:10px;padding:.75rem;"><div class="hint">CONDICIONES / OBSERVACIONES</div><div style="margin-top:4px;">'+oc113Esc(s.observaciones||'—')+'</div></div>'+
+    '<div class="hint" style="margin-top:8px;">Creada/publicada: '+oc113Esc(s.fecha)+' · Cotizar hasta: '+oc113Esc(s.limite)+' · Matching Mootsil: '+(s.proveedores_sugeridos||0)+' proveedor(es).</div>');
+  bg.querySelector('#oc118-x').onclick=oc113Close;
+}
+
+function oc118SembrarPropuestasDemo(){
+  var sols=window.OC113_SOLICITUDES||[];
+  if(!sols.length){alert('Primero publica una solicitud.');return;}
+  var s=sols[0];
+  window.OC113_PROPUESTAS=window.OC113_PROPUESTAS||[];
+  if(window.OC113_PROPUESTAS.some(function(p){return String(p.solicitud_id)===String(s.id);})){showToast('Ya hay propuestas de prueba para esta solicitud');return;}
+  var base=10000+(s.items||[]).reduce(function(a,x){return a+(parseFloat(x.cantidad)||0)*15;},0);
+  window.OC113_PROPUESTAS.push(
+    {id:'P-'+String(Date.now()).slice(-4)+'A',solicitud_id:s.id,proveedor:'Agroinsumos del Valle',marca:'Marca solicitada / equivalente',presentacion:'Según ficha',total:base,entrega:'2 días',pago:'Contado',vigencia:'5 días',disponibilidad:'Completa',observaciones:'Entrega incluida.'},
+    {id:'P-'+String(Date.now()).slice(-4)+'B',solicitud_id:s.id,proveedor:'Campo Suministros',marca:'Alternativa compatible',presentacion:'Según disponibilidad',total:base*1.035,entrega:'1 día',pago:'30 días crédito',vigencia:'3 días',disponibilidad:'Completa',observaciones:'Crédito sujeto a historial.'},
+    {id:'P-'+String(Date.now()).slice(-4)+'C',solicitud_id:s.id,proveedor:'Proveedora Agrícola Regional',marca:'Marca abierta',presentacion:'Equivalente',total:base*.975,entrega:'4 días',pago:'Contado',vigencia:'7 días',disponibilidad:'Completa',observaciones:'Precio más bajo; entrega posterior.'}
+  );
+  renderOrdenCompra();
+  showToast('✅ Propuestas de prueba cargadas');
+}
+
+function oc118Adjudicar(pid){
+  var p=(window.OC113_PROPUESTAS||[]).find(function(x){return String(x.id)===String(pid);}); if(!p)return;
+  var s=(window.OC113_SOLICITUDES||[]).find(function(x){return String(x.id)===String(p.solicitud_id);}); if(!s)return;
+  if((window.OC113_ORDENES||[]).some(function(o){return String(o.solicitud_id)===String(s.id);})){alert('Esta solicitud ya tiene una orden adjudicada.');return;}
+  if(!confirm('¿Seleccionar la propuesta de '+p.proveedor+' por $'+formatMonto(p.total||0)+'?'))return;
+  s.estado='Adjudicada';
+  window.OC113_ORDENES=window.OC113_ORDENES||[];
+  window.OC113_ORDENES.unshift({
+    id:'OC-'+String(Date.now()).slice(-5),
+    solicitud_id:s.id,
+    propuesta_id:p.id,
+    proveedor:p.proveedor,
+    total:p.total,
+    estado:'Adjudicada',
+    fecha_adjudicacion:fechaHoyLocal(),
+    items:s.items,
+    condiciones:s.observaciones,
+    trazabilidad:[
+      {fecha:fechaHoyLocal(),evento:'Necesidad publicada'},
+      {fecha:fechaHoyLocal(),evento:'Propuesta seleccionada: '+p.proveedor},
+      {fecha:fechaHoyLocal(),evento:'Orden de compra generada'}
+    ]
+  });
+  OC113_TAB='ordenes'; renderOrdenCompra(); showToast('✅ Orden de compra generada');
+}
+
+function oc118DetalleOrden(id){
+  var o=(window.OC113_ORDENES||[]).find(function(x){return String(x.id)===String(id);}); if(!o)return;
+  var tr=(o.trazabilidad||[]).map(function(t){return '<div style="padding:.42rem 0;border-bottom:1px solid var(--gris-2);"><strong>'+oc113Esc(t.fecha)+'</strong> · '+oc113Esc(t.evento)+'</div>';}).join('');
+  var items=(o.items||[]).map(function(x){return '<tr><td style="padding:.45rem;">'+oc113Esc(x.nombre)+'</td><td style="padding:.45rem;text-align:right;">'+numFmt(x.cantidad)+'</td><td style="padding:.45rem;">'+oc113Esc(x.unidad||'')+'</td></tr>';}).join('');
+  var bg=oc113Modal('<div style="display:flex;justify-content:space-between;"><div><div class="seccion-titulo" style="margin:0;">🛒 '+oc113Esc(o.id)+'</div><div class="hint">'+oc113Esc(o.proveedor)+' · '+oc113Esc(o.estado)+'</div></div><button id="oc118-x" style="border:none;background:none;font-size:1.35rem;cursor:pointer;">×</button></div>'+
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:10px 0;"><div class="form-card" style="margin:0;padding:.65rem;"><div class="hint">TOTAL</div><strong>$'+formatMonto(o.total||0)+'</strong></div><div class="form-card" style="margin:0;padding:.65rem;"><div class="hint">SOLICITUD</div><strong>'+oc113Esc(o.solicitud_id)+'</strong></div><div class="form-card" style="margin:0;padding:.65rem;"><div class="hint">ESTADO</div><strong>'+oc113Esc(o.estado)+'</strong></div></div>'+
+    '<div style="overflow:auto;"><table style="width:100%;border-collapse:collapse;font-size:.75rem;"><thead><tr><th>Producto</th><th>Cantidad</th><th>Unidad</th></tr></thead><tbody>'+items+'</tbody></table></div>'+
+    '<div class="seccion-titulo" style="margin-top:12px;">Trazabilidad</div><div class="form-card" style="margin:0;padding:.7rem;">'+tr+'</div>');
+  bg.querySelector('#oc118-x').onclick=oc113Close;
+}
+
+function oc118AvanzarOrden(id){
+  var o=(window.OC113_ORDENES||[]).find(function(x){return String(x.id)===String(id);}); if(!o)return;
+  var estados=['Adjudicada','Confirmada','En preparación','Enviada','Recibida'];
+  var i=estados.indexOf(o.estado||'Adjudicada');
+  if(i<estados.length-1){o.estado=estados[i+1];o.trazabilidad=o.trazabilidad||[];o.trazabilidad.push({fecha:fechaHoyLocal(),evento:'Estado: '+o.estado});}
+  renderOrdenCompra(); showToast('✅ Orden actualizada: '+o.estado);
+}
+
+function oc118ConvertirCompra(id){
+  var o=(window.OC113_ORDENES||[]).find(function(x){return String(x.id)===String(id);}); if(!o)return;
+  if(o.estado!=='Recibida'){alert('La orden debe estar Recibida antes de convertirla en compra.');return;}
+  window.OC118_COMPRA_DESDE_ORDEN=o;
+  C027_COMPRA_DESDE_CAJA=false;
+  renderNuevaCompra();
+  showToast('🧾 Orden '+o.id+' lista para registrar como compra');
+}
 function oc113SolicitudesHtml(rows){
   if(!rows.length)return '<div class="empty"><strong>Sin solicitudes publicadas</strong><div class="hint" style="margin-top:5px;">Selecciona necesidades y usa “Solicitar cotizaciones”. Los proveedores compatibles recibirán la oportunidad en su tablero.</div></div>';
   return rows.map(function(s){
     var req=s.fecha_requerida||(s.items&&s.items[0]&&s.items[0].fecha_requerida)||'';
-    return '<div class="orden-card" style="border-left-color:#3f7fbf;"><div style="display:flex;justify-content:space-between;gap:10px;"><div><strong>'+oc113Esc(s.id)+' · Solicitud de cotización</strong><div class="orden-meta">'+s.items.length+' producto(s) · publicada '+oc113Esc(s.fecha)+'</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:6px;"><span style="font-size:.68rem;font-weight:800;background:#eef5ff;color:#2d679b;padding:3px 8px;border-radius:999px;">Cotizar hasta '+oc113Esc(s.limite)+'</span>'+(req?'<span style="font-size:.68rem;font-weight:800;background:#fff5e8;color:#8a5a13;padding:3px 8px;border-radius:999px;">Entrega requerida '+oc113Esc(req)+'</span>':'')+'</div></div><span style="font-size:.68rem;font-weight:800;background:#eaf3fb;color:#2d679b;padding:3px 8px;border-radius:999px;height:max-content;">'+oc113Esc(s.estado)+'</span></div><div class="hint" style="margin-top:6px;">Mootsil la distribuyó a '+(s.proveedores_sugeridos||0)+' proveedor(es) compatibles según categoría y cobertura.</div></div>';
+    var nprop=(window.OC113_PROPUESTAS||[]).filter(function(p){return String(p.solicitud_id)===String(s.id);}).length;
+    return '<div class="orden-card" style="border-left-color:#3f7fbf;"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;"><div><strong>'+oc113Esc(s.id)+' · Solicitud de cotización</strong><div class="orden-meta">'+s.items.length+' producto(s) · publicada '+oc113Esc(s.fecha)+'</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:6px;"><span style="font-size:.68rem;font-weight:800;background:#eef5ff;color:#2d679b;padding:3px 8px;border-radius:999px;">Cotizar hasta '+oc113Esc(s.limite)+'</span>'+(req?'<span style="font-size:.68rem;font-weight:800;background:#fff5e8;color:#8a5a13;padding:3px 8px;border-radius:999px;">Entrega requerida '+oc113Esc(req)+'</span>':'')+'<span style="font-size:.68rem;font-weight:800;background:#f2edff;color:#6746a8;padding:3px 8px;border-radius:999px;">'+nprop+' propuesta(s)</span></div></div><div style="display:flex;gap:6px;align-items:center;"><button type="button" class="btn-secondary" data-oc118-detalle="'+oc113Esc(s.id)+'" style="width:auto;margin:0;padding:.34rem .52rem;">Ver detalle</button><span style="font-size:.68rem;font-weight:800;background:#eaf3fb;color:#2d679b;padding:3px 8px;border-radius:999px;height:max-content;">'+oc113Esc(s.estado)+'</span></div></div><div class="hint" style="margin-top:6px;">Mootsil la distribuyó a '+(s.proveedores_sugeridos||0)+' proveedor(es) compatibles según categoría y cobertura.</div></div>';
   }).join('');
 }
 function oc113PropuestasHtml(rows){
-  if(!rows.length)return '<div class="empty"><strong>Aún no hay propuestas recibidas</strong><div class="hint" style="margin-top:5px;">Aquí se compararán precio, marca/presentación, disponibilidad, entrega, forma de pago, crédito y vigencia. Cada proveedor verá únicamente su propia propuesta.</div></div>';
-  return rows.map(function(p){return '<div class="orden-card">'+oc113Esc(p.proveedor||'Proveedor')+'</div>';}).join('');
+  if(!rows.length)return '<div class="empty"><strong>Aún no hay propuestas recibidas</strong><div class="hint" style="margin-top:5px;">Aquí se comparan precio, marca/presentación, entrega, forma de pago, crédito, vigencia y observaciones. Cada proveedor sólo verá su propia propuesta.</div><button type="button" class="btn-secondary" style="width:auto;margin-top:10px;" onclick="oc118SembrarPropuestasDemo()">＋ Simular propuestas para prueba</button></div>';
+  var agrup={}; rows.forEach(function(p){(agrup[p.solicitud_id]=agrup[p.solicitud_id]||[]).push(p);});
+  return Object.keys(agrup).map(function(sid){
+    var ps=agrup[sid], s=(window.OC113_SOLICITUDES||[]).find(function(x){return String(x.id)===String(sid);});
+    var cards=ps.map(function(p){
+      return '<div class="form-card" style="margin:0;padding:.75rem;border-top:3px solid #7b5bc7;"><div style="display:flex;justify-content:space-between;gap:8px;"><div><strong>'+oc113Esc(p.proveedor)+'</strong><div class="hint">'+oc113Esc(p.marca||'Marca abierta')+' · '+oc113Esc(p.presentacion||'Presentación por confirmar')+'</div></div><strong style="font-size:1rem;color:var(--verde);">$'+formatMonto(p.total||0)+'</strong></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:8px;font-size:.72rem;"><div><span class="hint">Entrega</span><br><strong>'+oc113Esc(p.entrega||'—')+'</strong></div><div><span class="hint">Pago</span><br><strong>'+oc113Esc(p.pago||'—')+'</strong></div><div><span class="hint">Vigencia</span><br><strong>'+oc113Esc(p.vigencia||'—')+'</strong></div><div><span class="hint">Disponibilidad</span><br><strong>'+oc113Esc(p.disponibilidad||'—')+'</strong></div></div><div class="hint" style="margin-top:7px;">'+oc113Esc(p.observaciones||'Sin observaciones')+'</div><button type="button" class="btn-primary" data-oc118-adjudicar="'+oc113Esc(p.id)+'" style="margin-top:9px;">✓ Seleccionar propuesta</button></div>';
+    }).join('');
+    return '<div style="margin-bottom:14px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;"><div><strong>'+oc113Esc(sid)+' · Comparador de propuestas</strong><div class="hint">'+(s?s.items.length:0)+' producto(s)</div></div><button type="button" class="btn-secondary" data-oc118-detalle="'+oc113Esc(sid)+'" style="width:auto;margin:0;padding:.34rem .52rem;">Ver solicitud</button></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px;">'+cards+'</div></div>';
+  }).join('');
 }
 function oc113OrdenesHtml(rows){
-  if(!rows.length)return '<div class="empty"><strong>Aún no hay órdenes adjudicadas</strong><div class="hint" style="margin-top:5px;">La Orden de Compra se genera únicamente después de que Administración selecciona una propuesta ganadora. Después seguirá Confirmada → En preparación → Enviada → Recibida → Convertir en compra.</div></div>';
-  return rows.map(function(o){return '<div class="orden-card">'+oc113Esc(o.id||'Orden')+'</div>';}).join('');
+  if(!rows.length)return '<div class="empty"><strong>Aún no hay órdenes adjudicadas</strong><div class="hint" style="margin-top:5px;">La Orden de Compra se genera después de seleccionar una propuesta ganadora.</div></div>';
+  return rows.map(function(o){
+    var estados=['Adjudicada','Confirmada','En preparación','Enviada','Recibida'];
+    var idx=Math.max(0,estados.indexOf(o.estado||'Adjudicada'));
+    var barra=estados.map(function(e,i){return '<span style="font-size:.65rem;font-weight:800;padding:3px 7px;border-radius:999px;background:'+(i<=idx?'#eaf5ee':'#f1f1f1')+';color:'+(i<=idx?'var(--verde)':'var(--gris-3)')+';">'+e+'</span>';}).join(' ');
+    return '<div class="orden-card" style="border-left-color:var(--verde-mid);"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;"><div><strong>'+oc113Esc(o.id)+' · '+oc113Esc(o.proveedor)+'</strong><div class="orden-meta">Solicitud '+oc113Esc(o.solicitud_id)+' · $'+formatMonto(o.total||0)+' · adjudicada '+oc113Esc(o.fecha_adjudicacion||'')+'</div></div><span style="font-size:.68rem;font-weight:800;background:#eaf5ee;color:var(--verde);padding:3px 8px;border-radius:999px;">'+oc113Esc(o.estado||'Adjudicada')+'</span></div><div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;">'+barra+'</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:10px;"><button type="button" class="btn-secondary" data-oc118-orden="'+oc113Esc(o.id)+'" style="width:auto;margin:0;">Ver orden</button>'+(o.estado!=='Recibida'?'<button type="button" class="btn-primary" data-oc118-avanzar="'+oc113Esc(o.id)+'" style="width:auto;margin:0;">Avanzar estado</button>':'<button type="button" class="btn-primary" data-oc118-convertir="'+oc113Esc(o.id)+'" style="width:auto;margin:0;">Convertir en compra</button>')+'</div></div>';
+  }).join('');
 }
 
 function cargarJsPDF(cb){
