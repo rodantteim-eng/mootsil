@@ -14190,5 +14190,166 @@ document.addEventListener('click',function(e){
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
 C087
 </div>
+
+<style id="fi128-css">
+.fi128-wrap{padding:26px 36px 40px;background:#f7f8f6;min-height:calc(100vh - 155px)}
+.fi128-kicker{font-size:13px;font-weight:800;letter-spacing:.08em;color:#c56b00;text-transform:uppercase}
+.fi128-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:18px}
+.fi128-title{font-size:34px;line-height:1;color:#164b36;margin:5px 0 7px}
+.fi128-sub{color:#68746d;font-size:14px}
+.fi128-btn{border:1px solid #d7ddd9;background:white;border-radius:12px;padding:11px 16px;font-weight:750;cursor:pointer;color:#174d38}
+.fi128-btn.primary{background:#176a49;color:white;border-color:#176a49}
+.fi128-btn.danger{color:#a63c32}
+.fi128-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.fi128-stat,.fi128-card{background:#fff;border:1px solid #e0e4e1;border-radius:15px;padding:16px}
+.fi128-stat small{display:block;color:#7c857f;text-transform:uppercase;font-weight:700;font-size:11px}
+.fi128-stat strong{display:block;font-size:24px;color:#163f30;margin-top:4px}
+.fi128-list{display:grid;gap:10px}
+.fi128-row{background:#fff;border:1px solid #e0e4e1;border-left:4px solid #277a58;border-radius:14px;padding:15px 16px;display:grid;grid-template-columns:1.4fr .9fr .9fr .9fr auto;gap:12px;align-items:center}
+.fi128-row .muted,.fi128-muted{color:#7a837e;font-size:12px}
+.fi128-pill{display:inline-block;border-radius:999px;padding:4px 9px;background:#e9f5ee;color:#176a49;font-size:11px;font-weight:800}
+.fi128-modalbg{position:fixed;inset:0;background:rgba(0,0,0,.42);display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px}
+.fi128-modal{background:#fff;border-radius:18px;width:min(900px,96vw);max-height:90vh;overflow:auto;box-shadow:0 22px 70px rgba(0,0,0,.25)}
+.fi128-mhead{padding:18px 20px;border-bottom:1px solid #e7eae8;display:flex;justify-content:space-between;align-items:center}
+.fi128-mbody{padding:18px 20px}
+.fi128-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.fi128-form label{font-size:11px;font-weight:800;color:#68736d;text-transform:uppercase}
+.fi128-form input,.fi128-form select,.fi128-form textarea{width:100%;box-sizing:border-box;border:1px solid #d6dcd8;border-radius:10px;padding:11px;margin-top:5px;font:inherit;background:#fafbf9}
+.fi128-span2{grid-column:1/-1}
+.fi128-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:17px}
+.fi128-table{width:100%;border-collapse:collapse;margin-top:10px}
+.fi128-table th{background:#174f3a;color:#fff;text-align:left;padding:9px;font-size:11px;text-transform:uppercase}
+.fi128-table td{padding:9px;border-bottom:1px solid #e7eae8;font-size:13px}
+.fi128-empty{text-align:center;color:#89908c;padding:45px 15px}
+@media(max-width:900px){.fi128-grid{grid-template-columns:1fr 1fr}.fi128-row{grid-template-columns:1fr 1fr}.fi128-form{grid-template-columns:1fr}.fi128-span2{grid-column:auto}}
+</style>
+
+<script id="fi128-js">
+(function(){
+ const KEY='mootsil_financiamientos_128';
+ const MOV='mootsil_financiamientos_mov_128';
+ const $=s=>document.querySelector(s);
+ const money=n=>'$'+(Number(n)||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+ const load=(k)=>{try{return JSON.parse(localStorage.getItem(k)||'[]')}catch(e){return[]}};
+ const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+ const id=()=> 'FIN-'+Date.now().toString(36).toUpperCase().slice(-6);
+ const today=()=>new Date().toISOString().slice(0,10);
+ let returnHTML=null;
+
+ function financs(){return load(KEY)}
+ function movs(){return load(MOV)}
+ function saldo(f){
+   let ab=movs().filter(m=>m.financiamiento_id===f.id&&m.tipo==='capital').reduce((a,m)=>a+Number(m.monto||0),0);
+   let mix=movs().filter(m=>m.financiamiento_id===f.id&&m.tipo==='mixto').reduce((a,m)=>a+Number(m.capital||0),0);
+   return Math.max(0,Number(f.monto_original||0)-ab-mix);
+ }
+ function render(){
+   const app=document.querySelector('main')||document.querySelector('#app')||document.body;
+   if(!returnHTML) returnHTML={node:app,html:app.innerHTML};
+   let fs=financs(), total=fs.reduce((a,f)=>a+Number(f.monto_original||0),0),
+       pendiente=fs.reduce((a,f)=>a+saldo(f),0),
+       activos=fs.filter(f=>saldo(f)>0&&f.estado!=='cerrado').length,
+       prox=fs.filter(f=>f.proximo_pago).sort((a,b)=>a.proximo_pago.localeCompare(b.proximo_pago))[0];
+   app.innerHTML=`<div class="fi128-wrap">
+     <div class="fi128-head"><div><div class="fi128-kicker">Administración · Caja</div><h1 class="fi128-title">Financiamientos</h1><div class="fi128-sub">Créditos bancarios y de otras instituciones. Control de deuda externa y pagos desde Caja.</div></div>
+     <div><button class="fi128-btn" id="fi128-back">← Caja</button> <button class="fi128-btn primary" id="fi128-new">+ Nuevo financiamiento</button></div></div>
+     <div class="fi128-grid">
+       <div class="fi128-stat"><small>Capital contratado</small><strong>${money(total)}</strong></div>
+       <div class="fi128-stat"><small>Saldo pendiente</small><strong>${money(pendiente)}</strong></div>
+       <div class="fi128-stat"><small>Financiamientos activos</small><strong>${activos}</strong></div>
+       <div class="fi128-stat"><small>Próximo pago</small><strong style="font-size:18px">${prox?prox.proximo_pago:'—'}</strong><span class="fi128-muted">${prox?prox.institucion:''}</span></div>
+     </div>
+     <div class="fi128-card"><div style="display:flex;justify-content:space-between;align-items:center"><strong style="color:#174f3a">Créditos registrados</strong><span class="fi128-muted">Sólo deuda externa institucional</span></div>
+       <div class="fi128-list" style="margin-top:12px">${fs.length?fs.map(f=>`<div class="fi128-row">
+        <div><strong>${esc(f.institucion)}</strong><div class="muted">${esc(f.tipo_credito||'Crédito')} · ${esc(f.folio||'Sin referencia')}</div></div>
+        <div><span class="muted">Original</span><br><strong>${money(f.monto_original)}</strong></div>
+        <div><span class="muted">Saldo</span><br><strong>${money(saldo(f))}</strong></div>
+        <div><span class="muted">Próximo pago</span><br><strong>${f.proximo_pago||'—'}</strong></div>
+        <div><span class="fi128-pill">${saldo(f)<=0?'Liquidado':'Activo'}</span><br><button class="fi128-btn" style="margin-top:6px;padding:7px 10px" data-fi-detail="${f.id}">Ver detalle</button></div>
+       </div>`).join(''):`<div class="fi128-empty">Aún no hay financiamientos registrados.</div>`}</div>
+     </div></div>`;
+   $('#fi128-back').onclick=back;
+   $('#fi128-new').onclick=()=>modalNuevo();
+   document.querySelectorAll('[data-fi-detail]').forEach(b=>b.onclick=()=>detalle(b.dataset.fiDetail));
+ }
+ function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+ function back(){ if(returnHTML){returnHTML.node.innerHTML=returnHTML.html; let x=returnHTML;returnHTML=null; setTimeout(hook,0)} else location.reload() }
+ function modal(html){let d=document.createElement('div');d.className='fi128-modalbg';d.innerHTML=`<div class="fi128-modal">${html}</div>`;document.body.appendChild(d);d.addEventListener('click',e=>{if(e.target===d||e.target.closest('[data-fi-close]'))d.remove()});return d}
+ function modalNuevo(){
+  let d=modal(`<div class="fi128-mhead"><div><strong>🏦 Nuevo financiamiento</strong><div class="fi128-muted">Registra el crédito contratado por el rancho.</div></div><button class="fi128-btn" data-fi-close>×</button></div>
+  <form class="fi128-mbody" id="fi128-form"><div class="fi128-form">
+   <div><label>Institución / acreedor<input name="institucion" required placeholder="Ej. Banamex"></label></div>
+   <div><label>Tipo de financiamiento<select name="tipo_credito"><option>Crédito bancario</option><option>Crédito de avío</option><option>Crédito refaccionario</option><option>SOFOM / Financiera</option><option>Arrendamiento financiero</option><option>Factoraje</option><option>Otro institucional</option></select></label></div>
+   <div><label>Monto original ($)<input name="monto_original" type="number" min="0" step=".01" required></label></div>
+   <div><label>Fecha de disposición<input name="fecha_inicio" type="date" value="${today()}" required></label></div>
+   <div><label>Tasa anual (%)<input name="tasa" type="number" min="0" step=".01"></label></div>
+   <div><label>Plazo (meses)<input name="plazo" type="number" min="1"></label></div>
+   <div><label>Periodicidad<select name="periodicidad"><option>Mensual</option><option>Quincenal</option><option>Trimestral</option><option>Semestral</option><option>Anual</option><option>Otro</option></select></label></div>
+   <div><label>Pago programado ($)<input name="pago_programado" type="number" min="0" step=".01"></label></div>
+   <div><label>Próxima fecha de pago<input name="proximo_pago" type="date"></label></div>
+   <div><label>Cuenta de ingreso<select name="cuenta_ingreso"><option>Efectivo en Caja</option><option>Banamex Pesos</option><option>Banamex Dólares</option><option>Santander Pesos</option></select></label></div>
+   <div><label>Contrato / folio<input name="folio" placeholder="Número de crédito o contrato"></label></div>
+   <div><label>Vencimiento<input name="vencimiento" type="date"></label></div>
+   <div class="fi128-span2"><label>Observaciones<textarea name="observaciones" rows="2" placeholder="Garantía, destino del crédito, condiciones especiales..."></textarea></label></div>
+  </div><div class="fi128-actions"><button type="button" class="fi128-btn" data-fi-close>Cancelar</button><button class="fi128-btn primary">Registrar financiamiento</button></div></form>`);
+  d.querySelector('#fi128-form').onsubmit=e=>{
+   e.preventDefault();let o=Object.fromEntries(new FormData(e.target).entries());o.id=id();o.estado='activo';o.creado=today();
+   let a=financs();a.push(o);save(KEY,a);
+   // Record financing inflow in Caja test ledger when available.
+   try{ if(typeof ca21Load==='function'&&typeof ca21Save==='function'){let c=ca21Load();c.movimientos.push({id:'FI'+Date.now(),fecha:o.fecha_inicio,hora:new Date().toTimeString().slice(0,5),tipo:'entrada',cuenta:o.cuenta_ingreso,monto:Number(o.monto_original),categoria:'Financiamientos',concepto:'Disposición de financiamiento',persona:o.institucion,nota:o.folio||'',origen:'Financiamientos',estado:'Registrado',financiamiento_id:o.id});ca21Save(c)} }catch(_){}
+   d.remove();render();
+  }
+ }
+ function detalle(fid){
+  let f=financs().find(x=>x.id===fid);if(!f)return;let ms=movs().filter(x=>x.financiamiento_id===fid);
+  let cap=ms.reduce((a,m)=>a+(m.tipo==='capital'?Number(m.monto||0):m.tipo==='mixto'?Number(m.capital||0):0),0);
+  let inte=ms.reduce((a,m)=>a+(m.tipo==='interes'?Number(m.monto||0):m.tipo==='mixto'?Number(m.interes||0):0),0);
+  let d=modal(`<div class="fi128-mhead"><div><strong>🏦 ${esc(f.institucion)}</strong><div class="fi128-muted">${esc(f.tipo_credito)} · ${esc(f.folio||'Sin folio')}</div></div><button class="fi128-btn" data-fi-close>×</button></div>
+  <div class="fi128-mbody">
+   <div class="fi128-grid"><div class="fi128-stat"><small>Capital original</small><strong>${money(f.monto_original)}</strong></div><div class="fi128-stat"><small>Capital pagado</small><strong>${money(cap)}</strong></div><div class="fi128-stat"><small>Intereses pagados</small><strong>${money(inte)}</strong></div><div class="fi128-stat"><small>Saldo pendiente</small><strong>${money(saldo(f))}</strong></div></div>
+   <div class="fi128-card"><strong>Condiciones</strong><div class="fi128-form" style="margin-top:10px"><div>Tasa: <b>${f.tasa||'—'}${f.tasa?'%':''}</b></div><div>Plazo: <b>${f.plazo?f.plazo+' meses':'—'}</b></div><div>Periodicidad: <b>${esc(f.periodicidad||'—')}</b></div><div>Pago programado: <b>${money(f.pago_programado)}</b></div><div>Próximo pago: <b>${f.proximo_pago||'—'}</b></div><div>Vencimiento: <b>${f.vencimiento||'—'}</b></div></div></div>
+   <div style="display:flex;justify-content:space-between;align-items:center;margin:15px 0 7px"><strong>Historial de pagos</strong>${saldo(f)>0?`<button class="fi128-btn primary" id="fi128-pay">Registrar pago</button>`:''}</div>
+   <table class="fi128-table"><thead><tr><th>Fecha</th><th>Tipo</th><th>Capital</th><th>Interés</th><th>Cuenta</th><th>Referencia</th></tr></thead><tbody>${ms.length?ms.map(m=>`<tr><td>${m.fecha}</td><td>${m.tipo==='mixto'?'Mixto':m.tipo==='capital'?'Capital':'Intereses'}</td><td>${money(m.tipo==='capital'?m.monto:m.capital)}</td><td>${money(m.tipo==='interes'?m.monto:m.interes)}</td><td>${esc(m.cuenta)}</td><td>${esc(m.referencia||'—')}</td></tr>`).join(''):`<tr><td colspan="6" class="fi128-empty">Sin pagos registrados.</td></tr>`}</tbody></table>
+  </div>`);
+  let b=d.querySelector('#fi128-pay');if(b)b.onclick=()=>{d.remove();pago(fid)}
+ }
+ function pago(fid){
+  let f=financs().find(x=>x.id===fid);if(!f)return;
+  let d=modal(`<div class="fi128-mhead"><div><strong>💳 Pago de financiamiento</strong><div class="fi128-muted">${esc(f.institucion)} · Saldo ${money(saldo(f))}</div></div><button class="fi128-btn" data-fi-close>×</button></div>
+  <form class="fi128-mbody" id="fi128-payform"><div class="fi128-form">
+   <div><label>Tipo de pago<select name="tipo" id="fi128-tipo"><option value="capital">Abono a capital</option><option value="interes">Pago de intereses</option><option value="mixto">Pago mixto</option></select></label></div>
+   <div><label>Fecha<input name="fecha" type="date" value="${today()}" required></label></div>
+   <div id="fi128-one"><label>Monto ($)<input name="monto" type="number" min=".01" step=".01" required></label></div>
+   <div id="fi128-cap" style="display:none"><label>Capital ($)<input name="capital" type="number" min="0" step=".01"></label></div>
+   <div id="fi128-int" style="display:none"><label>Intereses ($)<input name="interes" type="number" min="0" step=".01"></label></div>
+   <div><label>Cuenta de salida<select name="cuenta"><option>Efectivo en Caja</option><option>Banamex Pesos</option><option>Banamex Dólares</option><option>Santander Pesos</option></select></label></div>
+   <div class="fi128-span2"><label>Referencia / observación<input name="referencia" placeholder="Transferencia, folio o comentario"></label></div>
+  </div><div class="fi128-actions"><button type="button" class="fi128-btn" data-fi-close>Cancelar</button><button class="fi128-btn primary">Registrar pago</button></div></form>`);
+  let typ=d.querySelector('#fi128-tipo');typ.onchange=()=>{let mix=typ.value==='mixto';d.querySelector('#fi128-one').style.display=mix?'none':'';d.querySelector('#fi128-cap').style.display=mix?'':'none';d.querySelector('#fi128-int').style.display=mix?'':'none';d.querySelector('[name=monto]').required=!mix};
+  d.querySelector('#fi128-payform').onsubmit=e=>{
+    e.preventDefault();let o=Object.fromEntries(new FormData(e.target).entries());o.id='MOV-'+Date.now();o.financiamiento_id=fid;
+    let total=o.tipo==='mixto'?Number(o.capital||0)+Number(o.interes||0):Number(o.monto||0);
+    let capital=o.tipo==='capital'?Number(o.monto||0):o.tipo==='mixto'?Number(o.capital||0):0;
+    if(total<=0)return alert('Captura un monto válido.');
+    if(capital>saldo(f)+.01)return alert('El abono a capital no puede superar el saldo pendiente.');
+    let a=movs();a.push(o);save(MOV,a);
+    try{if(typeof ca21Load==='function'&&typeof ca21Save==='function'){let c=ca21Load();c.movimientos.push({id:'FIP'+Date.now(),fecha:o.fecha,hora:new Date().toTimeString().slice(0,5),tipo:'salida',cuenta:o.cuenta,monto:total,categoria:'Financiamientos',concepto:o.tipo==='capital'?'Abono a capital':o.tipo==='interes'?'Pago de intereses':'Pago mixto capital + intereses',persona:f.institucion,nota:o.referencia||f.folio||'',origen:'Financiamientos',estado:'Registrado',financiamiento_id:fid});ca21Save(c)}}catch(_){}
+    d.remove();render();setTimeout(()=>detalle(fid),0);
+  }
+ }
+ function hook(){
+  document.addEventListener('click',function(e){
+    let b=e.target.closest('button,a,[role=button]');
+    if(!b)return;
+    let txt=(b.textContent||'').trim().toLowerCase();
+    if(txt.includes('financiamientos')&&!b.closest('.fi128-wrap')&&!b.closest('.fi128-modalbg')){
+      e.preventDefault();e.stopImmediatePropagation();render();
+    }
+  },true);
+ }
+ hook();
+})();
+</script>
+
 </body>
 </html>
