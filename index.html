@@ -10528,67 +10528,51 @@ function bo92Decidir(id,rows,benef){
 function renderNuevoBono(){renderBonos();setTimeout(bo91ToggleForm,80);}
 function renderApoyosC092(){
  var body=document.getElementById('no89-body')||document.getElementById('enc-body');
- body.innerHTML='<div class="seccion-titulo">⛽ Solicitudes de Apoyo</div><div class="hint" style="margin-bottom:10px;">Aquí sólo aparecen solicitudes enviadas por colaboradores activos. Administración decide autorizar o rechazar.</div><div id="ap100-list"><div class="loading">Cargando solicitudes...</div></div>';
- Promise.all([
-   from('solicitudes_operario').select('*').eq('tipo','apoyo').order('creado_en',{ascending:false}).get(),
-   from('usuarios').select('*').get()
- ]).then(function(rr){
-   var usuarios=rr[1]||[],porId={};usuarios.forEach(function(u){porId[String(u.id)]=u;});
-   var solicitudes=(rr[0]||[]).filter(function(s){
-     var u=porId[String(s.operario_id)];
-     return u&&u.activo===true;
-   });
-   var pendientes=solicitudes.filter(function(s){return s.estado==='pendiente';});
-   var resueltas=solicitudes.filter(function(s){return s.estado!=='pendiente';});
-   function card(s){
-     var u=porId[String(s.operario_id)]||{},m=ap100SolicitudMeta(s.mensaje),pend=s.estado==='pendiente';
-     return '<div class="orden-card" style="padding:.8rem .9rem;"><div style="display:flex;justify-content:space-between;gap:10px;"><div><strong>⛽ '+(u.nombre||'Colaborador')+' · '+m.concepto+'</strong><div class="orden-meta">'+m.descripcion+'<br>Monto solicitado: <b>$'+parseFloat(s.monto_solicitado||0).toFixed(2)+'</b></div></div><span style="font-size:.68rem;font-weight:800;color:'+(pend?'var(--tierra)':(s.estado==='atendida'?'var(--verde-mid)':'var(--rojo)'))+';">'+String(s.estado||'pendiente').toUpperCase()+'</span></div>'+
-       (pend?'<div style="display:flex;gap:7px;margin-top:8px;"><button class="btn-sm btn-completar" data-ap100-ok="'+s.id+'">Autorizar</button><button class="btn-sm btn-cancelar" data-ap100-no="'+s.id+'">Rechazar</button></div>':'<div class="hint" style="margin-top:5px;">'+(s.respuesta||'Resuelta por Administración')+'</div>')+'</div>';
-   }
-   var list=document.getElementById('ap100-list');
-   list.innerHTML='<div style="font-size:.68rem;font-weight:850;color:var(--verde);text-transform:uppercase;margin:4px 0 7px;">Por revisar · '+pendientes.length+'</div>'+
-     (pendientes.length?pendientes.map(card).join(''):'<div class="empty" style="padding:.8rem;">No hay solicitudes pendientes.</div>')+
-     '<div style="font-size:.68rem;font-weight:850;color:var(--verde);text-transform:uppercase;margin:16px 0 7px;">Historial</div>'+
-     (resueltas.length?resueltas.map(card).join(''):'<div class="empty" style="padding:.8rem;">Sin solicitudes resueltas.</div>');
-   list.querySelectorAll('[data-ap100-ok]').forEach(function(b){b.onclick=function(){
-     var id=this.dataset.ap100Ok,s=solicitudes.find(function(x){return String(x.id)===String(id);});if(!s)return;
-     var u=porId[String(s.operario_id)]||{},m=ap100SolicitudMeta(s.mensaje);
-     ap100AutorizarSolicitud(s,u,m);
-   };});
-   list.querySelectorAll('[data-ap100-no]').forEach(function(b){b.onclick=function(){
-     var id=this.dataset.ap100No,s=solicitudes.find(function(x){return String(x.id)===String(id);});if(!s)return;
-     var motivo=prompt('Motivo del rechazo:');if(motivo===null)return;if(!motivo.trim()){alert('Captura el motivo.');return;}
-     from('solicitudes_operario').eq('id',id).update({estado:'rechazada',respuesta:motivo.trim(),atendido_por:usuario.id,atendido_en:new Date().toISOString()})
-      .then(function(){return from('notificaciones').insert({titulo:'❌ Apoyo rechazado',cuerpo:'Tu solicitud de apoyo fue rechazada: '+motivo.trim(),icono:'❌',leida:false,para_rol:'operario',para_usuario:s.operario_id});})
-      .then(function(){showToast('Solicitud rechazada');renderApoyosC092();}).catch(function(e){alert('Error: '+e.message);});
-   };});
- }).catch(function(e){body.innerHTML='<div class="empty">Error al cargar apoyos: '+e.message+'</div>';});
-}
-function ap100AutorizarSolicitud(s,u,m){
- var old=document.getElementById('ap100-auth');if(old)old.remove();
- var bg=document.createElement('div');bg.id='ap100-auth';bg.className='sol59-modal-bg';bg.style.zIndex='10080';
- bg.innerHTML='<div class="sol59-modal"><div class="sol59-modal-h"><strong>Autorizar apoyo · '+(u.nombre||'Colaborador')+'</strong><button class="em59-back" id="ap100-x">✕</button></div><div class="sol59-modal-b"><div class="sol59-grid">'+
- '<div class="sol59-field"><label>Concepto</label><select id="ap100-tipo"><option>Gasolina</option><option>Transporte</option><option>Alimentos</option><option>Hospedaje</option><option>Viáticos</option><option>Herramientas / equipo personal</option><option>Otro</option></select></div>'+
- '<div class="sol59-field"><label>Monto autorizado ($)</label><input id="ap100-monto" type="number" min="1" step="1" value="'+parseFloat(s.monto_solicitado||0).toFixed(2)+'"></div>'+
- '<div class="sol59-field full"><label>Descripción</label><textarea id="ap100-desc">'+String(m.descripcion||'').replace(/</g,'&lt;')+'</textarea></div>'+
- '<div class="sol59-field full"><div class="hint">Autorizado por: <b>'+((usuario&&usuario.nombre)||'Administración')+'</b></div></div></div></div>'+
- '<div class="sol59-modal-f"><button class="btn-sm" id="ap100-cancel">Cancelar</button><button class="btn-sm btn-completar" id="ap100-save">Autorizar apoyo</button></div></div>';
- document.body.appendChild(bg);
- var sel=document.getElementById('ap100-tipo');[].slice.call(sel.options).forEach(function(o){if(o.value===m.concepto||o.text===m.concepto)sel.value=o.value;});
- document.getElementById('ap100-x').onclick=document.getElementById('ap100-cancel').onclick=function(){bg.remove();};
- document.getElementById('ap100-save').onclick=function(){
-   var tipo=sel.value,desc=(document.getElementById('ap100-desc').value||'').trim(),monto=parseFloat(document.getElementById('ap100-monto').value||0);
-   if(!desc){alert('Captura la descripción.');return;}if(!monto||monto<=0){alert('Captura el monto.');return;}
-   var meta={operario_id:s.operario_id,nombre:u.nombre||'Colaborador',tipo:tipo,descripcion:desc,origen:'nomina_apoyo',solicitud_id:s.id,autorizado_por:usuario.id,autorizado_por_nombre:(usuario&&usuario.nombre)||'Administración'};
-   var btn=this;btn.disabled=true;btn.textContent='Guardando...';
-   from('gastos').insert({categoria:'otros',monto:monto,fecha:fechaHoyLocal(),proveedor_id:null,concepto:ap98Desc(meta,tipo),inventario_item_id:null,cantidad:null,comprobante_url:null,registrado_por:usuario.id,forma_pago:'Nómina',fecha_vencimiento:null,estado_pago:'pendiente',notificado_vencimiento:false,compra_id:null})
-    .then(function(){return from('solicitudes_operario').eq('id',s.id).update({estado:'atendida',respuesta:'Apoyo autorizado por $'+monto.toFixed(2)+' · '+tipo,atendido_por:usuario.id,atendido_en:new Date().toISOString()});})
-    .then(function(){return from('notificaciones').insert({titulo:'✅ Apoyo autorizado',cuerpo:'Tu apoyo de '+tipo+' por $'+monto.toFixed(2)+' fue autorizado y se reflejará en Nómina.',icono:'✅',leida:false,para_rol:'operario',para_usuario:s.operario_id});})
-    .then(function(){bg.remove();showToast('✅ Apoyo autorizado');renderApoyosC092();})
-    .catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Autorizar apoyo';});
- };
-}
+ body.innerHTML='<div class="seccion-titulo">⛽ Apoyos</div><div class="hint" style="margin-bottom:10px;">Gasolina, transporte, alimentos u otros apoyos económicos. Son independientes de Bonos y se reflejan en Nómina, Cartera y Recibo.</div>'+
+ '<div class="form-card">'+
+ '<div class="form-group"><label>Colaborador</label><select id="ap98-op"><option value="">Cargando personal...</option></select></div>'+
+ '<div class="form-group"><label>Concepto</label><select id="ap98-tipo"><option>Gasolina</option><option>Transporte</option><option>Alimentos</option><option>Hospedaje</option><option>Viáticos</option><option>Herramientas / equipo personal</option><option>Otro</option></select></div>'+
+ '<div class="form-group"><label>Descripción</label><input id="ap99-desc" placeholder="Ej. Gasolina para traslado al rancho"></div>'+
+ '<div class="hint" style="margin:-3px 0 10px;">Autorizado / registrado por: <b>'+((usuario&&usuario.nombre)||'Administración')+'</b></div>'+
+ '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><div class="form-group"><label>Monto ($)</label><input id="ap98-monto" type="number" min="0" step="1" placeholder="Ej. 200"></div><div class="form-group"><label>Fecha</label><input id="ap98-fecha" type="date" value="'+fechaHoyLocal()+'"></div></div>'+
+ '<button class="btn-sm btn-completar" id="ap98-guardar">Registrar apoyo</button></div>'+
+ '<div style="font-size:.68rem;font-weight:850;color:var(--verde);text-transform:uppercase;margin:16px 0 7px;">Apoyos recientes</div><div id="ap98-list"><div class="loading">Cargando...</div></div>';
 
+ function cargarLista(){
+  Promise.all([
+   from('usuarios').select('*').get(),
+   from('gastos').select('*').order('fecha',{ascending:false}).limit(80).get()
+  ]).then(function(rr){
+   var us=(rr[0]||[]).filter(function(u){return u.nombre&&['admin','dueño','dueno','inversionista'].indexOf(String(u.rol||'').toLowerCase())<0;});
+   var sel=document.getElementById('ap98-op');
+   if(sel&&sel.options.length<=1)sel.innerHTML='<option value="">Selecciona...</option>'+us.map(function(u){return '<option value="'+u.id+'">'+u.nombre+'</option>';}).join('');
+   var apoyos=(rr[1]||[]).filter(ap98EsApoyo).slice(0,30),list=document.getElementById('ap98-list');
+   if(!list)return;
+   list.innerHTML=apoyos.length?apoyos.map(function(g){
+    var m=ap98Meta(g.concepto)||{},nom=m.nombre||'Colaborador';
+    return '<div class="orden-card" style="padding:.7rem .85rem;"><div style="display:flex;justify-content:space-between;gap:8px;"><div><strong>⛽ '+nom+'</strong><div class="orden-meta">'+ap98Concepto(g)+(ap99Descripcion(g)?' · '+ap99Descripcion(g):'')+' · '+g.fecha+(m.autorizado_por_nombre?'<br>Registrado por: '+m.autorizado_por_nombre:'')+'</div></div><strong style="color:var(--verde);">+$'+parseFloat(g.monto||0).toFixed(2)+'</strong></div></div>';
+   }).join(''):'<div class="empty">No hay apoyos registrados.</div>';
+  }).catch(function(e){var l=document.getElementById('ap98-list');if(l)l.innerHTML='<div class="empty">Error: '+e.message+'</div>';});
+ }
+
+ document.getElementById('ap98-guardar').onclick=function(){
+  var op=document.getElementById('ap98-op'),opId=op.value,nombre=op.options[op.selectedIndex]?op.options[op.selectedIndex].text:'';
+  var tipo=document.getElementById('ap98-tipo').value;
+  var concepto=tipo;
+  var descripcion=(document.getElementById('ap99-desc').value||'').trim();
+  var monto=parseFloat(document.getElementById('ap98-monto').value||0),fecha=document.getElementById('ap98-fecha').value;
+  if(!opId){alert('Selecciona al colaborador.');return;}
+  if(!descripcion){alert('Captura la descripción del apoyo.');return;}
+  if(!monto||monto<=0){alert('Captura el monto.');return;}
+  if(!fecha){alert('Captura la fecha.');return;}
+  var meta={operario_id:opId,nombre:nombre,tipo:concepto,descripcion:descripcion,origen:'nomina_apoyo',autorizado_por:(usuario&&usuario.id)||null,autorizado_por_nombre:(usuario&&usuario.nombre)||'Administración'};
+  var btn=this;btn.disabled=true;btn.textContent='Guardando...';
+  from('gastos').insert({categoria:'otros',monto:monto,fecha:fecha,proveedor_id:null,concepto:ap98Desc(meta,concepto),inventario_item_id:null,cantidad:null,comprobante_url:null,registrado_por:usuario.id,forma_pago:'Nómina',fecha_vencimiento:null,estado_pago:'pendiente',notificado_vencimiento:false,compra_id:null})
+   .then(function(){showToast('✅ Apoyo registrado · se reflejará en Nómina');document.getElementById('ap98-monto').value='';document.getElementById('ap99-desc').value='';btn.disabled=false;btn.textContent='Registrar apoyo';cargarLista();})
+   .catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Registrar apoyo';});
+ };
+ cargarLista();
+}
 
 var cosecha={plantacionId:null,tablaId:null,surcos:[],operarios:[],fecha:null,notas:null};
 
@@ -11577,7 +11561,7 @@ function marcarAsistencia(tipo,modalidad){
 
 function renderSolicitudesMenu(){
   var body=document.getElementById('op-body');
-  body.innerHTML='<div class="seccion-titulo">📨 Solicitudes</div><div style="display:flex;flex-direction:column;gap:.75rem;"><div class="tarea-card" style="cursor:pointer;" onclick="renderAsisPermisos()"><div class="tarea-title">📝 Permisos</div><div class="tarea-meta">Solicita un permiso personal o médico</div></div><div class="tarea-card" style="cursor:pointer;" onclick="renderSolicitarPrestamo()"><div class="tarea-title">💰 Solicitar préstamo</div><div class="tarea-meta">Pide un adelanto o préstamo a administración</div></div><div class="tarea-card" style="cursor:pointer;" onclick="renderSolicitarApoyo100()"><div class="tarea-title">⛽ Solicitar apoyo</div><div class="tarea-meta">Gasolina, transporte, alimentos u otro apoyo económico</div></div><div class="tarea-card" style="cursor:pointer;" onclick="renderSolicitudOtro()"><div class="tarea-title">💬 Otro asunto</div><div class="tarea-meta">Cualquier tema directo con administración</div></div><div class="tarea-card" style="cursor:pointer;" onclick="renderMisSolicitudes()"><div class="tarea-title">📋 Mis solicitudes</div><div class="tarea-meta">Revisa el estatus de lo que has pedido</div></div></div>';
+  body.innerHTML='<div class="seccion-titulo">📨 Solicitudes</div><div style="display:flex;flex-direction:column;gap:.75rem;"><div class="tarea-card" style="cursor:pointer;" onclick="renderAsisPermisos()"><div class="tarea-title">📝 Permisos</div><div class="tarea-meta">Solicita un permiso personal o médico</div></div><div class="tarea-card" style="cursor:pointer;" onclick="renderSolicitarPrestamo()"><div class="tarea-title">💰 Solicitar préstamo</div><div class="tarea-meta">Pide un adelanto o préstamo a administración</div></div><div class="tarea-card" style="cursor:pointer;" onclick="renderSolicitudOtro()"><div class="tarea-title">💬 Otro asunto</div><div class="tarea-meta">Cualquier tema directo con administración</div></div><div class="tarea-card" style="cursor:pointer;" onclick="renderMisSolicitudes()"><div class="tarea-title">📋 Mis solicitudes</div><div class="tarea-meta">Revisa el estatus de lo que has pedido</div></div></div>';
 }
 
 function limitesMesActual(){
@@ -11630,34 +11614,6 @@ function renderSolicitarPrestamo(){
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
-
-function renderSolicitarApoyo100(){
-  var body=document.getElementById('op-body');
-  body.innerHTML='<div class="seccion-titulo">⛽ Solicitar apoyo</div>'+
-    '<div class="form-card"><p class="hint" style="margin-bottom:.75rem;">La solicitud será revisada por Administración. El apoyo sólo se incorpora a tu nómina si es autorizado.</p>'+
-    '<div class="form-group"><label>Concepto</label><select id="sa100-tipo"><option>Gasolina</option><option>Transporte</option><option>Alimentos</option><option>Hospedaje</option><option>Viáticos</option><option>Herramientas / equipo personal</option><option>Otro</option></select></div>'+
-    '<div class="form-group"><label>Descripción</label><textarea id="sa100-desc" rows="3" placeholder="Ej. Gasolina para traslado al rancho" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div>'+
-    '<div class="form-group"><label>Monto solicitado ($)</label><input id="sa100-monto" type="number" min="1" step="1" placeholder="Ej. 200"></div>'+
-    '<button class="btn-primary" id="sa100-enviar">Enviar solicitud</button></div>'+
-    '<button class="btn-back" style="margin-top:1rem;" onclick="renderSolicitudesMenu()">← Volver a Solicitudes</button>';
-  document.getElementById('sa100-enviar').onclick=function(){
-    var tipo=document.getElementById('sa100-tipo').value,desc=(document.getElementById('sa100-desc').value||'').trim(),monto=parseFloat(document.getElementById('sa100-monto').value||0);
-    if(!desc){alert('Describe para qué necesitas el apoyo.');return;}
-    if(!monto||monto<=0){alert('Captura el monto solicitado.');return;}
-    var btn=this;btn.disabled=true;btn.textContent='Enviando...';
-    var mensaje='[APOYO100]'+encodeURIComponent(JSON.stringify({concepto:tipo,descripcion:desc}))+'[/APOYO100] '+desc;
-    from('solicitudes_operario').insert({operario_id:usuario.id,tipo:'apoyo',monto_solicitado:monto,mensaje:mensaje,estado:'pendiente'})
-      .then(function(){return from('notificaciones').insert({titulo:'⛽ Solicitud de apoyo',cuerpo:usuario.nombre+' solicita '+tipo+' por $'+monto.toFixed(2)+': '+desc,icono:'⛽',leida:false,para_rol:'encargado'});})
-      .then(function(){showToast('✅ Solicitud de apoyo enviada');renderSolicitudesMenu();})
-      .catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Enviar solicitud';});
-  };
-}
-function ap100SolicitudMeta(mensaje){
-  var m=String(mensaje||'').match(/\[APOYO100\](.*?)\[\/APOYO100\]/);
-  if(!m)return {concepto:'Apoyo',descripcion:String(mensaje||'')};
-  try{return JSON.parse(decodeURIComponent(m[1]));}catch(e){return {concepto:'Apoyo',descripcion:String(mensaje||'').replace(/\[APOYO100\].*?\[\/APOYO100\]\s*/,'')};}
-}
-
 function renderSolicitudOtro(contexto){
   var esSugerencia=contexto==='sugerencia';
   var body=document.getElementById('op-body');
@@ -11682,8 +11638,8 @@ function renderMisSolicitudes(){
     from('solicitudes_operario').select('*').eq('operario_id',usuario.id).order('creado_en',{ascending:false}).get(),
     from('permisos').select('*').eq('usuario_id',usuario.id).order('creado_en',{ascending:false}).get()
   ]).then(function(r){
-    var solicitudTipoIc={herramienta:'⚠️ ',otro:'💬 ',mantenimiento:'🔧 ',insumo:'📦 ',apoyo:'⛽ '},
-        generales=(r[0]||[]).map(function(s){return {tipo:s.tipo,estado:s.estado,texto:(s.tipo==='prestamo'?'💰 Préstamo · $'+parseFloat(s.monto_solicitado||0).toFixed(2):(s.tipo==='apoyo'?'⛽ Apoyo · $'+parseFloat(s.monto_solicitado||0).toFixed(2)+' · '+ap100SolicitudMeta(s.mensaje).concepto:(solicitudTipoIc[s.tipo]||'💬 ')+s.mensaje.slice(0,60))),respuesta:s.respuesta,fecha:s.creado_en};}),
+    var solicitudTipoIc={herramienta:'⚠️ ',otro:'💬 ',mantenimiento:'🔧 ',insumo:'📦 '},
+        generales=(r[0]||[]).map(function(s){return {tipo:s.tipo,estado:s.estado,texto:(s.tipo==='prestamo'?'💰 Préstamo · $'+parseFloat(s.monto_solicitado||0).toFixed(2):(solicitudTipoIc[s.tipo]||'💬 ')+s.mensaje.slice(0,60)),respuesta:s.respuesta,fecha:s.creado_en};}),
         permisos=(r[1]||[]).map(function(p){return {tipo:'permiso',estado:p.estado,texto:(p.tipo==='medico'?'🩺 Permiso médico':'👤 Permiso personal')+' · '+p.fecha_inicio,respuesta:null,fecha:p.creado_en};});
     var todas=generales.concat(permisos).sort(function(a,b){return new Date(b.fecha)-new Date(a.fecha);});
     if(!todas.length){body.innerHTML='<div class="seccion-titulo">📋 Mis solicitudes</div><div class="empty">Aún no has enviado ninguna solicitud.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderSolicitudesMenu()">← Volver a Solicitudes</button>';return;}
