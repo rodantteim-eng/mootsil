@@ -740,7 +740,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ca22-op.nomina-gold{border-top:4px solid #c59a12!important}
 
 
-/* C083 — Recibo media carta con impresión directa + descarga PDF */
+/* C084 — Hoja Carta con 2 recibos media carta horizontal + crédito proveedor por factura/abono */
 .ca22-op.nomina-gold{border-top:4px solid #c59a12!important}
 .no49-paybox{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;padding:8px 10px;background:#fbfaf4;border:1px solid #eadfb7;border-radius:10px}
 .no49-payfield{display:flex;flex-direction:column;gap:3px}
@@ -5419,25 +5419,109 @@ function ca25LoadPagosProveedor(){try{return JSON.parse(localStorage.getItem('mo
 function ca25SavePagosProveedor(a){localStorage.setItem('mootsil_pagos_credito_proveedor_v1',JSON.stringify(a||[]))}
 function ca25PagadoCompra(id){return ca25LoadPagosProveedor().filter(function(p){return String(p.compra_id)===String(id)}).reduce(function(s,p){return s+(parseFloat(p.monto)||0)},0)}
 function ca25RegistrarPagoProveedor(compra){
-  var pagado=ca25PagadoCompra(compra.id),saldo=Math.max(0,(parseFloat(compra.total)||0)-pagado);
-  ca21OpenModal('<div class="ca21-dialog-head"><div><h3>💳 Pago a crédito de proveedor</h3><p>'+(compra.proveedor?compra.proveedor.nombre:'Proveedor')+' · Saldo $'+formatMonto(saldo)+'</p></div><button class="ca21-close" onclick="ca21CloseModal()">×</button></div>'+
-  '<div class="ca21-dialog-body"><div class="ca21-form"><div class="ca21-field"><label>Monto a pagar</label><input id="ca25-cp-monto" type="number" min=".01" max="'+saldo+'" step=".01" value="'+saldo+'"></div><div class="ca21-field"><label>Cuenta</label><select id="ca25-cp-cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div><div class="ca21-field full"><label>Referencia / observación</label><textarea id="ca25-cp-nota"></textarea></div></div></div>'+
-  '<div class="ca21-dialog-actions"><button onclick="ca21CloseModal()">Cancelar</button><button class="save" id="ca25-cp-save">Registrar pago</button></div>');
-  document.getElementById('ca25-cp-save').onclick=function(){
-    var monto=ca21Money(document.getElementById('ca25-cp-monto').value),cuenta=document.getElementById('ca25-cp-cuenta').value;
+  var pagado=ca25PagadoCompra(compra.id);
+  var total=parseFloat(compra.total)||0;
+  var saldo=Math.max(0,total-pagado);
+  var factura=(compra.numero_factura||'Sin folio');
+  var proveedor=compra.proveedor?compra.proveedor.nombre:'Proveedor';
+
+  ca21OpenModal(
+    '<div class="ca21-dialog-head"><div><h3>💳 Pago / Abono a crédito de proveedor</h3><p>'+proveedor+'</p></div><button class="ca21-close" onclick="ca21CloseModal()">×</button></div>'+
+    '<div class="ca21-dialog-body">'+
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">'+
+        '<div style="background:#f6f8f6;border:1px solid #dde5df;border-radius:9px;padding:9px;"><div style="font-size:.56rem;font-weight:850;color:#748078;text-transform:uppercase">Factura / referencia</div><div style="font-size:.8rem;font-weight:900;color:#174f3c;margin-top:3px">'+factura+'</div></div>'+
+        '<div style="background:#f6f8f6;border:1px solid #dde5df;border-radius:9px;padding:9px;"><div style="font-size:.56rem;font-weight:850;color:#748078;text-transform:uppercase">Total factura</div><div style="font-size:.8rem;font-weight:900;color:#174f3c;margin-top:3px">$'+formatMonto(total)+'</div></div>'+
+        '<div style="background:#fff7e8;border:1px solid #efd9ae;border-radius:9px;padding:9px;"><div style="font-size:.56rem;font-weight:850;color:#89651a;text-transform:uppercase">Saldo actual</div><div style="font-size:.8rem;font-weight:900;color:#8b5f00;margin-top:3px">$'+formatMonto(saldo)+'</div></div>'+
+      '</div>'+
+      '<div style="font-size:.64rem;color:#6d7a73;margin:-3px 0 10px">Pagado acumulado a esta factura: <strong>$'+formatMonto(pagado)+'</strong></div>'+
+      '<div class="ca21-form">'+
+        '<div class="ca21-field"><label>Monto a aplicar a esta factura</label><input id="ca25-cp-monto" type="number" min=".01" max="'+saldo+'" step=".01" value="'+saldo+'"></div>'+
+        '<div class="ca21-field"><label>Cuenta de salida</label><select id="ca25-cp-cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div>'+
+        '<div class="ca21-field full"><div id="ca84-result" style="border:1px solid #dce6df;border-radius:9px;background:#f8fbf9;padding:9px 10px;font-size:.67rem;color:#40574d"><strong>Liquidación:</strong> este movimiento cubrirá el saldo completo de la factura.</div></div>'+
+        '<div class="ca21-field full"><label>Referencia / observación</label><textarea id="ca25-cp-nota" placeholder="Ej. Transferencia, folio bancario o comentario"></textarea></div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="ca21-dialog-actions"><button onclick="ca21CloseModal()">Cancelar</button><button class="save" id="ca25-cp-save">Liquidar factura</button></div>'
+  );
+
+  var inputMonto=document.getElementById('ca25-cp-monto');
+  var btnSave=document.getElementById('ca25-cp-save');
+  var result=document.getElementById('ca84-result');
+
+  function actualizarTipo(){
+    var monto=ca21Money(inputMonto.value);
+    var despues=Math.max(0,saldo-monto);
+    var esLiquidacion=monto>0 && Math.abs(monto-saldo)<0.01;
+    btnSave.textContent=esLiquidacion?'Liquidar factura':'Registrar abono';
+    if(monto<=0||monto>saldo){
+      result.innerHTML='<strong>Revisa el monto:</strong> debe ser mayor a $0 y no superar el saldo de $'+formatMonto(saldo)+'.';
+      result.style.background='#fff1f0';result.style.borderColor='#efcbc7';result.style.color='#a33128';
+    }else if(esLiquidacion){
+      result.innerHTML='<strong>Liquidación:</strong> la factura '+factura+' quedará con saldo $0.00.';
+      result.style.background='#eef7f1';result.style.borderColor='#cfe4d7';result.style.color='#245b40';
+    }else{
+      result.innerHTML='<strong>Abono parcial:</strong> después de aplicar $'+formatMonto(monto)+', la factura '+factura+' quedará con saldo <strong>$'+formatMonto(despues)+'</strong>.';
+      result.style.background='#fff8e9';result.style.borderColor='#ead8b5';result.style.color='#765615';
+    }
+  }
+  inputMonto.oninput=actualizarTipo;
+  actualizarTipo();
+
+  btnSave.onclick=function(){
+    var monto=ca21Money(inputMonto.value);
+    var cuenta=document.getElementById('ca25-cp-cuenta').value;
+    var nota=document.getElementById('ca25-cp-nota').value.trim();
     if(monto<=0||monto>saldo){alert('Captura un monto válido, máximo $'+formatMonto(saldo));return;}
     var totals=ca21Totals(fechaHoyLocal()),disp=ca35CuentaSaldo(totals,cuenta);
     if(monto>disp){alert('Saldo insuficiente en la cuenta seleccionada.');return;}
-    var pagos=ca25LoadPagosProveedor();pagos.push({id:ca21Id(),compra_id:compra.id,fecha:fechaHoyLocal(),hora:ca21Now(),monto:monto,cuenta:cuenta,nota:document.getElementById('ca25-cp-nota').value.trim()});ca25SavePagosProveedor(pagos);
-    var d=ca21Load();d.movimientos.push({id:'credprov-'+Date.now(),fecha:fechaHoyLocal(),hora:ca21Now(),tipo:'salida',cuenta:cuenta,monto:monto,categoria:'Crédito proveedor',concepto:'Pago a proveedor'+(compra.numero_factura?' · Factura '+compra.numero_factura:''),persona:compra.proveedor?compra.proveedor.nombre:'Proveedor',forma:cuenta,origen:'Crédito proveedor',estado:'Pagado',usuario:(usuario&&usuario.nombre)||'Usuario'});ca21Save(d);
+
+    var esLiquidacion=Math.abs(monto-saldo)<0.01;
+    var pagos=ca25LoadPagosProveedor();
+    pagos.push({
+      id:ca21Id(),
+      compra_id:compra.id,
+      factura:factura,
+      proveedor:proveedor,
+      fecha:fechaHoyLocal(),
+      hora:ca21Now(),
+      monto:monto,
+      cuenta:cuenta,
+      tipo:esLiquidacion?'liquidacion':'abono',
+      saldo_antes:saldo,
+      saldo_despues:Math.max(0,saldo-monto),
+      nota:nota
+    });
+    ca25SavePagosProveedor(pagos);
+
+    var d=ca21Load();
+    d.movimientos.push({
+      id:'credprov-'+Date.now(),
+      fecha:fechaHoyLocal(),hora:ca21Now(),tipo:'salida',cuenta:cuenta,monto:monto,
+      categoria:'Crédito proveedor',
+      concepto:(esLiquidacion?'Pago proveedor':'Abono proveedor')+' · '+proveedor+' · Factura '+factura,
+      persona:proveedor,forma:cuenta,origen:'Crédito proveedor',
+      referencia_factura:factura,compra_id:compra.id,
+      estado:'Pagado',usuario:(usuario&&usuario.nombre)||'Usuario'
+    });
+    ca21Save(d);
+
     var nuevoPagado=pagado+monto;
     var prom=Promise.resolve();
-    if(nuevoPagado+0.009>=(parseFloat(compra.total)||0)){
-      prom=from('compras').eq('id',compra.id).update({estado_pago:'pagado'}).then(function(){return from('gastos').eq('compra_id',compra.id).update({estado_pago:'pagado'})});
+    if(nuevoPagado+0.009>=total){
+      prom=from('compras').eq('id',compra.id).update({estado_pago:'pagado'})
+        .then(function(){return from('gastos').eq('compra_id',compra.id).update({estado_pago:'pagado'})});
     }
-    prom.then(function(){ca21CloseModal();renderCuentasPorPagar();}).catch(function(e){alert('Pago guardado en Preview, pero no se pudo actualizar estado: '+e.message);ca21CloseModal();renderCuentasPorPagar();});
+    prom.then(function(){
+      ca21CloseModal();
+      showToast(esLiquidacion?'✅ Factura '+factura+' liquidada':'✅ Abono aplicado a factura '+factura);
+      renderCuentasPorPagar();
+    }).catch(function(e){
+      alert('El movimiento quedó registrado localmente, pero no se pudo actualizar el estado de la compra: '+e.message);
+      ca21CloseModal();renderCuentasPorPagar();
+    });
   };
 }
+
 var C027_CREDITOS_DESDE_CAJA=false;
 function renderCreditosDesdeCaja(){C027_CREDITOS_DESDE_CAJA=true;renderCuentasPorPagar();}
 function volverCreditosContexto(){if(C027_CREDITOS_DESDE_CAJA){C027_CREDITOS_DESDE_CAJA=false;renderCajaMootsil('dia',CAJA_FECHA_BASE||fechaHoyLocal())}else renderComprasMenu();}
@@ -5498,7 +5582,7 @@ function renderCuentasPorPagar(){
         '<td>'+(c.numero_factura||'—')+'</td>'+
         '<td>'+(c.fecha_vencimiento||'—')+'</td>'+
         '<td>$'+formatMonto(total)+'</td>'+
-        '<td>$'+formatMonto(pagado)+'</td>'+
+        '<td>$'+formatMonto(pagado)+(pagado>0?'<div style="font-size:.54rem;color:#718078;margin-top:2px">Aplicado a '+(c.numero_factura||'esta factura')+'</div>':'')+'</td>'+
         '<td><strong>$'+formatMonto(saldo)+'</strong></td>'+
         '<td><span class="cr43-pill '+clase+'">'+estado+'</span></td>'+
         '<td>'+(terminado?'—':'<button class="cr43-pay" data-pago-prov="'+c.id+'">Registrar pago / abono</button>')+'</td>'+
@@ -9934,7 +10018,7 @@ function abrirRecibo(d){
       '<div class="rn81-att"><span>Días pagados: '+(r.diasPagados||0)+'</span><span>H.E.: '+(d.horasExtra||0).toFixed(1)+' h</span><span class="rn81-ret">Retardos: '+(r.retardos||0)+' · informativo, sin descuento automático</span></div>'+
       filas+
       '<div class="rn81-total"><span>NETO A PAGAR</span><strong>$'+d.granTotal.toFixed(2)+'</strong></div>'+
-      '<div class="rn81-note">El registro de retardos es informativo y no genera descuento automático de salario. El recibo refleja la información registrada en Mootsil para esta semana. Estatus: '+(d.nominaCompleta?'Pagada':'Pendiente de pago')+'.</div>'+
+      '<div class="rn81-note">El registro de retardos es informativo y no genera descuento automático de salario. Al imprimir o descargar se genera una hoja Carta con <strong>2 recibos media carta horizontal</strong>: Administración y Empleado. Estatus: '+(d.nominaCompleta?'Pagada':'Pendiente de pago')+'.</div>'+
     '</div>'+
     '<div class="rn81-actions"><button class="rn81-close" id="rn81-close">Cerrar</button><button class="rn81-close" id="rn83-print">🖨️ Imprimir</button><button class="rn81-pdf" id="rn81-pdf">📄 Descargar PDF</button></div>'+
   '</div>';
@@ -9948,7 +10032,7 @@ function imprimirReciboNominaMediaCarta(d,folio){
   cargarJsPDF(function(){
     try{
       var jsPDF=window.jspdf.jsPDF;
-      var doc=construirPdfReciboNominaMediaCarta(d,folio,jsPDF);
+      var doc=construirHojaRecibosNomina(d,folio,jsPDF);
       var blob=doc.output('blob');
       var url=URL.createObjectURL(blob);
       var w=window.open(url,'_blank');
@@ -9961,42 +10045,73 @@ function imprimirReciboNominaMediaCarta(d,folio){
   });
 }
 
-function construirPdfReciboNominaMediaCarta(d,folio,jsPDF){
-  var doc=new jsPDF({unit:'mm',format:[139.7,215.9],orientation:'portrait'});
-  var r=d.resumen||{}, y=18;
-  doc.setFillColor(14,81,55);doc.rect(0,0,139.7,32,'F');
-  doc.setTextColor(255);doc.setFont(undefined,'bold');doc.setFontSize(19);doc.text('Mootsil',15,15);
-  doc.setFontSize(11);doc.setTextColor(255,208,128);doc.text('Rancho Sagrado Corazon · Zarzamora',15,22);
-  doc.setFontSize(9);doc.setTextColor(235);doc.text('Recibo de Nomina',15,28);
-  doc.setFont(undefined,'normal');doc.setFontSize(8);doc.text(folio,124,15,{align:'right'});doc.text('Semana '+d.numSemana,124,21,{align:'right'});
+function dibujarReciboMediaCartaHorizontal(doc,d,folio,offsetY,copia){
+  // Cada copia ocupa media carta horizontal: 215.9 x 139.7 mm,
+  // colocada dentro de una hoja Carta vertical (215.9 x 279.4 mm).
+  var r=d.resumen||{};
+  var x0=10, y0=offsetY+8, ancho=195.9, y=y0;
 
-  y=44;doc.setTextColor(30);doc.setFontSize(9);
-  doc.setFont(undefined,'bold');doc.text('Colaborador:',15,y);doc.setFont(undefined,'normal');doc.text(d.nombre,43,y);
-  y+=7;doc.setFont(undefined,'bold');doc.text('Periodo:',15,y);doc.setFont(undefined,'normal');doc.text(d.semanaInicio+' a '+d.semanaFin,34,y);
-  y+=8;doc.setTextColor(90);doc.text('Dias pagados: '+(r.diasPagados||0)+'   H.E.: '+(d.horasExtra||0).toFixed(1)+' h   Retardos: '+(r.retardos||0),15,y);
-  y+=5;doc.text('Retardos informativos; sin descuento automatico.',15,y);
+  doc.setFillColor(14,81,55);doc.roundedRect(x0,y0,ancho,25,2,2,'F');
+  doc.setTextColor(255);doc.setFont(undefined,'bold');doc.setFontSize(16);doc.text('Mootsil',x0+7,y0+9);
+  doc.setFontSize(9.5);doc.setTextColor(255,208,128);doc.text('Rancho Sagrado Corazon · Zarzamora',x0+7,y0+16);
+  doc.setFontSize(8);doc.setTextColor(235);doc.text('Recibo de Nomina · Copia '+copia,x0+7,y0+21);
+  doc.setFont(undefined,'normal');doc.setFontSize(7.5);
+  doc.text(folio,x0+ancho-7,y0+9,{align:'right'});
+  doc.text('Semana '+d.numSemana,x0+ancho-7,y0+15,{align:'right'});
 
-  y+=10;doc.setTextColor(40);doc.setFont(undefined,'bold');doc.text('Concepto',15,y);doc.text('Importe',124,y,{align:'right'});
-  doc.line(15,y+2,124,y+2);y+=9;doc.setFont(undefined,'normal');
+  y=y0+34;doc.setTextColor(35);doc.setFontSize(8);
+  doc.setFont(undefined,'bold');doc.text('Colaborador:',x0+5,y);
+  doc.setFont(undefined,'normal');doc.text(d.nombre,x0+27,y,{maxWidth:55});
+  doc.setFont(undefined,'bold');doc.text('Periodo:',x0+91,y);
+  doc.setFont(undefined,'normal');doc.text(d.semanaInicio+' a '+d.semanaFin,x0+106,y);
+
+  y+=7;doc.setTextColor(90);doc.setFontSize(7.2);
+  doc.text('Dias pagados: '+(r.diasPagados||0)+'   H.E.: '+(d.horasExtra||0).toFixed(1)+' h   Retardos: '+(r.retardos||0)+' (informativo)',x0+5,y);
+
+  y+=8;doc.setTextColor(40);doc.setFont(undefined,'bold');doc.setFontSize(7.7);
+  doc.text('Concepto',x0+5,y);doc.text('Importe',x0+ancho-7,y,{align:'right'});
+  doc.setDrawColor(205);doc.line(x0+5,y+2,x0+ancho-7,y+2);y+=7;
+  doc.setFont(undefined,'normal');
+
   function linea(concepto,monto){
-    doc.setTextColor(50);doc.text(concepto,15,y,{maxWidth:78});
-    doc.setTextColor(monto<0?170:25);doc.text((monto<0?'-':'')+'$'+Math.abs(monto).toFixed(2),124,y,{align:'right'});
-    y+=8;
+    doc.setTextColor(50);doc.setFontSize(7.4);
+    doc.text(concepto,x0+5,y,{maxWidth:135});
+    doc.setTextColor(monto<0?170:25);
+    doc.text((monto<0?'-':'')+'$'+Math.abs(monto).toFixed(2),x0+ancho-7,y,{align:'right'});
+    y+=6;
   }
+
   linea('Sueldo',d.totalSueldo||0);
   if((d.horasExtra||0)>0)linea('Horas extra ('+d.horasExtra.toFixed(1)+' h)',d.totalExtra||0);
   (d.bonos||[]).forEach(function(b){linea(b.descripcion,parseFloat(b.monto)||0);});
   (d.deducciones||[]).forEach(function(x){linea(x.concepto+' (pago '+x.numero+')',-(parseFloat(x.monto)||0));});
 
-  y+=2;doc.setDrawColor(200);doc.line(72,y,124,y);y+=9;
-  doc.setFont(undefined,'bold');doc.setTextColor(14,81,55);doc.setFontSize(12);doc.text('NETO A PAGAR',72,y);doc.text('$'+d.granTotal.toFixed(2),124,y,{align:'right'});
-  y+=16;doc.setFontSize(8);doc.setTextColor(100);doc.setFont(undefined,'normal');
-  doc.text('Estatus: '+(d.nominaCompleta?'Pagada':'Pendiente de pago'),15,y);
-  y+=7;doc.text('Retardos: registro informativo; no genera descuento automatico en Nomina.',15,y,{maxWidth:109});
-  y+=18;doc.line(15,y,58,y);doc.line(80,y,124,y);
-  y+=5;doc.text('Entrego',36.5,y,{align:'center'});doc.text('Recibi conforme · '+d.nombre,102,y,{align:'center',maxWidth:42});
+  y+=1;doc.setDrawColor(200);doc.line(x0+112,y,x0+ancho-7,y);y+=7;
+  doc.setFont(undefined,'bold');doc.setTextColor(14,81,55);doc.setFontSize(10.5);
+  doc.text('NETO A PAGAR',x0+112,y);
+  doc.text('$'+d.granTotal.toFixed(2),x0+ancho-7,y,{align:'right'});
+
+  y+=9;doc.setFontSize(6.8);doc.setTextColor(100);doc.setFont(undefined,'normal');
+  doc.text('Estatus: '+(d.nominaCompleta?'Pagada':'Pendiente de pago')+' · Retardos informativos, sin descuento automatico.',x0+5,y);
+
+  y+=10;doc.setDrawColor(150);
+  doc.line(x0+20,y,x0+72,y);doc.line(x0+123,y,x0+176,y);
+  y+=4.5;doc.setFontSize(6.6);doc.setTextColor(90);
+  doc.text('Entrego',x0+46,y,{align:'center'});
+  doc.text('Recibi conforme · '+d.nombre,x0+149.5,y,{align:'center',maxWidth:52});
+}
+
+function construirHojaRecibosNomina(d,folio,jsPDF){
+  // Hoja Carta vertical: dos recibos media carta HORIZONTAL,
+  // uno para Administración y otro para el Empleado.
+  var doc=new jsPDF({unit:'mm',format:'letter',orientation:'portrait'});
+  dibujarReciboMediaCartaHorizontal(doc,d,folio,0,'Administracion');
+  doc.setDrawColor(150);doc.setLineDashPattern([2,2],0);doc.line(8,139.7,207.9,139.7);doc.setLineDashPattern([],0);
+  doc.setFontSize(6.5);doc.setTextColor(130);doc.text('Corte',108,137.2,{align:'center'});
+  dibujarReciboMediaCartaHorizontal(doc,d,folio,139.7,'Empleado');
   return doc;
 }
+
 
 function generarPdfReciboNomina(d,folio,btn){
   var textoOriginal=btn?btn.textContent:'';
@@ -10004,7 +10119,7 @@ function generarPdfReciboNomina(d,folio,btn){
   cargarJsPDF(function(){
     try{
       var jsPDF=window.jspdf.jsPDF;
-      var doc=construirPdfReciboNominaMediaCarta(d,folio,jsPDF);
+      var doc=construirHojaRecibosNomina(d,folio,jsPDF);
       var safe=String(d.nombre||'colaborador').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9_-]+/g,'_').replace(/^_+|_+$/g,'');
       doc.save('Semana_'+d.numSemana+'_'+safe+'.pdf');
       if(btn){btn.disabled=false;btn.textContent='✅ PDF descargado';setTimeout(function(){btn.textContent=textoOriginal;},1800);}
