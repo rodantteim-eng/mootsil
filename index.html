@@ -9536,7 +9536,7 @@ function renderGenerarNomina(fechaRef){
     from('pagos_extra_estado').select('*').eq('semana_inicio',semanaInicio).get(),
     from('config_app').select('*').get(),
     from('permisos').select('*').eq('estado','aprobado').get(),
-    from('bonos').select('*').eq('estado','activo').get(),
+    from('bonos').select('*').get(),
     from('bono_beneficiarios').select('*').get(),
     from('prestamos').select('*').eq('estado','activo').get(),
     from('prestamo_pagos').select('*').eq('semana_inicio',semanaInicio).get(),
@@ -9568,9 +9568,9 @@ function renderGenerarNomina(fechaRef){
     });
     // C080: los bonos de EQUIPO sí aplican al equipo completo.
     // Los bonos INDIVIDUALES, tengan o no umbral, sólo aplican al beneficiario autorizado.
-    var bonosSinUmbral=bonosDeLaSemana.filter(function(b){return b.tipo==='equipo'&&!b.umbral_minimo;});
-    var bonosConUmbral=bonosDeLaSemana.filter(function(b){return b.tipo==='individual'&&b.umbral_minimo;});
-    var bonosEquipoConUmbral=bonosDeLaSemana.filter(function(b){return b.tipo==='equipo'&&b.umbral_minimo;});
+    var bonosSinUmbral=bonosDeLaSemana.filter(function(b){return b.estado==='activo'&&b.tipo==='equipo'&&!b.umbral_minimo;});
+    var bonosConUmbral=bonosDeLaSemana.filter(function(b){return b.estado==='activo'&&b.tipo==='individual'&&b.umbral_minimo;});
+    var bonosEquipoConUmbral=bonosDeLaSemana.filter(function(b){return b.estado==='activo'&&b.tipo==='equipo'&&b.umbral_minimo;});
     var bonosYaOtorgadosPorOp={};
     bonoBeneficiarios.forEach(function(bb){
       if(!bonosYaOtorgadosPorOp[bb.operario_id])bonosYaOtorgadosPorOp[bb.operario_id]={};
@@ -10323,9 +10323,11 @@ function bo92Texto(desc){return String(desc||'').replace(/\[C092\].*?\[\/C092\]\
 function bo91ToggleForm(){var x=document.getElementById('bo91-form-wrap');if(x)x.style.display=(x.style.display==='none'||!x.style.display)?'block':'none';}
 function bo92ObjetivosRol(){
  var rol=document.getElementById('bo92-rol').value,sel=document.getElementById('bo92-objetivo');
+ var modalidadWrap=document.getElementById('bo95-modalidad-wrap');
+ if(modalidadWrap)modalidadWrap.style.display=rol==='cosecha'?'none':'block';
  var map={
   labores:[['actividad','Por tarea'],['semanal','Objetivo semanal · varias tareas'],['manual','Otro objetivo · validación de Administración']],
-  cosecha:[['mayor_cajas','Individual · mayor número de cajas cosechadas del día'],['meta_cajas','Equipo · alcanzar cajas programadas del día'],['manual','Otro objetivo · validación de Administración']],
+  cosecha:[['mayor_cajas','Mayor número de cajas cosechadas del día · Individual'],['meta_cajas','Alcanzar cajas programadas del día · Equipo'],['manual','Otro objetivo · validación de Administración']],
   galerista:[['cajas','Meta de cajas procesadas / pesadas'],['manual','Otro objetivo · validación de Administración']],
   auxiliar_galera:[['cajas','Meta de cajas atendidas / surtidas'],['manual','Otro objetivo · validación de Administración']],
   ingeniero:[['meta_cosecha','Meta de cosecha del periodo'],['manual','Otro objetivo · validación de Administración']],
@@ -10337,7 +10339,7 @@ function bo92ObjetivosRol(){
 }
 function bo92ObjetivoCambio(){
  var v=document.getElementById('bo92-objetivo').value,rol=document.getElementById('bo92-rol').value;
- if(rol==='cosecha'&&(v==='mayor_cajas'||v==='meta_cajas')){
+ if(rol==='cosecha'){
   var deseado=v==='mayor_cajas'?'individual':'equipo';
   document.querySelectorAll('#no89-body [data-tipo]').forEach(function(x){x.classList.toggle('sel',x.dataset.tipo===deseado);});
  }
@@ -10402,7 +10404,7 @@ function renderBonos(){
  body.innerHTML='<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;"><div><div class="seccion-titulo" style="margin:0;">🎯 Campañas de Bonos</div><div class="hint">Mootsil registra el resultado disponible, pero Administración conserva la decisión final de entregar la recompensa y a quién.</div></div><button class="btn-sm btn-completar" onclick="bo91ToggleForm()">+ Nueva campaña</button></div>'+
  '<div id="bo91-form-wrap" style="display:none;margin-top:10px;"><div class="form-card" style="padding:1rem;">'+
  '<div class="form-group"><label>Rol</label><select id="bo92-rol" onchange="bo92ObjetivosRol()"><option value="labores">Labores</option><option value="cosecha">Cosecha</option><option value="galerista">Galerista</option><option value="auxiliar_galera">Auxiliar de Galera</option><option value="ingeniero">Ingeniero</option><option value="encargado">Encargado</option><option value="transportista">Transportista</option></select></div>'+
- '<div class="form-group"><label>Modalidad</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip sel" data-tipo="equipo" onclick="seleccionUnica(this);bo92CargarParticipantes()">🤝 Equipo</button><button type="button" class="op-chip" data-tipo="individual" onclick="seleccionUnica(this);bo92CargarParticipantes()">👤 Individual</button></div></div>'+
+ '<div class="form-group" id="bo95-modalidad-wrap"><label>Modalidad</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip sel" data-tipo="equipo" onclick="seleccionUnica(this);bo92CargarParticipantes()">🤝 Equipo</button><button type="button" class="op-chip" data-tipo="individual" onclick="seleccionUnica(this);bo92CargarParticipantes()">👤 Individual</button></div></div>'+
  '<div class="form-group"><label>Participantes</label><div id="bo92-participantes"></div><p class="hint">Administración puede incluir o excluir personas.</p></div>'+
  '<div class="form-group"><label>Tipo de objetivo</label><select id="bo92-objetivo" onchange="bo92ObjetivoCambio()"></select><p class="hint" id="bo93-objetivo-hint">El objetivo se define según el rol y la operación real.</p></div>'+
  '<div class="form-group" id="bo92-libre-wrap" style="display:none;"><label>Objetivo definido por Administración</label><input id="bo92-libre" placeholder="Describe claramente qué se debe lograr"><p class="hint">Queda sujeto a validación manual.</p></div>'+
@@ -11198,7 +11200,7 @@ function renderCartera(fechaRef){
     from('pagos_semana_estado').select('*').eq('operario_id',usuario.id).eq('semana_inicio',semanaInicio).get(),
     from('pagos_extra_estado').select('*').eq('operario_id',usuario.id).eq('semana_inicio',semanaInicio).get(),
     from('config_app').select('*').get(),
-    from('bonos').select('*').eq('estado','activo').get(),
+    from('bonos').select('*').get(),
     from('prestamos').select('*').eq('operario_id',usuario.id).eq('estado','activo').get(),
     from('permisos').select('*').eq('usuario_id',usuario.id).eq('estado','aprobado').get(),
     from('bono_beneficiarios').select('*').eq('operario_id',usuario.id).get(),
@@ -11233,16 +11235,16 @@ function renderCartera(fechaRef){
 
     var bonosDeLaSemana=bonosActivos.filter(function(b){return !(b.periodo_fin<semanaInicio||b.periodo_inicio>semanaFin);});
     var bonosAutorizados=bonosDeLaSemana.filter(function(b){return !!bonosYaOtorgadosIds[b.id];});
-    var bonosSinUmbral=bonosDeLaSemana.filter(function(b){return b.tipo==='equipo';});
-    var bonosConUmbral=bonosDeLaSemana.filter(function(b){return b.tipo==='individual'&&b.umbral_minimo;});
+    var bonosSinUmbral=bonosDeLaSemana.filter(function(b){return b.estado==='activo'&&b.tipo==='equipo';});
+    var bonosConUmbral=bonosDeLaSemana.filter(function(b){return b.estado==='activo'&&b.tipo==='individual'&&b.umbral_minimo;});
 
     Promise.all(bonosConUmbral.map(function(b){
       return calcularScoreOperario(usuario.id,b.periodo_inicio,b.periodo_fin).then(function(score){return {bono:b,score:score};});
     })).then(function(resultadosUmbral){
       var bonosUmbralCalifican=resultadosUmbral.filter(function(r){return r.score.final>=parseFloat(r.bono.umbral_minimo);}).map(function(r){return r.bono;});
-      var bonosNuevos=bonosSinUmbral.concat(bonosUmbralCalifican).filter(function(b){return !bonosYaOtorgadosIds[b.id];});
+      var bonosNuevos=bonosSinUmbral.concat(bonosUmbralCalifican).filter(function(b){return !bo92Meta(b.descripcion)&&!bonosYaOtorgadosIds[b.id];});
       var bonosQueCalifican=bonosAutorizados.concat(bonosNuevos.filter(function(b){return !bonosAutorizados.some(function(a){return a.id===b.id;});}));
-      var totalBonos=bonosQueCalifican.reduce(function(s,b){return s+(parseFloat(b.monto)||0);},0);
+      var totalBonos=bonosQueCalifican.reduce(function(s,b){var mc=bo92Meta(b.descripcion);if(mc&&mc.recompensa!=='economico')return s;return s+(b.tipo_recompensa==='economico'?(parseFloat(b.monto)||0):0);},0);
 
       // C086: la aplicación del empleado NO incorpora bonos económicos locales.
       // Sólo muestra bonos compartidos/autorizados en la nómina oficial.
