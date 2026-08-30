@@ -9132,7 +9132,7 @@ function renderCajaMootsil(periodo,fechaBase){
         '<div class="ca17-kpi out"><div class="ball">↑</div><div><div class="lbl">Salidas</div><div class="num">$'+formatMonto(localSalidas)+'</div><div class="meta">MXN</div><div class="num" style="font-size:1.05rem;margin-top:3px">US$ '+formatMonto(localSalidasUsd)+'</div><div class="meta">USD</div></div></div>'+
         '<div class="ca17-kpi net"><div class="ball">▰</div><div><div class="lbl">Saldo disponible</div><div class="num">$'+formatMonto(saldoDisponible)+'</div><div class="meta">MXN · Efectivo + bancos en pesos</div><div class="num" style="font-size:1.05rem;margin-top:3px">US$ '+formatMonto(saldoDisponibleUsd)+'</div><div class="meta">USD · Banamex Dólares</div></div></div></div>'+
         '<div class="ca22-accounts" style="grid-template-columns:repeat(5,minmax(0,1fr))"><div class="ca22-account"><strong>💵 EFECTIVO EN CAJA</strong><div class="amt">$'+formatMonto(ef)+'</div><div class="ca40-account-meta">Inicial <strong>$'+formatMonto(saldoInicialEf)+'</strong> · Salidas <strong>$'+formatMonto(salEf)+'</strong></div></div><div class="ca22-account"><strong>🏦 BANAMEX PESOS</strong><div class="amt">$'+formatMonto(bp)+'</div><div class="ca40-account-meta">Inicial <strong>$'+formatMonto(saldoInicialBp)+'</strong> · Salidas <strong>$'+formatMonto(salBp)+'</strong></div></div><div class="ca22-account"><strong>🏦 BANAMEX DÓLARES</strong><div class="amt">US$ '+formatMonto(bd)+'</div><div class="ca40-account-meta">Inicial <strong>US$ '+formatMonto(saldoInicialBd)+'</strong> · Salidas <strong>US$ '+formatMonto(salBd)+'</strong></div></div><div class="ca22-account"><strong>🏦 SANTANDER PESOS</strong><div class="amt">$'+formatMonto(sp)+'</div><div class="ca40-account-meta">Inicial <strong>$'+formatMonto(saldoInicialSp)+'</strong> · Salidas <strong>$'+formatMonto(salSp)+'</strong></div></div><button class="ca22-transfer" id="ca21-transfer" '+(!apertura||corte?'disabled style="opacity:.45"':'')+'><span>⇄</span>Transferir entre cuentas<small>Entre cuentas de la misma moneda</small></button></div>'+
-        '<div class="ca22-ops" style="grid-template-columns:repeat(5,minmax(0,1fr))"><button class="ca22-op orange" id="ca22-compras" type="button">🧾 Compras</button><button class="ca22-op red" id="ca22-gastos" type="button">💳 Gastos</button><button class="ca22-op nomina-gold" id="ca22-nomina" type="button">💰 Nómina</button><button class="ca22-op purple" id="ca22-inversionistas" type="button">💼 Inversionistas</button><button class="ca22-op" id="ca25-financiamientos" type="button">🏦 Financiamientos</button></div>'+
+        '<div class="ca22-ops" style="grid-template-columns:repeat(5,minmax(0,1fr))"><button class="ca22-op orange" id="ca22-compras" type="button">🧾 Compras</button><button class="ca22-op red" id="ca22-gastos" type="button">💳 Gastos</button><button class="ca22-op nomina-gold" id="ca22-nomina" type="button">💰 Nómina</button><button class="ca22-op purple" id="ca22-inversionistas" type="button">💼 Inversionistas</button><button class="ca22-op finance-blue" id="ca25-financiamientos" type="button">🏦 Financiamientos</button></div>'+
         '<div class="ca17-controls"><input id="ca21-fecha" type="date" value="'+CAJA_FECHA_BASE+'"><select id="ca21-tipo"><option value="todos">Todos los movimientos</option><option value="entrada">Entradas</option><option value="salida">Salidas</option><option value="transferencia">Transferencias</option></select><select><option>Todas las categorías</option></select><select><option>Todas las formas de pago</option><option>Efectivo</option><option>Transferencia</option></select><input placeholder="Buscar concepto, beneficiario, folio..."></div>'+
         '<div class="ca17-table-wrap"><table class="ca17-table"><thead><tr><th>Hora</th><th>Tipo</th><th>Concepto</th><th>Categoría</th><th>Beneficiario / Proveedor</th><th>Forma de pago</th><th>Entrada</th><th>Salida</th><th>Origen</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
         '<div class="ca17-foot"><div>ⓘ <strong>Modo prueba:</strong> apertura y movimientos manuales se guardan en este navegador. Los movimientos existentes de Mootsil se muestran como referencia y no se duplican en el saldo de prueba.</div><div>'+(corte?'Corte: '+corte.hora+' · Diferencia $'+formatMonto(corte.diferencia):'Caja sin corte')+'</div></div></div>'+
@@ -14192,7 +14192,7 @@ C087
 </div>
 
 <style id="fi128-css">
-.fi128-wrap{padding:26px 36px 40px;background:#f7f8f6;min-height:calc(100vh - 155px)}
+.fi128-wrap{padding:18px 16px 32px;background:#f7f8f6;min-height:620px}
 .fi128-kicker{font-size:13px;font-weight:800;letter-spacing:.08em;color:#c56b00;text-transform:uppercase}
 .fi128-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:18px}
 .fi128-title{font-size:34px;line-height:1;color:#164b36;margin:5px 0 7px}
@@ -14224,6 +14224,7 @@ C087
 @media(max-width:900px){.fi128-grid{grid-template-columns:1fr 1fr}.fi128-row{grid-template-columns:1fr 1fr}.fi128-form{grid-template-columns:1fr}.fi128-span2{grid-column:auto}}
 </style>
 
+<style id="fi129-fix">.ca22-op.finance-blue{border-top-color:#2d78a6!important;}</style>
 <script id="fi128-js">
 (function(){
  const KEY='mootsil_financiamientos_128';
@@ -14244,7 +14245,8 @@ C087
    return Math.max(0,Number(f.monto_original||0)-ab-mix);
  }
  function render(){
-   const app=document.querySelector('main')||document.querySelector('#app')||document.body;
+   const app=document.getElementById('enc-body');
+   if(!app){alert('No se encontró el área de Administración.');return;}
    if(!returnHTML) returnHTML={node:app,html:app.innerHTML};
    let fs=financs(), total=fs.reduce((a,f)=>a+Number(f.monto_original||0),0),
        pendiente=fs.reduce((a,f)=>a+saldo(f),0),
@@ -14273,7 +14275,11 @@ C087
    document.querySelectorAll('[data-fi-detail]').forEach(b=>b.onclick=()=>detalle(b.dataset.fiDetail));
  }
  function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
- function back(){ if(returnHTML){returnHTML.node.innerHTML=returnHTML.html; let x=returnHTML;returnHTML=null; setTimeout(hook,0)} else location.reload() }
+ function back(){
+   returnHTML=null;
+   if(typeof renderCajaMootsil==='function'){renderCajaMootsil(window.CAJA_PERIODO||'dia',window.CAJA_FECHA_BASE||today());return;}
+   location.reload();
+ }
  function modal(html){let d=document.createElement('div');d.className='fi128-modalbg';d.innerHTML=`<div class="fi128-modal">${html}</div>`;document.body.appendChild(d);d.addEventListener('click',e=>{if(e.target===d||e.target.closest('[data-fi-close]'))d.remove()});return d}
  function modalNuevo(){
   let d=modal(`<div class="fi128-mhead"><div><strong>🏦 Nuevo financiamiento</strong><div class="fi128-muted">Registra el crédito contratado por el rancho.</div></div><button class="fi128-btn" data-fi-close>×</button></div>
