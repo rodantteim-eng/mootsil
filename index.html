@@ -7136,7 +7136,7 @@ function oc113Kpi(id,label,n,nota,color){
   return '<button type="button" data-oc113-tab="'+id+'" class="form-card" style="margin:0;padding:.72rem;border:1px solid '+(active?(color||'var(--verde-mid)'):'var(--gris-2)')+';border-top:3px solid '+(color||'var(--verde-mid)')+';background:'+(active?'#f8fbf9':'white')+';text-align:left;cursor:pointer;border-radius:12px;"><div class="hint">'+label+'</div><strong style="font-size:1.18rem;color:var(--verde);">'+n+'</strong><div class="hint">'+nota+'</div></button>';
 }
 function oc113Header(kpis){
-  return '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:10px;"><div><div class="seccion-titulo" style="margin:0;">🛒 Órdenes de compra</div><div class="hint" style="margin-top:3px;">Necesidad → solicitud de cotización → propuestas → orden emitida → recepción → compra.</div></div><button type="button" class="btn-back" style="margin:0;padding:.38rem .58rem;font-size:.72rem;width:auto;min-width:0;" onclick="renderAdministracionMenu()">← Administración</button></div>'+
+  return '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:10px;"><div><div class="seccion-titulo" style="margin:0;">🛒 Órdenes de compra</div><div class="hint" style="margin-top:3px;">Necesidad → solicitud de cotización → propuestas → orden emitida → recepción → compra.</div></div><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;"><button type="button" id="oc113-nueva-global" class="btn-primary" style="margin:0;padding:.42rem .68rem;width:auto;font-size:.73rem;">＋ Nueva necesidad</button><button type="button" class="btn-back" style="margin:0;padding:.38rem .58rem;font-size:.72rem;width:auto;min-width:0;" onclick="renderAdministracionMenu()">← Administración</button></div></div>'+
     '<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-bottom:12px;">'+kpis+'</div>';
 }
 function oc113Modal(inner){
@@ -7195,7 +7195,7 @@ function oc113Pintar(body,necesidades,porCaducar,hoy){
   if(OC113_TAB==='ordenes') html+=oc113OrdenesHtml(ordenes);
   body.innerHTML=html;
   body.querySelectorAll('[data-oc113-tab]').forEach(function(b){b.onclick=function(){OC113_TAB=this.dataset.oc113Tab;renderOrdenCompra();};});
-  var nuevo=body.querySelector('#oc113-nueva');if(nuevo)nuevo.onclick=oc113NuevaNecesidad;
+  var nuevoGlobal=body.querySelector('#oc113-nueva-global');if(nuevoGlobal)nuevoGlobal.onclick=oc113NuevaNecesidad;
   var sol=body.querySelector('#oc113-solicitar');if(sol)sol.onclick=function(){oc113SolicitarCotizacion(necesidades);};
 }
 
@@ -7212,8 +7212,8 @@ function oc113NecesidadesHtml(necesidades,porCaducar,hoy){
     var vencido=it.fecha_caducidad<hoy;
     return '<div class="orden-card" style="border-left-color:'+(vencido?'var(--rojo)':'var(--tierra)')+';"><strong>'+oc113Esc(it.nombre)+'</strong><div class="orden-meta">'+(vencido?'⚠️ Venció ':'Caduca ')+oc113Esc(it.fecha_caducidad)+' · Stock '+numFmt(it.stock_actual)+' '+oc113Esc(it.unidad)+'</div></div>';
   }).join(''):'';
-  return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;"><div><strong style="font-size:.9rem;">Necesidades del rancho</strong><div class="hint">Mootsil sugiere faltantes; Administración decide qué publicar a proveedores.</div></div><div style="display:flex;gap:7px;flex-wrap:wrap;"><button id="oc113-nueva" class="btn-secondary" style="width:auto;padding:.46rem .68rem;margin:0;">＋ Nueva necesidad</button><button id="oc113-solicitar" class="btn-primary" style="width:auto;padding:.46rem .72rem;margin:0;">📣 Solicitar cotizaciones</button></div></div>'+
-    (rows||'<div class="empty">No hay faltantes automáticos. Puedes crear una necesidad manual.</div>')+
+  return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;"><div><strong style="font-size:.9rem;">Necesidades del rancho</strong><div class="hint">Mootsil sugiere faltantes; Administración decide cuáles convertir en solicitud.</div></div><button id="oc113-solicitar" class="btn-primary" style="width:auto;padding:.46rem .72rem;margin:0;">📣 Solicitar cotizaciones seleccionadas</button></div>'+
+    (rows||'<div class="empty">No hay faltantes automáticos. Usa “Nueva necesidad” para solicitar un material manualmente.</div>')+
     cad;
 }
 
@@ -7241,6 +7241,17 @@ function oc113NuevaNecesidad(){
   };
 }
 
+function oc116FechaLimiteSugerida(fechaRequerida){
+  if(!fechaRequerida)return '';
+  var d=new Date(fechaRequerida+'T12:00:00');
+  if(isNaN(d.getTime()))return '';
+  d.setDate(d.getDate()-2);
+  var hoy=fechaHoyLocal();
+  var sugerida=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  if(sugerida<hoy)sugerida=hoy;
+  return sugerida;
+}
+
 function oc113SolicitarCotizacion(necesidades,directItems){
   var sels=(directItems&&directItems.length)?directItems:Array.from(document.querySelectorAll('.oc113-check:checked')).map(function(ch){
     var idx=parseInt(ch.dataset.idx,10),n=necesidades[idx],inp=document.querySelector('.oc113-cant[data-idx="'+idx+'"]'),q=parseFloat(inp&&inp.value)||0;
@@ -7249,11 +7260,13 @@ function oc113SolicitarCotizacion(necesidades,directItems){
   if(!sels.length){alert('Selecciona al menos una necesidad con cantidad mayor a 0.');return;}
   var sugeridos=oc114CalcularProveedoresSugeridos(sels);
   var reqFechas=sels.map(function(x){return x.fecha_requerida||'';}).filter(Boolean);
-  var reqTxt=reqFechas.length?(' · requerido '+reqFechas[0]):'';
+  var fechaRequerida=reqFechas.length?reqFechas[0]:'';
+  var fechaLimiteSugerida=oc116FechaLimiteSugerida(fechaRequerida);
+  var reqTxt=fechaRequerida?(' · entrega requerida '+fechaRequerida):'';
   var esp=sels.map(function(x){return x.especificacion||'';}).filter(Boolean).join(' · ');
   var bg=oc113Modal('<div style="display:flex;justify-content:space-between;align-items:flex-start;"><div><div class="seccion-titulo" style="margin:0;">📣 Solicitar cotizaciones</div><div class="hint">'+sels.length+' producto'+(sels.length===1?'':'s')+' seleccionado'+(sels.length===1?'':'s')+reqTxt+'. Mootsil determina los proveedores compatibles.</div></div><button id="oc113-x" style="border:none;background:none;font-size:1.35rem;cursor:pointer;">×</button></div>'+
     '<div style="background:#f6f8f7;border:1px solid var(--gris-2);border-radius:10px;padding:10px;margin:10px 0;"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><div><strong style="font-size:.8rem;">Proveedores sugeridos por Mootsil: '+sugeridos.total+'</strong><div class="hint" style="margin-top:3px;">Matching automático por categoría, cobertura y proveedor activo.</div></div><button type="button" id="oc114-ver-prov" class="btn-secondary" style="width:auto;margin:0;padding:.38rem .58rem;">Ver / ajustar</button></div><div id="oc114-prov-resumen" class="hint" style="margin-top:7px;">'+oc113Esc(sugeridos.resumen)+'</div></div>'+
-    '<div class="form-group"><label>Fecha límite para recibir propuestas</label><input id="oc113-lim" type="date"></div>'+
+    (fechaRequerida?'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><div class="form-group"><label>Entrega requerida</label><input type="date" value="'+oc113Esc(fechaRequerida)+'" disabled style="background:#f5f5f5;"></div><div class="form-group"><label>Recibir propuestas hasta</label><input id="oc113-lim" type="date" value="'+oc113Esc(fechaLimiteSugerida)+'" max="'+oc113Esc(fechaRequerida)+'"></div></div>':'<div class="form-group"><label>Fecha límite para recibir propuestas</label><input id="oc113-lim" type="date"></div>')+
     '<div class="form-group"><label>Condiciones / observaciones para proveedores</label><textarea id="oc113-obs" rows="4" style="width:100%;min-height:90px;resize:vertical;box-sizing:border-box;" placeholder="Lugar de entrega, equivalencias permitidas, requerimientos fiscales, etc.">'+oc113Esc(esp)+'</textarea></div>'+
     '<div style="background:#fff8e8;border:1px solid #ead9ae;border-radius:10px;padding:9px;margin-bottom:10px;"><strong style="font-size:.78rem;">Lo que verá el proveedor</strong><div class="hint" style="margin-top:3px;">Productos, cantidades, fecha requerida y condiciones de la solicitud. No verá inventario, consumos ni información privada del rancho.</div></div>'+
     '<button id="oc113-pub" class="btn-primary">Publicar solicitud a proveedores</button>');
@@ -7262,7 +7275,7 @@ function oc113SolicitarCotizacion(necesidades,directItems){
   bg.querySelector('#oc113-pub').onclick=function(){
     var lim=bg.querySelector('#oc113-lim').value;if(!lim){alert('Indica la fecha límite para recibir propuestas.');return;}
     window.OC113_SOLICITUDES=window.OC113_SOLICITUDES||[];
-    window.OC113_SOLICITUDES.unshift({id:'SC-'+String(Date.now()).slice(-5),fecha:fechaHoyLocal(),limite:lim,alcance:'matching_mootsil',proveedores_sugeridos:sugeridos.total,items:sels,observaciones:bg.querySelector('#oc113-obs').value.trim(),estado:'Publicada'});
+    window.OC113_SOLICITUDES.unshift({id:'SC-'+String(Date.now()).slice(-5),fecha:fechaHoyLocal(),limite:lim,fecha_requerida:fechaRequerida,alcance:'matching_mootsil',proveedores_sugeridos:sugeridos.total,items:sels,observaciones:bg.querySelector('#oc113-obs').value.trim(),estado:'Publicada'});
     oc113Close();OC113_TAB='solicitudes';renderOrdenCompra();showToast('✅ Solicitud publicada a proveedores compatibles');
   };
 }
@@ -7301,7 +7314,10 @@ function oc114VerAjustarProveedores(sugeridos){
 
 function oc113SolicitudesHtml(rows){
   if(!rows.length)return '<div class="empty"><strong>Sin solicitudes publicadas</strong><div class="hint" style="margin-top:5px;">Selecciona necesidades y usa “Solicitar cotizaciones”. Los proveedores compatibles recibirán la oportunidad en su tablero.</div></div>';
-  return rows.map(function(s){return '<div class="orden-card" style="border-left-color:#3f7fbf;"><div style="display:flex;justify-content:space-between;gap:10px;"><div><strong>'+oc113Esc(s.id)+' · Solicitud de cotización</strong><div class="orden-meta">'+s.items.length+' producto(s) · publicada '+oc113Esc(s.fecha)+' · propuestas hasta '+oc113Esc(s.limite)+'</div></div><span style="font-size:.68rem;font-weight:800;background:#eaf3fb;color:#2d679b;padding:3px 8px;border-radius:999px;height:max-content;">'+oc113Esc(s.estado)+'</span></div><div class="hint" style="margin-top:6px;">Mootsil la distribuyó a '+(s.proveedores_sugeridos||0)+' proveedor(es) compatibles según categoría y cobertura.</div></div>';}).join('');
+  return rows.map(function(s){
+    var req=s.fecha_requerida||(s.items&&s.items[0]&&s.items[0].fecha_requerida)||'';
+    return '<div class="orden-card" style="border-left-color:#3f7fbf;"><div style="display:flex;justify-content:space-between;gap:10px;"><div><strong>'+oc113Esc(s.id)+' · Solicitud de cotización</strong><div class="orden-meta">'+s.items.length+' producto(s) · publicada '+oc113Esc(s.fecha)+'</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:6px;"><span style="font-size:.68rem;font-weight:800;background:#eef5ff;color:#2d679b;padding:3px 8px;border-radius:999px;">Cotizar hasta '+oc113Esc(s.limite)+'</span>'+(req?'<span style="font-size:.68rem;font-weight:800;background:#fff5e8;color:#8a5a13;padding:3px 8px;border-radius:999px;">Entrega requerida '+oc113Esc(req)+'</span>':'')+'</div></div><span style="font-size:.68rem;font-weight:800;background:#eaf3fb;color:#2d679b;padding:3px 8px;border-radius:999px;height:max-content;">'+oc113Esc(s.estado)+'</span></div><div class="hint" style="margin-top:6px;">Mootsil la distribuyó a '+(s.proveedores_sugeridos||0)+' proveedor(es) compatibles según categoría y cobertura.</div></div>';
+  }).join('');
 }
 function oc113PropuestasHtml(rows){
   if(!rows.length)return '<div class="empty"><strong>Aún no hay propuestas recibidas</strong><div class="hint" style="margin-top:5px;">Aquí se compararán precio, marca/presentación, disponibilidad, entrega, forma de pago, crédito y vigencia. Cada proveedor verá únicamente su propia propuesta.</div></div>';
