@@ -8144,7 +8144,7 @@ function renderAdministracionMenu(){
   body.innerHTML='<div class="ad17-shell"><div class="ad17-head"><div><div class="ad17-eyebrow">Administración</div><div class="ad17-title">Control del Rancho</div><div class="ad17-sub">Finanzas, personal, compras y operación administrativa de Mootsil.</div></div></div><div class="ad17-grid">'+
     '<div class="ad17-card primary" data-admin="caja"><div class="ic">💵</div><h3>Caja</h3><p>Entradas, salidas, pagos, movimientos y control financiero operativo.</p></div>'+
     '<div class="ad17-card blue em60-card" data-admin="empleados"><div class="ic">👥</div><h3>Empleados</h3><p>Expedientes, asistencia y solicitudes del personal.</p><div class="em60-actions"><button type="button" data-empgo="expedientes">👤 Expedientes</button><button type="button" data-empgo="asistencia">📋 Asistencia</button><button type="button" data-empgo="solicitudes">📨 Solicitudes</button></div></div>'+
-    '<div class="ad17-card gold em60-card" data-admin="compensaciones"><div class="ic">💰</div><h3>Nómina y Compensaciones</h3><p>Bonos por objetivos, apoyos, préstamos e historial de nómina.</p><div class="em60-actions"><button type="button" data-compgo="bonos">🎯 Bonos</button><button type="button" data-compgo="apoyos">⛽ Apoyos</button><button type="button" data-compgo="prestamos">📝 Préstamos</button><button type="button" data-compgo="historial">📊 Historial</button></div></div>'+
+    '<div class="ad17-card gold em60-card" data-admin="compensaciones"><div class="ic">💰</div><h3>Nómina y Compensaciones</h3><p>Bonos por objetivos y apoyos económicos al personal.</p><div class="em60-actions"><button type="button" data-compgo="bonos">🎯 Bonos</button><button type="button" data-compgo="apoyos">⛽ Apoyos</button></div></div>'+
     '<div class="ad17-card orange" data-admin="gastos"><div class="ic">🧾</div><h3>Compras y Gastos</h3><p>Compras, proveedores, cuentas por pagar e historial.</p></div>'+
     '<div class="ad17-card primary" data-admin="eventual"><div class="ic">🧑‍🌾</div><h3>Labores Eventual</h3><p>Registro y pago del personal eventual por día.</p></div>'+
     '<div class="ad17-card purple" data-admin="inversionistas"><div class="ic">💼</div><h3>Inversionistas y Dueños</h3><p>Perfiles patrimoniales, aportaciones, contratos, movimientos y devoluciones.</p></div>'+
@@ -8155,8 +8155,6 @@ function renderAdministracionMenu(){
   body.querySelector('[data-empgo="solicitudes"]').addEventListener('click',function(e){e.stopPropagation();em69RenderSolicitudes();});
   body.querySelector('[data-compgo="bonos"]').addEventListener('click',function(e){e.stopPropagation();no89AbrirModal('🎯 Bonos');renderBonos();});
   body.querySelector('[data-compgo="apoyos"]').addEventListener('click',function(e){e.stopPropagation();no89AbrirModal('⛽ Apoyos');renderApoyosC092();});
-  body.querySelector('[data-compgo="prestamos"]').addEventListener('click',function(e){e.stopPropagation();no89AbrirModal('📝 Préstamos');renderPrestamos();});
-  body.querySelector('[data-compgo="historial"]').addEventListener('click',function(e){e.stopPropagation();no89AbrirModal('📊 Historial de nómina');renderResumenNomina();});
   body.querySelector('[data-admin="gastos"]').addEventListener('click',renderComprasMenu);
   body.querySelector('[data-admin="eventual"]').addEventListener('click',function(){renderPagosEventuales(fechaHoyLocal());});
   body.querySelector('[data-admin="inversionistas"]').addEventListener('click',renderInversionistasMenu);
@@ -12972,6 +12970,42 @@ function ex57Hist(id){var x=ex57Load(EX57_HIST_KEY);return x[id]||[];}
 function ex57Notas(id){var x=ex57Load(EX57_NOTAS_KEY);return x[id]||[];}
 function ex57AddNota(id){var el=document.getElementById('ex57-nota');if(!el||!el.value.trim())return;var x=ex57Load(EX57_NOTAS_KEY);x[id]=x[id]||[];x[id].unshift({fecha:new Date().toISOString(),nota:el.value.trim(),responsable:ex57Actor()});ex57Save(EX57_NOTAS_KEY,x);showToast('✅ Nota administrativa guardada');renderEditarUsuario(id,'','operario',false);}
 function ex57FmtFecha(v){try{return new Date(v).toLocaleString('es-MX',{dateStyle:'short',timeStyle:'short'})}catch(e){return v}}
+function ex103HistorialPersonalHtml(id){
+  return '<div class="ex54-sec"><h3>Historial de préstamos e incidencias</h3><div class="hint" style="margin-bottom:8px;">Consulta individual. Las autorizaciones se realizan únicamente en Empleados · Solicitudes; los efectos económicos se reflejan en Caja · Nómina.</div><div id="ex103-hist-'+id+'"><div class="loading">Cargando historial...</div></div></div>';
+}
+function ex103CargarHistorialPersonal(id){
+  var box=document.getElementById('ex103-hist-'+id);if(!box)return;
+  Promise.all([
+    from('prestamos').select('*').eq('operario_id',id).order('creado_en',{ascending:false}).get(),
+    from('prestamo_pagos').select('*').order('semana_inicio',{ascending:false}).get(),
+    from('solicitudes_operario').select('*').eq('operario_id',id).order('creado_en',{ascending:false}).get(),
+    from('permisos').select('*').eq('usuario_id',id).order('creado_en',{ascending:false}).get()
+  ]).then(function(rr){
+    var prestamos=rr[0]||[], pagos=rr[1]||[], solicitudes=rr[2]||[], permisos=rr[3]||[];
+    var loanIds={};prestamos.forEach(function(p){loanIds[String(p.id)]=true;});
+    pagos=pagos.filter(function(pg){return loanIds[String(pg.prestamo_id)];});
+    var ph=prestamos.length?prestamos.map(function(p){
+      var pp=pagos.filter(function(x){return String(x.prestamo_id)===String(p.id);});
+      var saldo=pp.filter(function(x){return x.estado!=='descontado';}).reduce(function(s,x){return s+parseFloat(x.monto||0);},0);
+      var descontado=pp.filter(function(x){return x.estado==='descontado';}).reduce(function(s,x){return s+parseFloat(x.monto||0);},0);
+      return '<div class="ex55-subcard"><div style="display:flex;justify-content:space-between;gap:8px;"><strong>💰 '+ex54Esc(p.concepto||'Préstamo')+'</strong><span class="ex55-status '+(p.estado==='activo'?'ex55-pend':'ex55-ok')+'">'+ex54Esc(p.estado||'activo')+'</span></div><div class="ex55-mini">Total $'+parseFloat(p.monto_total||0).toFixed(2)+' · Descontado $'+descontado.toFixed(2)+' · Saldo $'+saldo.toFixed(2)+' · '+pp.length+' pago(s)</div></div>';
+    }).join(''):'<div class="ex55-mini">Sin préstamos autorizados.</div>';
+
+    var incidencias=[];
+    solicitudes.filter(function(s){return String(s.tipo||'').toLowerCase()!=='prestamo';}).forEach(function(s){
+      incidencias.push({fecha:s.creado_en,tipo:s.tipo||'Solicitud',detalle:s.mensaje||'',estado:s.estado||'pendiente'});
+    });
+    permisos.forEach(function(x){
+      incidencias.push({fecha:x.creado_en||x.fecha_inicio,tipo:x.tipo||'Permiso',detalle:(x.fecha_inicio||'')+(x.fecha_fin&&x.fecha_fin!==x.fecha_inicio?' a '+x.fecha_fin:'')+(x.motivo?' · '+x.motivo:''),estado:x.estado||'pendiente'});
+    });
+    incidencias.sort(function(a,b){return String(b.fecha||'').localeCompare(String(a.fecha||''));});
+    var ih=incidencias.length?incidencias.map(function(x){
+      return '<div class="ex55-subcard"><div style="display:flex;justify-content:space-between;gap:8px;"><strong>📌 '+ex54Esc(String(x.tipo).replace(/_/g,' '))+'</strong><span class="ex55-mini">'+ex54Esc(x.estado)+'</span></div><div class="ex55-mini">'+(x.fecha?new Date(x.fecha).toLocaleDateString('es-MX'):'')+(x.detalle?' · '+ex54Esc(x.detalle):'')+'</div></div>';
+    }).join(''):'<div class="ex55-mini">Sin incidencias o permisos registrados.</div>';
+    box.innerHTML='<div style="font-size:.66rem;font-weight:850;color:var(--verde);margin-bottom:6px;">PRÉSTAMOS</div>'+ph+'<div style="font-size:.66rem;font-weight:850;color:var(--verde);margin:12px 0 6px;">INCIDENCIAS / PERMISOS</div>'+ih;
+  }).catch(function(e){box.innerHTML='<div class="ex55-mini">No se pudo cargar el historial: '+ex54Esc(e.message)+'</div>';});
+}
+
 function ex54FormHtml(mode,id,base,extra){
   base=base||{}; extra=extra||{};
   var isEdit=mode==='edit';
@@ -13027,6 +13061,7 @@ function ex54FormHtml(mode,id,base,extra){
       })():'<div class="ex55-mini">Guarda primero el expediente para habilitar contrato.</div>')+
     '</div>'+
     (isEdit?(function(){var ns=ex57Notas(id);return '<div class="ex54-sec"><h3>Notas administrativas</h3><div style="display:flex;gap:8px;"><input id="ex57-nota" placeholder="Agregar nota administrativa..." style="flex:1;"><button type="button" class="ex55-btn primary" onclick="ex57AddNota(\''+id+'\')">Agregar</button></div>'+(ns.length?'<div style="margin-top:8px;">'+ns.map(function(n){return '<div class="ex55-subcard"><strong>'+ex57FmtFecha(n.fecha)+'</strong> · '+ex54Esc(n.responsable)+'<div class="ex55-mini" style="margin-top:3px;">'+ex54Esc(n.nota)+'</div></div>';}).join('')+'</div>':'<div class="ex55-mini" style="margin-top:6px;">Sin notas registradas.</div>')+'</div>';})():'')+
+    (isEdit?ex103HistorialPersonalHtml(id):'')+
     (isEdit?(function(){var hs=ex57Hist(id);return '<div class="ex54-sec"><h3>Historial laboral</h3>'+(hs.length?'<div style="display:flex;flex-direction:column;gap:6px;">'+hs.map(function(h){return '<div class="ex55-subcard" style="display:grid;grid-template-columns:130px 1fr 1.5fr 1fr;gap:8px;align-items:center;"><span class="ex55-mini">'+ex57FmtFecha(h.fecha)+'</span><strong>'+ex54Esc(h.movimiento)+'</strong><span>'+ex54Esc(h.anterior)+' → '+ex54Esc(h.nuevo)+'</span><span class="ex55-mini">'+ex54Esc(h.responsable)+'</span></div>';}).join('')+'</div>':'<div class="ex55-mini">Los cambios de cargo, sueldo, hora extra y estatus se registrarán aquí automáticamente.</div>')+'</div>';})():'')+
     '<div class="ex54-actions"><button class="btn-back" onclick="renderAltasBajas()">Cancelar</button><button class="btn-next" id="ex54-guardar">'+(isEdit?'Guardar cambios':'Crear expediente')+'</button></div>'+
   '</div>';
@@ -13083,6 +13118,7 @@ function renderEditarUsuario(id,nombre,rol,certAmbas){
     var base=(rows&&rows[0])||{nombre:nombre,rol:rol,activo:true};
     var extra=ex54Get(id);
     body.innerHTML=ex54FormHtml('edit',id,base,extra);
+    ex103CargarHistorialPersonal(id);
     document.getElementById('ex54-guardar').addEventListener('click',function(){guardarEditarUsuario(id);});
   });
 }
