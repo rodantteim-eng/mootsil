@@ -8296,8 +8296,8 @@ function inv124EditarInfo(id,nombre){
 }
 
 var MOV_INVERSION_TIPOS={
-  rendimiento:{ic:'📈',lbl:'Rendimiento / Utilidad'},
-  devolucion_capital:{ic:'💰',lbl:'Pago de capital (se descuenta de lo invertido)'}
+  rendimiento:{ic:'📈',lbl:'Abono a utilidad / ganancia'},
+  devolucion_capital:{ic:'💰',lbl:'Abono / devolución a capital'}
 };
 
 function subirComprobanteInversion(f){
@@ -8373,8 +8373,14 @@ function renderInversionistaDetalle(usuarioId){
       var primeraFecha=contratos.length?contratos.slice().sort(function(a,b){return String(a.fecha_inicio||'').localeCompare(String(b.fecha_inicio||''));})[0].fecha_inicio:'';
       var docs=extra.documentos||[];
       var eventos=[];
-      contratos.forEach(function(c){eventos.push({fecha:c.fecha_inicio,tipo:'Aportación de capital',descripcion:'Contrato '+(c.condiciones||'de inversión'),monto:c.monto_invertido});});
-      movs.forEach(function(m){eventos.push({fecha:m.fecha,tipo:m.tipo==='rendimiento'?'Utilidad pagada':'Devolución de capital',descripcion:m.concepto||'',monto:m.monto});});
+      contratos.forEach(function(c){eventos.push({fecha:c.fecha_inicio,tipo:'Aportación de capital',descripcion:'Contrato '+(c.condiciones||'de inversión'),monto:c.monto_invertido,contrato:c.id,cuenta:'—',referencia:'—'});});
+      movs.forEach(function(m){eventos.push({fecha:m.fecha,tipo:m.tipo==='rendimiento'?'Abono a utilidad / ganancia':'Abono / devolución a capital',descripcion:m.concepto||'',monto:m.monto,contrato:m.inversion_id,cuenta:'—',referencia:m.concepto||'—'});});
+      var cajaInv=(ca21Load().movimientos||[]).filter(function(m){return m.categoria==='Inversionistas'&&String(m.inversionista_id||'')===String(usuarioId);});
+      cajaInv.forEach(function(m){
+        var duplicado=eventos.some(function(e){return String(e.fecha)===String(m.fecha)&&Math.abs((parseFloat(e.monto)||0)-(parseFloat(m.monto)||0))<.01&&String(e.contrato||'')===String(m.contrato_id||'');});
+        if(!duplicado)eventos.push({fecha:m.fecha,tipo:m.concepto||'Movimiento de inversionista',descripcion:m.nota||'',monto:m.monto,contrato:m.contrato_id||'—',cuenta:ca35CuentaLabel(m.cuenta),referencia:m.nota||'—'});
+        else eventos.forEach(function(e){if(String(e.fecha)===String(m.fecha)&&Math.abs((parseFloat(e.monto)||0)-(parseFloat(m.monto)||0))<.01&&String(e.contrato||'')===String(m.contrato_id||'')){e.cuenta=ca35CuentaLabel(m.cuenta);e.referencia=m.nota||e.referencia||'—';}});
+      });
       eventos.sort(function(a,b){return String(b.fecha||'').localeCompare(String(a.fecha||''));});
 
       var contratosRows=contratos.length?contratos.map(function(c,i){
@@ -8382,11 +8388,11 @@ function renderInversionistaDetalle(usuarioId){
         var rend=cm.filter(function(m){return m.tipo==='rendimiento';}).reduce(function(s,m){return s+(parseFloat(m.monto)||0);},0);
         var dev=cm.filter(function(m){return m.tipo==='devolucion_capital';}).reduce(function(s,m){return s+(parseFloat(m.monto)||0);},0);
         var saldo=Math.max(0,(parseFloat(c.monto_invertido)||0)-dev);
-        return '<div class="ex55-subcard" style="margin-bottom:7px;"><div class="ex55-contract-row" style="grid-template-columns:70px 1.4fr 1fr 1fr 1fr 100px;"><strong>#'+(i+1)+'</strong><span>'+ex54Esc(c.condiciones||'Inversión de capital')+'</span><span>'+ex54Esc(c.fecha_inicio||'—')+'</span><span>'+ex54Esc(c.fecha_fin_estimada||'Sin fin')+'</span><span>$'+formatMonto(c.monto_invertido||0)+'</span><span class="ex55-status '+(c.estado==='activo'?'ex55-ok':'ex55-pend')+'">'+(c.estado==='activo'?'Vigente':'Cerrado')+'</span></div><div class="ex55-mini" style="margin-top:5px;">Capital vigente: $'+formatMonto(saldo)+' · Capital devuelto: $'+formatMonto(dev)+' · Utilidades: $'+formatMonto(rend)+'</div><div style="margin-top:6px;"><button type="button" class="ex55-btn ex56-view" data-ver-inversion="'+c.id+'">Ver contrato</button></div></div>';
+        return '<div class="ex55-subcard" style="margin-bottom:7px;"><div class="ex55-contract-row" style="grid-template-columns:70px 1.4fr 1fr 1fr 1fr 100px;"><strong>#'+(i+1)+'</strong><span>'+ex54Esc(c.condiciones||'Inversión de capital')+'</span><span>'+ex54Esc(c.fecha_inicio||'—')+'</span><span>'+ex54Esc(c.fecha_fin_estimada||'Sin fin')+'</span><span>$'+formatMonto(c.monto_invertido||0)+'</span><span class="ex55-status '+(c.estado==='activo'?'ex55-ok':'ex55-pend')+'">'+(c.estado==='activo'?'Vigente':'Cerrado')+'</span></div><div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:7px;"><div class="ex56-banknote"><strong>Capital original</strong><br>$'+formatMonto(c.monto_invertido||0)+'</div><div class="ex56-banknote"><strong>Capital devuelto</strong><br>$'+formatMonto(dev)+'</div><div class="ex56-banknote"><strong>Capital vigente</strong><br>$'+formatMonto(saldo)+'</div><div class="ex56-banknote"><strong>Utilidad pagada</strong><br>$'+formatMonto(rend)+'</div></div><div class="ex55-mini" style="margin-top:6px;">La utilidad pendiente sólo se mostrará cuando el contrato tenga una utilidad/meta económica definida de forma estructurada.</div><div style="margin-top:6px;"><button type="button" class="ex55-btn ex56-view" data-ver-inversion="'+c.id+'">Ver contrato</button></div></div>';
       }).join(''):'<div class="ex55-mini">Sin contratos registrados.</div>';
 
       var histRows=eventos.length?eventos.map(function(x){
-        return '<div class="ex55-subcard" style="display:grid;grid-template-columns:120px 170px 1fr 130px;gap:8px;align-items:center;"><span class="ex55-mini">'+ex54Esc(x.fecha||'—')+'</span><strong>'+ex54Esc(x.tipo)+'</strong><span>'+ex54Esc(x.descripcion||'—')+'</span><strong style="text-align:right;">$'+formatMonto(x.monto||0)+'</strong></div>';
+        return '<div class="ex55-subcard" style="display:grid;grid-template-columns:105px 165px 1fr 145px 120px;gap:8px;align-items:center;"><span class="ex55-mini">'+ex54Esc(x.fecha||'—')+'</span><strong>'+ex54Esc(x.tipo)+'</strong><span>'+ex54Esc(x.descripcion||'—')+'<div class="ex55-mini">Contrato: '+ex54Esc(x.contrato||'—')+' · Cuenta: '+ex54Esc(x.cuenta||'—')+(x.referencia&&x.referencia!=='—'?' · Ref: '+ex54Esc(x.referencia):'')+'</div></span><strong style="text-align:right;">$'+formatMonto(x.monto||0)+'</strong><span class="ex55-status ex55-ok">Registrado</span></div>';
       }).join(''):'<div class="ex55-mini">Sin movimientos patrimoniales registrados.</div>';
 
       var html=
@@ -8421,7 +8427,7 @@ function renderInversionistaDetalle(usuarioId){
 
         '<div class="ex54-sec"><h3>Documentos</h3>'+
           '<div class="ex55-docgrid">'+
-            ['INE','RFC','Comprobante domicilio','Contrato de inversión','Comprobantes de aportaciones'].map(function(tp){
+            ['INE','RFC','Comprobante domicilio','Contrato de inversión','Comprobantes de aportaciones','Comprobantes de movimientos'].map(function(tp){
               return '<div class="ex55-docitem"><div class="ex55-docrow"><div><div class="ex55-docname">'+tp+'</div><div class="ex55-mini">'+(docs.some(function(d){return d.tipo===tp;})?'Cargado':'Pendiente')+'</div></div><span class="ex55-status '+(docs.some(function(d){return d.tipo===tp;})?'ex55-ok':'ex55-pend')+'">'+(docs.some(function(d){return d.tipo===tp;})?'Cargado':'Pendiente')+'</span></div></div>';
             }).join('')+
           '</div><div class="ex55-mini" style="margin-top:7px;">La administración documental completa se habilitará al persistir el expediente patrimonial en la etapa multiusuario.</div>'+
@@ -8988,7 +8994,7 @@ function renderFinanciamientosCaja(){
 }
 
 function ca124OpenInversionistas(fecha){
-  ca21OpenModal('<div class="ca21-dialog-head"><div><h3>💼 Movimiento a inversionista</h3><p>Pago de capital o utilidades desde Caja.</p></div><button class="ca21-close" onclick="ca21CloseModal()">×</button></div><div class="ca21-dialog-body"><div class="loading">Cargando inversionistas...</div></div>');
+  ca21OpenModal('<div class="ca21-dialog-head"><div><h3>💼 Movimiento a inversionista</h3><p>Abonos a capital o utilidades desde Caja.</p></div><button class="ca21-close" onclick="ca21CloseModal()">×</button></div><div class="ca21-dialog-body"><div class="loading">Cargando inversionistas...</div></div>');
   Promise.all([
     from('usuarios').select('id,nombre,activo').eq('rol','inversionista').eq('activo',true).order('nombre').get(),
     from('inversiones').select('*').eq('estado','activo').get()
@@ -8999,7 +9005,7 @@ function ca124OpenInversionistas(fecha){
     body.innerHTML='<div class="ca21-form">'+
       '<div class="ca21-field full"><label>Inversionista</label><select id="ca124-inv"><option value="">Seleccionar...</option>'+opts+'</select></div>'+
       '<div class="ca21-field full"><label>Contrato activo</label><select id="ca124-contr"><option value="">Selecciona inversionista</option></select></div>'+
-      '<div class="ca21-field"><label>Tipo de movimiento</label><select id="ca124-tipo"><option value="devolucion_capital">Abono / devolución a capital</option><option value="rendimiento">Pago de utilidad / ganancia</option></select></div>'+
+      '<div class="ca21-field"><label>Tipo de movimiento</label><select id="ca124-tipo"><option value="devolucion_capital">Abono / devolución a capital</option><option value="rendimiento">Abono a utilidad / ganancia</option></select></div>'+
       '<div class="ca21-field"><label>Monto</label><input id="ca124-monto" type="number" min=".01" step=".01" placeholder="0.00"></div>'+
       '<div class="ca21-field"><label>Cuenta de salida</label><select id="ca124-cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div>'+
       '<div class="ca21-field"><label>Fecha</label><input id="ca124-fecha" type="date" value="'+ex54Esc(fecha||fechaHoyLocal())+'"></div>'+
@@ -9019,10 +9025,10 @@ function ca124OpenInversionistas(fecha){
       if(!uid||!cid){alert('Selecciona inversionista y contrato activo.');return;}
       if(monto<=0){alert('Captura un monto mayor a cero.');return;}
       var inv=personas.find(function(x){return String(x.id)===String(uid);});
-      var concepto=tipo==='rendimiento'?'Pago de utilidad / ganancia':'Abono / devolución a capital';
+      var concepto=tipo==='rendimiento'?'Abono a utilidad / ganancia':'Abono / devolución a capital';
       var btn=this;btn.disabled=true;btn.textContent='Guardando...';
       from('inversion_movimientos').insert({inversion_id:cid,tipo:tipo,monto:monto,fecha:f,concepto:ref||concepto,comprobante_url:null,registrado_por:usuario.id}).then(function(){
-        var d=ca21Load();d.movimientos.push({id:ca21Id(),fecha:f,hora:ca21Now(),tipo:'salida',cuenta:cuenta,monto:monto,categoria:'Inversionistas',concepto:concepto,persona:inv?inv.nombre:'Inversionista',nota:ref,origen:'Inversionistas',estado:'Registrado',usuario:(usuario&&usuario.nombre)||'Usuario'});ca21Save(d);
+        var d=ca21Load();d.movimientos.push({id:ca21Id(),fecha:f,hora:ca21Now(),tipo:'salida',cuenta:cuenta,monto:monto,categoria:'Inversionistas',concepto:concepto,persona:inv?inv.nombre:'Inversionista',nota:ref,origen:'Inversionistas',estado:'Registrado',usuario:(usuario&&usuario.nombre)||'Usuario',inversionista_id:uid,contrato_id:cid});ca21Save(d);
         return from('notificaciones').insert({titulo:'💼 Movimiento de inversión',cuerpo:'Se registró '+concepto.toLowerCase()+' por $'+formatMonto(monto)+'.',icono:'💼',leida:false,para_rol:'inversionista',para_usuario:uid});
       }).then(function(){ca21CloseModal();showToast('✅ Movimiento registrado en Caja e historial del inversionista');renderCajaMootsil(CAJA_PERIODO,CAJA_FECHA_BASE);}).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Registrar movimiento';});
     };
@@ -14173,7 +14179,7 @@ document.addEventListener('click',function(e){
   if((e.target.textContent||'').trim()==='Otros')setTimeout(ca45MontarDecisionOtros,0);
 });
 
-/* C126 — Expediente patrimonial con visual homologado a Empleados */
+/* C127 — Cierre de Inversionistas: abonos, estado por contrato, historial y documentos */
 </script>
 
 <input type="file" id="cam-input" accept="image/*,video/*" capture="environment" style="display:none" onchange="capturaEjec.foto=true;renderEjec();">
