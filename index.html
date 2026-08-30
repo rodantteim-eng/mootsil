@@ -6797,8 +6797,7 @@ function renderProveedores(){
       var cs=compras.filter(function(c){return String(c.proveedor_id||'')===String(pr.id);});
       var total=cs.reduce(function(s,c){return s+parseFloat(c.total||0);},0);
       var saldo=cs.filter(function(c){return c.estado_pago!=='pagado';}).reduce(function(s,c){
-        var gs=gastos.filter(function(g){return String(g.compra_id||'')===String(c.id)&&g.estado_pago==='pagado';});
-        var pag=gs.reduce(function(a,g){return a+parseFloat(g.monto||0);},0);
+        var pag=c.forma_pago==='credito'?ca25PagadoCompra(c.id):(parseFloat(c.total)||0);
         return s+Math.max(0,parseFloat(c.total||0)-pag);
       },0);
       var ultima=cs.length?(cs[0].fecha||'—'):'—';
@@ -6874,15 +6873,45 @@ function prov109Historial(id,proveedores,compras,gastos){
   var cs=compras.filter(function(c){return String(c.proveedor_id||'')===String(id);});
   var total=cs.reduce(function(s,c){return s+parseFloat(c.total||0);},0),saldo=0;
   var filas=cs.map(function(c){
-    var gs=gastos.filter(function(g){return String(g.compra_id||'')===String(c.id)&&g.estado_pago==='pagado';});
-    var pag=gs.reduce(function(s,g){return s+parseFloat(g.monto||0);},0);
-    var sal=Math.max(0,parseFloat(c.total||0)-pag);if(c.estado_pago!=='pagado')saldo+=sal;
-    return '<tr style="border-top:1px solid var(--gris-2);"><td style="padding:.55rem;">'+(c.fecha||'—')+'</td><td style="padding:.55rem;">'+ex54Esc(c.numero_factura||'—')+'</td><td style="padding:.55rem;">'+ex54Esc(c.forma_pago||'—')+'</td><td style="padding:.55rem;text-align:right;">$'+formatMonto(c.total||0)+'</td><td style="padding:.55rem;text-align:right;">$'+formatMonto(pag)+'</td><td style="padding:.55rem;text-align:right;font-weight:700;">$'+formatMonto(sal)+'</td><td style="padding:.55rem;">'+(c.estado_pago||'pendiente')+'</td></tr>';
+    var pag=c.forma_pago==='credito'?ca25PagadoCompra(c.id):(parseFloat(c.total)||0);
+    var sal=Math.max(0,parseFloat(c.total||0)-pag);
+    if(c.estado_pago!=='pagado')saldo+=sal;
+    var estado=sal<=0.009?'pagado':(c.estado_pago||'pendiente');
+    var detalle=c.forma_pago==='credito'
+      ?'<button type="button" class="btn-sm" data-ph-detalle="'+c.id+'" style="white-space:nowrap;">Ver movimientos</button>'
+      :'<span class="hint">Contado</span>';
+    return '<tr style="border-top:1px solid var(--gris-2);"><td style="padding:.55rem;">'+(c.fecha||'—')+'</td><td style="padding:.55rem;">'+ex54Esc(c.numero_factura||'—')+'</td><td style="padding:.55rem;">'+ex54Esc(c.forma_pago||'—')+'</td><td style="padding:.55rem;text-align:right;">$'+formatMonto(c.total||0)+'</td><td style="padding:.55rem;text-align:right;">$'+formatMonto(pag)+'</td><td style="padding:.55rem;text-align:right;font-weight:700;">$'+formatMonto(sal)+'</td><td style="padding:.55rem;">'+estado+'</td><td style="padding:.55rem;">'+detalle+'</td></tr>';
   }).join('');
-  var ov=prov109Modal('<div style="display:flex;justify-content:space-between;align-items:flex-start;"><div><div class="seccion-titulo" style="margin:0;">📜 '+ex54Esc(pr.nombre)+'</div><div class="hint">'+ex54Esc(pr.giro||'Proveedor')+'</div></div><button id="ph-cerrar" style="border:none;background:none;font-size:1.35rem;cursor:pointer;">×</button></div>'+
+  var ov=prov109Modal('<div style="display:flex;justify-content:space-between;align-items:flex-start;"><div><div class="seccion-titulo" style="margin:0;">📜 '+ex54Esc(pr.nombre)+'</div><div class="hint">'+ex54Esc(pr.giro||'Proveedor')+' · Consulta y trazabilidad; los pagos se registran en Cuentas por pagar.</div></div><button id="ph-cerrar" style="border:none;background:none;font-size:1.35rem;cursor:pointer;">×</button></div>'+
     '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:12px 0;"><div class="form-card" style="margin:0;padding:.65rem;"><div class="hint">COMPRAS</div><strong>'+cs.length+'</strong></div><div class="form-card" style="margin:0;padding:.65rem;"><div class="hint">TOTAL COMPRADO</div><strong>$'+formatMonto(total)+'</strong></div><div class="form-card" style="margin:0;padding:.65rem;"><div class="hint">SALDO</div><strong>$'+formatMonto(saldo)+'</strong></div></div>'+
-    '<div style="overflow:auto;"><table style="width:100%;border-collapse:collapse;min-width:650px;font-size:.76rem;"><thead><tr><th>Fecha</th><th>Factura</th><th>Forma</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Estado</th></tr></thead><tbody>'+(filas||'<tr><td colspan="7" style="padding:1rem;text-align:center;">Sin compras registradas.</td></tr>')+'</tbody></table></div>');
+    '<div style="overflow:auto;"><table style="width:100%;border-collapse:collapse;min-width:760px;font-size:.76rem;"><thead><tr><th>Fecha</th><th>Factura</th><th>Forma</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Estado</th><th>Detalle</th></tr></thead><tbody>'+(filas||'<tr><td colspan="8" style="padding:1rem;text-align:center;">Sin compras registradas.</td></tr>')+'</tbody></table></div>');
   ov.querySelector('#ph-cerrar').onclick=prov109Close;
+  ov.querySelectorAll('[data-ph-detalle]').forEach(function(btn){
+    btn.onclick=function(){
+      var cid=this.dataset.phDetalle;
+      var c=cs.find(function(x){return String(x.id)===String(cid);});
+      if(c)prov112DetalleFactura(c,pr);
+    };
+  });
+}
+
+function prov112CuentaLabel(c){
+  return ({efectivo:'Efectivo en Caja',banamex_pesos:'Banamex Pesos',banamex_dolares:'Banamex Dólares',santander_pesos:'Santander Pesos'})[c]||c||'—';
+}
+function prov112DetalleFactura(compra,pr){
+  var movimientos=ca25LoadPagosProveedor().filter(function(x){return String(x.compra_id)===String(compra.id);});
+  movimientos.sort(function(a,b){return String(a.fecha||'').localeCompare(String(b.fecha||''))||String(a.hora||'').localeCompare(String(b.hora||''));});
+  var total=parseFloat(compra.total)||0;
+  var pagado=movimientos.reduce(function(s,x){return s+(parseFloat(x.monto)||0);},0);
+  var saldo=Math.max(0,total-pagado);
+  var filas=movimientos.map(function(x){
+    return '<tr style="border-top:1px solid var(--gris-2);"><td style="padding:.55rem;">'+ex54Esc(x.fecha||'—')+(x.hora?' · '+ex54Esc(x.hora):'')+'</td><td style="padding:.55rem;">'+(x.tipo==='liquidacion'?'Liquidación':'Abono')+'</td><td style="padding:.55rem;text-align:right;font-weight:700;">$'+formatMonto(x.monto||0)+'</td><td style="padding:.55rem;">'+ex54Esc(prov112CuentaLabel(x.cuenta))+'</td><td style="padding:.55rem;">'+ex54Esc(x.nota||'—')+'</td><td style="padding:.55rem;text-align:right;">$'+formatMonto(x.saldo_despues==null?0:x.saldo_despues)+'</td></tr>';
+  }).join('');
+  var ov=prov109Modal('<div style="display:flex;justify-content:space-between;align-items:flex-start;"><div><div class="seccion-titulo" style="margin:0;">🧾 Factura '+ex54Esc(compra.numero_factura||'Sin folio')+'</div><div class="hint">'+ex54Esc(pr.nombre)+' · Historial de abonos y pagos</div></div><button id="p112-cerrar" style="border:none;background:none;font-size:1.35rem;cursor:pointer;">×</button></div>'+
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:12px 0;"><div class="form-card" style="margin:0;padding:.65rem;"><div class="hint">TOTAL FACTURA</div><strong>$'+formatMonto(total)+'</strong></div><div class="form-card" style="margin:0;padding:.65rem;"><div class="hint">PAGADO ACUMULADO</div><strong>$'+formatMonto(pagado)+'</strong></div><div class="form-card" style="margin:0;padding:.65rem;"><div class="hint">SALDO</div><strong>$'+formatMonto(saldo)+'</strong></div></div>'+
+    '<div class="hint" style="margin-bottom:8px;">Sólo consulta. Los abonos y liquidaciones se realizan desde Cuentas por pagar.</div>'+
+    '<div style="overflow:auto;"><table style="width:100%;border-collapse:collapse;min-width:720px;font-size:.76rem;"><thead><tr><th>Fecha</th><th>Movimiento</th><th>Importe</th><th>Cuenta de salida</th><th>Referencia / observación</th><th>Saldo posterior</th></tr></thead><tbody>'+(filas||'<tr><td colspan="6" style="padding:1rem;text-align:center;">Esta factura todavía no tiene abonos registrados.</td></tr>')+'</tbody></table></div>');
+  ov.querySelector('#p112-cerrar').onclick=prov109Close;
 }
 
 function agruparGastosPorCompra(rows){
