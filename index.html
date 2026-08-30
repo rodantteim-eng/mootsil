@@ -14224,7 +14224,13 @@ C087
 @media(max-width:900px){.fi128-grid{grid-template-columns:1fr 1fr}.fi128-row{grid-template-columns:1fr 1fr}.fi128-form{grid-template-columns:1fr}.fi128-span2{grid-column:auto}}
 </style>
 
-<style id="fi129-fix">.ca22-op.finance-blue{border-top-color:#2d78a6!important;}</style>
+<style id="fi130-fix">
+.ca22-op.finance-blue{border-top:5px solid #2d78a6!important;box-shadow:0 -5px 12px rgba(45,120,166,.24),0 2px 5px rgba(0,0,0,.06)!important;}
+.ca22-op.finance-blue:hover{box-shadow:0 -6px 15px rgba(45,120,166,.32),0 3px 7px rgba(0,0,0,.08)!important;}
+.fi130-historybar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.fi130-status{display:inline-block;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:800;background:#eef1ef;color:#526059}
+.fi130-status.active{background:#e9f5ee;color:#176a49}.fi130-status.closed{background:#eef2f5;color:#4f6370}
+</style>
 <script id="fi128-js">
 (function(){
  const KEY='mootsil_financiamientos_128';
@@ -14254,7 +14260,7 @@ C087
        prox=fs.filter(f=>f.proximo_pago).sort((a,b)=>a.proximo_pago.localeCompare(b.proximo_pago))[0];
    app.innerHTML=`<div class="fi128-wrap">
      <div class="fi128-head"><div><div class="fi128-kicker">Administración · Caja</div><h1 class="fi128-title">Financiamientos</h1><div class="fi128-sub">Créditos bancarios y de otras instituciones. Control de deuda externa y pagos desde Caja.</div></div>
-     <div><button class="fi128-btn" id="fi128-back">← Caja</button> <button class="fi128-btn primary" id="fi128-new">+ Nuevo financiamiento</button></div></div>
+     <div><button class="fi128-btn" id="fi128-back">← Caja</button> <button class="fi128-btn" id="fi130-history">Historial de financiamientos</button> <button class="fi128-btn primary" id="fi128-new">+ Nuevo financiamiento</button></div></div>
      <div class="fi128-grid">
        <div class="fi128-stat"><small>Capital contratado</small><strong>${money(total)}</strong></div>
        <div class="fi128-stat"><small>Saldo pendiente</small><strong>${money(pendiente)}</strong></div>
@@ -14272,6 +14278,7 @@ C087
      </div></div>`;
    $('#fi128-back').onclick=back;
    $('#fi128-new').onclick=()=>modalNuevo();
+   $('#fi130-history').onclick=()=>historialGeneral();
    document.querySelectorAll('[data-fi-detail]').forEach(b=>b.onclick=()=>detalle(b.dataset.fiDetail));
  }
  function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -14305,6 +14312,21 @@ C087
    try{ if(typeof ca21Load==='function'&&typeof ca21Save==='function'){let c=ca21Load();c.movimientos.push({id:'FI'+Date.now(),fecha:o.fecha_inicio,hora:new Date().toTimeString().slice(0,5),tipo:'entrada',cuenta:o.cuenta_ingreso,monto:Number(o.monto_original),categoria:'Financiamientos',concepto:'Disposición de financiamiento',persona:o.institucion,nota:o.folio||'',origen:'Financiamientos',estado:'Registrado',financiamiento_id:o.id});ca21Save(c)} }catch(_){}
    d.remove();render();
   }
+ }
+ function historialGeneral(){
+  let fs=financs().slice().sort((a,b)=>String(b.fecha_inicio||b.creado||'').localeCompare(String(a.fecha_inicio||a.creado||'')));
+  let ms=movs();
+  let rows=fs.map(f=>{
+    let fm=ms.filter(x=>x.financiamiento_id===f.id);
+    let cap=fm.reduce((a,m)=>a+(m.tipo==='capital'?Number(m.monto||0):m.tipo==='mixto'?Number(m.capital||0):0),0);
+    let inte=fm.reduce((a,m)=>a+(m.tipo==='interes'?Number(m.monto||0):m.tipo==='mixto'?Number(m.interes||0):0),0);
+    let s=saldo(f), st=s<=0?'Liquidado':(f.estado==='cerrado'?'Cerrado':'Activo');
+    return `<tr><td>${esc(f.fecha_inicio||f.creado||'—')}</td><td><strong>${esc(f.institucion)}</strong><div class="fi128-muted">${esc(f.tipo_credito||'Crédito')}</div></td><td>${esc(f.folio||'—')}</td><td>${money(f.monto_original)}</td><td>${money(cap)}</td><td>${money(inte)}</td><td>${money(s)}</td><td>${esc(f.vencimiento||'—')}</td><td><span class="fi130-status ${st==='Activo'?'active':'closed'}">${st}</span></td><td><button class="fi128-btn" style="padding:6px 9px" data-fi-hdetail="${f.id}">Ver detalle</button></td></tr>`;
+  }).join('');
+  let d=modal(`<div class="fi128-mhead"><div><strong>🏦 Historial de financiamientos</strong><div class="fi128-muted">Consulta general de créditos institucionales activos, liquidados o cerrados.</div></div><button class="fi128-btn" data-fi-close>×</button></div>
+  <div class="fi128-mbody"><div class="fi130-historybar"><strong>Créditos registrados: ${fs.length}</strong><span class="fi128-muted">Consulta administrativa · sin acciones de pago</span></div>
+  <div style="overflow:auto"><table class="fi128-table"><thead><tr><th>Disposición</th><th>Institución</th><th>Folio</th><th>Original</th><th>Capital pagado</th><th>Intereses pagados</th><th>Saldo</th><th>Vencimiento</th><th>Estatus</th><th>Detalle</th></tr></thead><tbody>${rows||'<tr><td colspan="10" class="fi128-empty">Aún no hay financiamientos registrados.</td></tr>'}</tbody></table></div></div>`);
+  d.querySelectorAll('[data-fi-hdetail]').forEach(b=>b.onclick=()=>{d.remove();detalle(b.dataset.fiHdetail)});
  }
  function detalle(fid){
   let f=financs().find(x=>x.id===fid);if(!f)return;let ms=movs().filter(x=>x.financiamiento_id===fid);
