@@ -7567,7 +7567,7 @@ function em69AtenderSolicitud(id){
     .catch(function(e){alert('No se pudo atender: '+e.message);});
 }
 
-function em69AprobarPrestamo(x){
+function em69AprobarPrestamo(x,volverFn){
   em69Close();
   Promise.all([
     from('config_app').select('*').get(),
@@ -7627,7 +7627,7 @@ function em69AprobarPrestamo(x){
       }).then(function(){
         showToast('✅ Préstamo aprobado · salida registrada en Caja');
         em69Close();
-        em69RenderSolicitudes(EM69_VOLVER_SOLICITUDES);
+        if(typeof volverFn==='function')volverFn();else em69RenderSolicitudes(EM69_VOLVER_SOLICITUDES);
       }).catch(function(e){
         var msg=document.getElementById('em69-msg');if(msg)msg.innerHTML='<div class="em69-error">No se pudo completar: '+e.message+'</div>';
         btn.disabled=false;btn.textContent='Aprobar y entregar';
@@ -10212,118 +10212,69 @@ function cerrarRecibo(){
 
 function renderPrestamos(){
   var body=document.getElementById('no89-body')||document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📝 Préstamos<button type="button" onclick="renderNuevoPrestamo()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo préstamo</button></div><div class="loading">Cargando...</div>';
-  from('prestamos').select('*,operario:usuarios!operario_id(nombre)').order('creado_en',{ascending:false}).get().then(function(prestamos){
-    var header='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📝 Préstamos<button type="button" onclick="renderNuevoPrestamo()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo préstamo</button></div>';
-    if(!prestamos||!prestamos.length){body.innerHTML=header+'<div class="empty">Sin préstamos registrados.</div><button class="btn-back" style="margin-top:1rem;" onclick="no89CerrarModal()">← Cerrar</button>';return;}
-    var ids=prestamos.map(function(p){return p.id;});
-    from('prestamo_pagos').select('*').in('prestamo_id',ids).order('numero_pago',{ascending:true}).get().then(function(pagos){
-      var html=header;
-      html+=prestamos.map(function(p){
-        var pagosDe=pagos.filter(function(x){return x.prestamo_id===p.id;});
-        var pendientes=pagosDe.filter(function(x){return x.estado==='pendiente';});
-        var restante=pendientes.reduce(function(s,x){return s+parseFloat(x.monto);},0);
+  body.innerHTML='<div class="seccion-titulo">📝 Préstamos</div><div class="hint" style="margin-bottom:10px;">Los préstamos nacen de una solicitud del colaborador. Administración únicamente autoriza o rechaza.</div><div class="loading">Cargando solicitudes y préstamos...</div>';
+
+  Promise.all([
+    from('solicitudes_operario').select('*,operario:usuarios!operario_id(nombre,activo)').eq('tipo','prestamo').order('creado_en',{ascending:false}).get(),
+    from('prestamos').select('*,operario:usuarios!operario_id(nombre)').order('creado_en',{ascending:false}).get()
+  ]).then(function(rr){
+    var solicitudes=(rr[0]||[]).filter(function(s){return s.operario&&s.operario.activo===true;});
+    var prestamos=rr[1]||[];
+    var pendientes=solicitudes.filter(function(s){return s.estado==='pendiente';});
+    var resueltas=solicitudes.filter(function(s){return s.estado!=='pendiente';});
+    var prestamoIds=prestamos.map(function(p){return p.id;});
+    var pagosPromise=prestamoIds.length?from('prestamo_pagos').select('*').in('prestamo_id',prestamoIds).order('numero_pago',{ascending:true}).get():Promise.resolve([]);
+
+    pagosPromise.then(function(pagos){
+      pagos=pagos||[];
+      function solicitudCard(s){
+        var rechaz=s.estado==='rechazada'||s.estado==='rechazado';
+        var estado=s.estado==='pendiente'?'PENDIENTE':(rechaz?'RECHAZADA':'AUTORIZADA');
+        var color=s.estado==='pendiente'?'var(--tierra)':(rechaz?'var(--rojo)':'var(--verde-mid)');
+        return '<div class="orden-card" style="border-left-color:'+color+';"><div style="display:flex;justify-content:space-between;gap:10px;"><div><strong>💰 '+(s.operario?s.operario.nombre:'Colaborador')+'</strong><div class="orden-meta">Solicita: <b>$'+parseFloat(s.monto_solicitado||0).toFixed(2)+'</b><br>Motivo: '+(s.mensaje||'—')+'</div></div><span style="font-size:.68rem;font-weight:800;color:'+color+';">'+estado+'</span></div>'+
+          (s.estado==='pendiente'?'<div style="display:flex;gap:7px;margin-top:8px;"><button class="btn-sm btn-completar" data-pr-aprobar="'+s.id+'">Autorizar</button><button class="btn-sm btn-cancelar" data-pr-rechazar="'+s.id+'">Rechazar</button></div>':'<div class="hint" style="margin-top:5px;">'+(s.respuesta||'Solicitud resuelta')+'</div>')+'</div>';
+      }
+      function prestamoCard(p){
+        var pagosDe=pagos.filter(function(x){return String(x.prestamo_id)===String(p.id);});
+        var pendientesPago=pagosDe.filter(function(x){return x.estado==='pendiente';});
+        var restante=pendientesPago.reduce(function(s,x){return s+parseFloat(x.monto||0);},0);
         var filas=pagosDe.map(function(pg){
           var ns=numeroSemanaISO(new Date(pg.semana_inicio+'T00:00:00'));
-          var pagado=pg.estado==='descontado';
-          return '<div style="display:flex;justify-content:space-between;align-items:center;font-size:.8rem;padding:.3rem 0;border-bottom:1px solid var(--gris-1);"><span>Pago '+pg.numero_pago+'/'+p.num_pagos+' · Sem '+ns+' · $'+parseFloat(pg.monto).toFixed(2)+'</span>'+(pagado?'<span style="color:var(--verde-mid);font-weight:700;">✅ Descontado</span>':'<button class="btn-sm btn-completar" data-descontar="'+pg.id+'" data-prestamo="'+p.id+'">Marcar descontado</button>')+'</div>';
+          var descontado=pg.estado==='descontado';
+          return '<div style="display:flex;justify-content:space-between;align-items:center;font-size:.76rem;padding:.3rem 0;border-bottom:1px solid var(--gris-1);"><span>Pago '+pg.numero_pago+'/'+p.num_pagos+' · Sem '+ns+' · $'+parseFloat(pg.monto||0).toFixed(2)+'</span><span style="color:'+(descontado?'var(--verde-mid)':'var(--tierra)')+';font-weight:700;">'+(descontado?'✅ Descontado':'⏳ Pendiente en Nómina')+'</span></div>';
         }).join('');
-        return '<div class="orden-card" style="border-left-color:'+(p.estado==='activo'?'var(--tierra)':'var(--gris-3)')+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(p.operario?p.operario.nombre:'')+' · '+p.concepto+'</strong><span style="font-size:.72rem;font-weight:700;color:'+(p.estado==='activo'?'var(--tierra)':'var(--verde-mid)')+';">'+(p.estado==='activo'?'Activo':'Liquidado')+'</span></div><div class="orden-meta">Total: $'+parseFloat(p.monto_total).toFixed(2)+' · Restante: $'+restante.toFixed(2)+'</div><div style="margin-top:.5rem;">'+filas+'</div></div>';
-      }).join('');
-      body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="no89CerrarModal()">← Cerrar</button>';
-      body.querySelectorAll('[data-descontar]').forEach(function(btn){
-        btn.addEventListener('click',function(){
-          var pagoId=this.dataset.descontar, prestamoId=this.dataset.prestamo;
-          from('prestamo_pagos').eq('id',pagoId).update({estado:'descontado',descontado_en:new Date().toISOString()}).then(function(){
-            return from('prestamo_pagos').select('*').eq('prestamo_id',prestamoId).get();
-          }).then(function(todosPagos){
-            var todosDescontados=todosPagos.every(function(x){return x.estado==='descontado';});
-            if(todosDescontados) return from('prestamos').eq('id',prestamoId).update({estado:'liquidado'});
-          }).then(function(){showToast('✅ Pago marcado como descontado');renderPrestamos();}).catch(function(e){alert('Error: '+e.message);});
-        });
+        return '<div class="orden-card" style="border-left-color:'+(p.estado==='activo'?'var(--tierra)':'var(--gris-3)')+';"><div style="display:flex;justify-content:space-between;gap:8px;"><strong>'+(p.operario?p.operario.nombre:'')+' · '+p.concepto+'</strong><span style="font-size:.68rem;font-weight:800;color:'+(p.estado==='activo'?'var(--tierra)':'var(--verde-mid)')+';">'+String(p.estado||'activo').toUpperCase()+'</span></div><div class="orden-meta">Total: $'+parseFloat(p.monto_total||0).toFixed(2)+' · Restante: $'+restante.toFixed(2)+'</div><div style="margin-top:.45rem;">'+filas+'</div></div>';
+      }
+
+      var html='<div style="font-size:.68rem;font-weight:850;color:var(--verde);text-transform:uppercase;margin:4px 0 7px;">Solicitudes por revisar · '+pendientes.length+'</div>'+
+        (pendientes.length?pendientes.map(solicitudCard).join(''):'<div class="empty" style="padding:.8rem;">No hay solicitudes de préstamo pendientes.</div>')+
+        '<div style="font-size:.68rem;font-weight:850;color:var(--verde);text-transform:uppercase;margin:16px 0 7px;">Préstamos autorizados / historial</div>'+
+        (prestamos.length?prestamos.map(prestamoCard).join(''):'<div class="empty" style="padding:.8rem;">Aún no hay préstamos autorizados.</div>')+
+        '<div style="font-size:.68rem;font-weight:850;color:var(--verde);text-transform:uppercase;margin:16px 0 7px;">Solicitudes resueltas</div>'+
+        (resueltas.length?resueltas.map(solicitudCard).join(''):'<div class="empty" style="padding:.8rem;">Sin solicitudes resueltas.</div>');
+      body.innerHTML=html;
+
+      body.querySelectorAll('[data-pr-aprobar]').forEach(function(btn){
+        btn.onclick=function(){
+          var id=this.dataset.prAprobar,s=solicitudes.find(function(x){return String(x.id)===String(id);});if(!s)return;
+          var x={origen:'sol',id:s.id,uid:s.operario_id,nombre:s.operario?s.operario.nombre:'',tipo:'prestamo',raw:s};
+          em69AprobarPrestamo(x,renderPrestamos);
+        };
+      });
+      body.querySelectorAll('[data-pr-rechazar]').forEach(function(btn){
+        btn.onclick=function(){
+          var id=this.dataset.prRechazar,s=solicitudes.find(function(x){return String(x.id)===String(id);});if(!s)return;
+          var motivo=prompt('Motivo del rechazo:');if(motivo===null)return;motivo=motivo.trim();if(!motivo){alert('Captura el motivo.');return;}
+          from('solicitudes_operario').eq('id',id).update({estado:'rechazada',respuesta:motivo,atendido_por:usuario.id,atendido_en:new Date().toISOString()})
+           .then(function(){return from('notificaciones').insert({titulo:'❌ Préstamo rechazado',cuerpo:'Tu solicitud de préstamo fue rechazada: '+motivo,icono:'❌',leida:false,para_rol:'operario',para_usuario:s.operario_id});})
+           .then(function(){showToast('Solicitud rechazada');renderPrestamos();}).catch(function(e){alert('Error: '+e.message);});
+        };
       });
     });
-  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+  }).catch(function(e){body.innerHTML='<div class="empty">Error al cargar préstamos: '+e.message+'</div>';});
 }
 
-function renderNuevoPrestamo(prefill){
-  prefill=prefill||{};
-  var body=document.getElementById('no89-body')||document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo">+ Nuevo préstamo</div><div class="loading">Cargando...</div>';
-  from('config_app').select('*').get().then(function(cfgRows){
-    var cfg={}; (cfgRows||[]).forEach(function(c){cfg[c.clave]=c.valor;});
-    var maxMes=parseInt(cfg.prestamo_max_activos_mes)||1;
-    var montoMax=(cfg.prestamo_monto_max!==undefined&&cfg.prestamo_monto_max!==null&&cfg.prestamo_monto_max!=='')?parseFloat(cfg.prestamo_monto_max):null;
-    var opO=cats.operarios.map(function(o){return '<button type="button" class="op-chip'+(prefill.operarioId===o.id?' sel':'')+'" data-id="'+o.id+'" onclick="seleccionUnica(this)">'+o.nombre+'</button>';}).join('');
-    body.innerHTML='<div class="seccion-titulo">+ Nuevo préstamo</div><div class="form-card">'+(prefill.solicitudId?'<p class="hint" style="margin-bottom:.75rem;">Completando la solicitud del colaborador — ajusta pagos y fecha antes de registrar.</p>':'')+(montoMax!=null?'<p class="hint" style="margin-bottom:.75rem;">Monto máximo autorizable por préstamo: $'+montoMax.toFixed(2)+' · Máximo '+maxMes+' préstamo(s) por colaborador al mes. <a href="javascript:void(0)" onclick="renderConfig()" style="color:var(--verde-mid);">cambiar</a></p>':'')+'<div class="form-group"><label>Colaborador</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group"><label>Concepto</label><input type="text" id="pr-concepto" value="'+(prefill.concepto||'').replace(/"/g,'&quot;')+'" placeholder="Ej. Préstamo personal / Anticipo de nómina"></div><div class="form-group"><label>Monto total ($)</label><input type="number" id="pr-monto" min="0" step="1" value="'+(prefill.monto||'')+'" placeholder="Ej. 600"></div><div class="form-group"><label>Número de pagos semanales</label><input type="number" id="pr-pagos" min="1" step="1" placeholder="Ej. 3"></div><div class="no50-loan-account"><div class="form-group"><label>Semana en que inicia el descuento</label><input type="date" id="pr-fecha" value="'+fechaHoyLocal()+'"></div><div class="form-group"><label>Cuenta de entrega</label><select id="pr-cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="santander_pesos">Santander Pesos</option></select><p class="hint">El préstamo genera una salida inmediata en Caja.</p></div></div><button class="btn-primary" id="pr-guardar">Registrar préstamo y salida en Caja</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderPrestamos()">← Volver a Préstamos</button>';
-    document.getElementById('pr-guardar').addEventListener('click',function(){
-    var opBtn=document.querySelector('.op-chip.sel');
-    var concepto=document.getElementById('pr-concepto').value.trim();
-    var monto=parseFloat(document.getElementById('pr-monto').value);
-    var numPagos=parseInt(document.getElementById('pr-pagos').value);
-    var fechaIni=document.getElementById('pr-fecha').value;
-    var cuentaEntrega=document.getElementById('pr-cuenta').value;
-    if(!opBtn){alert('Selecciona un colaborador.');return;}
-    if(!concepto){alert('Describe el concepto.');return;}
-    if(!monto||monto<=0){alert('Captura un monto válido.');return;}
-    if(!numPagos||numPagos<1){alert('Captura el número de pagos.');return;}
-    if(montoMax!=null&&monto>montoMax){alert('El monto máximo que se puede autorizar por préstamo es $'+montoMax.toFixed(2)+'. Puedes cambiar este límite en Configuración.');return;}
-    var cajaPrest=ca21Totals(fechaHoyLocal());
-    var disponiblePrest=ca35CuentaSaldo(cajaPrest,cuentaEntrega);
-    if(monto>disponiblePrest){alert('Saldo insuficiente en '+ca35CuentaLabel(cuentaEntrega)+'. Disponible: $'+formatMonto(disponiblePrest));return;}
-    var prestamoCreado=null;
-    var btn=this; btn.disabled=true; btn.textContent='Verificando...';
-    contarPrestamosDelMes(opBtn.dataset.id).then(function(usadosDelMes){
-      if(usadosDelMes>=maxMes){
-        var okSeguir=confirm('⚠️ Este colaborador ya tiene '+usadosDelMes+' préstamo(s) este mes (máximo configurado: '+maxMes+'). ¿Autorizar de todas formas?');
-        if(!okSeguir){btn.disabled=false;btn.textContent='Registrar préstamo';return Promise.reject({_cancelado:true});}
-      }
-      btn.textContent='Guardando...';
-    }).then(function(){
-    return from('prestamos').insert({operario_id:opBtn.dataset.id,concepto:concepto,monto_total:monto,num_pagos:numPagos,fecha_inicio:fechaIni,estado:'activo',creado_por:usuario.id});
-    }).then(function(rows){
-      var promesaSolicitud = prefill.solicitudId ? from('solicitudes_operario').eq('id',prefill.solicitudId).update({estado:'atendida',respuesta:'Préstamo registrado y aprobado.',atendido_por:usuario.id,atendido_en:new Date().toISOString()}) : Promise.resolve();
-      return promesaSolicitud.then(function(){
-        return from('prestamos').select('*').eq('operario_id',opBtn.dataset.id).order('creado_en',{ascending:false}).limit(1).get();
-      });
-    }).then(function(nuevoPrestamoRows){
-      var prestamo=nuevoPrestamoRows[0];
-      prestamoCreado=prestamo;
-      var montoPorPago=Math.round((monto/numPagos)*100)/100;
-      var lunes=inicioDeSemana(new Date(fechaIni+'T00:00:00'));
-      var pagosArr=[];
-      for(var i=0;i<numPagos;i++){
-        var sem=new Date(lunes); sem.setDate(sem.getDate()+i*7);
-        var esUltimo=i===numPagos-1;
-        var montoEste = esUltimo ? Math.round((monto-montoPorPago*(numPagos-1))*100)/100 : montoPorPago;
-        pagosArr.push({prestamo_id:prestamo.id,numero_pago:i+1,semana_inicio:sem.toISOString().slice(0,10),monto:montoEste,estado:'pendiente'});
-      }
-      return Promise.all(pagosArr.map(function(p){return from('prestamo_pagos').insert(p);}));
-    }).then(function(){
-      var caja=ca21Load();
-      var refPrest='prestamo-'+(prestamoCreado&&prestamoCreado.id?prestamoCreado.id:Date.now());
-      caja.movimientos=caja.movimientos.filter(function(m){return m.ref_prestamo!==refPrest;});
-      caja.movimientos.push({
-        id:refPrest+'-'+Date.now(),ref_prestamo:refPrest,fecha:fechaHoyLocal(),hora:ca21Now(),
-        tipo:'salida',cuenta:cuentaEntrega,monto:ca21Money(monto),categoria:'Préstamo personal',
-        concepto:concepto,persona:opBtn.textContent.trim(),forma:cuentaEntrega,origen:'Personal · Préstamo',
-        estado:'Entregado',usuario:(usuario&&usuario.nombre)||'Usuario'
-      });
-      ca21Save(caja);
-      return from('notificaciones').insert({titulo:'📝 Nuevo préstamo registrado',cuerpo:usuario.nombre+' te registró: '+concepto+' — $'+monto+' en '+numPagos+' pago(s) semanales',icono:'📝',leida:false,para_rol:'operario',para_usuario:opBtn.dataset.id});
-    }).then(function(){
-      showToast('✅ Préstamo registrado · salida aplicada en Caja');
-      renderPrestamos();
-    }).catch(function(e){
-      if(e&&e._cancelado) return;
-      alert('Error: '+(e&&e.message?e.message:e));
-      btn.disabled=false;btn.textContent='Registrar préstamo';
-    });
-    });
-  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
-}
-
-
+/* C102: préstamo manual desde Administración retirado; el origen es la solicitud del colaborador. */
 
 function bo91FmtFecha(f){if(!f)return '—';try{return new Date(f+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});}catch(e){return f;}}
 function bo92Meta(desc){var m=String(desc||'').match(/\[C092\](.*?)\[\/C092\]/);if(!m)return null;try{return JSON.parse(decodeURIComponent(m[1]));}catch(e){return null;}}
@@ -10543,7 +10494,7 @@ function renderApoyosC092(){
    from('usuarios').select('*').get(),
    from('gastos').select('*').order('fecha',{ascending:false}).limit(80).get()
   ]).then(function(rr){
-   var us=(rr[0]||[]).filter(function(u){return u.nombre&&['admin','dueño','dueno','inversionista'].indexOf(String(u.rol||'').toLowerCase())<0;});
+   var us=(rr[0]||[]).filter(function(u){return u.activo===true&&u.nombre&&['admin','dueño','dueno','inversionista'].indexOf(String(u.rol||'').toLowerCase())<0;});
    var sel=document.getElementById('ap98-op');
    if(sel&&sel.options.length<=1)sel.innerHTML='<option value="">Selecciona...</option>'+us.map(function(u){return '<option value="'+u.id+'">'+u.nombre+'</option>';}).join('');
    var apoyos=(rr[1]||[]).filter(ap98EsApoyo).slice(0,30),list=document.getElementById('ap98-list');
