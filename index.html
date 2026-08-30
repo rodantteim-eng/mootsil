@@ -5780,9 +5780,12 @@ function ca30SeleccionarCuentaCompra(total,callback){
 function renderNuevaCompra(){
   var body=document.getElementById('enc-body');
   var hoy=fechaHoyLocal();
+  var compraDesdeCaja=!!C027_COMPRA_DESDE_CAJA;
+  var compraRuta=compraDesdeCaja?'Administración · Caja · Compras':'Administración · Compras y Proveedores';
+  var compraVolver=compraDesdeCaja?'← Caja':'← Compras y Proveedores';
   var provOpts=cats.proveedores.map(function(p){return '<option value="'+p.id+'">'+p.nombre+(p.giro?' — '+p.giro:'')+'</option>';}).join('');
   body.innerHTML='<div class="nc28-shell">'+
-    '<div class="nc28-head"><div><div class="nc28-eyebrow">Administración · Caja · Compras</div><div class="nc28-title">Nueva compra</div><div class="nc28-sub">Captura rápida de factura y productos.</div><div style="display:flex;gap:7px;margin-top:9px;"><button type="button" class="op-chip sel">＋ Nueva compra</button><button type="button" class="op-chip" onclick="renderHistorialCompras()">📜 Historial de compras</button></div></div><button type="button" class="nc28-back" onclick="volverCompraContexto()">← Caja</button></div>'+
+    '<div class="nc28-head"><div><div class="nc28-eyebrow">'+compraRuta+'</div><div class="nc28-title">Nueva compra</div><div class="nc28-sub">Captura rápida de factura y productos.</div><div style="display:flex;gap:7px;margin-top:9px;"><button type="button" class="op-chip sel">＋ Nueva compra</button><button type="button" class="op-chip" onclick="renderHistorialCompras()">📜 Historial de compras</button></div></div><button type="button" class="nc28-back" onclick="volverCompraContexto()">'+compraVolver+'</button></div>'+
     '<div class="nc30-card">'+
       '<div class="nc30-topgrid">'+
         '<div class="form-group"><label>Proveedor</label><div class="nc29-provider-wrap"><input type="text" id="nc-proveedor-buscar" autocomplete="off" placeholder="Escribe proveedor"><div id="nc-proveedor-resultados" class="nc29-provider-results nc30-provider-results"></div></div><select id="nc-proveedor" style="display:none"><option value="">Sin proveedor</option>'+provOpts+'<option value="_nuevo">+ Agregar nuevo proveedor...</option></select></div>'+
@@ -7220,27 +7223,38 @@ function oc113NuevaNecesidad(){
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><div class="form-group"><label>Cantidad</label><input id="oc113-q" type="number" min="0" step="any"></div><div class="form-group"><label>Unidad</label><input id="oc113-u" placeholder="rollos, kg, L..."></div></div>'+
     '<div class="form-group"><label>Fecha requerida</label><input id="oc113-f" type="date"></div>'+
     '<div class="form-group"><label>Motivo / especificación</label><textarea id="oc113-m" rows="4" style="width:100%;min-height:92px;resize:vertical;box-sizing:border-box;" placeholder="Marca permitida, medida, presentación o necesidad específica."></textarea></div>'+
-    '<button id="oc113-save" class="btn-primary">Guardar necesidad</button>');
+    '<button id="oc113-save" class="btn-primary">Continuar a cotización →</button>');
   bg.querySelector('#oc113-x').onclick=oc113Close;
   bg.querySelector('#oc113-save').onclick=function(){
     var nom=bg.querySelector('#oc113-nom').value.trim(),q=parseFloat(bg.querySelector('#oc113-q').value)||0,u=bg.querySelector('#oc113-u').value.trim();
     if(!nom||q<=0||!u){alert('Captura producto, cantidad mayor a 0 y unidad.');return;}
-    window.OC113_MANUALES.push({id:'manual-'+Date.now(),nombre:nom,cantidad:q,unidad:u,fecha_requerida:bg.querySelector('#oc113-f').value,motivo:bg.querySelector('#oc113-m').value.trim()});
-    oc113Close();renderOrdenCompra();
+    var directa=[{
+      nombre:nom,
+      cantidad:q,
+      unidad:u,
+      origen:'Administración',
+      fecha_requerida:bg.querySelector('#oc113-f').value,
+      especificacion:bg.querySelector('#oc113-m').value.trim()
+    }];
+    oc113Close();
+    oc113SolicitarCotizacion([],directa);
   };
 }
 
-function oc113SolicitarCotizacion(necesidades){
-  var sels=Array.from(document.querySelectorAll('.oc113-check:checked')).map(function(ch){
+function oc113SolicitarCotizacion(necesidades,directItems){
+  var sels=(directItems&&directItems.length)?directItems:Array.from(document.querySelectorAll('.oc113-check:checked')).map(function(ch){
     var idx=parseInt(ch.dataset.idx,10),n=necesidades[idx],inp=document.querySelector('.oc113-cant[data-idx="'+idx+'"]'),q=parseFloat(inp&&inp.value)||0;
     return q>0?{nombre:n.item.nombre,cantidad:q,unidad:n.item.unidad,origen:n.origen,fecha_requerida:n.fecha_requerida||''}:null;
   }).filter(Boolean);
   if(!sels.length){alert('Selecciona al menos una necesidad con cantidad mayor a 0.');return;}
   var sugeridos=oc114CalcularProveedoresSugeridos(sels);
-  var bg=oc113Modal('<div style="display:flex;justify-content:space-between;align-items:flex-start;"><div><div class="seccion-titulo" style="margin:0;">📣 Solicitar cotizaciones</div><div class="hint">'+sels.length+' producto'+(sels.length===1?'':'s')+' seleccionado'+(sels.length===1?'':'s')+'. Mootsil determina los proveedores compatibles.</div></div><button id="oc113-x" style="border:none;background:none;font-size:1.35rem;cursor:pointer;">×</button></div>'+
+  var reqFechas=sels.map(function(x){return x.fecha_requerida||'';}).filter(Boolean);
+  var reqTxt=reqFechas.length?(' · requerido '+reqFechas[0]):'';
+  var esp=sels.map(function(x){return x.especificacion||'';}).filter(Boolean).join(' · ');
+  var bg=oc113Modal('<div style="display:flex;justify-content:space-between;align-items:flex-start;"><div><div class="seccion-titulo" style="margin:0;">📣 Solicitar cotizaciones</div><div class="hint">'+sels.length+' producto'+(sels.length===1?'':'s')+' seleccionado'+(sels.length===1?'':'s')+reqTxt+'. Mootsil determina los proveedores compatibles.</div></div><button id="oc113-x" style="border:none;background:none;font-size:1.35rem;cursor:pointer;">×</button></div>'+
     '<div style="background:#f6f8f7;border:1px solid var(--gris-2);border-radius:10px;padding:10px;margin:10px 0;"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><div><strong style="font-size:.8rem;">Proveedores sugeridos por Mootsil: '+sugeridos.total+'</strong><div class="hint" style="margin-top:3px;">Matching automático por categoría, cobertura y proveedor activo.</div></div><button type="button" id="oc114-ver-prov" class="btn-secondary" style="width:auto;margin:0;padding:.38rem .58rem;">Ver / ajustar</button></div><div id="oc114-prov-resumen" class="hint" style="margin-top:7px;">'+oc113Esc(sugeridos.resumen)+'</div></div>'+
     '<div class="form-group"><label>Fecha límite para recibir propuestas</label><input id="oc113-lim" type="date"></div>'+
-    '<div class="form-group"><label>Condiciones / observaciones para proveedores</label><textarea id="oc113-obs" rows="4" style="width:100%;min-height:90px;resize:vertical;box-sizing:border-box;" placeholder="Lugar de entrega, equivalencias permitidas, requerimientos fiscales, etc."></textarea></div>'+
+    '<div class="form-group"><label>Condiciones / observaciones para proveedores</label><textarea id="oc113-obs" rows="4" style="width:100%;min-height:90px;resize:vertical;box-sizing:border-box;" placeholder="Lugar de entrega, equivalencias permitidas, requerimientos fiscales, etc.">'+oc113Esc(esp)+'</textarea></div>'+
     '<div style="background:#fff8e8;border:1px solid #ead9ae;border-radius:10px;padding:9px;margin-bottom:10px;"><strong style="font-size:.78rem;">Lo que verá el proveedor</strong><div class="hint" style="margin-top:3px;">Productos, cantidades, fecha requerida y condiciones de la solicitud. No verá inventario, consumos ni información privada del rancho.</div></div>'+
     '<button id="oc113-pub" class="btn-primary">Publicar solicitud a proveedores</button>');
   bg.querySelector('#oc113-x').onclick=oc113Close;
