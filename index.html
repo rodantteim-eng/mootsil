@@ -7841,24 +7841,35 @@ function sumarMesesFecha(fechaStr,meses){
 
 function renderInversionistasMenu(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo">💼 Inversionistas</div><div class="loading">Cargando...</div>';
+  body.innerHTML='<div class="seccion-titulo">💼 Inversionistas y Dueños</div><div class="loading">Cargando...</div>';
   Promise.all([
-    from('usuarios').select('id,nombre').eq('rol','inversionista').order('nombre').get(),
+    from('usuarios').select('id,nombre,rol,activo').in('rol',['inversionista','dueño']).order('nombre').get(),
     from('inversiones').select('*').get()
   ]).then(function(r){
-    var inversionistas=r[0]||[], inversiones=r[1]||[];
+    var personas=r[0]||[], inversiones=r[1]||[];
+    var inversionistas=personas.filter(function(p){return p.rol==='inversionista';});
+    var duenos=personas.filter(function(p){return p.rol==='dueño';});
     var porInversionista={};
     inversiones.forEach(function(inv){(porInversionista[inv.inversionista_id]=porInversionista[inv.inversionista_id]||[]).push(inv);});
-    var headerHtml='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">💼 Inversionistas<button type="button" onclick="renderAdministracionMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Administración</button></div>';
-    var html=headerHtml;
+    var headerHtml='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">💼 Inversionistas y Dueños<button type="button" onclick="renderAdministracionMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Administración</button></div>';
+    var html=headerHtml+'<p class="hint" style="margin-bottom:.8rem;">Estos perfiles se administran aquí y no forman parte de Empleados, Sueldos ni Nómina laboral.</p>';
+    html+='<div class="seccion-titulo" style="margin-top:.4rem;">Inversionistas</div>';
     if(!inversionistas.length){
-      html+='<div class="empty">Aún no tienes usuarios con rol "Inversionista". Dalos de alta en Empleados → Expedientes.</div>';
-    } else {
+      html+='<div class="empty">Sin inversionistas registrados.</div>';
+    }else{
       html+=inversionistas.map(function(iv){
         var contratos=porInversionista[iv.id]||[];
         var activos=contratos.filter(function(c){return c.estado==='activo';});
         var totalActivo=activos.reduce(function(s,c){return s+parseFloat(c.monto_invertido);},0);
-        return '<div class="orden-card" data-ver-inversionista="'+iv.id+'" style="cursor:pointer;"><strong style="font-size:.92rem;">'+iv.nombre+'</strong><div class="orden-meta">'+(contratos.length?(activos.length+' contrato(s) activo(s) · $'+formatMonto(totalActivo)+' invertido'):'Sin contratos registrados')+'</div></div>';
+        return '<div class="orden-card" data-ver-inversionista="'+iv.id+'" style="cursor:pointer;"><div style="display:flex;justify-content:space-between;gap:10px;"><strong style="font-size:.92rem;">'+iv.nombre+'</strong><span style="font-size:.7rem;color:'+(iv.activo?'var(--verde-mid)':'var(--gris-3)')+';">'+(iv.activo?'Activo':'Inactivo')+'</span></div><div class="orden-meta">'+(contratos.length?(activos.length+' contrato(s) activo(s) · $'+formatMonto(totalActivo)+' invertido'):'Sin contratos registrados')+'</div></div>';
+      }).join('');
+    }
+    html+='<div class="seccion-titulo" style="margin-top:1rem;">Dueños</div>';
+    if(!duenos.length){
+      html+='<div class="empty">Sin dueños registrados.</div>';
+    }else{
+      html+=duenos.map(function(d){
+        return '<div class="orden-card" style="border-left-color:var(--purple,#6f2c91);"><div style="display:flex;justify-content:space-between;gap:10px;"><strong style="font-size:.92rem;">'+d.nombre+'</strong><span style="font-size:.7rem;color:'+(d.activo?'var(--verde-mid)':'var(--gris-3)')+';">'+(d.activo?'Activo':'Inactivo')+'</span></div><div class="orden-meta">Perfil Dueño · separado de Personal y Nómina</div></div>';
       }).join('');
     }
     body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderAdministracionMenu()">← Volver a Administración</button>';
@@ -8115,7 +8126,7 @@ function renderEditarInversion(inversionId){
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
-/* C089 — Nómina y Compensaciones: 4 accesos con modales compactos */
+/* C090 — Sueldos por personal activo + separación Inversionistas/Dueños de Expedientes */
 
 function no89CerrarModal(){var x=document.getElementById('no89-overlay');if(x)x.remove();}
 function no89AbrirModal(titulo,tamano){
@@ -8136,7 +8147,7 @@ function renderAdministracionMenu(){
     '<div class="ad17-card gold em60-card" data-admin="compensaciones"><div class="ic">💰</div><h3>Nómina y Compensaciones</h3><p>Sueldos, bonos, préstamos e historial de nómina.</p><div class="em60-actions"><button type="button" data-compgo="sueldos">💵 Sueldos</button><button type="button" data-compgo="bonos">🎁 Bonos</button><button type="button" data-compgo="prestamos">📝 Préstamos</button><button type="button" data-compgo="historial">📊 Historial</button></div></div>'+
     '<div class="ad17-card orange" data-admin="gastos"><div class="ic">🧾</div><h3>Compras y Gastos</h3><p>Compras, proveedores, cuentas por pagar e historial.</p></div>'+
     '<div class="ad17-card primary" data-admin="eventual"><div class="ic">🧑‍🌾</div><h3>Labores Eventual</h3><p>Registro y pago del personal eventual por día.</p></div>'+
-    '<div class="ad17-card purple" data-admin="inversionistas"><div class="ic">💼</div><h3>Inversionistas</h3><p>Aportaciones, contratos, movimientos y devoluciones.</p></div>'+
+    '<div class="ad17-card purple" data-admin="inversionistas"><div class="ic">💼</div><h3>Inversionistas y Dueños</h3><p>Perfiles patrimoniales, aportaciones, contratos, movimientos y devoluciones.</p></div>'+
   '</div></div>';
   body.querySelector('[data-admin="caja"]').addEventListener('click',function(){renderCajaMootsil('dia',fechaHoyLocal());});
   body.querySelector('[data-empgo="expedientes"]').addEventListener('click',function(e){e.stopPropagation();renderAltasBajas();});
@@ -8583,20 +8594,37 @@ function renderEmpleadosMenu(){
 function renderPersonalSueldos(){
   var body=document.getElementById('no89-body')||document.getElementById('enc-body');
   body.innerHTML='<div class="loading">Cargando sueldos...</div>';
-  from('usuarios').select('id,nombre,rol,activo,sueldo_base').eq('rol','operario').order('nombre').get().then(function(rows){
-    rows=rows||[];
-    var totalBase=rows.reduce(function(s,u){return s+(parseFloat(u.sueldo_base)||0);},0);
-    var html='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px;"><div><div style="font-size:.7rem;font-weight:850;color:var(--tierra);letter-spacing:.05em;">ADMINISTRACIÓN · PERSONAL</div><h2 style="margin:.15rem 0;color:var(--verde);">Sueldos</h2><div class="hint">El sueldo diario definido aquí alimenta automáticamente Pago de Nómina en Caja.</div></div><button class="btn-back" onclick="no89CerrarModal()">← Cerrar</button></div>'+
+  from('usuarios').select('id,nombre,rol,activo,sueldo_base').order('nombre').get().then(function(rows){
+    rows=(rows||[]).filter(function(u){
+      return u.activo!==false && u.rol!=='inversionista' && u.rol!=='dueño' && u.rol!=='admin';
+    });
+    function cargoDe(u){
+      var ex=ex54Get(u.id)||{};
+      return ex.cargo||(ROLES[u.rol]||u.rol||'—');
+    }
+    function esquemaDe(u){
+      var cargo=cargoDe(u);
+      if(u.rol==='labores_eventual')return 'Por día / labor';
+      if(cargo==='Cosecha'||u.rol==='cosechador')return 'Por caja · desde Cosecha';
+      return 'Sueldo diario';
+    }
+    var totalBase=rows.filter(function(u){return esquemaDe(u)==='Sueldo diario';}).reduce(function(s,u){return s+(parseFloat(u.sueldo_base)||0);},0);
+    var html='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px;"><div><div style="font-size:.7rem;font-weight:850;color:var(--tierra);letter-spacing:.05em;">ADMINISTRACIÓN · PERSONAL</div><h2 style="margin:.15rem 0;color:var(--verde);">Sueldos</h2><div class="hint">Sólo personal activo de Expedientes. Cosecha recibe su tarifa diaria desde el Módulo Cosecha; Eventuales conservan su esquema por día/labor.</div></div><button class="btn-back" onclick="no89CerrarModal()">← Cerrar</button></div>'+
       '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">'+
-        '<div class="form-card" style="margin:0;padding:.8rem;"><div class="hint">COLABORADORES</div><strong style="font-size:1.2rem;color:var(--verde);">'+rows.length+'</strong></div>'+
+        '<div class="form-card" style="margin:0;padding:.8rem;"><div class="hint">PERSONAL ACTIVO</div><strong style="font-size:1.2rem;color:var(--verde);">'+rows.length+'</strong></div>'+
         '<div class="form-card" style="margin:0;padding:.8rem;"><div class="hint">SUMA SUELDOS DIARIOS</div><strong style="font-size:1.2rem;color:var(--verde);">$'+totalBase.toFixed(2)+'</strong></div>'+
-        '<div class="form-card" style="margin:0;padding:.8rem;"><div class="hint">AFECTA CAJA</div><strong style="font-size:.85rem;color:var(--verde);">Al generar nómina</strong></div>'+
+        '<div class="form-card" style="margin:0;padding:.8rem;"><div class="hint">FUENTE DE ACTIVACIÓN</div><strong style="font-size:.85rem;color:var(--verde);">Empleados · Expedientes</strong></div>'+
       '</div>'+
-      '<div class="form-card" style="padding:0;overflow:hidden;"><table style="width:100%;border-collapse:collapse;"><thead><tr style="background:var(--gris-1);"><th style="text-align:left;padding:.7rem;font-size:.65rem;">COLABORADOR</th><th style="text-align:left;padding:.7rem;font-size:.65rem;">SUELDO DIARIO</th><th style="text-align:left;padding:.7rem;font-size:.65rem;">ESTADO</th><th style="text-align:right;padding:.7rem;font-size:.65rem;">ACCIÓN</th></tr></thead><tbody>'+
+      '<div class="form-card" style="padding:0;overflow:auto;"><table style="width:100%;border-collapse:collapse;min-width:760px;"><thead><tr style="background:var(--gris-1);"><th style="text-align:left;padding:.7rem;font-size:.65rem;">COLABORADOR</th><th style="text-align:left;padding:.7rem;font-size:.65rem;">CARGO</th><th style="text-align:left;padding:.7rem;font-size:.65rem;">ESQUEMA</th><th style="text-align:left;padding:.7rem;font-size:.65rem;">TARIFA BASE</th><th style="text-align:right;padding:.7rem;font-size:.65rem;">ACCIÓN</th></tr></thead><tbody>'+
       rows.map(function(u){
-        return '<tr style="border-top:1px solid var(--gris-2);"><td style="padding:.65rem .7rem;font-weight:700;">'+u.nombre+'</td><td style="padding:.65rem .7rem;"><input type="number" min="0" step="1" value="'+(parseFloat(u.sueldo_base)||0)+'" data-sueldo-id="'+u.id+'" style="max-width:150px;padding:.5rem;border:1px solid var(--gris-2);border-radius:8px;"></td><td style="padding:.65rem .7rem;font-size:.7rem;color:'+(u.activo?'var(--verde-mid)':'var(--gris-3)')+';">'+(u.activo?'Activo':'Inactivo')+'</td><td style="padding:.65rem .7rem;text-align:right;"><button class="btn-sm btn-completar" data-save-sueldo="'+u.id+'">Guardar</button></td></tr>';
+        var cargo=cargoDe(u), esquema=esquemaDe(u), especial=esquema!=='Sueldo diario';
+        var tarifa=especial
+          ?('<span style="font-size:.72rem;color:var(--gris-3);">'+(esquema.indexOf('Cosecha')>=0?'Se define por jornada':'Se define al registrar labor')+'</span>')
+          :('<input type="number" min="0" step="1" value="'+(parseFloat(u.sueldo_base)||0)+'" data-sueldo-id="'+u.id+'" style="max-width:130px;padding:.5rem;border:1px solid var(--gris-2);border-radius:8px;">');
+        return '<tr style="border-top:1px solid var(--gris-2);"><td style="padding:.65rem .7rem;font-weight:700;">'+u.nombre+'</td><td style="padding:.65rem .7rem;font-size:.78rem;">'+cargo+'</td><td style="padding:.65rem .7rem;font-size:.75rem;color:var(--verde-mid);font-weight:700;">'+esquema+'</td><td style="padding:.65rem .7rem;">'+tarifa+'</td><td style="padding:.65rem .7rem;text-align:right;">'+(especial?'—':'<button class="btn-sm btn-completar" data-save-sueldo="'+u.id+'">Guardar</button>')+'</td></tr>';
       }).join('')+
-      '</tbody></table></div>';
+      '</tbody></table></div>'+
+      '<div class="form-card" style="margin-top:10px;padding:.85rem;"><strong style="color:var(--verde);font-size:.82rem;">Reglas contempladas para Nómina</strong><div class="hint" style="margin-top:.35rem;line-height:1.6;">Labores, Ingeniero, Galerista, Auxiliar Galera, Transportista y Encargado: sueldo diario. · Cosecha: pago por caja definido cada día desde Módulo Cosecha y enviado a Nómina. · Labores Eventual: pago por día/labor. · H.E.: las horas autorizadas se incorporan desde Asistencia/Nómina; no se capturan en esta pantalla.</div></div>';
     body.innerHTML=html;
     body.querySelectorAll('[data-save-sueldo]').forEach(function(btn){
       btn.addEventListener('click',function(){
@@ -8613,7 +8641,6 @@ function renderPersonalSueldos(){
     });
   }).catch(function(e){body.innerHTML='<div class="form-card">Error: '+e.message+'</div>';});
 }
-
 
 function renderCompensacionesMenu(){
   // C088: se elimina la pantalla intermedia grande.
@@ -12594,6 +12621,11 @@ function renderAltasBajas(){
   body.innerHTML='<div class="loading">Cargando expedientes...</div>';
   from('usuarios').select('id,nombre,rol,activo,certificado_ambas,sueldo_base,fecha_ingreso,fecha_nacimiento').order('nombre').get().then(function(users){
     users=users||[];
+    // C090: Expedientes de Empleados contiene sólo personal laboral/operativo.
+    // Dueños, inversionistas y perfiles administrativos se administran fuera de Personal.
+    users=users.filter(function(u){
+      return u.rol!=='inversionista' && u.rol!=='dueño' && u.rol!=='admin';
+    });
     var html='<div class="ex54-head"><div><div class="ex54-eyebrow">Administración · Empleados</div><div class="ex54-title">Expedientes</div><div class="ex54-sub">Información personal, laboral y condiciones de pago de cada colaborador.</div></div><div style="display:flex;gap:7px;align-items:center;"><button class="em59-back" onclick="renderAdministracionMenu()">← Empleados</button><button class="btn-sm btn-completar" onclick="renderNuevoUsuario()">+ Nuevo expediente</button></div></div><div class="ex54-list">';
     html+=users.map(function(u){
       var ex=ex54Get(u.id), cargo=ex.cargo||(ROLES[u.rol]||u.rol), tipo=ex.tipo_colaborador||(u.rol==='labores_eventual'?'Eventual':'Base');
