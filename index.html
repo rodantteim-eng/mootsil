@@ -888,6 +888,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .em69-error{background:#fff2f0;border:1px solid #efc0b7;color:#9a2c1f;border-radius:8px;padding:8px 10px;font-size:.67rem;margin-top:8px}
 @media(max-width:700px){.em69-grid{grid-template-columns:1fr}.em69-field.full{grid-column:auto}}
 
+
+/* C089 — Nómina y Compensaciones en ventana compacta */
+.no89-overlay{position:fixed;inset:0;z-index:10020;background:rgba(12,34,24,.46);display:flex;align-items:center;justify-content:center;padding:18px}
+.no89-modal{width:min(1120px,96vw);max-height:90vh;background:#f8f8f5;border-radius:18px;box-shadow:0 22px 70px rgba(0,0,0,.28);overflow:hidden;border:1px solid rgba(20,70,48,.12);display:flex;flex-direction:column}
+.no89-modal.compact{width:min(920px,96vw)}
+.no89-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;background:#fff;border-bottom:1px solid var(--gris-2)}
+.no89-head strong{font-size:.95rem;color:var(--verde)}
+.no89-close{border:0;background:var(--gris-1);border-radius:999px;width:34px;height:34px;font-size:1rem;cursor:pointer;font-weight:800;color:var(--verde)}
+.no89-body{padding:16px 18px 20px;overflow:auto;min-height:160px}
+.no89-body .btn-back{display:none!important}
+.no89-body>.seccion-titulo:first-child{margin-top:0}
+@media(max-width:700px){.no89-overlay{padding:8px;align-items:flex-end}.no89-modal,.no89-modal.compact{width:100%;max-height:92vh;border-radius:18px 18px 0 0}.no89-head{padding:12px 14px}.no89-body{padding:12px}}
 </style>
 </head>
 <body>
@@ -8103,7 +8115,19 @@ function renderEditarInversion(inversionId){
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
-/* C088 — Nómina y Compensaciones compacta dentro de Administración */
+/* C089 — Nómina y Compensaciones: 4 accesos con modales compactos */
+
+function no89CerrarModal(){var x=document.getElementById('no89-overlay');if(x)x.remove();}
+function no89AbrirModal(titulo,tamano){
+  no89CerrarModal();
+  var ov=document.createElement('div');ov.className='no89-overlay';ov.id='no89-overlay';
+  ov.innerHTML='<div class="no89-modal '+(tamano==='compact'?'compact':'')+'" role="dialog" aria-modal="true"><div class="no89-head"><strong>'+titulo+'</strong><button type="button" class="no89-close" aria-label="Cerrar">✕</button></div><div class="no89-body" id="no89-body"></div></div>';
+  document.body.appendChild(ov);
+  ov.querySelector('.no89-close').onclick=no89CerrarModal;
+  ov.addEventListener('click',function(e){if(e.target===ov)no89CerrarModal();});
+  return document.getElementById('no89-body');
+}
+
 function renderAdministracionMenu(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="ad17-shell"><div class="ad17-head"><div><div class="ad17-eyebrow">Administración</div><div class="ad17-title">Control del Rancho</div><div class="ad17-sub">Finanzas, personal, compras y operación administrativa de Mootsil.</div></div></div><div class="ad17-grid">'+
@@ -8118,10 +8142,10 @@ function renderAdministracionMenu(){
   body.querySelector('[data-empgo="expedientes"]').addEventListener('click',function(e){e.stopPropagation();renderAltasBajas();});
   body.querySelector('[data-empgo="asistencia"]').addEventListener('click',function(e){e.stopPropagation();em69RenderAsistencia(fechaHoyLocal());});
   body.querySelector('[data-empgo="solicitudes"]').addEventListener('click',function(e){e.stopPropagation();em69RenderSolicitudes();});
-  body.querySelector('[data-compgo="sueldos"]').addEventListener('click',function(e){e.stopPropagation();renderPersonalSueldos();});
-  body.querySelector('[data-compgo="bonos"]').addEventListener('click',function(e){e.stopPropagation();renderBonos();});
-  body.querySelector('[data-compgo="prestamos"]').addEventListener('click',function(e){e.stopPropagation();renderPrestamos();});
-  body.querySelector('[data-compgo="historial"]').addEventListener('click',function(e){e.stopPropagation();renderResumenNomina();});
+  body.querySelector('[data-compgo="sueldos"]').addEventListener('click',function(e){e.stopPropagation();no89AbrirModal('💵 Sueldos');renderPersonalSueldos();});
+  body.querySelector('[data-compgo="bonos"]').addEventListener('click',function(e){e.stopPropagation();no89AbrirModal('🎁 Bonos','compact');renderBonos();});
+  body.querySelector('[data-compgo="prestamos"]').addEventListener('click',function(e){e.stopPropagation();no89AbrirModal('📝 Préstamos');renderPrestamos();});
+  body.querySelector('[data-compgo="historial"]').addEventListener('click',function(e){e.stopPropagation();no89AbrirModal('📊 Historial de nómina');renderResumenNomina();});
   body.querySelector('[data-admin="gastos"]').addEventListener('click',renderComprasMenu);
   body.querySelector('[data-admin="eventual"]').addEventListener('click',function(){renderPagosEventuales(fechaHoyLocal());});
   body.querySelector('[data-admin="inversionistas"]').addEventListener('click',renderInversionistasMenu);
@@ -8557,12 +8581,12 @@ function renderEmpleadosMenu(){
 
 
 function renderPersonalSueldos(){
-  var body=document.getElementById('enc-body');
+  var body=document.getElementById('no89-body')||document.getElementById('enc-body');
   body.innerHTML='<div class="loading">Cargando sueldos...</div>';
   from('usuarios').select('id,nombre,rol,activo,sueldo_base').eq('rol','operario').order('nombre').get().then(function(rows){
     rows=rows||[];
     var totalBase=rows.reduce(function(s,u){return s+(parseFloat(u.sueldo_base)||0);},0);
-    var html='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px;"><div><div style="font-size:.7rem;font-weight:850;color:var(--tierra);letter-spacing:.05em;">ADMINISTRACIÓN · PERSONAL</div><h2 style="margin:.15rem 0;color:var(--verde);">Sueldos</h2><div class="hint">El sueldo diario definido aquí alimenta automáticamente Pago de Nómina en Caja.</div></div><button class="btn-back" onclick="renderCompensacionesMenu()">← Nómina y Compensaciones</button></div>'+
+    var html='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px;"><div><div style="font-size:.7rem;font-weight:850;color:var(--tierra);letter-spacing:.05em;">ADMINISTRACIÓN · PERSONAL</div><h2 style="margin:.15rem 0;color:var(--verde);">Sueldos</h2><div class="hint">El sueldo diario definido aquí alimenta automáticamente Pago de Nómina en Caja.</div></div><button class="btn-back" onclick="no89CerrarModal()">← Cerrar</button></div>'+
       '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">'+
         '<div class="form-card" style="margin:0;padding:.8rem;"><div class="hint">COLABORADORES</div><strong style="font-size:1.2rem;color:var(--verde);">'+rows.length+'</strong></div>'+
         '<div class="form-card" style="margin:0;padding:.8rem;"><div class="hint">SUMA SUELDOS DIARIOS</div><strong style="font-size:1.2rem;color:var(--verde);">$'+totalBase.toFixed(2)+'</strong></div>'+
@@ -9407,7 +9431,7 @@ function renderPerfilOperario(){
 }
 
 function renderResumenNomina(){
-  var body=document.getElementById('enc-body');
+  var body=document.getElementById('no89-body')||document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo">📊 Historial nómina</div><div class="loading">Calculando...</div>';
   var hoyD=new Date();
   var primerDiaMes=new Date(hoyD.getFullYear(),hoyD.getMonth(),1).toISOString().slice(0,10);
@@ -9436,7 +9460,7 @@ function renderResumenNomina(){
       var permisoTxt=(resumen.diasPermisoConGoce||resumen.diasPermisoSinGoce)?('<span>🩺 '+(resumen.diasPermisoConGoce+resumen.diasPermisoSinGoce)+' permiso(s)</span>'):'';
       return '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+o.nombre+'</strong></div><div class="orden-meta" style="display:flex;gap:1rem;margin-top:.3rem;flex-wrap:wrap;"><span>✅ '+resumen.trabajados+' trabajados</span><span style="color:var(--rojo);">❌ '+resumen.faltas+' faltas</span><span style="color:var(--tierra);">⏰ '+resumen.retardos+' retardos</span>'+permisoTxt+'</div>'+(horasExtra>0?'<div class="orden-meta" style="margin-top:.2rem;">💰 '+horasExtra.toFixed(1)+' h extra</div>':'')+'</div>';
     }).join('');
-    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderCompensacionesMenu()">← Volver a Nómina y Compensaciones</button>';
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="no89CerrarModal()">← Cerrar</button>';
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
@@ -10131,11 +10155,11 @@ function cerrarRecibo(){
 }
 
 function renderPrestamos(){
-  var body=document.getElementById('enc-body');
+  var body=document.getElementById('no89-body')||document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📝 Préstamos<button type="button" onclick="renderNuevoPrestamo()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo préstamo</button></div><div class="loading">Cargando...</div>';
   from('prestamos').select('*,operario:usuarios!operario_id(nombre)').order('creado_en',{ascending:false}).get().then(function(prestamos){
     var header='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📝 Préstamos<button type="button" onclick="renderNuevoPrestamo()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo préstamo</button></div>';
-    if(!prestamos||!prestamos.length){body.innerHTML=header+'<div class="empty">Sin préstamos registrados.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderCompensacionesMenu()">← Volver a Nómina y Compensaciones</button>';return;}
+    if(!prestamos||!prestamos.length){body.innerHTML=header+'<div class="empty">Sin préstamos registrados.</div><button class="btn-back" style="margin-top:1rem;" onclick="no89CerrarModal()">← Cerrar</button>';return;}
     var ids=prestamos.map(function(p){return p.id;});
     from('prestamo_pagos').select('*').in('prestamo_id',ids).order('numero_pago',{ascending:true}).get().then(function(pagos){
       var html=header;
@@ -10150,7 +10174,7 @@ function renderPrestamos(){
         }).join('');
         return '<div class="orden-card" style="border-left-color:'+(p.estado==='activo'?'var(--tierra)':'var(--gris-3)')+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(p.operario?p.operario.nombre:'')+' · '+p.concepto+'</strong><span style="font-size:.72rem;font-weight:700;color:'+(p.estado==='activo'?'var(--tierra)':'var(--verde-mid)')+';">'+(p.estado==='activo'?'Activo':'Liquidado')+'</span></div><div class="orden-meta">Total: $'+parseFloat(p.monto_total).toFixed(2)+' · Restante: $'+restante.toFixed(2)+'</div><div style="margin-top:.5rem;">'+filas+'</div></div>';
       }).join('');
-      body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderCompensacionesMenu()">← Volver a Nómina y Compensaciones</button>';
+      body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="no89CerrarModal()">← Cerrar</button>';
       body.querySelectorAll('[data-descontar]').forEach(function(btn){
         btn.addEventListener('click',function(){
           var pagoId=this.dataset.descontar, prestamoId=this.dataset.prestamo;
@@ -10244,15 +10268,15 @@ function renderNuevoPrestamo(prefill){
 }
 
 function renderBonos(){
-  var body=document.getElementById('enc-body');
+  var body=document.getElementById('no89-body')||document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🎁 Bonos<button type="button" onclick="renderNuevoBono()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo bono</button></div><div class="loading">Cargando...</div>';
   from('bonos').select('*').order('creado_en',{ascending:false}).get().then(function(rows){
-    if(!rows||!rows.length){body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🎁 Bonos<button type="button" onclick="renderNuevoBono()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo bono</button></div><div class="empty">Sin bonos registrados.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderCompensacionesMenu()">← Volver a Nómina y Compensaciones</button>';return;}
+    if(!rows||!rows.length){body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🎁 Bonos<button type="button" onclick="renderNuevoBono()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo bono</button></div><div class="empty">Sin bonos registrados.</div><button class="btn-back" style="margin-top:1rem;" onclick="no89CerrarModal()">← Cerrar</button>';return;}
     var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🎁 Bonos<button type="button" onclick="renderNuevoBono()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nuevo bono</button></div>';
     html+=rows.map(function(b){
       return '<div class="orden-card" style="border-left-color:'+(b.estado==='activo'?'var(--verde-mid)':'var(--gris-3)')+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(b.tipo==='equipo'?'🤝 Equipo':'👤 Individual')+' · '+(b.tipo_recompensa==='economico'?'💰 Económico':'🎁 En especie')+(b.monto?' · $'+b.monto:'')+'</strong><span style="font-size:.72rem;font-weight:700;color:'+(b.estado==='activo'?'var(--verde-mid)':'var(--gris-3)')+';">'+(b.estado==='activo'?'Activo':'Cerrado')+'</span></div><div class="orden-meta">'+b.descripcion+(b.umbral_minimo?'<br/>Requiere '+b.umbral_minimo+'/10 de rendimiento':'')+'<br/>📅 '+b.periodo_inicio+' a '+b.periodo_fin+'</div>'+(b.estado==='activo'?'<button class="btn-sm btn-cancelar" data-cerrar="'+b.id+'" style="margin-top:.5rem;">Cerrar bono</button>':'')+'</div>';
     }).join('');
-    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderCompensacionesMenu()">← Volver a Nómina y Compensaciones</button>';
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="no89CerrarModal()">← Cerrar</button>';
     body.querySelectorAll('[data-cerrar]').forEach(function(btn){btn.addEventListener('click',function(){
       from('bonos').eq('id',this.dataset.cerrar).update({estado:'cerrado'}).then(function(){showToast('Bono cerrado');renderBonos();});
     });});
@@ -10260,7 +10284,7 @@ function renderBonos(){
 }
 
 function renderNuevoBono(){
-  var body=document.getElementById('enc-body');
+  var body=document.getElementById('no89-body')||document.getElementById('enc-body');
   var hoyD=new Date();
   var primerDiaMes=new Date(hoyD.getFullYear(),hoyD.getMonth(),1).toISOString().slice(0,10);
   var ultimoDiaMes=new Date(hoyD.getFullYear(),hoyD.getMonth()+1,0).toISOString().slice(0,10);
