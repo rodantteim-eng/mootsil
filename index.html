@@ -5823,12 +5823,16 @@ function renderNuevaCompra(){
   if(ordenOrigen&&ordenOrigen.items&&ordenOrigen.items.length){
     filas=ordenOrigen.items.map(function(x){
       var f=nuevaFilaCompra();
-      var nombre=(x.nombre||'').trim();
-      var inv=cats.inventario.find(function(it){return (it.nombre||'').trim().toLowerCase()===nombre.toLowerCase();});
+      var nombre=(x.nombre||'').trim(), nn=nombre.toLowerCase();
+      var inv=cats.inventario.find(function(it){return (it.nombre||'').trim().toLowerCase()===nn;});
+      if(!inv&&nn) inv=cats.inventario.find(function(it){var ni=(it.nombre||'').trim().toLowerCase();return ni.indexOf(nn)>-1||nn.indexOf(ni)>-1;});
       f.itemId=inv?inv.id:'';
       f.itemNombre=nombre;
       f.cantidad=x.cantidad||'';
       f.monto=x.importe!=null?x.importe:((ordenOrigen.items.length===1)?ordenOrigen.total:'');
+      f.precioUnitario=x.precio_unitario!=null?x.precio_unitario:((parseFloat(x.cantidad)||0)>0?(parseFloat(f.monto)||0)/parseFloat(x.cantidad):null);
+      f.ordenOrigen=true;
+      f.unidadOrden=x.unidad||'unidad';
       f.concepto=[x.especificacion||'',ordenOrigen.id,ordenOrigen.solicitud_id].filter(Boolean).join(' · ');
       return f;
     });
@@ -5930,8 +5934,8 @@ var nuevoProductoHtml=esNuevo?('<div class="form-group" style="margin-bottom:.5r
       existenteMetaHtml+
       nuevoProductoHtml+
       activoHtml+
-      ((tieneItem||esNuevo)?(modoTogglesHtml+'<div class="form-group" style="margin-bottom:.2rem;"><label>Cantidad que entra a inventario ('+cantLbl+')</label><input type="number" class="nc-cantidad" data-row="'+f.row+'" min="0" step="any" value="'+(f.cantidad||'')+'" placeholder="0">'+(cantEjemplo?'<p class="hint" style="margin:.3rem 0 0;">'+cantEjemplo+'</p>':'')+'</div><p class="hint nc-equiv" data-row="'+f.row+'" style="margin:0 0 .5rem;font-weight:700;color:var(--verde-mid);">'+equivTxt+'</p>'):'')+
-      '<div class="form-group" style="margin-bottom:.5rem;"><label>Monto ($)</label><input type="number" class="nc-monto" data-row="'+f.row+'" min="0" step="any" value="'+(f.monto||'')+'" placeholder="0.00"></div>'+
+      ((tieneItem||esNuevo||f.ordenOrigen)?(modoTogglesHtml+'<div class="form-group" style="margin-bottom:.2rem;"><label>Cantidad '+(f.ordenOrigen?'recibida':'que entra a inventario')+' ('+(cantLbl||f.unidadOrden||'unidad')+')</label><input type="number" class="nc-cantidad" data-row="'+f.row+'" min="0" step="any" value="'+(f.cantidad||'')+'" placeholder="0">'+(f.ordenOrigen&&!f.itemId?'<p class="hint" style="margin:.3rem 0;color:#9a6415;font-weight:700;">⚠ Vincula este producto con Inventario para que la recepción aumente existencias.</p>':(cantEjemplo?'<p class="hint" style="margin:.3rem 0 0;">'+cantEjemplo+'</p>':''))+'</div><p class="hint nc-equiv" data-row="'+f.row+'" style="margin:0 0 .5rem;font-weight:700;color:var(--verde-mid);">'+equivTxt+'</p>'):'')+
+      (f.precioUnitario!=null?'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><div class="form-group" style="margin-bottom:.5rem;"><label>Precio unitario adjudicado</label><input type="text" value="$'+formatMonto(f.precioUnitario)+'" disabled style="background:#f5f7f6;font-weight:700;"></div><div class="form-group" style="margin-bottom:.5rem;"><label>Importe de la partida ($)</label><input type="number" class="nc-monto" data-row="'+f.row+'" min="0" step="any" value="'+(f.monto||'')+'" placeholder="0.00"></div></div>':'<div class="form-group" style="margin-bottom:.5rem;"><label>Monto ($)</label><input type="number" class="nc-monto" data-row="'+f.row+'" min="0" step="any" value="'+(f.monto||'')+'" placeholder="0.00"></div>')+
       '<div class="form-group" style="margin-bottom:0;"><label>Concepto / descripción (opcional)</label><input type="text" class="nc-concepto" data-row="'+f.row+'" value="'+(f.concepto?f.concepto.replace(/"/g,'&quot;'):'')+'" placeholder="Ej. Sulfato de amonio 25kg"></div>'+
       (filas.length>1?'<button type="button" class="nc-quitar" data-row="'+f.row+'" style="border:none;background:none;color:var(--rojo);font-size:.78rem;font-weight:600;cursor:pointer;margin-top:.5rem;">🗑️ Quitar producto</button>':'')+
       '</div>';
@@ -6116,6 +6120,7 @@ var nuevoProductoHtml=esNuevo?('<div class="form-group" style="margin-bottom:.5r
   });
 
   var formaPagoSel='contado';
+  if(ordenOrigen&&ordenOrigen.factura_proveedor){var facturaEl=document.getElementById('nc-factura');if(facturaEl)facturaEl.value=ordenOrigen.factura_proveedor;}
   function actualizarVisibilidadVencimiento(){
     var esCredito=formaPagoSel==='credito';
     document.getElementById('nc-vencimiento-wrap').style.display=esCredito?'':'none';
@@ -6124,7 +6129,20 @@ var nuevoProductoHtml=esNuevo?('<div class="form-group" style="margin-bottom:.5r
   document.getElementById('nc-fp-contado').addEventListener('click',function(){formaPagoSel='contado';this.classList.add('sel');this.textContent='✓ Contado';document.getElementById('nc-fp-credito').classList.remove('sel');document.getElementById('nc-fp-credito').textContent='Crédito';actualizarVisibilidadVencimiento();});
   document.getElementById('nc-fp-credito').addEventListener('click',function(){formaPagoSel='credito';this.classList.add('sel');this.textContent='✓ Crédito';document.getElementById('nc-fp-contado').classList.remove('sel');document.getElementById('nc-fp-contado').textContent='Contado';actualizarVisibilidadVencimiento();});
   actualizarVisibilidadVencimiento();
-  
+  if(ordenOrigen){
+    var pagoOrden=String(ordenOrigen.pago||'').toLowerCase();
+    if(pagoOrden.indexOf('crédito')>-1||pagoOrden.indexOf('credito')>-1){
+      document.getElementById('nc-fp-credito').click();
+      var mPlazo=pagoOrden.match(/(\d+)\s*d[ií]as?/);
+      if(mPlazo){
+        var fd=new Date((document.getElementById('nc-fecha').value||hoy)+'T12:00:00');
+        fd.setDate(fd.getDate()+parseInt(mPlazo[1],10));
+        document.getElementById('nc-vencimiento').value=fd.getFullYear()+'-'+String(fd.getMonth()+1).padStart(2,'0')+'-'+String(fd.getDate()).padStart(2,'0');
+      }
+    }else if(pagoOrden.indexOf('contado')>-1){
+      document.getElementById('nc-fp-contado').click();
+    }
+  }
   var provBuscar=document.getElementById('nc-proveedor-buscar');
   var provResultados=document.getElementById('nc-proveedor-resultados');
   var provSelect=document.getElementById('nc-proveedor');
@@ -6214,6 +6232,9 @@ var nuevoProductoHtml=esNuevo?('<div class="form-group" style="margin-bottom:.5r
           alert('Captura cuántas presentaciones compraste de "'+lf.nuevoProducto.nombre+'".');
           return;
         }
+      } else if(lf.ordenOrigen&&!lf.itemId){
+        alert('Vincula "'+lf.itemNombre+'" con un producto de Inventario para registrar la cantidad recibida.');
+        return;
       } else if(lf.itemId&&!(cantidadBaseDe(lf)>0)){
         alert('Captura la cantidad que entra a inventario para "'+lf.itemNombre+'", o quita el producto de inventario si no aplica.');
         return;
@@ -7428,15 +7449,15 @@ function oc118DetalleOrden(id){
   var o=(window.OC113_ORDENES||[]).find(function(x){return String(x.id)===String(id);}); if(!o)return;
   var estados=['Adjudicada','Confirmada','En preparación','Enviada','Recibida'], idx=Math.max(0,estados.indexOf(o.estado||'Adjudicada'));
   var progreso=estados.map(function(e,i){return '<div style="flex:1;min-width:90px;text-align:center;"><div style="height:5px;border-radius:5px;background:'+(i<=idx?'var(--verde-mid)':'#dfe5e1')+';margin-bottom:5px;"></div><span style="font-size:.64rem;font-weight:800;color:'+(i===idx?'var(--verde)':'#7d8781')+';">'+e+'</span></div>';}).join('');
-  var tr=(o.trazabilidad||[]).map(function(t,i){return '<div style="display:flex;gap:9px;padding:.48rem 0;border-bottom:1px solid #e7ece9;"><span style="width:9px;height:9px;border-radius:50%;background:'+(i===(o.trazabilidad.length-1)?'var(--verde-mid)':'#b9c8bf')+';margin-top:5px;flex:none;"></span><div><strong>'+oc113Esc(t.fecha)+'</strong> · '+oc113Esc(t.evento)+'</div></div>';}).join('');
+  var tr=(o.trazabilidad||[]).map(function(t,i){return '<div style="display:flex;gap:9px;padding:.48rem 0;border-bottom:1px solid #d9e7de;"><span style="width:9px;height:9px;border-radius:50%;background:'+(i===(o.trazabilidad.length-1)?'var(--verde-mid)':'#9db8a6')+';margin-top:5px;flex:none;"></span><div><strong>'+oc113Esc(t.fecha)+'</strong> · '+oc113Esc(t.evento)+'</div></div>';}).join('');
   var items=(o.items||[]).map(function(x){return '<tr><td style="padding:.48rem;">'+oc113Esc(x.nombre)+'</td><td style="padding:.48rem;text-align:right;">'+numFmt(x.cantidad)+'</td><td style="padding:.48rem;">'+oc113Esc(x.unidad||'')+'</td><td style="padding:.48rem;text-align:right;">'+(x.precio_unitario!=null?'$'+formatMonto(x.precio_unitario):'—')+'</td><td style="padding:.48rem;text-align:right;font-weight:800;">'+(x.importe!=null?'$'+formatMonto(x.importe):'—')+'</td></tr>';}).join('');
   var bg=oc113Modal(
-    '<div style="margin:-18px -18px 12px;padding:16px 18px;background:linear-gradient(180deg,#edf7f0,#f8fbf9);border-bottom:1px solid #dce9e0;border-radius:14px 14px 0 0;display:flex;justify-content:space-between;gap:10px;"><div><div class="seccion-titulo" style="margin:0;color:var(--verde);">🛒 '+oc113Esc(o.id)+'</div><div class="hint" style="margin-top:3px;">'+oc113Esc(o.proveedor)+' · seguimiento de orden de compra</div></div><button id="oc118-x" style="border:none;background:none;font-size:1.35rem;cursor:pointer;">×</button></div>'+
+    '<div style="margin:-18px -18px 12px;padding:16px 18px;background:linear-gradient(180deg,#eaf5ee,#f8fbf9);border-bottom:1px solid #d2e3d8;border-radius:14px 14px 0 0;display:flex;justify-content:space-between;gap:10px;"><div><div class="seccion-titulo" style="margin:0;color:var(--verde);">🛒 '+oc113Esc(o.id)+'</div><div class="hint" style="margin-top:3px;">'+oc113Esc(o.proveedor)+' · seguimiento de orden de compra</div></div><button id="oc118-x" style="border:none;background:none;font-size:1.35rem;cursor:pointer;">×</button></div>'+
     '<div style="display:flex;gap:5px;margin:4px 0 14px;">'+progreso+'</div>'+
-    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:10px 0;"><div class="form-card" style="margin:0;padding:.65rem;background:#f8fbf9;"><div class="hint">TOTAL</div><strong>$'+formatMonto(o.total||0)+'</strong></div><div class="form-card" style="margin:0;padding:.65rem;background:#f8fbf9;"><div class="hint">SOLICITUD</div><strong>'+oc113Esc(o.solicitud_id)+'</strong></div><div class="form-card" style="margin:0;padding:.65rem;background:#f8fbf9;"><div class="hint">ENTREGA</div><strong>'+oc113Esc(o.entrega||o.fecha_requerida||'—')+'</strong></div><div class="form-card" style="margin:0;padding:.65rem;background:#eaf5ee;"><div class="hint">ESTADO</div><strong style="color:var(--verde);">'+oc113Esc(o.estado)+'</strong></div></div>'+
-    '<div style="overflow:auto;border:1px solid #e2e9e5;border-radius:10px;"><table style="width:100%;border-collapse:collapse;font-size:.75rem;"><thead style="background:#f3f7f4;"><tr><th>Producto</th><th>Cantidad</th><th>Unidad</th><th>P. unitario</th><th>Importe</th></tr></thead><tbody>'+items+'</tbody></table></div>'+
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;"><div class="form-card" style="margin:0;padding:.7rem;"><div class="hint">CONDICIONES DE PROPUESTA</div><div style="margin-top:4px;"><strong>Pago:</strong> '+oc113Esc(o.pago||'—')+' · <strong>Vigencia:</strong> '+oc113Esc(o.vigencia||'—')+'<br><strong>Marca/presentación:</strong> '+oc113Esc((o.marca||'—')+' · '+(o.presentacion||'—'))+'<br>'+oc113Esc(o.condiciones||'')+'</div></div><div class="form-card" style="margin:0;padding:.7rem;background:#fafcfb;"><div class="hint">FECHAS</div><div style="margin-top:4px;"><strong>Adjudicada:</strong> '+oc113Esc(o.fecha_adjudicacion||'—')+'<br><strong>Entrega requerida:</strong> '+oc113Esc(o.fecha_requerida||'—')+'<br><strong>Límite cotización:</strong> '+oc113Esc(o.fecha_limite||'—')+'</div></div></div>'+
-    '<div class="seccion-titulo" style="margin-top:12px;color:var(--verde);">Trazabilidad</div><div class="form-card" style="margin:0;padding:.7rem;background:#fbfcfb;">'+tr+'</div>');
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:10px 0;"><div class="form-card" style="margin:0;padding:.7rem;background:#f8fbf9;"><div class="hint">TOTAL ADJUDICADO</div><strong>$'+formatMonto(o.total||0)+'</strong></div><div class="form-card" style="margin:0;padding:.7rem;background:#f8fbf9;"><div class="hint">SOLICITUD</div><strong>'+oc113Esc(o.solicitud_id)+'</strong></div><div class="form-card" style="margin:0;padding:.7rem;background:#f8fbf9;"><div class="hint">FACTURA PROVEEDOR</div><strong>'+oc113Esc(o.factura_proveedor||'Pendiente de recepción')+'</strong></div></div>'+
+    '<div style="overflow:auto;border:1px solid #dfe8e2;border-radius:10px;"><table style="width:100%;border-collapse:collapse;font-size:.75rem;"><thead style="background:#eef5f0;"><tr><th>Producto</th><th>Cantidad</th><th>Unidad</th><th>P. unitario</th><th>Importe</th></tr></thead><tbody>'+items+'</tbody></table></div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;"><div style="border:1px solid #d5e4da;border-left:4px solid var(--verde-mid);border-radius:10px;padding:.8rem;background:#f8fbf9;"><div style="font-size:.68rem;font-weight:900;color:var(--verde);letter-spacing:.04em;margin-bottom:7px;">CONDICIONES DE PROPUESTA</div><div style="font-size:.77rem;line-height:1.55;"><strong>Forma de pago:</strong> '+oc113Esc(o.pago||'—')+'<br><strong>Vigencia:</strong> '+oc113Esc(o.vigencia||'—')+'<br><strong>Marca:</strong> '+oc113Esc(o.marca||'—')+'<br><strong>Presentación:</strong> '+oc113Esc(o.presentacion||'—')+'<br><strong>Disponibilidad:</strong> '+oc113Esc(o.disponibilidad||'—')+'<br><strong>Observaciones:</strong> '+oc113Esc(o.condiciones||'—')+'</div></div><div style="border:1px solid #eadfca;border-left:4px solid #c78a32;border-radius:10px;padding:.8rem;background:#fffaf2;"><div style="font-size:.68rem;font-weight:900;color:#8a5a13;letter-spacing:.04em;margin-bottom:7px;">FECHAS</div><div style="font-size:.77rem;line-height:1.55;"><strong>Adjudicada:</strong> '+oc113Esc(o.fecha_adjudicacion||'—')+'<br><strong>Límite de cotización:</strong> '+oc113Esc(o.fecha_limite||'—')+'<br><strong>Entrega requerida:</strong> '+oc113Esc(o.fecha_requerida||'—')+'<br><strong>Recepción:</strong> '+oc113Esc(o.fecha_recepcion||'Pendiente')+'</div></div></div>'+
+    '<div style="margin-top:12px;border-radius:10px;overflow:hidden;border:1px solid #cfe0d5;"><div style="background:var(--verde);color:white;padding:.5rem .75rem;font-size:.7rem;font-weight:900;letter-spacing:.05em;">TRAZABILIDAD</div><div style="padding:.45rem .75rem;background:#f4faf6;">'+tr+'</div></div>');
   bg.querySelector('#oc118-x').onclick=oc113Close;
 }
 
@@ -7444,10 +7465,28 @@ function oc118AvanzarOrden(id){
   var o=(window.OC113_ORDENES||[]).find(function(x){return String(x.id)===String(id);}); if(!o)return;
   var estados=['Adjudicada','Confirmada','En preparación','Enviada','Recibida'];
   var i=estados.indexOf(o.estado||'Adjudicada');
-  if(i<estados.length-1){o.estado=estados[i+1];o.trazabilidad=o.trazabilidad||[];o.trazabilidad.push({fecha:fechaHoyLocal(),evento:'Estado: '+o.estado});}
-  renderOrdenCompra(); showToast('✅ Orden actualizada: '+o.estado);
+  if(i<0||i>=estados.length-1)return;
+  var siguiente=estados[i+1];
+  if(siguiente==='Recibida'){
+    var bg=oc113Modal('<div style="display:flex;justify-content:space-between;gap:10px;"><div><div class="seccion-titulo" style="margin:0;">📦 Confirmar recepción</div><div class="hint">La mercancía llegó al rancho. Registra la factura que acompaña la entrega.</div></div><button id="oc120-x" style="border:none;background:none;font-size:1.35rem;cursor:pointer;">×</button></div>'+
+      '<div class="form-card" style="margin:10px 0;padding:.75rem;background:#f8fbf9;border-left:4px solid var(--verde-mid);"><strong>'+oc113Esc(o.id)+' · '+oc113Esc(o.proveedor)+'</strong><div class="hint">Total adjudicado: $'+formatMonto(o.total||0)+' · '+oc113Esc(o.pago||'Condición de pago no indicada')+'</div></div>'+
+      '<div class="form-group"><label>Número de factura del proveedor</label><input id="oc120-factura" type="text" value="'+oc113Esc(o.factura_proveedor||'')+'" placeholder="Ej. F-12345"></div>'+
+      '<div class="form-group"><label>Fecha de recepción</label><input id="oc120-fecha" type="date" value="'+fechaHoyLocal()+'"></div>'+
+      '<button id="oc120-recibir" class="btn-primary">✓ Marcar como recibida</button>');
+    bg.querySelector('#oc120-x').onclick=oc113Close;
+    bg.querySelector('#oc120-recibir').onclick=function(){
+      var fac=(bg.querySelector('#oc120-factura').value||'').trim();
+      var frec=bg.querySelector('#oc120-fecha').value||fechaHoyLocal();
+      if(!fac){alert('Captura el número de factura del proveedor.');return;}
+      o.factura_proveedor=fac;o.fecha_recepcion=frec;o.estado='Recibida';
+      o.trazabilidad=o.trazabilidad||[];o.trazabilidad.push({fecha:frec,evento:'Mercancía recibida · Factura '+fac});
+      oc113Close();renderOrdenCompra();showToast('✅ Orden recibida · Factura '+fac);
+    };
+    return;
+  }
+  o.estado=siguiente;o.trazabilidad=o.trazabilidad||[];o.trazabilidad.push({fecha:fechaHoyLocal(),evento:'Estado: '+o.estado});
+  renderOrdenCompra();showToast('✅ Orden actualizada: '+o.estado);
 }
-
 function oc118ConvertirCompra(id){
   var o=(window.OC113_ORDENES||[]).find(function(x){return String(x.id)===String(id);}); if(!o)return;
   if(o.estado!=='Recibida'){alert('La orden debe estar Recibida antes de convertirla en compra.');return;}
@@ -7481,7 +7520,7 @@ function oc113OrdenesHtml(rows){
     var estados=['Adjudicada','Confirmada','En preparación','Enviada','Recibida'];
     var idx=Math.max(0,estados.indexOf(o.estado||'Adjudicada'));
     var barra=estados.map(function(e,i){return '<span style="font-size:.65rem;font-weight:800;padding:3px 7px;border-radius:999px;background:'+(i<=idx?'#eaf5ee':'#f1f1f1')+';color:'+(i<=idx?'var(--verde)':'var(--gris-3)')+';">'+e+'</span>';}).join(' ');
-    return '<div class="orden-card" style="border-left-color:var(--verde-mid);"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;"><div><strong>'+oc113Esc(o.id)+' · '+oc113Esc(o.proveedor)+'</strong><div class="orden-meta">Solicitud '+oc113Esc(o.solicitud_id)+' · $'+formatMonto(o.total||0)+' · adjudicada '+oc113Esc(o.fecha_adjudicacion||'')+'</div></div><span style="font-size:.68rem;font-weight:800;background:#eaf5ee;color:var(--verde);padding:3px 8px;border-radius:999px;">'+oc113Esc(o.estado||'Adjudicada')+'</span></div><div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;">'+barra+'</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:10px;"><button type="button" class="btn-secondary" data-oc118-orden="'+oc113Esc(o.id)+'" style="width:auto;margin:0;">Ver orden</button>'+(o.estado!=='Recibida'?'<button type="button" class="btn-primary" data-oc118-avanzar="'+oc113Esc(o.id)+'" style="width:auto;margin:0;">Avanzar estado</button>':'<button type="button" class="btn-primary" data-oc118-convertir="'+oc113Esc(o.id)+'" style="width:auto;margin:0;">Convertir en compra</button>')+'</div></div>';
+    return '<div class="orden-card" style="border-left-color:var(--verde-mid);"><div><strong>'+oc113Esc(o.id)+' · '+oc113Esc(o.proveedor)+'</strong><div class="orden-meta">Solicitud '+oc113Esc(o.solicitud_id)+' · $'+formatMonto(o.total||0)+' · adjudicada '+oc113Esc(o.fecha_adjudicacion||'')+(o.factura_proveedor?' · Factura '+oc113Esc(o.factura_proveedor):'')+'</div></div><div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;">'+barra+'</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:10px;"><button type="button" class="btn-secondary" data-oc118-orden="'+oc113Esc(o.id)+'" style="width:auto;margin:0;">Ver orden</button>'+(o.estado!=='Recibida'?'<button type="button" class="btn-primary" data-oc118-avanzar="'+oc113Esc(o.id)+'" style="width:auto;margin:0;">Avanzar estado</button>':'<button type="button" class="btn-primary" data-oc118-convertir="'+oc113Esc(o.id)+'" style="width:auto;margin:0;">Convertir en compra</button>')+'</div></div>';
   }).join('');
 }
 
