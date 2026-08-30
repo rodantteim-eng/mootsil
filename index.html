@@ -13194,7 +13194,17 @@ guardarProgramacionRiegoV1=function(){
 function salir(){usuario=null;pin='';dibujarPin();setErr('');mostrar('screen-login');}
 
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('./sw.js').catch(function(e){console.warn('SW no registrado:',e);});
+  navigator.serviceWorker.register('./sw.js?v=C087',{updateViaCache:'none'}).then(function(reg){
+    try{reg.update();}catch(e){}
+    var recargaKey='mootsil_sw_c087_recargado';
+    navigator.serviceWorker.addEventListener('controllerchange',function(){
+      try{
+        if(sessionStorage.getItem(recargaKey))return;
+        sessionStorage.setItem(recargaKey,'1');
+      }catch(e){}
+      location.reload();
+    });
+  }).catch(function(e){console.warn('SW no registrado:',e);});
 }
 
 function ca45MontarDecisionOtros(){
@@ -13233,5 +13243,10 @@ document.addEventListener('click',function(e){
 <input type="file" id="cam-input" accept="image/*,video/*" capture="environment" style="display:none" onchange="capturaEjec.foto=true;renderEjec();">
 <input type="file" id="gal-input" accept="image/*,video/*" capture style="display:none" onchange="capturaEjec.foto=true;renderEjec();">
 <input type="file" id="perm-ev-input" accept="image/*" style="display:none" onchange="capturarEvidenciaPermiso(event)">
+
+<div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
+font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
+C087
+</div>
 </body>
 </html>
