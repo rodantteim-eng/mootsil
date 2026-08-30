@@ -10323,11 +10323,9 @@ function bo92Texto(desc){return String(desc||'').replace(/\[C092\].*?\[\/C092\]\
 function bo91ToggleForm(){var x=document.getElementById('bo91-form-wrap');if(x)x.style.display=(x.style.display==='none'||!x.style.display)?'block':'none';}
 function bo92ObjetivosRol(){
  var rol=document.getElementById('bo92-rol').value,sel=document.getElementById('bo92-objetivo');
- var modalidadWrap=document.getElementById('bo95-modalidad-wrap');
- if(modalidadWrap)modalidadWrap.style.display=rol==='cosecha'?'none':'block';
  var map={
   labores:[['actividad','Por tarea'],['semanal','Objetivo semanal · varias tareas'],['manual','Otro objetivo · validación de Administración']],
-  cosecha:[['mayor_cajas','Mayor número de cajas cosechadas del día · Individual'],['meta_cajas','Alcanzar cajas programadas del día · Equipo'],['manual','Otro objetivo · validación de Administración']],
+  cosecha:[['mayor_cajas','Mayor número de cajas cosechadas del día'],['meta_cajas','Alcanzar cajas programadas del día'],['manual','Otro objetivo · validación de Administración']],
   galerista:[['cajas','Meta de cajas procesadas / pesadas'],['manual','Otro objetivo · validación de Administración']],
   auxiliar_galera:[['cajas','Meta de cajas atendidas / surtidas'],['manual','Otro objetivo · validación de Administración']],
   ingeniero:[['meta_cosecha','Meta de cosecha del periodo'],['manual','Otro objetivo · validación de Administración']],
@@ -10339,10 +10337,6 @@ function bo92ObjetivosRol(){
 }
 function bo92ObjetivoCambio(){
  var v=document.getElementById('bo92-objetivo').value,rol=document.getElementById('bo92-rol').value;
- if(rol==='cosecha'){
-  var deseado=v==='mayor_cajas'?'individual':'equipo';
-  document.querySelectorAll('#no89-body [data-tipo]').forEach(function(x){x.classList.toggle('sel',x.dataset.tipo===deseado);});
- }
  var meta=document.getElementById('bo92-meta'),wrap=document.getElementById('bo92-meta-wrap'),libre=document.getElementById('bo92-libre-wrap'),unidad=document.getElementById('bo92-unidad');
  libre.style.display=v==='manual'?'block':'none';
  var requiereNumero=['meta_cajas','cajas','meta_cosecha','viajes'].indexOf(v)>=0;
@@ -10355,7 +10349,7 @@ function bo92ObjetivoCambio(){
  var hint=document.getElementById('bo93-objetivo-hint');
  if(hint){
   if(rol==='labores')hint.textContent=v==='actividad'?'Por tarea: la recompensa se evalúa al cerrar la actividad indicada.':(v==='semanal'?'Semanal: se evalúa el conjunto de tareas indicadas para la semana.':'Administración describe y valida el objetivo.');
-  else if(rol==='cosecha')hint.textContent=v==='mayor_cajas'?'Individual: gana el cosechador con más cajas registradas en esa jornada.':(v==='meta_cajas'?'Equipo: se compara la cosecha total contra las cajas programadas para ese día; pueden participar cosechadores, galeristas y auxiliares.':'Administración describe y valida el objetivo.');
+  else if(rol==='cosecha')hint.textContent=v==='mayor_cajas'?'Compiten los cosechadores seleccionados; gana quien registre más cajas en la jornada.':(v==='meta_cajas'?'Se compara la cosecha total contra las cajas programadas del día; pueden participar cosechadores, galeristas y auxiliares.':'Administración describe y valida el objetivo.');
   else hint.textContent='Administración define la meta y conserva la decisión final de entrega.';
  }
  bo93AjustarRecompensas();
@@ -10377,6 +10371,9 @@ function bo93AjustarRecompensas(){
   bo91CambiarRecompensa();
  }
 }
+function bo96SeleccionParticipantes(valor){
+ document.querySelectorAll('#bo92-participantes [data-bo92-op]').forEach(function(x){x.checked=!!valor;});
+}
 function bo92CargarParticipantes(){
  var box=document.getElementById('bo92-participantes');box.innerHTML='<span class="hint">Cargando personal activo...</span>';
  from('usuarios').select('id,nombre,rol,activo').eq('activo',true).order('nombre').get().then(function(rows){
@@ -10384,8 +10381,8 @@ function bo92CargarParticipantes(){
   rows=(rows||[]).filter(function(u){
    if(['admin','dueño','inversionista'].indexOf(u.rol)>=0)return false;
    if(rol==='cosecha'){
-    var tipoEl=document.querySelector('#no89-body [data-tipo].sel'),tipo=tipoEl?tipoEl.dataset.tipo:'equipo';
-    if(tipo==='individual')return u.rol==='cosechador';
+    var objEl=document.getElementById('bo92-objetivo'),obj=objEl?objEl.value:'meta_cajas';
+    if(obj==='mayor_cajas')return u.rol==='cosechador';
     var exC=ex54Get(u.id)||{},cargoC=String(exC.cargo||'').toLowerCase().replace(/\s+/g,'_');
     return ['cosechador','galerista','auxiliar_galera'].indexOf(String(u.rol||'').toLowerCase())>=0 || ['cosecha','galerista','auxiliar_galera'].indexOf(cargoC)>=0;
    }
@@ -10404,8 +10401,8 @@ function renderBonos(){
  body.innerHTML='<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;"><div><div class="seccion-titulo" style="margin:0;">🎯 Campañas de Bonos</div><div class="hint">Mootsil registra el resultado disponible, pero Administración conserva la decisión final de entregar la recompensa y a quién.</div></div><button class="btn-sm btn-completar" onclick="bo91ToggleForm()">+ Nueva campaña</button></div>'+
  '<div id="bo91-form-wrap" style="display:none;margin-top:10px;"><div class="form-card" style="padding:1rem;">'+
  '<div class="form-group"><label>Rol</label><select id="bo92-rol" onchange="bo92ObjetivosRol()"><option value="labores">Labores</option><option value="cosecha">Cosecha</option><option value="galerista">Galerista</option><option value="auxiliar_galera">Auxiliar de Galera</option><option value="ingeniero">Ingeniero</option><option value="encargado">Encargado</option><option value="transportista">Transportista</option></select></div>'+
- '<div class="form-group" id="bo95-modalidad-wrap"><label>Modalidad</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip sel" data-tipo="equipo" onclick="seleccionUnica(this);bo92CargarParticipantes()">🤝 Equipo</button><button type="button" class="op-chip" data-tipo="individual" onclick="seleccionUnica(this);bo92CargarParticipantes()">👤 Individual</button></div></div>'+
- '<div class="form-group"><label>Participantes</label><div id="bo92-participantes"></div><p class="hint">Administración puede incluir o excluir personas.</p></div>'+
+ ''+
+ '<div class="form-group"><label>Participantes</label><div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:7px;"><button type="button" class="btn-sm" onclick="bo96SeleccionParticipantes(true)">✓ Seleccionar todos</button><button type="button" class="btn-sm" onclick="bo96SeleccionParticipantes(false)">Limpiar selección</button></div><div id="bo92-participantes"></div><p class="hint">La selección determina exactamente a quién se lanza la campaña.</p></div>'+
  '<div class="form-group"><label>Tipo de objetivo</label><select id="bo92-objetivo" onchange="bo92ObjetivoCambio()"></select><p class="hint" id="bo93-objetivo-hint">El objetivo se define según el rol y la operación real.</p></div>'+
  '<div class="form-group" id="bo92-libre-wrap" style="display:none;"><label>Objetivo definido por Administración</label><input id="bo92-libre" placeholder="Describe claramente qué se debe lograr"><p class="hint">Queda sujeto a validación manual.</p></div>'+
  '<div class="form-group" id="bo92-meta-wrap" style="display:none;"><label>Meta <span id="bo92-unidad" class="hint"></span></label><input type="number" id="bo92-meta" min="0" step="1"></div>'+
@@ -10420,8 +10417,9 @@ function renderBonos(){
  bo92ObjetivosRol();
 
  document.getElementById('bo92-publicar').onclick=function(){
-  var rol=document.getElementById('bo92-rol').value,obj=document.getElementById('bo92-objetivo').value,tipo=document.querySelector('#no89-body [data-tipo].sel').dataset.tipo,rec=document.querySelector('#no89-body [data-rec].sel').dataset.rec;
+  var rol=document.getElementById('bo92-rol').value,obj=document.getElementById('bo92-objetivo').value,rec=document.querySelector('#no89-body [data-rec].sel').dataset.rec;
   var ops=[].slice.call(document.querySelectorAll('[data-bo92-op]:checked')).map(function(x){return {id:x.dataset.bo92Op,nombre:x.dataset.nombre};});
+  var tipo=(rol==='cosecha'&&obj==='mayor_cajas')?'individual':(ops.length===1?'individual':'equipo');
   if(!ops.length){alert('Selecciona al menos un participante.');return;}
   var libre=(document.getElementById('bo92-libre').value||'').trim(),mensaje=(document.getElementById('bo92-mensaje').value||'').trim();
   if(obj==='manual'&&!libre){alert('Describe el objetivo manual.');return;}
@@ -10445,7 +10443,7 @@ function renderBonos(){
   list.innerHTML=rows.map(function(b){
    var m=bo92Meta(b.descripcion)||{},ot=benef.filter(function(x){return String(x.bono_id)===String(b.id);});
    var rec=m.recompensa==='especie'?(m.premio||'En especie'):(m.recompensa==='cajas_extra'?((m.cajas_extra||1)+' caja(s) extra'):'$'+parseFloat(b.monto||0).toFixed(2));
-   return '<div class="orden-card"><div style="display:flex;justify-content:space-between;gap:10px;"><div><strong>'+(b.tipo==='equipo'?'🤝 Equipo':'👤 Individual')+' · '+String(m.rol||'').replace(/_/g,' ')+'</strong><div class="orden-meta">'+bo92Texto(b.descripcion)+'<br><b>Objetivo:</b> '+(m.objetivo_libre||String(m.objetivo||'').replace(/_/g,' '))+(m.meta?' · <b>Meta:</b> '+m.meta:'')+'<br><b>Recompensa:</b> '+rec+'<br><b>Decisión:</b> '+(ot.length?('Otorgado a '+ot.length+' participante(s)'):'Pendiente de Administración')+'</div></div><span style="font-size:.7rem;font-weight:800;color:var(--verde-mid);">'+String(b.estado||'activo').toUpperCase()+'</span></div><div style="display:flex;gap:7px;margin-top:8px;flex-wrap:wrap;">'+(b.estado==='activo'?'<button class="btn-sm btn-completar" data-decidir="'+b.id+'">Decidir entrega</button><button class="btn-sm btn-cancelar" data-cerrar="'+b.id+'">Cerrar</button>':'')+(m.recompensa==='especie'&&ot.length?'<button class="btn-sm" data-compras="1">Compras y Gastos</button>':'')+'</div></div>';
+   return '<div class="orden-card"><div style="display:flex;justify-content:space-between;gap:10px;"><div><strong>🎯 '+String(m.rol||'').replace(/_/g,' ')+' · '+((m.participantes||[]).length)+' participante(s)</strong><div class="orden-meta">'+bo92Texto(b.descripcion)+'<br><b>Objetivo:</b> '+(m.objetivo_libre||String(m.objetivo||'').replace(/_/g,' '))+(m.meta?' · <b>Meta:</b> '+m.meta:'')+'<br><b>Recompensa:</b> '+rec+'<br><b>Decisión:</b> '+(ot.length?('Otorgado a '+ot.length+' participante(s)'):'Pendiente de Administración')+'</div></div><span style="font-size:.7rem;font-weight:800;color:var(--verde-mid);">'+String(b.estado||'activo').toUpperCase()+'</span></div><div style="display:flex;gap:7px;margin-top:8px;flex-wrap:wrap;">'+(b.estado==='activo'?'<button class="btn-sm btn-completar" data-decidir="'+b.id+'">Decidir entrega</button><button class="btn-sm btn-cancelar" data-cerrar="'+b.id+'">Cerrar</button>':'')+(m.recompensa==='especie'&&ot.length?'<button class="btn-sm" data-compras="1">Compras y Gastos</button>':'')+'</div></div>';
   }).join('');
   list.querySelectorAll('[data-decidir]').forEach(function(x){x.onclick=function(){bo92Decidir(this.dataset.decidir,rows,benef);};});
   list.querySelectorAll('[data-cerrar]').forEach(function(x){x.onclick=function(){var id=this.dataset.cerrar;if(confirm('¿Cerrar esta campaña?'))from('bonos').eq('id',id).update({estado:'cerrado'}).then(renderBonos);};});
