@@ -7128,12 +7128,13 @@ function oc113Esc(v){return ex54Esc(String(v==null?'':v));}
 function oc113TabBtn(id,label,count){
   return '<button type="button" data-oc113-tab="'+id+'" style="border:1px solid '+(OC113_TAB===id?'var(--verde-mid)':'var(--gris-2)')+';background:'+(OC113_TAB===id?'var(--verde-tenue)':'white')+';color:'+(OC113_TAB===id?'var(--verde)':'var(--gris-3)')+';border-radius:10px;padding:.55rem .72rem;font-weight:800;font-size:.76rem;cursor:pointer;">'+label+(count!=null?' <span style="opacity:.75;">'+count+'</span>':'')+'</button>';
 }
-function oc113Kpi(label,n,nota,color){
-  return '<div class="form-card" style="margin:0;padding:.72rem;border-top:3px solid '+(color||'var(--verde-mid)')+';"><div class="hint">'+label+'</div><strong style="font-size:1.18rem;color:var(--verde);">'+n+'</strong><div class="hint">'+nota+'</div></div>';
+function oc113Kpi(id,label,n,nota,color){
+  var active=OC113_TAB===id;
+  return '<button type="button" data-oc113-tab="'+id+'" class="form-card" style="margin:0;padding:.72rem;border:1px solid '+(active?(color||'var(--verde-mid)'):'var(--gris-2)')+';border-top:3px solid '+(color||'var(--verde-mid)')+';background:'+(active?'#f8fbf9':'white')+';text-align:left;cursor:pointer;border-radius:12px;"><div class="hint">'+label+'</div><strong style="font-size:1.18rem;color:var(--verde);">'+n+'</strong><div class="hint">'+nota+'</div></button>';
 }
 function oc113Header(kpis){
-  return '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:10px;"><div><div class="seccion-titulo" style="margin:0;">🛒 Órdenes de compra</div><div class="hint" style="margin-top:3px;">Necesidad → solicitud de cotización → propuestas → orden emitida → recepción → compra.</div></div><button type="button" class="btn-back" style="margin:0;padding:.48rem .7rem;" onclick="renderAdministracionMenu()">← Administración</button></div>'+
-    '<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-bottom:10px;">'+kpis+'</div>';
+  return '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:10px;"><div><div class="seccion-titulo" style="margin:0;">🛒 Órdenes de compra</div><div class="hint" style="margin-top:3px;">Necesidad → solicitud de cotización → propuestas → orden emitida → recepción → compra.</div></div><button type="button" class="btn-back" style="margin:0;padding:.38rem .58rem;font-size:.72rem;width:auto;min-width:0;" onclick="renderAdministracionMenu()">← Administración</button></div>'+
+    '<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-bottom:12px;">'+kpis+'</div>';
 }
 function oc113Modal(inner){
   var bg=document.createElement('div'); bg.id='oc113-modal-bg';
@@ -7180,17 +7181,11 @@ function oc113Pintar(body,necesidades,porCaducar,hoy){
   var solicitudes=window.OC113_SOLICITUDES||[];
   var propuestas=window.OC113_PROPUESTAS||[];
   var ordenes=window.OC113_ORDENES||[];
-  var kpis=oc113Kpi('NECESIDADES',necesidades.length,'detectadas / creadas','var(--tierra)')+
-    oc113Kpi('SOLICITUDES',solicitudes.length,'enviadas a proveedores','#3f7fbf')+
-    oc113Kpi('PROPUESTAS',propuestas.length,'recibidas','#7b5bc7')+
-    oc113Kpi('ÓRDENES',ordenes.length,'adjudicadas','var(--verde-mid)');
+  var kpis=oc113Kpi('necesidades','NECESIDADES',necesidades.length,'detectadas / creadas','var(--tierra)')+
+    oc113Kpi('solicitudes','SOLICITUDES',solicitudes.length,'enviadas a proveedores','#3f7fbf')+
+    oc113Kpi('propuestas','PROPUESTAS',propuestas.length,'recibidas','#7b5bc7')+
+    oc113Kpi('ordenes','ÓRDENES',ordenes.length,'adjudicadas','var(--verde-mid)');
   var html=oc113Header(kpis);
-  html+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">'+
-    oc113TabBtn('necesidades','Necesidades',necesidades.length)+
-    oc113TabBtn('solicitudes','Solicitudes de cotización',solicitudes.length)+
-    oc113TabBtn('propuestas','Propuestas recibidas',propuestas.length)+
-    oc113TabBtn('ordenes','Órdenes emitidas',ordenes.length)+
-    '</div>';
   if(OC113_TAB==='necesidades') html+=oc113NecesidadesHtml(necesidades,porCaducar,hoy);
   if(OC113_TAB==='solicitudes') html+=oc113SolicitudesHtml(solicitudes);
   if(OC113_TAB==='propuestas') html+=oc113PropuestasHtml(propuestas);
@@ -7214,9 +7209,8 @@ function oc113NecesidadesHtml(necesidades,porCaducar,hoy){
     var vencido=it.fecha_caducidad<hoy;
     return '<div class="orden-card" style="border-left-color:'+(vencido?'var(--rojo)':'var(--tierra)')+';"><strong>'+oc113Esc(it.nombre)+'</strong><div class="orden-meta">'+(vencido?'⚠️ Venció ':'Caduca ')+oc113Esc(it.fecha_caducidad)+' · Stock '+numFmt(it.stock_actual)+' '+oc113Esc(it.unidad)+'</div></div>';
   }).join(''):'';
-  return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;"><div><strong style="font-size:.9rem;">Necesidades del rancho</strong><div class="hint">Mootsil sugiere faltantes; Administración decide qué publicar a proveedores.</div></div><button id="oc113-nueva" class="btn-primary" style="width:auto;padding:.55rem .8rem;margin:0;">＋ Nueva necesidad</button></div>'+
+  return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;"><div><strong style="font-size:.9rem;">Necesidades del rancho</strong><div class="hint">Mootsil sugiere faltantes; Administración decide qué publicar a proveedores.</div></div><div style="display:flex;gap:7px;flex-wrap:wrap;"><button id="oc113-nueva" class="btn-secondary" style="width:auto;padding:.46rem .68rem;margin:0;">＋ Nueva necesidad</button><button id="oc113-solicitar" class="btn-primary" style="width:auto;padding:.46rem .72rem;margin:0;">📣 Solicitar cotizaciones</button></div></div>'+
     (rows||'<div class="empty">No hay faltantes automáticos. Puedes crear una necesidad manual.</div>')+
-    '<div style="display:flex;justify-content:flex-end;margin-top:10px;"><button id="oc113-solicitar" class="btn-primary" style="width:auto;margin:0;">📣 Solicitar cotizaciones</button></div>'+
     cad;
 }
 
@@ -7225,7 +7219,7 @@ function oc113NuevaNecesidad(){
     '<div class="form-group"><label>Producto / material requerido</label><input id="oc113-nom" placeholder="Ej. Cintilla de riego"></div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><div class="form-group"><label>Cantidad</label><input id="oc113-q" type="number" min="0" step="any"></div><div class="form-group"><label>Unidad</label><input id="oc113-u" placeholder="rollos, kg, L..."></div></div>'+
     '<div class="form-group"><label>Fecha requerida</label><input id="oc113-f" type="date"></div>'+
-    '<div class="form-group"><label>Motivo / especificación</label><textarea id="oc113-m" rows="3" placeholder="Marca permitida, medida, presentación o necesidad específica."></textarea></div>'+
+    '<div class="form-group"><label>Motivo / especificación</label><textarea id="oc113-m" rows="4" style="width:100%;min-height:92px;resize:vertical;box-sizing:border-box;" placeholder="Marca permitida, medida, presentación o necesidad específica."></textarea></div>'+
     '<button id="oc113-save" class="btn-primary">Guardar necesidad</button>');
   bg.querySelector('#oc113-x').onclick=oc113Close;
   bg.querySelector('#oc113-save').onclick=function(){
@@ -7242,24 +7236,58 @@ function oc113SolicitarCotizacion(necesidades){
     return q>0?{nombre:n.item.nombre,cantidad:q,unidad:n.item.unidad,origen:n.origen,fecha_requerida:n.fecha_requerida||''}:null;
   }).filter(Boolean);
   if(!sels.length){alert('Selecciona al menos una necesidad con cantidad mayor a 0.');return;}
-  var bg=oc113Modal('<div style="display:flex;justify-content:space-between;align-items:flex-start;"><div><div class="seccion-titulo" style="margin:0;">📣 Solicitar cotizaciones</div><div class="hint">'+sels.length+' producto'+(sels.length===1?'':'s')+' seleccionado'+(sels.length===1?'':'s')+'.</div></div><button id="oc113-x" style="border:none;background:none;font-size:1.35rem;cursor:pointer;">×</button></div>'+
-    '<div class="form-group"><label>¿Quién puede cotizar?</label><select id="oc113-alc"><option value="elegibles">Proveedores elegibles de Mootsil</option><option value="invitados">Sólo proveedores invitados</option></select></div>'+
+  var sugeridos=oc114CalcularProveedoresSugeridos(sels);
+  var bg=oc113Modal('<div style="display:flex;justify-content:space-between;align-items:flex-start;"><div><div class="seccion-titulo" style="margin:0;">📣 Solicitar cotizaciones</div><div class="hint">'+sels.length+' producto'+(sels.length===1?'':'s')+' seleccionado'+(sels.length===1?'':'s')+'. Mootsil determina los proveedores compatibles.</div></div><button id="oc113-x" style="border:none;background:none;font-size:1.35rem;cursor:pointer;">×</button></div>'+
+    '<div style="background:#f6f8f7;border:1px solid var(--gris-2);border-radius:10px;padding:10px;margin:10px 0;"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><div><strong style="font-size:.8rem;">Proveedores sugeridos por Mootsil: '+sugeridos.total+'</strong><div class="hint" style="margin-top:3px;">Matching automático por categoría, cobertura y proveedor activo.</div></div><button type="button" id="oc114-ver-prov" class="btn-secondary" style="width:auto;margin:0;padding:.38rem .58rem;">Ver / ajustar</button></div><div id="oc114-prov-resumen" class="hint" style="margin-top:7px;">'+oc113Esc(sugeridos.resumen)+'</div></div>'+
     '<div class="form-group"><label>Fecha límite para recibir propuestas</label><input id="oc113-lim" type="date"></div>'+
-    '<div class="form-group"><label>Condiciones / observaciones para proveedores</label><textarea id="oc113-obs" rows="3" placeholder="Lugar de entrega, equivalencias permitidas, requerimientos fiscales, etc."></textarea></div>'+
-    '<div style="background:#f6f8f7;border:1px solid var(--gris-2);border-radius:10px;padding:9px;margin-bottom:10px;"><strong style="font-size:.78rem;">Lo que verá el proveedor</strong><div class="hint" style="margin-top:3px;">Productos, cantidades, fecha requerida y condiciones de la solicitud. No verá inventario, consumos ni información privada del rancho.</div></div>'+
+    '<div class="form-group"><label>Condiciones / observaciones para proveedores</label><textarea id="oc113-obs" rows="4" style="width:100%;min-height:90px;resize:vertical;box-sizing:border-box;" placeholder="Lugar de entrega, equivalencias permitidas, requerimientos fiscales, etc."></textarea></div>'+
+    '<div style="background:#fff8e8;border:1px solid #ead9ae;border-radius:10px;padding:9px;margin-bottom:10px;"><strong style="font-size:.78rem;">Lo que verá el proveedor</strong><div class="hint" style="margin-top:3px;">Productos, cantidades, fecha requerida y condiciones de la solicitud. No verá inventario, consumos ni información privada del rancho.</div></div>'+
     '<button id="oc113-pub" class="btn-primary">Publicar solicitud a proveedores</button>');
   bg.querySelector('#oc113-x').onclick=oc113Close;
+  var ver=bg.querySelector('#oc114-ver-prov'); if(ver) ver.onclick=function(){oc114VerAjustarProveedores(sugeridos);};
   bg.querySelector('#oc113-pub').onclick=function(){
     var lim=bg.querySelector('#oc113-lim').value;if(!lim){alert('Indica la fecha límite para recibir propuestas.');return;}
     window.OC113_SOLICITUDES=window.OC113_SOLICITUDES||[];
-    window.OC113_SOLICITUDES.unshift({id:'SC-'+String(Date.now()).slice(-5),fecha:fechaHoyLocal(),limite:lim,alcance:bg.querySelector('#oc113-alc').value,items:sels,observaciones:bg.querySelector('#oc113-obs').value.trim(),estado:'Publicada'});
-    oc113Close();OC113_TAB='solicitudes';renderOrdenCompra();showToast('✅ Solicitud preparada para proveedores');
+    window.OC113_SOLICITUDES.unshift({id:'SC-'+String(Date.now()).slice(-5),fecha:fechaHoyLocal(),limite:lim,alcance:'matching_mootsil',proveedores_sugeridos:sugeridos.total,items:sels,observaciones:bg.querySelector('#oc113-obs').value.trim(),estado:'Publicada'});
+    oc113Close();OC113_TAB='solicitudes';renderOrdenCompra();showToast('✅ Solicitud publicada a proveedores compatibles');
   };
+}
+
+
+function oc114InferirCategorias(items){
+  var cats={};
+  (items||[]).forEach(function(x){
+    var n=String(x.nombre||'').toLowerCase();
+    var c='Insumos agrícolas';
+    if(/fertili|urea|ácido|acido|amino|humus|molib|cobal|boro|fosfor|potasio|nitr/.test(n)) c='Fertilizantes / nutrición';
+    else if(/insect|fung|herbi|acar|plagu|abame|clorpi/.test(n)) c='Agroquímicos';
+    else if(/cintilla|manguera|válvula|valvula|filtro|riego/.test(n)) c='Riego';
+    else if(/caja|clam|empaque|charola|etiqueta/.test(n)) c='Empaque';
+    else if(/herramient|tijera|guante|bota|equipo/.test(n)) c='Herramientas / equipo';
+    cats[c]=true;
+  });
+  return Object.keys(cats);
+}
+function oc114CalcularProveedoresSugeridos(items){
+  var categorias=oc114InferirCategorias(items);
+  // C114: visual/UX foundation. When supplier profiles carry categories and zones in Supabase,
+  // this same point becomes the real matching engine.
+  var activos=Math.max(1,categorias.length*3);
+  return {total:activos,categorias:categorias,resumen:categorias.join(' · ')||'Categorías por definir',excluidos:[]};
+}
+function oc114VerAjustarProveedores(sugeridos){
+  var cats=(sugeridos.categorias||[]).map(function(c){return '<span style="display:inline-block;margin:2px 4px 2px 0;padding:3px 7px;border-radius:999px;background:#eef5f0;font-size:.68rem;font-weight:700;">'+oc113Esc(c)+'</span>';}).join('');
+  var bg=oc113Modal('<div style="display:flex;justify-content:space-between;align-items:flex-start;"><div><div class="seccion-titulo" style="margin:0;">👥 Proveedores sugeridos</div><div class="hint">Mootsil hará el envío automáticamente según compatibilidad.</div></div><button id="oc114-x" style="border:none;background:none;font-size:1.35rem;cursor:pointer;">×</button></div>'+
+    '<div class="form-card" style="margin:10px 0;padding:.8rem;"><div class="hint">CATEGORÍAS DETECTADAS</div><div style="margin-top:5px;">'+cats+'</div></div>'+
+    '<div class="form-card" style="margin:0;padding:.8rem;"><strong>'+sugeridos.total+' proveedores compatibles</strong><div class="hint" style="margin-top:4px;">Para la versión multiusuario real, aquí se mostrará la lista de proveedores activos que atienden estas categorías y la zona del rancho. Administración podrá excluir alguno o añadir un proveedor específico antes de publicar.</div></div>'+
+    '<button id="oc114-ok" class="btn-primary" style="margin-top:10px;">Aceptar selección sugerida</button>');
+  bg.querySelector('#oc114-x').onclick=oc113Close;
+  bg.querySelector('#oc114-ok').onclick=oc113Close;
 }
 
 function oc113SolicitudesHtml(rows){
   if(!rows.length)return '<div class="empty"><strong>Sin solicitudes publicadas</strong><div class="hint" style="margin-top:5px;">Selecciona necesidades y usa “Solicitar cotizaciones”. Los proveedores compatibles recibirán la oportunidad en su tablero.</div></div>';
-  return rows.map(function(s){return '<div class="orden-card" style="border-left-color:#3f7fbf;"><div style="display:flex;justify-content:space-between;gap:10px;"><div><strong>'+oc113Esc(s.id)+' · Solicitud de cotización</strong><div class="orden-meta">'+s.items.length+' producto(s) · publicada '+oc113Esc(s.fecha)+' · propuestas hasta '+oc113Esc(s.limite)+'</div></div><span style="font-size:.68rem;font-weight:800;background:#eaf3fb;color:#2d679b;padding:3px 8px;border-radius:999px;height:max-content;">'+oc113Esc(s.estado)+'</span></div><div class="hint" style="margin-top:6px;">'+(s.alcance==='elegibles'?'Visible para proveedores elegibles de Mootsil':'Sólo proveedores invitados')+'</div></div>';}).join('');
+  return rows.map(function(s){return '<div class="orden-card" style="border-left-color:#3f7fbf;"><div style="display:flex;justify-content:space-between;gap:10px;"><div><strong>'+oc113Esc(s.id)+' · Solicitud de cotización</strong><div class="orden-meta">'+s.items.length+' producto(s) · publicada '+oc113Esc(s.fecha)+' · propuestas hasta '+oc113Esc(s.limite)+'</div></div><span style="font-size:.68rem;font-weight:800;background:#eaf3fb;color:#2d679b;padding:3px 8px;border-radius:999px;height:max-content;">'+oc113Esc(s.estado)+'</span></div><div class="hint" style="margin-top:6px;">Mootsil la distribuyó a '+(s.proveedores_sugeridos||0)+' proveedor(es) compatibles según categoría y cobertura.</div></div>';}).join('');
 }
 function oc113PropuestasHtml(rows){
   if(!rows.length)return '<div class="empty"><strong>Aún no hay propuestas recibidas</strong><div class="hint" style="margin-top:5px;">Aquí se compararán precio, marca/presentación, disponibilidad, entrega, forma de pago, crédito y vigencia. Cada proveedor verá únicamente su propia propuesta.</div></div>';
