@@ -883,7 +883,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .em69-field textarea{min-height:76px;resize:vertical}
 .em69-day{cursor:pointer;border-radius:6px;padding:3px 2px}.em69-day:hover{background:#f0f6f2}
 /* C148 — horarios visibles en Asistencia semanal */
-.as148-time{display:block;font-size:.52rem;line-height:1.25;font-weight:750;white-space:nowrap;margin-top:1px}.as148-in{color:#236c48}.as148-out{color:#40524a}.as148-open{color:#a86200}
+.as148-time{display:block;font-size:.64rem;line-height:1.3;font-weight:800;white-space:nowrap;margin-top:2px;letter-spacing:.01em}.as148-in{color:#236c48}.as148-out{color:#40524a}.as148-open{color:#a86200}.as148-time b{display:inline-block;min-width:12px;font-size:.62rem;font-weight:900}.as148-time strong{font-size:.72rem;font-weight:900}.as58-table tbody tr{height:76px}.as58-table td{vertical-align:middle}.as58-cell{font-size:.78rem;font-weight:900;margin-bottom:2px}.as59-he,.as60-he0{display:block;margin-top:3px;font-size:.54rem;line-height:1.2}
 .em69-adjusted{display:block;font-size:.49rem;color:#2d6d4e;font-weight:850;margin-top:2px}
 .em69-sec{margin-top:10px}.em69-sec-title{font-size:.72rem;font-weight:900;margin:7px 0;color:var(--verde)}.em69-sec-title.pending{color:#a86200}
 .em69-resolved{opacity:.94}.em69-meta{font-size:.58rem;color:var(--gris-5);margin-top:3px}
@@ -7951,13 +7951,13 @@ function em69RenderAsistencia(fecha){
       /* C148 — la tabla semanal también muestra las marcaciones reales.
          La fuente sigue siendo asistencia_registros; no se duplican horarios. */
       if(r&&r.entradaRow){
-        base+='<span class="as148-time as148-in">Entrada '+em69Hora(r.entradaRow.registrado_en)+'</span>';
+        base+='<span class="as148-time as148-in"><b>E</b> <strong>'+em69Hora(r.entradaRow.registrado_en)+'</strong></span>';
         if(r.salidaRow){
-          base+='<span class="as148-time as148-out">Salida '+em69Hora(r.salidaRow.registrado_en)+'</span>';
+          base+='<span class="as148-time as148-out"><b>S</b> <strong>'+em69Hora(r.salidaRow.registrado_en)+'</strong></span>';
         }else if(f===hoy){
-          base+='<span class="as148-time as148-open">En jornada</span>';
+          base+='<span class="as148-time as148-open"><b>S</b> <strong>En jornada</strong></span>';
         }else{
-          base+='<span class="as148-time as148-open">Salida —</span>';
+          base+='<span class="as148-time as148-open"><b>S</b> <strong>—</strong></span>';
         }
       }
       var he=heDia(u.id,f);
