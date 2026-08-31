@@ -882,6 +882,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .em69-field input,.em69-field select,.em69-field textarea{border:1px solid var(--gris-2);border-radius:8px;padding:8px 9px;font-size:.74rem;background:#fafbf9}
 .em69-field textarea{min-height:76px;resize:vertical}
 .em69-day{cursor:pointer;border-radius:6px;padding:3px 2px}.em69-day:hover{background:#f0f6f2}
+/* C148 — horarios visibles en Asistencia semanal */
+.as148-time{display:block;font-size:.52rem;line-height:1.25;font-weight:750;white-space:nowrap;margin-top:1px}.as148-in{color:#236c48}.as148-out{color:#40524a}.as148-open{color:#a86200}
 .em69-adjusted{display:block;font-size:.49rem;color:#2d6d4e;font-weight:850;margin-top:2px}
 .em69-sec{margin-top:10px}.em69-sec-title{font-size:.72rem;font-weight:900;margin:7px 0;color:var(--verde)}.em69-sec-title.pending{color:#a86200}
 .em69-resolved{opacity:.94}.em69-meta{font-size:.58rem;color:var(--gris-5);margin-top:3px}
@@ -7946,6 +7948,18 @@ function em69RenderAsistencia(fecha){
       else if(estado==='presente')base='<span class="as58-cell as58-p">✓</span>';
       else if(f===hoy)base='<span class="as58-cell as58-na">·</span>';
       else base='<span class="as58-cell as58-f">F</span>';
+      /* C148 — la tabla semanal también muestra las marcaciones reales.
+         La fuente sigue siendo asistencia_registros; no se duplican horarios. */
+      if(r&&r.entradaRow){
+        base+='<span class="as148-time as148-in">Entrada '+em69Hora(r.entradaRow.registrado_en)+'</span>';
+        if(r.salidaRow){
+          base+='<span class="as148-time as148-out">Salida '+em69Hora(r.salidaRow.registrado_en)+'</span>';
+        }else if(f===hoy){
+          base+='<span class="as148-time as148-open">En jornada</span>';
+        }else{
+          base+='<span class="as148-time as148-open">Salida —</span>';
+        }
+      }
       var he=heDia(u.id,f);
       base+=he>0?'<span class="as59-he">H.E. '+he.toFixed(1)+' h</span>':'<span class="as60-he0">H.E. 0.0 h</span>';
       return '<div class="em69-day" data-uid="'+u.id+'" data-fecha="'+f+'">'+base+'</div>';
