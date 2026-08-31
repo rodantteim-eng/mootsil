@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#003f22"><title>Mootsil | Registro de Personal</title>
+<style>
+:root{--verde:#004426;--verde2:#00683c;--verde3:#19854e;--naranja:#f6a000;--morado:#4e087c;--gris:#69736d;--borde:#dce3de;--rojo:#c84034}
+*{box-sizing:border-box}html,body{margin:0;background:#e9eeea;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#163426}.app{max-width:600px;margin:0 auto;min-height:100vh;background:#fff;box-shadow:0 0 34px rgba(0,0,0,.11)}
+.master{background:radial-gradient(circle at 82% 25%,#075f33 0,#003d21 46%,#002f1a 100%);color:#fff;padding:22px 20px 18px;min-height:142px;position:relative;overflow:hidden}.master-title{font-size:28px;font-weight:800;margin-top:12px}.master-title span{color:var(--naranja)}.master-sub{margin-top:5px;font-size:15px}.master-sub b{color:var(--naranja)}.master-avatar{position:absolute;right:16px;top:18px;width:96px;height:96px;border-radius:50%;overflow:hidden;border:3px solid rgba(255,255,255,.78);background:#0c6d40;box-shadow:0 6px 17px rgba(0,0,0,.25)}.master-avatar img{width:100%;height:100%;object-fit:cover}
+.ranchbar{height:67px;display:grid;grid-template-columns:1fr 155px;position:relative;background:var(--naranja);align-items:center}.ranchname{font-family:Georgia,"Times New Roman",serif;font-style:italic;text-align:center;font-size:20px;color:#17120a;padding-left:86px}.crop{height:100%;background:linear-gradient(110deg,#3a0765,#65078d);display:grid;place-items:center;color:#fff;font-size:22px;font-weight:750}.crest{position:absolute;left:20px;top:-29px;width:92px;height:112px;object-fit:contain;z-index:4}
+.welcome{padding:27px 22px 34px;text-align:center}.welcome-avatar{width:168px;height:168px;margin:3px auto 17px;border-radius:50%;overflow:hidden;border:5px solid #fff;background:#087043;box-shadow:0 10px 26px rgba(0,0,0,.16)}.welcome-avatar img{width:100%;height:100%;object-fit:cover}.eyebrow{font-size:11px;font-weight:900;color:var(--naranja);text-transform:uppercase;letter-spacing:.07em}h1{font-size:30px;color:var(--verde);margin:6px 0 8px}.welcome p{color:#596a61;line-height:1.5;font-size:15px;max-width:440px;margin:0 auto 20px}
+button{border:0;border-radius:11px;padding:12px 16px;font-weight:800;font-size:15px;cursor:pointer}.start{width:100%;max-width:410px;background:var(--naranja);color:#173125;font-size:17px;padding:14px}.note{font-size:12px;line-height:1.42;color:#6b766f;background:#f4f7f4;border-radius:9px;padding:9px 10px}
+.progress{padding:12px 18px 3px;background:#fff;position:sticky;top:0;z-index:20;border-bottom:1px solid #eef1ef}.track{height:6px;background:#edf1ee;border-radius:999px;overflow:hidden}.bar{height:100%;background:linear-gradient(90deg,var(--verde3),var(--naranja));transition:.2s}.steptext{display:flex;justify-content:space-between;font-size:11px;color:#77817b;margin-top:6px}
+.content{padding:16px 18px 28px}.card{border:1px solid var(--borde);border-radius:14px;padding:15px;margin-bottom:11px;background:#fff;box-shadow:0 3px 12px rgba(0,0,0,.035)}h2{font-size:21px;color:var(--verde);margin:4px 0 5px}.help{font-size:13px;color:var(--gris);line-height:1.42;margin-bottom:14px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.full{grid-column:1/-1}label{display:block;margin:0 0 5px;font-size:11px;font-weight:850;text-transform:uppercase;color:#657068}
+input,select,textarea{width:100%;border:1px solid var(--borde);background:#fafbf9;border-radius:10px;padding:11px 12px;font-size:15px;color:#163426;outline:0}input:focus,select:focus,textarea:focus{border-color:#4f9e72;box-shadow:0 0 0 3px rgba(35,131,76,.08)}.roles{display:grid;gap:9px}.role{border:1px solid var(--borde);border-radius:12px;padding:12px;display:flex;gap:11px;align-items:center;cursor:pointer}.role.sel{border:2px solid var(--verde2);background:#eef8f2}.role b{display:block}.role small{color:var(--gris)}.ricon{font-size:24px;width:35px;text-align:center}
+.docs{display:grid;gap:10px}.doc{border:1px solid var(--borde);border-radius:12px;padding:11px;background:#fbfcfb}.dochead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.optional{font-size:10px;border-radius:999px;background:#edf1ee;color:#6a756e;padding:4px 7px}.doc-actions{display:flex;gap:7px;flex-wrap:wrap}.doc-actions label{margin:0;text-transform:none;font-size:12px;background:#eaf4ed;color:#145d39;border-radius:8px;padding:9px 11px;cursor:pointer}.doc-actions label.gallery{background:#f1f2f1;color:#35483e}.doc-input{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}.docstatus{display:none;margin-top:8px;border-top:1px dashed #dce3de;padding-top:8px;align-items:center;gap:8px}.docstatus.show{display:flex}.thumb{width:48px;height:48px;border-radius:8px;object-fit:cover;background:#edf1ee}.fileok{font-size:12px;line-height:1.3;color:#496056;min-width:0}.fileok b{color:#137242}.filename{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:330px}
+.actions{display:flex;gap:8px;margin-top:15px}.back{flex:1;background:#eef1ef;color:#34483d}.next{flex:2;background:var(--verde2);color:#fff}.submit{width:100%;background:var(--verde2);color:#fff}.hidden{display:none!important}.check{display:flex;gap:9px;align-items:flex-start;font-size:12px;color:#53635a;line-height:1.42}.check input{width:auto;margin-top:3px}.summary{font-size:13px;line-height:1.58}.summary strong{color:var(--verde)}.error{background:#fff0ed;border:1px solid #efc0b8;color:#9d3025;border-radius:9px;padding:9px 10px;font-size:12px;margin-top:10px}.ok{padding:36px 20px 48px;text-align:center}.okicon{width:82px;height:82px;margin:0 auto 17px;border-radius:50%;display:grid;place-items:center;background:#e9f8ef;color:#16814a;font-size:42px;font-weight:900}
+@media(max-width:500px){.grid{grid-template-columns:1fr}.full{grid-column:auto}.master-title{font-size:25px}.master-avatar{width:82px;height:82px}.ranchbar{grid-template-columns:1fr 125px}.ranchname{font-size:17px;padding-left:72px}.crop{font-size:19px}.crest{width:81px;left:12px}}
+
+/* C072 · Base visual alineada a la pantalla aprobada de Cosecha */
+.approved-head{background:#fff}
+.approved-top{
+  min-height:145px;padding:28px 24px 18px;position:relative;color:#fff;
+  background:radial-gradient(circle at 82% 20%,#086034 0,#004425 48%,#002f1a 100%);
+}
+.approved-brand{font-size:31px;font-weight:850;letter-spacing:-.03em;margin-top:8px}
+.approved-brand span{color:#f6a000}
+.approved-person{margin-top:7px;font-size:16px}
+.approved-person b{color:#f6a000}
+.approved-actions{position:absolute;right:20px;top:20px;display:flex;align-items:center;gap:12px}
+.approved-round{
+  width:48px;height:48px;border-radius:50%;display:grid;place-items:center;
+  background:#ce2d2b;color:#fff;font-size:23px;font-weight:900;border:1px solid rgba(255,255,255,.45)
+}
+.approved-avatar{width:92px;height:92px;border-radius:50%;overflow:hidden;border:3px solid rgba(255,255,255,.86)}
+.approved-avatar img{width:100%;height:100%;object-fit:cover}
+.approved-ranchbar{
+  height:72px;background:#f6a000;position:relative;display:grid;
+  grid-template-columns:1fr 165px;align-items:center
+}
+.approved-crest{position:absolute;left:20px;top:-31px;width:102px;height:126px;object-fit:contain;z-index:3}
+.approved-ranchname{
+  font-family:Georgia,"Times New Roman",serif;font-style:italic;text-align:center;
+  font-size:22px;color:#161109;padding-left:94px
+}
+.approved-crop{
+  height:100%;display:grid;place-items:center;background:linear-gradient(110deg,#3d0868,#65088c);
+  color:#fff;font-size:24px;font-weight:800
+}
+.approved-field{height:225px;position:relative;overflow:hidden;background:#e7efe7}
+.approved-field>img{width:100%;height:100%;object-fit:cover;object-position:center 45%}
+.approved-field:after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,rgba(255,255,255,.94) 0%,rgba(255,255,255,.70) 34%,rgba(255,255,255,.05) 60%,rgba(255,255,255,0) 100%)
+}
+.approved-field-copy{
+  position:absolute;left:28px;top:45px;z-index:2;width:48%;display:flex;flex-direction:column;gap:7px
+}
+.approved-field-copy strong{font-size:30px;color:#073a22}
+.approved-field-copy span{font-size:17px;line-height:1.35;color:#263f32}
+
+.welcome{padding-top:22px}
+.doc-actions .camera-btn{
+  margin:0;text-transform:none;font-size:12px;background:#eaf4ed;color:#145d39;
+  border-radius:8px;padding:9px 11px;width:auto
+}
+
+/* Low-memory in-page camera: browser stream is constrained before capture. */
+.camera-modal{
+  position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:9999;
+  display:flex;align-items:center;justify-content:center;padding:16px
+}
+.camera-panel{width:min(520px,96vw);background:#fff;border-radius:16px;overflow:hidden}
+.camera-head{padding:13px 15px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e2e7e3}
+.camera-head strong{color:#063d25}
+.camera-close{background:#eef2ef;color:#2d4638;padding:8px 11px}
+.camera-video-wrap{background:#111;aspect-ratio:3/4;max-height:62vh;display:grid;place-items:center;overflow:hidden}
+.camera-video-wrap video{width:100%;height:100%;object-fit:cover}
+.camera-foot{padding:12px;display:flex;gap:8px}
+.camera-shot{flex:2;background:#f6a000;color:#173125}
+.camera-cancel{flex:1;background:#eef1ef;color:#33483d}
+.camera-error{padding:14px;color:#a53128;font-size:13px;line-height:1.45}
+@media(max-width:500px){
+  .approved-top{min-height:132px;padding:24px 18px 15px}
+  .approved-brand{font-size:26px}
+  .approved-person{font-size:14px;max-width:58%}
+  .approved-actions{right:13px;top:18px;gap:8px}
+  .approved-round{width:42px;height:42px;font-size:20px}
+  .approved-avatar{width:76px;height:76px}
+  .approved-ranchbar{height:64px;grid-template-columns:1fr 126px}
+  .approved-crest{left:12px;top:-27px;width:84px;height:106px}
+  .approved-ranchname{font-size:17px;padding-left:72px}
+  .approved-crop{font-size:19px}
+  .approved-field{height:205px}
+  .approved-field-copy{left:22px;top:39px;width:53%}
+  .approved-field-copy strong{font-size:26px}
+  .approved-field-copy span{font-size:15px}
+}
+
+</style></head><body><div class="app">
+<header class="approved-head">
+  <div class="approved-top">
+    <div class="approved-brand">Mootsil | <span>Registro</span></div>
+    <div class="approved-person"><b>Personal eventual</b> · Registro de ingreso</div>
+    <div class="approved-actions">
+      <div class="approved-round">!</div>
+      <div class="approved-avatar"><img src="mootsilito-cosecha.png" alt="Mootsilito"></div>
+    </div>
+  </div>
+  <div class="approved-ranchbar">
+    <img class="approved-crest" src="escudo-mootsil.png" alt="Mootsil">
+    <div class="approved-ranchname">Rancho Sagrado Corazón</div>
+    <div class="approved-crop">Zarzamora</div>
+  </div>
+  <div class="approved-field">
+    <img src="mootsil-cosecha-campo-aprobado.jpg" alt="Rancho Sagrado Corazón">
+    <div class="approved-field-copy">
+      <strong>¡Bienvenido!</strong>
+      <span>Queremos conocerte para formar parte del equipo Mootsil.</span>
+    </div>
+  </div>
+</header>
+<div id="welcome" class="welcome"><div class="eyebrow">Registro de personal</div><h1>¡Bienvenido a Mootsil!</h1><p>Estamos preparando nuestro equipo de cosecha. Completa tu registro para postularte como <strong>Galerista, Auxiliar de Galera o Cosechador</strong>.</p><button class="start" onclick="startForm()">Iniciar mi registro</button><div class="note" style="margin:15px auto 0;max-width:410px">INE, CURP y comprobante de domicilio son opcionales. Puedes enviar tu registro aunque todavía no tengas esos documentos.</div></div>
+<div id="formapp" class="hidden"><div class="progress"><div class="track"><div class="bar" id="bar"></div></div><div class="steptext"><span id="steplabel"></span><span id="pct"></span></div></div><form id="regform" class="content" onsubmit="return false">
+<section class="step" data-step="1"><div class="card"><div class="eyebrow">Paso 1</div><h2>Datos personales</h2><div class="help">Información básica para identificarte y comunicarnos contigo.</div><div class="grid"><div class="full"><label>Nombre completo *</label><input id="nombre" required></div><div><label>Fecha de nacimiento *</label><input id="nacimiento" type="date" required></div><div><label>Teléfono *</label><input id="telefono" type="tel" required></div><div class="full"><label>Domicilio *</label><input id="direccion" required placeholder="Calle, colonia, municipio"></div></div></div></section>
+<section class="step hidden" data-step="2"><div class="card"><div class="eyebrow">Paso 2</div><h2>Puesto al que te postulas</h2><div class="help">Las postulaciones se registran inicialmente como personal <strong>Eventual</strong>.</div><div class="roles"><div class="role" data-role="Galerista" onclick="pickRole(this)"><div class="ricon">⚖️</div><div><b>Galerista</b><small>Pesaje, control y recepción de cosecha.</small></div></div><div class="role" data-role="Auxiliar Galera" onclick="pickRole(this)"><div class="ricon">📦</div><div><b>Auxiliar de Galera</b><small>Rack, surtido, cajas, trazabilidad y apoyo de galera.</small></div></div><div class="role" data-role="Cosechador" onclick="pickRole(this)"><div class="ricon">🫐</div><div><b>Cosechador</b><small>Cosecha y manejo de fruta en campo.</small></div></div></div><input type="hidden" id="puesto"><div style="margin-top:12px"><label>Fecha disponible para ingreso *</label><input type="date" id="ingreso" required></div></div></section>
+<section class="step hidden" data-step="3"><div class="card"><div class="eyebrow">Paso 3</div><h2>Datos bancarios</h2><div class="grid"><div><label>Banco</label><input id="banco"></div><div><label>Número de tarjeta</label><input id="tarjeta" inputmode="numeric"></div></div></div><div class="card"><h2 style="font-size:18px">Contacto de emergencia</h2><div class="grid"><div class="full"><label>Nombre *</label><input id="em_nombre" required></div><div><label>Parentesco *</label><input id="em_parentesco" required></div><div><label>Teléfono *</label><input id="em_telefono" required></div></div></div><div class="card"><h2 style="font-size:18px">Información básica para emergencias</h2><div class="grid"><div><label>Tipo de sangre</label><input id="sangre"></div><div><label>Alergias / dato relevante</label><input id="salud"></div></div></div></section>
+<section class="step hidden" data-step="4"><div class="card"><div class="eyebrow">Paso 4</div><h2>Documentos</h2><div class="help">Puedes tomar una foto o elegirla de tu galería. Las fotos se optimizan antes de subirlas para evitar archivos demasiado pesados. <strong>Los documentos siguen siendo opcionales.</strong></div><div class="docs">
+<div class="doc"><div class="dochead"><b>INE</b><span class="optional">Opcional</span></div><div class="doc-actions"><button type="button" class="camera-btn" onclick="openCamera(\'ine\')">📷 Tomar foto</button><label class="gallery" for="doc_ine">🖼️ Elegir archivo</label></div><input class="doc-input" id="doc_ine" type="file" accept="image/*,.pdf"><div class="docstatus" id="st_ine"><img class="thumb" id="th_ine"><div class="fileok"><b>✓ Archivo listo</b><div class="filename" id="nm_ine"></div><div id="sz_ine"></div></div></div></div>
+<div class="doc"><div class="dochead"><b>CURP</b><span class="optional">Opcional</span></div><div class="doc-actions"><button type="button" class="camera-btn" onclick="openCamera(\'curp\')">📷 Tomar foto</button><label class="gallery" for="doc_curp">🖼️ Elegir archivo</label></div><input class="doc-input" id="doc_curp" type="file" accept="image/*,.pdf"><div class="docstatus" id="st_curp"><img class="thumb" id="th_curp"><div class="fileok"><b>✓ Archivo listo</b><div class="filename" id="nm_curp"></div><div id="sz_curp"></div></div></div></div>
+<div class="doc"><div class="dochead"><b>Comprobante de domicilio</b><span class="optional">Opcional</span></div><div class="doc-actions"><button type="button" class="camera-btn" onclick="openCamera(\'domicilio\')">📷 Tomar foto</button><label class="gallery" for="doc_domicilio">🖼️ Elegir archivo</label></div><input class="doc-input" id="doc_domicilio" type="file" accept="image/*,.pdf"><div class="docstatus" id="st_domicilio"><img class="thumb" id="th_domicilio"><div class="fileok"><b>✓ Archivo listo</b><div class="filename" id="nm_domicilio"></div><div id="sz_domicilio"></div></div></div></div>
+</div><div class="note" style="margin-top:10px">Si la cámara no permite preparar la foto, puedes continuar sin el documento o elegir una imagen desde la galería.</div></div></section>
+<section class="step hidden" data-step="5"><div class="card"><div class="eyebrow">Paso 5</div><h2>Revisa tu información</h2><div id="summary" class="summary"></div></div><div class="card"><label class="check"><input type="checkbox" id="consent"><span>Confirmo que los datos proporcionados son correctos y autorizo su uso para el proceso de incorporación y conformación de mi expediente en Mootsil.</span></label><div id="senderror"></div></div></section>
+<div class="actions"><button type="button" id="back" class="back hidden" onclick="prevStep()">Anterior</button><button type="button" id="next" class="next" onclick="nextStep()">Continuar</button><button type="button" id="submit" class="submit hidden" onclick="submitForm()">Enviar mi registro</button></div></form></div>
+<div id="success" class="ok hidden"><div class="okicon">✓</div><div class="eyebrow">Registro completado</div><h1>¡Gracias por registrarte!</h1><p>Tu información fue recibida correctamente.</p><p><strong>Administración se pondrá en contacto contigo para dar seguimiento a tu solicitud.</strong></p><p>Gracias por tu interés en formar parte del equipo Mootsil.</p><div id="folio" class="note" style="margin:18px auto 0;max-width:370px"></div></div>
+</div><script>
+const URL_SB="https://ypreafyqnckswvoaerbe.supabase.co"; const KEY_SB="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwcmVhZnlxbmNrc3d2b2FlcmJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NDE0NjAsImV4cCI6MjA5ODQxNzQ2MH0.2Bwg1HdUXKlw9U3a3-3FvpeNV3iKktJchkL6xbD51DU"; let step=1; const selectedFiles={ine:null,curp:null,domicilio:null}, previewUrls={};
+function startForm(){welcome.classList.add('hidden');formapp.classList.remove('hidden');setStep(1)} function setStep(n){step=n;document.querySelectorAll('.step').forEach(x=>x.classList.toggle('hidden',+x.dataset.step!==n));bar.style.width=(n*20)+'%';steplabel.textContent='Paso '+n+' de 5';pct.textContent=(n*20)+'%';back.classList.toggle('hidden',n===1);next.classList.toggle('hidden',n===5);submit.classList.toggle('hidden',n!==5);if(n===5)renderSummary();scrollTo({top:0,behavior:'smooth'})} function pickRole(el){document.querySelectorAll('.role').forEach(x=>x.classList.remove('sel'));el.classList.add('sel');puesto.value=el.dataset.role;saveDraft()}
+function validStep(n){let ok=true;document.querySelector('.step[data-step="'+n+'"]').querySelectorAll('[required]').forEach(el=>{if(!String(el.value||'').trim()){el.style.borderColor='#c93b2f';ok=false}else el.style.borderColor=''});if(n===2&&!puesto.value){alert('Selecciona el puesto al que te postulas.');return false}if(!ok)alert('Completa los campos obligatorios para continuar.');return ok} function nextStep(){if(validStep(step))setStep(Math.min(5,step+1))} function prevStep(){setStep(Math.max(1,step-1))}
+function val(id){return document.getElementById(id).value.trim()} function esc(s){return String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))} function fmtSize(n){return n<1048576?(n/1024).toFixed(0)+' KB':(n/1048576).toFixed(1)+' MB'} function ext(n){let p=n.lastIndexOf('.');return p>=0?n.slice(p):''}
+function renderSummary(){let docs=[];Object.values(selectedFiles).forEach(f=>{if(f)docs.push(f.name)});summary.innerHTML='<strong>'+esc(val('nombre'))+'</strong><br>'+esc(val('puesto'))+' · Eventual<br>Disponible para ingreso: '+esc(val('ingreso'))+'<br>Tel: '+esc(val('telefono'))+'<br>Domicilio: '+esc(val('direccion'))+'<br><br><strong>Contacto de emergencia:</strong> '+esc(val('em_nombre'))+' · '+esc(val('em_parentesco'))+' · '+esc(val('em_telefono'))+'<br><br><strong>Documentos preparados:</strong> '+(docs.length?esc(docs.join(', ')):'Ninguno · puedes enviar así tu registro.')}
+async function compressImage(file){if(!file.type.startsWith('image/'))return file;try{if(!('createImageBitmap'in window))return file;let bmp=await createImageBitmap(file);let max=1600,sc=Math.min(1,max/Math.max(bmp.width,bmp.height)),cw=Math.max(1,Math.round(bmp.width*sc)),ch=Math.max(1,Math.round(bmp.height*sc)),cv=document.createElement('canvas');cv.width=cw;cv.height=ch;cv.getContext('2d',{alpha:false}).drawImage(bmp,0,0,cw,ch);bmp.close&&bmp.close();let blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',.76));cv.width=cv.height=1;return blob?new File([blob],file.name.replace(/\.[^.]+$/,'')+'.jpg',{type:'image/jpeg',lastModified:Date.now()}):file}catch(e){return file}}
+async function handleFile(key,file){if(!file)return;let prepared=await compressImage(file);selectedFiles[key]=prepared;if(previewUrls[key])URL.revokeObjectURL(previewUrls[key]);previewUrls[key]=URL.createObjectURL(prepared);document.getElementById('nm_'+key).textContent=prepared.name;document.getElementById('sz_'+key).textContent=fmtSize(prepared.size)+(prepared!==file?' · foto optimizada':'');let th=document.getElementById('th_'+key);if(prepared.type.startsWith('image/')){th.src=previewUrls[key];th.style.display='block'}else th.style.display='none';document.getElementById('st_'+key).classList.add('show')}
+['ine','curp','domicilio'].forEach(k=>{document.getElementById('doc_'+k).addEventListener('change',e=>handleFile(k,e.target.files[0]))})
+async function restInsert(table,payload){let r=await fetch(URL_SB+'/rest/v1/'+table,{method:'POST',headers:{apikey:KEY_SB,Authorization:'Bearer '+KEY_SB,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(payload)});if(!r.ok){let tx=await r.text();if(tx.includes('PGRST205'))throw new Error('El registro todavía no está habilitado para envío. Administración debe completar la activación del formulario.');throw new Error(tx||('HTTP '+r.status))}}
+async function uploadDoc(appId,tipo,file){let path='postulaciones/'+appId+'/'+tipo.toLowerCase().replace(/[^a-z0-9]+/g,'_')+'_'+Date.now()+ext(file.name);let r=await fetch(URL_SB+'/storage/v1/object/evidencias/'+path,{method:'POST',headers:{apikey:KEY_SB,Authorization:'Bearer '+KEY_SB,'Content-Type':file.type||'application/octet-stream','x-upsert':'false'},body:file});if(!r.ok)throw new Error('No se pudo subir '+tipo);return URL_SB+'/storage/v1/object/public/evidencias/'+path}
+
+let cameraStream=null;
+let cameraTarget=null;
+
+function closeCamera(){
+  if(cameraStream){
+    cameraStream.getTracks().forEach(t=>t.stop());
+    cameraStream=null;
+  }
+  const m=document.getElementById('camera-modal');
+  if(m)m.remove();
+  cameraTarget=null;
+}
+
+async function openCamera(key){
+  cameraTarget=key;
+  const modal=document.createElement('div');
+  modal.id='camera-modal';
+  modal.className='camera-modal';
+  modal.innerHTML='<div class="camera-panel">'+
+    '<div class="camera-head"><strong>Tomar foto</strong><button type="button" class="camera-close" onclick="closeCamera()">✕</button></div>'+
+    '<div id="camera-body"><div class="camera-video-wrap"><video id="camera-video" autoplay playsinline muted></video></div>'+
+    '<div class="camera-foot"><button type="button" class="camera-cancel" onclick="closeCamera()">Cancelar</button><button type="button" class="camera-shot" onclick="captureCamera()">📷 Tomar foto</button></div></div>'+
+    '</div>';
+  document.body.appendChild(modal);
+
+  try{
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      throw new Error('La cámara integrada no está disponible en este navegador.');
+    }
+    // Crucial difference from input capture:
+    // request a modest stream BEFORE taking the image, avoiding 12–48 MP photos in memory.
+    cameraStream=await navigator.mediaDevices.getUserMedia({
+      video:{
+        facingMode:{ideal:'environment'},
+        width:{ideal:1280,max:1280},
+        height:{ideal:960,max:960}
+      },
+      audio:false
+    });
+    document.getElementById('camera-video').srcObject=cameraStream;
+  }catch(e){
+    const body=document.getElementById('camera-body');
+    if(body) body.innerHTML='<div class="camera-error">No fue posible abrir la cámara desde esta pantalla. Puedes usar <strong>Elegir archivo</strong> y seleccionar una foto de tu galería.<br><br>'+esc(e.message)+'</div><div class="camera-foot"><button type="button" class="camera-cancel" onclick="closeCamera()">Cerrar</button></div>';
+  }
+}
+
+async function captureCamera(){
+  const video=document.getElementById('camera-video');
+  if(!video || !cameraStream || !cameraTarget)return;
+  const vw=video.videoWidth||960, vh=video.videoHeight||1280;
+  const max=1280, scale=Math.min(1,max/Math.max(vw,vh));
+  const cw=Math.max(1,Math.round(vw*scale)), ch=Math.max(1,Math.round(vh*scale));
+  const canvas=document.createElement('canvas');
+  canvas.width=cw;canvas.height=ch;
+  const ctx=canvas.getContext('2d',{alpha:false});
+  ctx.drawImage(video,0,0,cw,ch);
+  const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',0.76));
+  canvas.width=1;canvas.height=1;
+  if(!blob){
+    alert('No se pudo preparar la fotografía. Intenta nuevamente o usa la galería.');
+    return;
+  }
+  const file=new File([blob],cameraTarget+'_'+Date.now()+'.jpg',{type:'image/jpeg',lastModified:Date.now()});
+  closeCamera();
+  await handleFile(cameraTarget,file);
+}
+
+async function submitForm(){if(!consent.checked){alert('Confirma la autorización para enviar tu registro.');return}let btn=submit;btn.disabled=true;btn.textContent='Enviando...';senderror.innerHTML='';let id=crypto.randomUUID();let p={id,nombre_completo:val('nombre'),fecha_nacimiento:val('nacimiento'),telefono:val('telefono'),direccion:val('direccion'),puesto:val('puesto'),tipo_colaborador:'Eventual',fecha_disponible_ingreso:val('ingreso')||null,banco:val('banco')||null,numero_tarjeta:val('tarjeta')||null,emergencia_nombre:val('em_nombre'),emergencia_parentesco:val('em_parentesco'),emergencia_telefono:val('em_telefono'),tipo_sangre:val('sangre')||null,salud_emergencia:val('salud')||null,estado:'recibida',consentimiento:true};try{await restInsert('postulaciones_personal',p);for(let [tipo,key] of [['INE','ine'],['CURP','curp'],['Comprobante domicilio','domicilio']]){let f=selectedFiles[key];if(!f)continue;let u=await uploadDoc(id,tipo,f);await restInsert('postulacion_documentos',{postulacion_id:id,tipo,nombre_archivo:f.name,url_documento:u})}formapp.classList.add('hidden');success.classList.remove('hidden');folio.textContent='Folio de registro: '+id.slice(0,8).toUpperCase();localStorage.removeItem('mootsil_prereg_draft')}catch(e){senderror.innerHTML='<div class="error"><strong>No se pudo enviar todavía.</strong><br>'+esc(e.message)+'<br>Tu información permanece guardada en este teléfono.</div>';btn.disabled=false;btn.textContent='Enviar mi registro'}}
+const draftIds=['nombre','nacimiento','telefono','direccion','puesto','ingreso','banco','tarjeta','em_nombre','em_parentesco','em_telefono','sangre','salud'];function saveDraft(){let d={};draftIds.forEach(id=>d[id]=document.getElementById(id)?.value||'');localStorage.setItem('mootsil_prereg_draft',JSON.stringify(d))}document.addEventListener('input',saveDraft);document.addEventListener('change',saveDraft);
+</script></body></html>
