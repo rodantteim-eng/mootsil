@@ -1528,7 +1528,14 @@ function entrarSegunRol(){
   } else {
     document.getElementById('enc-nombre').textContent=usuario.nombre+' · '+usuario.rol;
     mostrar('screen-encargado');
-    if(usuario.rol==='dueño') activarVistaDueno();
+    // C147 — Dueño/Dueña usa la misma envolvente visual que Admin.
+    // Se conservan permisos por rol; solo se elimina el shell alterno de sidebar/topbar.
+    if(usuario.rol==='dueño'){
+      var sc=document.getElementById('screen-encargado');
+      if(sc) sc.classList.remove('dueno-ui');
+      var ds=document.getElementById('dueno-sidebar'); if(ds) ds.remove();
+      var dt=document.getElementById('dueno-topbar'); if(dt) dt.remove();
+    }
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='dueño') document.getElementById('tab-tablero').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='dueño') document.getElementById('tab-asignar').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='dueño') document.getElementById('tab-cosecha').style.display='';
@@ -14691,5 +14698,6 @@ C087
 })();
 </script>
 
+<!-- C147: Dueño/Dueña unificado al shell visual Admin; permisos intactos -->
 </body>
 </html>
