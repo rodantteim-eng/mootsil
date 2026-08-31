@@ -1066,6 +1066,59 @@ function c133AdminRpc(fn, extra){
   return rpc(fn,p);
 }
 
+
+function c135EmpleadoRpc(fn, extra){
+  if(!usuario || !usuario.id) return Promise.reject(new Error('Sesión no disponible.'));
+  if(!pin || String(pin).replace(/\D/g,'').length!==4) return Promise.reject(new Error('Vuelve a iniciar sesión con tu PIN.'));
+  return rpc(fn,Object.assign({p_usuario_id:usuario.id,p_pin:String(pin)},extra||{}));
+}
+function c135WhatsappNumero(tel){
+  var d=String(tel||'').replace(/\D/g,'');
+  if(d.length===10)d='52'+d;
+  return d;
+}
+function c135AbrirWhatsapp(tel,msg){
+  var n=c135WhatsappNumero(tel); if(!n){alert('El candidato no registró un teléfono válido.');return;}
+  window.open('https://wa.me/'+n+'?text='+encodeURIComponent(msg),'_blank','noopener');
+}
+function renderCambioPinInicial(){
+  var body=document.getElementById('op-body');
+  body.innerHTML='<div class="seccion-titulo">🔐 Protege tu acceso</div><div class="form-card" style="max-width:560px;margin:auto"><h3>Primer ingreso a Mootsil</h3><p>El NIP que recibiste por WhatsApp es temporal. Crea ahora tu NIP personal de 4 dígitos.</p><div class="form-group"><label>NIP temporal</label><input type="password" inputmode="numeric" maxlength="4" id="c135-pin-actual"></div><div class="form-group"><label>Nuevo NIP</label><input type="password" inputmode="numeric" maxlength="4" id="c135-pin-nuevo"></div><div class="form-group"><label>Repite el nuevo NIP</label><input type="password" inputmode="numeric" maxlength="4" id="c135-pin-nuevo2"></div><button class="btn-primary" id="c135-pin-ok">Guardar y continuar</button><div id="c135-pin-msg"></div></div>';
+  document.getElementById('c135-pin-ok').onclick=function(){
+    var a=String(document.getElementById('c135-pin-actual').value||'').replace(/\D/g,''),n=String(document.getElementById('c135-pin-nuevo').value||'').replace(/\D/g,''),n2=String(document.getElementById('c135-pin-nuevo2').value||'').replace(/\D/g,'');
+    if(a.length!==4||n.length!==4||n!==n2){document.getElementById('c135-pin-msg').innerHTML='<div class="em69-error">Revisa los NIP. Deben tener 4 dígitos y coincidir.</div>';return;}
+    var b=this;b.disabled=true;b.textContent='Guardando...';
+    rpc('c135_cambiar_pin_inicial',{p_usuario_id:usuario.id,p_pin_actual:a,p_pin_nuevo:n}).then(function(){pin=n;usuario.pinTemporal=false;showToast('✅ NIP personal creado');renderMiIncorporacion();}).catch(function(e){document.getElementById('c135-pin-msg').innerHTML='<div class="em69-error">'+ex54Esc(e.message)+'</div>';b.disabled=false;b.textContent='Guardar y continuar';});
+  };
+}
+function renderMiIncorporacion(){
+  var body=document.getElementById('op-body'); body.innerHTML='<div class="loading">Cargando tu incorporación...</div>';
+  c135EmpleadoRpc('c135_mi_incorporacion').then(function(rows){
+    var x=Array.isArray(rows)?rows[0]:rows;
+    if(!x){entrarSegunRol();return;}
+    var pasos=[['Autorización',true],['Acceso protegido',!!x.pin_cambiado_en],['Pasaje',String(x.pasaje_estado||'').toLowerCase()==='enviado'],['Reglas',!!x.reglas_aceptadas_en],['Llegada',!!x.llegada_en],['Incorporado',!!x.incorporado_en]];
+    var html='<div class="seccion-titulo">🌱 Mi incorporación</div><div class="form-card"><h3>Bienvenido, '+ex54Esc(usuario.nombre)+'</h3><p>Desde aquí puedes dar seguimiento a tu llegada al Rancho Sagrado Corazón.</p><div style="display:grid;gap:8px;margin:14px 0">'+pasos.map(function(a){return '<div style="padding:10px;border:1px solid #dfe8e1;border-radius:10px;background:'+(a[1]?'#eef8f2':'#fff')+'"><strong>'+(a[1]?'✓ ':'○ ')+a[0]+'</strong></div>';}).join('')+'</div>';
+    if(x.pasaje_detalle||x.pasaje_url)html+='<div class="ex55-subcard"><strong>🎫 Pasaje</strong><div>'+ex54Esc(x.pasaje_detalle||'Pasaje enviado')+'</div>'+(x.pasaje_url?'<a href="'+ex54Esc(x.pasaje_url)+'" target="_blank">Ver pasaje</a>':'')+'</div>';
+    if(x.instrucciones_viaje)html+='<div class="ex55-subcard"><strong>🚌 Instrucciones de viaje</strong><div style="white-space:pre-wrap">'+ex54Esc(x.instrucciones_viaje)+'</div></div>';
+    if(x.reglas_texto)html+='<div class="ex55-subcard"><strong>📋 Reglas e indicaciones</strong><div style="white-space:pre-wrap">'+ex54Esc(x.reglas_texto)+'</div>'+(x.reglas_aceptadas_en?'<div style="color:var(--verde-mid);font-weight:700;margin-top:8px">✓ Aceptadas</div>':'<button class="btn-primary" id="c135-aceptar-reglas" style="margin-top:10px">Leí y acepto</button>')+'</div>';
+    if(!x.llegada_en)html+='<button class="btn-primary" id="c135-llegue" style="margin-top:12px">📍 Ya llegué</button>';
+    html+='<button class="btn-back" style="margin-top:12px" onclick="entrarSegunRol()">Ir a mi módulo</button></div>';
+    body.innerHTML=html;
+    var br=document.getElementById('c135-aceptar-reglas');if(br)br.onclick=function(){c135EmpleadoRpc('c135_empleado_actualizar',{p_accion:'aceptar_reglas'}).then(renderMiIncorporacion).catch(function(e){alert(e.message);});};
+    var bl=document.getElementById('c135-llegue');if(bl)bl.onclick=function(){c135EmpleadoRpc('c135_empleado_actualizar',{p_accion:'llegada'}).then(renderMiIncorporacion).catch(function(e){alert(e.message);});};
+  }).catch(function(){entrarSegunRol();});
+}
+function em135Seguimiento(uid,nombre){
+  c133AdminRpc('c135_admin_ver_incorporacion',{p_usuario_id:uid}).then(function(rows){
+    var x=Array.isArray(rows)?rows[0]:rows;if(!x)throw new Error('No existe seguimiento de incorporación.');
+    var bg=document.createElement('div');bg.className='em69-modal-bg';bg.id='em69-modal-bg';
+    bg.innerHTML='<div class="em69-modal" style="max-width:760px"><div class="em69-modal-h"><strong>Incorporación · '+ex54Esc(nombre)+'</strong><button class="em59-back" onclick="em69Close()">✕</button></div><div class="em69-modal-b"><div class="em69-grid"><div class="em69-field"><label>Estado pasaje</label><select id="c135-pasaje-estado"><option value="pendiente">Pendiente</option><option value="enviado">Enviado</option></select></div><div class="em69-field"><label>Enlace / archivo de pasaje</label><input id="c135-pasaje-url" value="'+ex54Esc(x.pasaje_url||'')+'"></div><div class="em69-field full"><label>Detalle del pasaje</label><textarea id="c135-pasaje-detalle">'+ex54Esc(x.pasaje_detalle||'')+'</textarea></div><div class="em69-field full"><label>Instrucciones de viaje</label><textarea id="c135-viaje">'+ex54Esc(x.instrucciones_viaje||'')+'</textarea></div><div class="em69-field full"><label>Reglas e indicaciones</label><textarea id="c135-reglas">'+ex54Esc(x.reglas_texto||'')+'</textarea></div></div><div class="hint" style="margin-top:8px">Primer acceso: '+(x.primer_acceso_en?'✓':'—')+' · NIP cambiado: '+(x.pin_cambiado_en?'✓':'—')+' · Reglas: '+(x.reglas_aceptadas_en?'✓':'—')+' · Llegada: '+(x.llegada_en?'✓':'—')+'</div></div><div class="em69-modal-f"><button class="btn-sm" onclick="em69Close()">Cerrar</button><button class="btn-sm btn-completar" id="c135-seg-guardar">Guardar seguimiento</button><button class="btn-sm btn-completar" id="c135-incorporado">Marcar incorporado</button></div></div>';
+    document.body.appendChild(bg);document.getElementById('c135-pasaje-estado').value=x.pasaje_estado||'pendiente';
+    document.getElementById('c135-seg-guardar').onclick=function(){c133AdminRpc('c135_admin_actualizar_incorporacion',{p_usuario_id:uid,p_pasaje_estado:document.getElementById('c135-pasaje-estado').value,p_pasaje_url:document.getElementById('c135-pasaje-url').value||null,p_pasaje_detalle:document.getElementById('c135-pasaje-detalle').value||null,p_instrucciones_viaje:document.getElementById('c135-viaje').value||null,p_reglas_texto:document.getElementById('c135-reglas').value||null,p_marcar_incorporado:false}).then(function(){showToast('✅ Seguimiento actualizado');em69Close();}).catch(function(e){alert(e.message);});};
+    document.getElementById('c135-incorporado').onclick=function(){if(!confirm('¿Marcar la incorporación como concluida?'))return;c133AdminRpc('c135_admin_actualizar_incorporacion',{p_usuario_id:uid,p_pasaje_estado:x.pasaje_estado||'pendiente',p_pasaje_url:x.pasaje_url||null,p_pasaje_detalle:x.pasaje_detalle||null,p_instrucciones_viaje:x.instrucciones_viaje||null,p_reglas_texto:x.reglas_texto||null,p_marcar_incorporado:true}).then(function(){showToast('✅ Colaborador incorporado');em69Close();}).catch(function(e){alert(e.message);});};
+  }).catch(function(e){alert('No se pudo abrir seguimiento: '+e.message);});
+}
+
 function from(table) {
   var q = {_t:table, _f:[], _s:'*', _o:'', _l:'',
     select:function(s){this._s=s;return this;},
@@ -1336,14 +1389,15 @@ function setErr(m){document.getElementById('pin-error').textContent=m;}
 
 function verificarPin(){
   setErr('Verificando...');
-  rpc('verificar_pin',{p_pin:pin}).then(function(data){
+  rpc('c135_verificar_acceso',{p_pin:pin}).then(function(data){
     if(!data||!data.length){setErr('PIN incorrecto.');pin='';dibujarPin();return;}
-    usuario={id:data[0].usuario_id,nombre:data[0].nombre,rol:data[0].rol};
+    usuario={id:data[0].usuario_id,nombre:data[0].nombre,rol:data[0].rol,pinTemporal:!!data[0].pin_temporal};
     setErr('Cargando...');
     cargarCatalogos().then(function(){
       setErr('');
       try{localStorage.setItem('mootsil_sesion',JSON.stringify({usuario:usuario,cats:cats,ts:Date.now()}));}catch(e){}
-      entrarSegunRol();
+      if(usuario.pinTemporal){mostrar('screen-operario');document.getElementById('op-nombre').innerHTML='<span style="color:var(--amarillo);">'+ex54Esc(usuario.nombre)+'</span><span style="color:var(--blanco);"> · Primer acceso</span>';renderCambioPinInicial();}
+      else entrarSegunRol();
     });
   }).catch(function(e){
     setErr('Sin señal. No se pudo verificar tu PIN.');
@@ -7929,7 +7983,7 @@ function em69RenderSolicitudes(filtro){
         else if(x.origen==='perm') actions='<button class="btn-sm btn-completar" data-pa="'+x.id+'">Aprobar</button><button class="btn-sm btn-cancelar" data-rj="'+x.id+'" data-origen="perm">Rechazar</button>';
         else if(x.tipo==='prestamo') actions='<button class="btn-sm btn-completar" data-la="'+x.id+'">Aprobar</button><button class="btn-sm btn-cancelar" data-rj="'+x.id+'" data-origen="sol">Rechazar</button>';
         else actions='<button class="btn-sm btn-completar" data-sa="'+x.id+'">Atender</button><button class="btn-sm btn-cancelar" data-rj="'+x.id+'" data-origen="sol">Rechazar</button>';
-      }else if(x.origen==='post') actions='<button class="btn-sm" data-pv="'+x.id+'">Ver registro</button>';
+      }else if(x.origen==='post') actions='<button class="btn-sm" data-pv="'+x.id+'">Ver registro</button>'+(x.raw&&x.raw.usuario_id?'<button class="btn-sm btn-completar" data-pseg="'+x.raw.usuario_id+'" data-psegn="'+ex54Esc(x.nombre)+'">Seguimiento</button>':'');
       var meta='';
       if(x.estado!=='pendiente'&&x.origen!=='post') meta='<div class="em69-meta">'+(rechaz?'Rechazó: ':'Autorizó: ')+em69NombreUsuario(x.resolverId,usuarios)+(x.resueltoEn?' · '+new Date(x.resueltoEn).toLocaleString('es-MX'):'')+(x.respuesta?' · '+x.respuesta:'')+'</div>';
       return '<div class="sol58-row '+(x.estado!=='pendiente'?'em69-resolved':'')+'" style="border-left-color:'+color+'"><div class="sol58-main"><div><div class="sol58-type">'+(tipoLbl[x.tipo]||x.tipo)+'</div><div class="sol58-person">'+ex54Esc(x.nombre)+'</div>'+meta+'</div><div class="sol58-detail">'+(x.fecha?String(x.fecha).slice(0,10):'')+'</div><div class="sol58-detail">'+ex54Esc(x.detalle)+'</div><div class="sol58-state" style="color:'+color+'">'+st+'</div><div class="sol58-actions">'+actions+'</div></div></div>';
@@ -7947,6 +8001,7 @@ function em69RenderSolicitudes(filtro){
     body.querySelectorAll('[data-pv]').forEach(function(b){b.onclick=function(){em131VerPostulacion(this.dataset.pv);};});
     body.querySelectorAll('[data-pau]').forEach(function(b){b.onclick=function(){em131AutorizarPostulacion(this.dataset.pau);};});
     body.querySelectorAll('[data-prj]').forEach(function(b){b.onclick=function(){em131RechazarPostulacion(this.dataset.prj);};});
+    body.querySelectorAll('[data-pseg]').forEach(function(b){b.onclick=function(){em135Seguimiento(this.dataset.pseg,this.dataset.psegn);};});
     body.querySelectorAll('[data-la]').forEach(function(b){b.onclick=function(){var id=this.dataset.la,x=items.find(function(y){return String(y.id)===String(id)&&y.origen==='sol';});if(x)em69AprobarPrestamo(x);};});
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
@@ -8008,7 +8063,14 @@ function em131AutorizarPostulacion(id){
       }).then(function(docs){
         (docs||[]).forEach(function(d){ex55SetDoc(uid,d.tipo,{name:d.nombre_archivo||d.tipo,url:d.url_documento||'',date:fechaHoyLocal(),source:'registro_publico'});});
         return cargarCatalogos();
-      }).then(function(){showToast('✅ Incorporación autorizada · expediente creado');em69Close();em69RenderSolicitudes('incorporaciones');}).catch(function(e){document.getElementById('em131-msg').innerHTML='<div class="em69-error">No se pudo completar: '+ex54Esc(e.message)+'</div>';btn.disabled=false;btn.textContent='Crear expediente y autorizar';});
+      }).then(function(){
+        showToast('✅ Incorporación autorizada · expediente creado');
+        var msg='¡Bienvenido a Mootsil! 🌱\n\nTu incorporación al Rancho Sagrado Corazón ha sido autorizada.\n\nPuesto: '+cargoSel+'\nTipo: '+tipo+'\nFecha de ingreso: '+ing+'\n\nAcceso a Mootsil: https://mootsil2.pages.dev/\nNIP temporal: '+nuevoPin+'\n\nAl ingresar por primera vez deberás crear tu NIP personal. Desde Mootsil recibirás pasaje, instrucciones de viaje, reglas e indicaciones para tu incorporación.';
+        em69Close();
+        var wb=document.createElement('div');wb.className='em69-modal-bg';wb.id='em69-modal-bg';wb.innerHTML='<div class="em69-modal" style="max-width:650px"><div class="em69-modal-h"><strong>✓ Incorporación autorizada</strong><button class="em59-back" onclick="em69Close();em69RenderSolicitudes(\'incorporaciones\')">✕</button></div><div class="em69-modal-b"><p>El expediente ya fue creado. Envía ahora la aceptación y acceso temporal al candidato por WhatsApp.</p><div class="ex55-subcard" style="white-space:pre-wrap">'+ex54Esc(msg)+'</div></div><div class="em69-modal-f"><button class="btn-sm" id="c135-copy-wa">Copiar mensaje</button><button class="btn-sm btn-completar" id="c135-open-wa">💬 Abrir WhatsApp</button></div></div>';document.body.appendChild(wb);
+        document.getElementById('c135-copy-wa').onclick=function(){navigator.clipboard&&navigator.clipboard.writeText(msg);showToast('📋 Mensaje copiado');};
+        document.getElementById('c135-open-wa').onclick=function(){c135AbrirWhatsapp(p.telefono,msg);c133AdminRpc('c135_admin_marcar_whatsapp',{p_usuario_id:uid}).catch(function(){});};
+      }).catch(function(e){document.getElementById('em131-msg').innerHTML='<div class="em69-error">No se pudo completar: '+ex54Esc(e.message)+'</div>';btn.disabled=false;btn.textContent='Crear expediente y autorizar';});
     };
   }).catch(function(e){alert('No se pudo abrir la solicitud: '+e.message);});
 }
@@ -10060,7 +10122,7 @@ function renderPerfilOperario(){
     }
     body.innerHTML='<div class="seccion-titulo">Perfil</div>'+
     '<div class="tarea-card"><div class="tarea-title">👤 '+usuario.nombre+'</div><div class="tarea-meta">'+asignacionLbl+antiguedadTxt+cumpleTxt+'</div></div>'+
-    '<div class="tarea-card" style="cursor:pointer;margin-top:.6rem;" onclick="renderCambiarMiPin()"><div class="tarea-title">🔒 Cambiar mi PIN</div><div class="tarea-meta">Actualiza tu código de acceso</div></div>'+
+    '<div class="tarea-card" style="cursor:pointer;margin-top:.6rem;" onclick="renderMiIncorporacion()"><div class="tarea-title">🌱 Mi incorporación</div><div class="tarea-meta">Pasaje, viaje, reglas y llegada</div></div>'+'<div class="tarea-card" style="cursor:pointer;margin-top:.6rem;" onclick="renderCambiarMiPin()"><div class="tarea-title">🔒 Cambiar mi PIN</div><div class="tarea-meta">Actualiza tu código de acceso</div></div>'+
     '<div class="tarea-card" style="cursor:pointer;margin-top:.6rem;" onclick="renderMisHerramientas()"><div class="tarea-title">🔧 Mis herramientas y equipo</div><div class="tarea-meta">Consulta lo que tienes asignado y su historial</div></div>'+
     '<div class="seccion-titulo" style="margin-top:1rem;font-size:.85rem;">📞 Contacto</div>'+
     '<div class="form-card"><label style="display:block;font-size:.75rem;font-weight:600;color:var(--gris-3);margin-bottom:.4rem;text-transform:uppercase;">Mi teléfono</label><input type="tel" id="perf-tel" value="'+(u.telefono||'').replace(/"/g,'&quot;')+'" placeholder="10 dígitos" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;margin-bottom:.75rem;">'+
