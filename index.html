@@ -1016,6 +1016,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 </div>
 <script>
+/* MOOTSIL C132 · Registro personal blindado + flujo administrativo */
 var ca45OtrosInventario=false;
 
 var URL_SB = 'https://ypreafyqnckswvoaerbe.supabase.co';
@@ -1762,7 +1763,7 @@ function renderTablero(){
     from('solicitudes_labor').select('id').eq('estado','pendiente').get(),
     from('solicitudes_operario').select('id').eq('estado','pendiente').get(),
     from('activos_rancho').select('id,nombre,fecha_ultimo_mantenimiento,frecuencia_mantenimiento_dias').eq('activo',true).not('frecuencia_mantenimiento_dias','is','null').get(),
-    from('postulaciones_personal').select('id').eq('estado','recibida').get(),
+    from('postulaciones_personal').select('id').eq('estado','recibida').get().catch(function(e){console.warn('C132 postulaciones no disponibles en tablero:',e.message);return [];}),
     riegoSemanalConteoFaltantes()
   ]).then(function(r){
     var todas=(r[0]||[]).concat(r[1]||[]), formulas=r[2]||[], ordenesConFormula=(r[3]||[]).filter(function(o){return o.estado!=='cancelada';}), permisosPendientes=r[4]||[], solicitudesPendientes=r[5]||[], solicitudesOpPendientes=r[6]||[], activosParaMant=r[7]||[], postulacionesPendientes=r[8]||[], riegoFaltantes=r[9]||0;
@@ -7886,7 +7887,7 @@ function em69RenderSolicitudes(filtro){
     from('solicitudes_operario').select('*,operario:usuarios!operario_id(nombre)').order('creado_en',{ascending:false}).get(),
     from('permisos').select('*,operario:usuarios!usuario_id(nombre)').order('creado_en',{ascending:false}).get(),
     from('usuarios').select('id,nombre').get(),
-    from('postulaciones_personal').select('*').order('fecha_disponible_ingreso',{ascending:false}).get()
+    from('postulaciones_personal').select('*').order('fecha_disponible_ingreso',{ascending:false}).get().catch(function(e){console.warn('C132 postulaciones no disponibles en solicitudes:',e.message);return [];})
   ]).then(function(rr){
     var sols=rr[0]||[],pers=rr[1]||[],usuarios=rr[2]||[],posts=rr[3]||[],items=[];
     sols.forEach(function(s){
@@ -7965,7 +7966,7 @@ function em131VerPostulacion(id){
 function em131RechazarPostulacion(id){
   em69Close();var motivo=prompt('Motivo del rechazo (uso administrativo):','');if(motivo===null)return;
   if(!confirm('¿Rechazar esta solicitud? No se generará expediente ni acceso.'))return;
-  from('postulaciones_personal').eq('id',id).update({estado:'rechazada'}).then(function(){showToast('✅ Solicitud rechazada · no se creó expediente');em69RenderSolicitudes('incorporaciones');}).catch(function(e){alert('No se pudo rechazar: '+e.message);});
+  from('postulaciones_personal').eq('id',id).update({estado:'rechazada',motivo_rechazo:motivo||null,revisado_por:(usuario&&usuario.id)||null,revisado_en:new Date().toISOString()}).then(function(){showToast('✅ Solicitud rechazada · no se creó expediente');em69RenderSolicitudes('incorporaciones');}).catch(function(e){alert('No se pudo rechazar: '+e.message);});
 }
 function em131AutorizarPostulacion(id){
   em69Close();
@@ -7977,7 +7978,7 @@ function em131AutorizarPostulacion(id){
       var btn=this,pin=String(document.getElementById('em131-pin').value||'').replace(/\D/g,''),tipo=document.getElementById('em131-tipo').value,cargoSel=document.getElementById('em131-cargo').value,ing=document.getElementById('em131-ingreso').value||fechaHoyLocal(),sueldo=parseFloat(document.getElementById('em131-sueldo').value)||null,he=parseFloat(document.getElementById('em131-he').value)||0;
       if(pin.length!==4){document.getElementById('em131-msg').innerHTML='<div class="em69-error">El PIN debe tener 4 dígitos.</div>';return;}
       btn.disabled=true;btn.textContent='Creando expediente...';var rol=ex54CargoRol(cargoSel,tipo),uid=null;
-      from('usuarios').insert({nombre:p.nombre_completo,rol:rol,fecha_ingreso:ing,fecha_nacimiento:p.fecha_nacimiento||null,sueldo_base:sueldo,activo:true}).then(function(data){uid=Array.isArray(data)?data[0].id:data.id;ex54Put(uid,{telefono:p.telefono||'',direccion:p.direccion||'',cargo:cargoSel,tipo_colaborador:tipo,tarifa_hora_extra:he,emergencia_nombre:p.emergencia_nombre||'',emergencia_parentesco:p.emergencia_parentesco||'',emergencia_telefono:p.emergencia_telefono||'',tipo_sangre:p.tipo_sangre||'',salud_emergencia:p.salud_emergencia||'',banco:p.banco||'',numero_tarjeta:p.numero_tarjeta||'',postulacion_id:p.id});ex57AddHist(uid,'Alta por registro público','Solicitud '+String(p.id).slice(0,8).toUpperCase(),'Activo');return api('/rest/v1/rpc/set_pin',{method:'POST',body:{p_usuario_id:uid,p_pin:pin}});}).then(function(){return from('postulacion_documentos').select('*').eq('postulacion_id',id).get();}).then(function(docs){(docs||[]).forEach(function(d){ex55SetDoc(uid,d.tipo,{name:d.nombre_archivo||d.tipo,url:d.url_documento||'',date:fechaHoyLocal(),source:'registro_publico'});});return from('postulaciones_personal').eq('id',id).update({estado:'autorizada'});}).then(function(){return cargarCatalogos();}).then(function(){showToast('✅ Incorporación autorizada · expediente creado');em69Close();em69RenderSolicitudes('incorporaciones');}).catch(function(e){document.getElementById('em131-msg').innerHTML='<div class="em69-error">No se pudo completar: '+ex54Esc(e.message)+'</div>';btn.disabled=false;btn.textContent='Crear expediente y autorizar';});
+      from('usuarios').insert({nombre:p.nombre_completo,rol:rol,fecha_ingreso:ing,fecha_nacimiento:p.fecha_nacimiento||null,sueldo_base:sueldo,activo:true}).then(function(data){uid=Array.isArray(data)?data[0].id:data.id;ex54Put(uid,{telefono:p.telefono||'',direccion:p.direccion||'',cargo:cargoSel,tipo_colaborador:tipo,tarifa_hora_extra:he,emergencia_nombre:p.emergencia_nombre||'',emergencia_parentesco:p.emergencia_parentesco||'',emergencia_telefono:p.emergencia_telefono||'',tipo_sangre:p.tipo_sangre||'',salud_emergencia:p.salud_emergencia||'',banco:p.banco||'',numero_tarjeta:p.numero_tarjeta||'',postulacion_id:p.id});ex57AddHist(uid,'Alta por registro público','Solicitud '+String(p.id).slice(0,8).toUpperCase(),'Activo');return api('/rest/v1/rpc/set_pin',{method:'POST',body:{p_usuario_id:uid,p_pin:pin}});}).then(function(){return from('postulacion_documentos').select('*').eq('postulacion_id',id).get();}).then(function(docs){(docs||[]).forEach(function(d){ex55SetDoc(uid,d.tipo,{name:d.nombre_archivo||d.tipo,url:d.url_documento||'',date:fechaHoyLocal(),source:'registro_publico'});});return from('postulaciones_personal').eq('id',id).update({estado:'autorizada',usuario_id:uid,revisado_por:(usuario&&usuario.id)||null,revisado_en:new Date().toISOString()});}).then(function(){return cargarCatalogos();}).then(function(){showToast('✅ Incorporación autorizada · expediente creado');em69Close();em69RenderSolicitudes('incorporaciones');}).catch(function(e){document.getElementById('em131-msg').innerHTML='<div class="em69-error">No se pudo completar: '+ex54Esc(e.message)+'</div>';btn.disabled=false;btn.textContent='Crear expediente y autorizar';});
     };
   }).catch(function(e){alert('No se pudo abrir la solicitud: '+e.message);});
 }
