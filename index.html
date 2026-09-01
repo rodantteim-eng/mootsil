@@ -6236,7 +6236,7 @@ var nuevoProductoHtml=esNuevo?('<div class="form-group" style="margin-bottom:.5r
         var rid=parseInt(this.dataset.delRow,10);filas=filas.filter(function(f){return f.row!==rid;});pintarItemsCompra();
       });
     });
-    cont.querySelectorAll('.nc31-cat-tab').forEach(function(btn){
+    cont.querySelectorAll('.nc31-cat-tab[data-cat]').forEach(function(btn){
       btn.addEventListener('click',function(){
         var rid=parseInt(this.dataset.row,10), val=this.dataset.cat;
         var f=filas.find(function(x){return x.row===rid;});
