@@ -9501,8 +9501,21 @@ function renderCajaMootsil(periodo,fechaBase){
 
     var store=ca21Load();
     /* Los reflejos FIS/FIP locales se excluyen para que la fuente financiera sea Supabase una sola vez. */
-    var locales=store.movimientos.filter(function(m){return m.fecha>=rg.inicio&&m.fecha<=rg.fin&&!String(m.id||'').startsWith('FIS-')&&!String(m.id||'').startsWith('FIP-S-');});
-    var movimientos=externos.concat(locales).sort(function(a,b){return (String(b.fecha)+String(b.hora||'')).localeCompare(String(a.fecha)+String(a.hora||''));});
+    /* C171 · El historial debe mostrar todo movimiento que afecte el saldo de Caja.
+       Para movimientos pagados localmente, la fecha efectiva es fecha_caja; fecha conserva
+       la fecha documental del comprobante/factura y no debe ocultar el pago del historial. */
+    var locales=store.movimientos.filter(function(m){
+      var fechaEfectiva=m.fecha_caja||m.fecha;
+      return fechaEfectiva>=rg.inicio&&fechaEfectiva<=rg.fin&&!String(m.id||'').startsWith('FIS-')&&!String(m.id||'').startsWith('FIP-S-');
+    }).map(function(m){
+      var x=Object.assign({},m);
+      x.fecha_historial=m.fecha_caja||m.fecha;
+      return x;
+    });
+    var movimientos=externos.concat(locales).sort(function(a,b){
+      var fa=a.fecha_historial||a.fecha,fb=b.fecha_historial||b.fecha;
+      return (String(fb)+String(b.hora||'')).localeCompare(String(fa)+String(a.hora||''));
+    });
 
     var apertura=store.aperturas[CAJA_FECHA_BASE]||null;
     var corte=store.cortes[CAJA_FECHA_BASE]||null;
@@ -9581,7 +9594,7 @@ function renderCajaMootsil(periodo,fechaBase){
       var cat=m.categoria||'—';
       var ent=(m.tipo==='entrada'||m.tipo==='transferencia')?'$'+formatMonto(m.monto):'—';
       var sal=(m.tipo==='salida'||m.tipo==='transferencia')?'$'+formatMonto(m.monto):'—';
-      return '<tr><td>'+(m.fecha?cajaFechaCorta(m.fecha):'—')+'</td><td>'+(m.hora||'—')+'</td><td>'+(m.tipo==='entrada'?'⬇️':m.tipo==='salida'?'⬆️':'⇄')+'</td><td><strong>'+m.concepto+'</strong><div class="ca21-mini">'+(m.nota||'')+'</div></td><td><span class="ca17-tag">'+cat+'</span></td><td>'+(m.persona||'—')+'</td><td>'+forma+'</td><td class="ca17-money-in">'+ent+'</td><td class="ca17-money-out">'+sal+'</td><td><span class="ca17-tag '+(m.db?'ca21-source-existing':'ca21-source-test')+'">'+(m.origen||'Caja')+'</span></td><td><span class="ca17-tag">'+(m.estado||'Registrado')+'</span></td><td>'+(m.db?'—':((m.origen==='Gasto operativo'?'<button class="ca21-action-btn" data-ca21-edit-gasto="'+m.id+'">Editar</button> ':'')+'<button class="ca21-action-btn" data-ca21-del="'+m.id+'">Eliminar</button>'))+'</td></tr>';
+      return '<tr><td>'+((m.fecha_historial||m.fecha)?cajaFechaCorta(m.fecha_historial||m.fecha):'—')+'</td><td>'+(m.hora||'—')+'</td><td>'+(m.tipo==='entrada'?'⬇️':m.tipo==='salida'?'⬆️':'⇄')+'</td><td><strong>'+m.concepto+'</strong><div class="ca21-mini">'+(m.nota||'')+'</div></td><td><span class="ca17-tag">'+cat+'</span></td><td>'+(m.persona||'—')+'</td><td>'+forma+'</td><td class="ca17-money-in">'+ent+'</td><td class="ca17-money-out">'+sal+'</td><td><span class="ca17-tag '+(m.db?'ca21-source-existing':'ca21-source-test')+'">'+(m.origen||'Caja')+'</span></td><td><span class="ca17-tag">'+(m.estado||'Registrado')+'</span></td><td>'+(m.db?'—':((m.origen==='Gasto operativo'?'<button class="ca21-action-btn" data-ca21-edit-gasto="'+m.id+'">Editar</button> ':'')+'<button class="ca21-action-btn" data-ca21-del="'+m.id+'">Eliminar</button>'))+'</td></tr>';
     }).join(''):'<tr><td colspan="12" style="text-align:center;color:#77837c;padding:24px">No hay movimientos registrados hasta esta fecha.</td></tr>';
 
     body.innerHTML='<div class="ca17-shell">'+
