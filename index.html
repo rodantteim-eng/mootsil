@@ -5643,29 +5643,108 @@ function renderHistorialCompras105(){
     from('gastos').select('id,compra_id,monto,estado_pago').get()
   ]).then(function(rr){
     var compras=rr[0]||[], gastos=rr[1]||[];
+
     function pagadoCompra(c){
-      var gs=gastos.filter(function(g){return String(g.compra_id||'')===String(c.id);});
-      var p=gs.filter(function(g){return g.estado_pago==='pagado';}).reduce(function(s,g){return s+parseFloat(g.monto||0);},0);
-      return p;
+      return gastos.filter(function(g){return String(g.compra_id||'')===String(c.id)&&g.estado_pago==='pagado';})
+        .reduce(function(s,g){return s+(parseFloat(g.monto)||0);},0);
     }
-    var total=compras.reduce(function(s,c){return s+parseFloat(c.total||0);},0);
-    var pendientes=compras.filter(function(c){return c.estado_pago!=='pagado';}).length;
-    var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📜 Historial de compras<button type="button" onclick="renderComprasMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Compras y Proveedores</button></div>'+
-      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">'+
-        '<div class="form-card" style="margin:0;padding:.8rem;"><div class="hint">COMPRAS</div><strong style="font-size:1.2rem;color:var(--verde);">'+compras.length+'</strong></div>'+
-        '<div class="form-card" style="margin:0;padding:.8rem;"><div class="hint">TOTAL REGISTRADO</div><strong style="font-size:1.2rem;color:var(--verde);">$'+formatMonto(total)+'</strong></div>'+
-        '<div class="form-card" style="margin:0;padding:.8rem;"><div class="hint">PENDIENTES</div><strong style="font-size:1.2rem;color:var(--tierra);">'+pendientes+'</strong></div>'+
+    function estadoCompra(c){
+      if(c.estado_pago==='pagado')return 'pagado';
+      if(String(c.forma_pago||'').toLowerCase()==='credito')return 'credito';
+      return 'pendiente';
+    }
+    function labelEstado(c){
+      var e=estadoCompra(c);
+      return e==='pagado'?'Pagado':e==='credito'?'Crédito / pendiente':'Pendiente';
+    }
+    function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+    function fechaDMY(f){return f?String(f).slice(0,10).split('-').reverse().join('/'):'—';}
+    var proveedores=[].concat.apply([],compras.map(function(c){return c.proveedor&&c.proveedor.nombre?[c.proveedor.nombre]:[];}))
+      .filter(function(x,i,a){return a.indexOf(x)===i;}).sort();
+
+    body.innerHTML=
+      '<div class="hc183-shell">'+
+        '<div class="hc183-head">'+
+          '<div><div class="ad17-eyebrow">Administración · Compras y Proveedores</div><div class="hc183-title">Historial de compras</div><div class="hc183-sub">Consulta, filtra y revisa compras registradas, pagos y pendientes por proveedor.</div></div>'+
+          '<button type="button" class="em59-back" id="hc183-back">← Administración</button>'+
+        '</div>'+
+        '<div class="hc183-kpis">'+
+          '<div class="hc183-kpi"><span>COMPRAS</span><strong id="hc183-k-compras">0</strong></div>'+
+          '<div class="hc183-kpi"><span>TOTAL REGISTRADO</span><strong id="hc183-k-total">$0.00</strong></div>'+
+          '<div class="hc183-kpi"><span>PAGADO</span><strong id="hc183-k-pagado">$0.00</strong></div>'+
+          '<div class="hc183-kpi warning"><span>PENDIENTE</span><strong id="hc183-k-pendiente">$0.00</strong></div>'+
+        '</div>'+
+        '<div class="hc183-filters">'+
+          '<div><label>Desde</label><input id="hc183-desde" type="date"></div>'+
+          '<div><label>Hasta</label><input id="hc183-hasta" type="date"></div>'+
+          '<div><label>Proveedor</label><select id="hc183-proveedor"><option value="">Todos los proveedores</option>'+proveedores.map(function(p){return '<option value="'+esc(p)+'">'+esc(p)+'</option>';}).join('')+'</select></div>'+
+          '<div><label>Estado</label><select id="hc183-estado"><option value="">Todos</option><option value="pagado">Pagado</option><option value="credito">Crédito / pendiente</option><option value="pendiente">Pendiente</option></select></div>'+
+          '<div><label>Forma de pago</label><select id="hc183-forma"><option value="">Todas</option><option value="contado">Contado</option><option value="credito">Crédito</option></select></div>'+
+          '<div class="hc183-search"><label>Buscar</label><input id="hc183-buscar" placeholder="Proveedor, factura..."></div>'+
+          '<button type="button" class="ca21-action-btn" id="hc183-limpiar">Limpiar filtros</button>'+
+        '</div>'+
+        '<div class="hc183-table-wrap"><table class="hc183-table"><thead><tr>'+
+          '<th>Fecha</th><th>Proveedor</th><th>Factura</th><th>Forma</th><th>Total</th><th>Pagado</th><th>Pendiente</th><th>Estado</th>'+
+        '</tr></thead><tbody id="hc183-body"></tbody></table></div>'+
       '</div>';
-    if(!compras.length){
-      html+='<div class="empty">No hay compras registradas.</div>';
-    }else{
-      html+='<div class="form-card" style="padding:0;overflow:auto;"><table style="width:100%;border-collapse:collapse;min-width:850px;"><thead><tr style="background:var(--gris-1);"><th style="text-align:left;padding:.7rem;">FECHA</th><th style="text-align:left;padding:.7rem;">PROVEEDOR</th><th style="text-align:left;padding:.7rem;">FACTURA</th><th style="text-align:left;padding:.7rem;">FORMA</th><th style="text-align:right;padding:.7rem;">TOTAL</th><th style="text-align:right;padding:.7rem;">PAGADO</th><th style="text-align:left;padding:.7rem;">ESTADO</th></tr></thead><tbody>'+
-      compras.map(function(c){
-        var pag=pagadoCompra(c), est=c.estado_pago==='pagado'?'Pagado':(c.forma_pago==='credito'?'Crédito / pendiente':'Pendiente');
-        return '<tr style="border-top:1px solid var(--gris-2);"><td style="padding:.65rem .7rem;">'+(c.fecha||'—')+'</td><td style="padding:.65rem .7rem;font-weight:700;">'+(c.proveedor?c.proveedor.nombre:'Sin proveedor')+'</td><td style="padding:.65rem .7rem;">'+(c.numero_factura||'—')+'</td><td style="padding:.65rem .7rem;">'+(c.forma_pago||'—')+'</td><td style="padding:.65rem .7rem;text-align:right;font-weight:700;">$'+formatMonto(c.total||0)+'</td><td style="padding:.65rem .7rem;text-align:right;">$'+formatMonto(pag)+'</td><td style="padding:.65rem .7rem;">'+est+'</td></tr>';
-      }).join('')+'</tbody></table></div>';
+
+    var els={
+      desde:document.getElementById('hc183-desde'),hasta:document.getElementById('hc183-hasta'),
+      proveedor:document.getElementById('hc183-proveedor'),estado:document.getElementById('hc183-estado'),
+      forma:document.getElementById('hc183-forma'),buscar:document.getElementById('hc183-buscar')
+    };
+
+    function filtradas(){
+      var q=(els.buscar.value||'').trim().toLowerCase();
+      return compras.filter(function(c){
+        var fecha=String(c.fecha||'').slice(0,10), prov=c.proveedor?c.proveedor.nombre:'Sin proveedor';
+        if(els.desde.value&&fecha<els.desde.value)return false;
+        if(els.hasta.value&&fecha>els.hasta.value)return false;
+        if(els.proveedor.value&&prov!==els.proveedor.value)return false;
+        if(els.estado.value&&estadoCompra(c)!==els.estado.value)return false;
+        if(els.forma.value&&String(c.forma_pago||'').toLowerCase()!==els.forma.value)return false;
+        if(q&&([prov,c.numero_factura||'',c.forma_pago||'',labelEstado(c)].join(' ').toLowerCase().indexOf(q)<0))return false;
+        return true;
+      });
     }
-    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderComprasMenu()">← Volver</button>';
+
+    function render(){
+      var rows=filtradas();
+      var total=rows.reduce(function(s,c){return s+(parseFloat(c.total)||0);},0);
+      var pagado=rows.reduce(function(s,c){return s+pagadoCompra(c);},0);
+      var pendiente=Math.max(0,total-pagado);
+      document.getElementById('hc183-k-compras').textContent=rows.length;
+      document.getElementById('hc183-k-total').textContent='$'+formatMonto(total);
+      document.getElementById('hc183-k-pagado').textContent='$'+formatMonto(pagado);
+      document.getElementById('hc183-k-pendiente').textContent='$'+formatMonto(pendiente);
+
+      var tb=document.getElementById('hc183-body');
+      if(!rows.length){
+        tb.innerHTML='<tr><td colspan="8" class="hc183-empty">No hay compras que coincidan con los filtros.</td></tr>';
+        return;
+      }
+      tb.innerHTML=rows.map(function(c){
+        var pag=pagadoCompra(c), tot=parseFloat(c.total)||0, pend=Math.max(0,tot-pag), est=estadoCompra(c);
+        var prov=c.proveedor?c.proveedor.nombre:'Sin proveedor';
+        return '<tr>'+
+          '<td>'+fechaDMY(c.fecha)+'</td>'+
+          '<td><strong>'+esc(prov)+'</strong></td>'+
+          '<td>'+esc(c.numero_factura||'—')+'</td>'+
+          '<td><span class="hc183-tag">'+esc(c.forma_pago||'—')+'</span></td>'+
+          '<td class="num"><strong>$'+formatMonto(tot)+'</strong></td>'+
+          '<td class="num">$'+formatMonto(pag)+'</td>'+
+          '<td class="num '+(pend>0?'pending':'')+'">$'+formatMonto(pend)+'</td>'+
+          '<td><span class="hc183-status '+est+'">'+esc(labelEstado(c))+'</span></td>'+
+        '</tr>';
+      }).join('');
+    }
+
+    Object.keys(els).forEach(function(k){els[k].addEventListener(k==='buscar'?'input':'change',render);});
+    document.getElementById('hc183-limpiar').onclick=function(){
+      Object.keys(els).forEach(function(k){els[k].value='';});render();
+    };
+    document.getElementById('hc183-back').onclick=renderAdministracionMenu;
+    render();
   }).catch(function(e){body.innerHTML='<div class="empty">Error: '+e.message+'</div>';});
 }
 
@@ -15734,5 +15813,30 @@ C087
 .ad17-card:not([data-admin="caja"]):hover{transform:none}
 </style>
 
+<style id="c183-historial-compras">
+.hc183-shell{padding:16px 18px 28px}
+.hc183-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:14px}
+.hc183-title{font-size:1.45rem;font-weight:900;color:#173f30;line-height:1.1}
+.hc183-sub{font-size:.72rem;color:#6f7b74;margin-top:4px}
+.hc183-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.hc183-kpi{background:#fff;border:1px solid #dfe7e2;border-radius:13px;padding:12px 14px;box-shadow:0 4px 14px rgba(20,70,45,.04)}
+.hc183-kpi span{display:block;font-size:.61rem;font-weight:850;color:#78837d;letter-spacing:.04em}
+.hc183-kpi strong{display:block;font-size:1.25rem;color:#15593d;margin-top:3px}
+.hc183-kpi.warning strong{color:#b46a13}
+.hc183-filters{display:grid;grid-template-columns:130px 130px minmax(190px,1fr) 170px 155px minmax(180px,1fr) auto;gap:8px;align-items:end;background:#fff;border:1px solid #dfe7e2;border-radius:13px;padding:10px 12px;margin-bottom:12px}
+.hc183-filters label{display:block;font-size:.58rem;font-weight:850;color:#6f7b74;margin:0 0 4px}
+.hc183-filters input,.hc183-filters select{width:100%;box-sizing:border-box;border:1px solid #d6dfda;border-radius:8px;background:#fff;padding:8px 9px;font-size:.68rem;color:#24362f}
+.hc183-table-wrap{background:#fff;border:1px solid #dfe7e2;border-radius:13px;overflow:auto;box-shadow:0 4px 14px rgba(20,70,45,.04)}
+.hc183-table{width:100%;border-collapse:collapse;min-width:960px;font-size:.69rem}
+.hc183-table th{background:#155b40;color:#fff;text-align:left;padding:9px 10px;font-size:.59rem;text-transform:uppercase;letter-spacing:.03em}
+.hc183-table td{padding:9px 10px;border-bottom:1px solid #e8eeea;color:#28362f}
+.hc183-table tr:last-child td{border-bottom:none}
+.hc183-table td.num{text-align:right;white-space:nowrap}.hc183-table td.pending{color:#b55422;font-weight:800}
+.hc183-tag,.hc183-status{display:inline-block;border-radius:999px;padding:4px 8px;font-size:.59rem;font-weight:800;background:#eef4f0;color:#35614e}
+.hc183-status.pagado{background:#e7f4ec;color:#267247}.hc183-status.credito,.hc183-status.pendiente{background:#fff1df;color:#9b5a12}
+.hc183-empty{text-align:center!important;color:#7a857f!important;padding:28px!important}
+@media(max-width:1100px){.hc183-filters{grid-template-columns:repeat(3,1fr)}.hc183-kpis{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.hc183-shell{padding:12px}.hc183-head{flex-direction:column}.hc183-filters{grid-template-columns:1fr}.hc183-kpis{grid-template-columns:1fr 1fr}}
+</style>
 </body>
 </html>
