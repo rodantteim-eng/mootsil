@@ -9483,16 +9483,20 @@ function renderCajaMootsil(periodo,fechaBase){
       if(c==='efectivo')return 'efectivo';
       return 'banamex_pesos';
     }
+    var c173StorePre=ca21Load();
+    var c173PrevDatePre=(function(){var d=new Date(CAJA_FECHA_BASE+'T12:00:00');d.setDate(d.getDate()-1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
+    var c173PrevCutPre=c173StorePre.cortes[c173PrevDatePre]||null;
+    var c173HasContinuityPre=!!(c173StorePre.aperturas[CAJA_FECHA_BASE]||c173PrevCutPre);
     var finById={};
     financiamientosDb.forEach(function(f){
       finById[String(f.id)]=f;
-      if(f.fecha_inicio&&f.fecha_inicio<=CAJA_FECHA_BASE){
+      if(f.fecha_inicio&&f.fecha_inicio<=CAJA_FECHA_BASE&&(!c173HasContinuityPre||f.fecha_inicio>=CAJA_FECHA_BASE)){
         var cuenta=ca167FinCuenta(f.cuenta_ingreso);
         externos.push({id:'db-fin-'+f.id,fecha:f.fecha_inicio,hora:'—',tipo:'entrada',cuenta:cuenta,categoria:'Financiamientos',concepto:'Disposición de financiamiento',persona:f.institucion||'Financiamiento',monto:cajaMonto(f.monto_original),forma:ca35CuentaLabel(cuenta),origen:'Financiamientos',estado:'Registrado',db:true});
       }
     });
     finMovsDb.forEach(function(m){
-      if(m.fecha&&m.fecha<=CAJA_FECHA_BASE){
+      if(m.fecha&&m.fecha<=CAJA_FECHA_BASE&&(!c173HasContinuityPre||m.fecha>=CAJA_FECHA_BASE)){
         var f=finById[String(m.financiamiento_id)],cuenta=ca167FinCuenta(m.cuenta);
         var total=m.tipo==='mixto'?cajaMonto(Number(m.capital||0)+Number(m.interes||0)):cajaMonto(m.monto);
         externos.push({id:'db-finp-'+m.id,fecha:m.fecha,hora:'—',tipo:'salida',cuenta:cuenta,categoria:'Financiamientos',concepto:m.tipo==='capital'?'Abono a capital':m.tipo==='interes'?'Pago de intereses':'Pago mixto capital + intereses',persona:f&&f.institucion?f.institucion:'Financiamiento',monto:total,forma:ca35CuentaLabel(cuenta),origen:'Financiamientos',estado:'Registrado',db:true});
@@ -9519,15 +9523,20 @@ function renderCajaMootsil(periodo,fechaBase){
 
     var apertura=store.aperturas[CAJA_FECHA_BASE]||null;
     var corte=store.cortes[CAJA_FECHA_BASE]||null;
+    /* C173 · Si existe corte del día anterior, ese corte es la continuidad contable.
+       Todo financiamiento/gasto previo ya está absorbido en ese saldo y NO se vuelve a sumar. */
+    var c173PrevDate=(function(){var d=new Date(CAJA_FECHA_BASE+'T12:00:00');d.setDate(d.getDate()-1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
+    var c173PrevCut=store.cortes[c173PrevDate]||null;
+    var c173HasContinuity=!!(apertura||c173PrevCut);
 
     // Daily test balances are based on local opening + local manual cash flows.
     // Existing DB records are displayed as historical/consolidated movements but are not double-counted
     // into the test opening/closing cash balance until migration rules are approved.
     var localDay=store.movimientos.filter(function(m){return (m.fecha_caja||m.fecha)===CAJA_FECHA_BASE&&!String(m.id||'').startsWith('FIS-')&&!String(m.id||'').startsWith('FIP-S-');});
-    var saldoInicialEf=apertura?ca21Money(apertura.efectivo):0;
-    var saldoInicialBp=apertura?ca21Money(apertura.banamex_pesos!=null?apertura.banamex_pesos:(apertura.banamex!=null?apertura.banamex:(apertura.bancos||0))):0;
-    var saldoInicialBd=apertura?ca21Money(apertura.banamex_dolares||0):0;
-    var saldoInicialSp=apertura?ca21Money(apertura.santander_pesos!=null?apertura.santander_pesos:(apertura.santander||0)):0;
+    var saldoInicialEf=apertura?ca21Money(apertura.efectivo):(c173PrevCut?ca21Money(c173PrevCut.efectivo_contado||0):0);
+    var saldoInicialBp=apertura?ca21Money(apertura.banamex_pesos!=null?apertura.banamex_pesos:(apertura.banamex!=null?apertura.banamex:(apertura.bancos||0))):(c173PrevCut?ca21Money(c173PrevCut.banamex_pesos_cierre!=null?c173PrevCut.banamex_pesos_cierre:(c173PrevCut.banamex_cierre||0)):0);
+    var saldoInicialBd=apertura?ca21Money(apertura.banamex_dolares||0):(c173PrevCut?ca21Money(c173PrevCut.banamex_dolares_cierre||0):0);
+    var saldoInicialSp=apertura?ca21Money(apertura.santander_pesos!=null?apertura.santander_pesos:(apertura.santander||0)):(c173PrevCut?ca21Money(c173PrevCut.santander_pesos_cierre!=null?c173PrevCut.santander_pesos_cierre:(c173PrevCut.santander_cierre||0)):0);
     var ef=saldoInicialEf,bp=saldoInicialBp,bd=saldoInicialBd,sp=saldoInicialSp;
     localDay.forEach(function(m){
       ef+=ca21AccountDelta(m,'efectivo');
@@ -9537,10 +9546,16 @@ function renderCajaMootsil(periodo,fechaBase){
     });
     /* C167: saldo acumulado por cuenta = apertura + movimientos locales + financiamientos reales hasta la fecha. */
     financiamientosDb.forEach(function(f){
+      /* Con continuidad, sólo una disposición NUEVA del día actual o posterior a la apertura afecta el saldo. */
+      if(c173HasContinuity && (!f.fecha_inicio || f.fecha_inicio<CAJA_FECHA_BASE))return;
+      if(f.fecha_inicio&&f.fecha_inicio>CAJA_FECHA_BASE)return;
       var cuenta=ca167FinCuenta(f.cuenta_ingreso),monto=ca21Money(f.monto_original);
       if(cuenta==='efectivo')ef+=monto;else if(cuenta==='banamex_dolares')bd+=monto;else if(cuenta==='santander_pesos')sp+=monto;else bp+=monto;
     });
     finMovsDb.forEach(function(m){
+      /* Los pagos anteriores al nuevo día ya están contenidos en el cierre previo. */
+      if(c173HasContinuity && (!m.fecha || m.fecha<CAJA_FECHA_BASE))return;
+      if(m.fecha&&m.fecha>CAJA_FECHA_BASE)return;
       var cuenta=ca167FinCuenta(m.cuenta),monto=m.tipo==='mixto'?ca21Money(Number(m.capital||0)+Number(m.interes||0)):ca21Money(m.monto);
       if(cuenta==='efectivo')ef-=monto;else if(cuenta==='banamex_dolares')bd-=monto;else if(cuenta==='santander_pesos')sp-=monto;else bp-=monto;
     });
@@ -15433,5 +15448,7 @@ C087
 })();
 </script>
 
+
+<script id="c173-continuidad-caja"><!-- C173: corte anterior manda; no reconstruir saldos con financiamientos históricos --></script>
 </body>
 </html>
