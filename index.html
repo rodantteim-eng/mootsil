@@ -15450,5 +15450,135 @@ C087
 
 
 <script id="c173-continuidad-caja"><!-- C173: corte anterior manda; no reconstruir saldos con financiamientos históricos --></script>
+
+<script id="c174-imprimir-cierre-historial">
+/* C174 · Impresión de corte e historial de Caja. Sólo lectura; no altera saldos ni movimientos. */
+(function(){
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function money(v,prefix){var n=Number(v||0);return (prefix||'$')+n.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});}
+  function effectiveDate(m){return m.fecha_caja||m.fecha_historial||m.fecha||'';}
+  function accountLabel(x){try{return ca35CuentaLabel(x)||x||'—';}catch(e){return x||'—';}}
+  function dayInfo(fecha){
+    var d=ca21Load(), ap=d.aperturas&&d.aperturas[fecha], cut=d.cortes&&d.cortes[fecha];
+    var mov=(d.movimientos||[]).filter(function(m){return effectiveDate(m)===fecha;});
+    return {d:d,ap:ap,cut:cut,mov:mov};
+  }
+  function openPrint(title,html){
+    var w=window.open('','_blank','width=1050,height=800');
+    if(!w){alert('El navegador bloqueó la ventana de impresión. Permite ventanas emergentes para Mootsil.');return;}
+    w.document.open();
+    w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+esc(title)+'</title><style>'+
+      '@page{size:letter;margin:12mm}body{font-family:Arial,sans-serif;color:#173b2e;font-size:11px}h1{font-size:22px;margin:0}h2{font-size:15px;margin:18px 0 7px}.head{border-bottom:3px solid #17633f;padding-bottom:10px;margin-bottom:12px}.muted{color:#66756e}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.card{border:1px solid #cfd9d4;border-radius:8px;padding:9px}.card b{display:block;margin-bottom:4px}table{width:100%;border-collapse:collapse;margin-top:8px}th{background:#14583d;color:#fff;text-align:left;padding:6px;font-size:9px}td{border-bottom:1px solid #dde4e0;padding:6px;vertical-align:top}.num{text-align:right;white-space:nowrap}.foot{margin-top:18px;border-top:1px solid #ccd6d1;padding-top:8px;font-size:9px;color:#66756e}@media print{button{display:none}}'+
+      '</style></head><body>'+html+'<script>window.onload=function(){setTimeout(function(){window.print()},200)}<\/script></body></html>');
+    w.document.close();
+  }
+  function header(fecha,cut){
+    return '<div class="head"><h1>Mootsil · Cierre de Caja</h1><div class="muted">Rancho Sagrado Corazón · '+esc(fecha)+'</div>'+
+      '<div class="muted">Cerrado por: '+esc((cut&&cut.usuario)||'—')+' · Hora: '+esc((cut&&cut.hora)||'—')+'</div></div>';
+  }
+  window.ca174ImprimirCierre=function(fecha,detalle){
+    var x=dayInfo(fecha), cut=x.cut;
+    if(!cut){alert('No existe un cierre confirmado para '+fecha+'.');return;}
+    var ap=x.ap||{};
+    var html=header(fecha,cut)+
+      '<h2>Resumen del cierre</h2><div class="grid">'+
+      '<div class="card"><b>Efectivo</b>Inicial '+money(ap.efectivo)+'<br>Cierre '+money(cut.efectivo_contado)+'</div>'+
+      '<div class="card"><b>Banamex Pesos</b>Inicial '+money(ap.banamex_pesos!=null?ap.banamex_pesos:(ap.banamex||0))+'<br>Cierre '+money(cut.banamex_pesos_cierre)+'</div>'+
+      '<div class="card"><b>Banamex Dólares</b>Inicial '+money(ap.banamex_dolares,'US$ ')+'<br>Cierre '+money(cut.banamex_dolares_cierre,'US$ ')+'</div>'+
+      '<div class="card"><b>Santander Pesos</b>Inicial '+money(ap.santander_pesos!=null?ap.santander_pesos:(ap.santander||0))+'<br>Cierre '+money(cut.santander_pesos_cierre)+'</div></div>'+
+      '<p><b>Diferencia de efectivo:</b> '+money(cut.diferencia)+' &nbsp; <b>Observación:</b> '+esc(cut.nota||'Sin observaciones')+'</p>';
+    if(detalle){
+      var rows=x.mov.slice().sort(function(a,b){return String(a.hora||'').localeCompare(String(b.hora||''));}).map(function(m){
+        var forma=m.tipo==='transferencia'?(accountLabel(m.cuenta_origen)+' → '+accountLabel(m.cuenta_destino)):(m.forma||accountLabel(m.cuenta));
+        var ent=(m.tipo==='entrada'||m.tipo==='transferencia')?money(m.monto):'—';
+        var sal=(m.tipo==='salida'||m.tipo==='transferencia')?money(m.monto):'—';
+        return '<tr><td>'+esc(m.hora||'—')+'</td><td>'+esc(m.concepto||'—')+'</td><td>'+esc(m.categoria||'—')+'</td><td>'+esc(m.persona||'—')+'</td><td>'+esc(forma)+'</td><td class="num">'+ent+'</td><td class="num">'+sal+'</td><td>'+esc(m.origen||'Caja')+'</td></tr>';
+      }).join('');
+      html+='<h2>Historial que integra el cierre</h2><table><thead><tr><th>Hora</th><th>Concepto</th><th>Categoría</th><th>Beneficiario / Proveedor</th><th>Cuenta</th><th>Entrada</th><th>Salida</th><th>Origen</th></tr></thead><tbody>'+(rows||'<tr><td colspan="8">Sin movimientos del día.</td></tr>')+'</tbody></table>';
+    }
+    html+='<div class="foot">Documento generado desde Mootsil · Caja compartida. El documento refleja el corte y los movimientos registrados para la fecha indicada.</div>';
+    openPrint(detalle?'Historial cierre '+fecha:'Cierre de Caja '+fecha,html);
+  };
+
+  function addButtons(){
+    try{
+      var fecha=window.CAJA_FECHA_BASE, d=ca21Load(), cut=d.cortes&&d.cortes[fecha];
+      if(!cut||document.getElementById('ca174-print-close'))return;
+      var dateRow=document.querySelector('.ca17-date');
+      if(!dateRow)return;
+      var b1=document.createElement('button');b1.className='ca21-action-btn';b1.id='ca174-print-close';b1.textContent='Imprimir cierre';b1.onclick=function(){ca174ImprimirCierre(fecha,false);};
+      var b2=document.createElement('button');b2.className='ca21-action-btn';b2.id='ca174-print-history';b2.textContent='Imprimir historial';b2.onclick=function(){ca174ImprimirCierre(fecha,true);};
+      dateRow.appendChild(b1);dateRow.appendChild(b2);
+    }catch(e){console.warn('C174 impresión',e);}
+  }
+  var old=window.renderCajaMootsil;
+  if(typeof old==='function'){
+    window.renderCajaMootsil=function(){var r=old.apply(this,arguments);Promise.resolve(r).then(function(){setTimeout(addButtons,0);});return r;};
+  }
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(addButtons,500);});
+})();
+</script>
+
+
+<script id="c175-historial-fecha-independiente">
+/* C175 · La fecha inferior es sólo filtro de historial. Nunca cambia la fecha operativa ni recalcula Caja. */
+(function(){
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function money(v){return '$'+Number(v||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});}
+  function label(x){try{return ca35CuentaLabel(x)||x||'—';}catch(e){return x||'—';}}
+  function finData(){
+    var fs=[],ms=[];
+    try{fs=JSON.parse(localStorage.getItem('mootsil_financiamientos_128')||'[]')||[];}catch(e){}
+    try{ms=JSON.parse(localStorage.getItem('mootsil_financiamiento_movimientos_128')||'[]')||[];}catch(e){}
+    return {fs:fs,ms:ms};
+  }
+  function row(m){
+    var forma=m.tipo==='transferencia'?(label(m.cuenta_origen)+' → '+label(m.cuenta_destino)):(m.forma||label(m.cuenta));
+    var ent=(m.tipo==='entrada'||m.tipo==='transferencia')?money(m.monto):'—';
+    var sal=(m.tipo==='salida'||m.tipo==='transferencia')?money(m.monto):'—';
+    var actions=m.db?'—':((m.origen==='Gasto operativo'?'<button class="ca21-action-btn" data-ca21-edit-gasto="'+esc(m.id)+'">Editar</button> ':'')+'<button class="ca21-action-btn" data-ca21-del="'+esc(m.id)+'">Eliminar</button>');
+    return '<tr><td>'+esc(m.fecha_historial||m.fecha||'—')+'</td><td>'+esc(m.hora||'—')+'</td><td>'+(m.tipo==='entrada'?'⬇️':m.tipo==='salida'?'⬆️':'⇄')+'</td><td><strong>'+esc(m.concepto||'—')+'</strong><div class="ca21-mini">'+esc(m.nota||'')+'</div></td><td><span class="ca17-tag">'+esc(m.categoria||'—')+'</span></td><td>'+esc(m.persona||'—')+'</td><td>'+esc(forma)+'</td><td class="ca17-money-in">'+ent+'</td><td class="ca17-money-out">'+sal+'</td><td><span class="ca17-tag">'+esc(m.origen||'Caja')+'</span></td><td><span class="ca17-tag">'+esc(m.estado||'Registrado')+'</span></td><td>'+actions+'</td></tr>';
+  }
+  function historyFor(fecha){
+    var d=ca21Load(), out=[];
+    (d.movimientos||[]).forEach(function(m){
+      if(String(m.id||'').indexOf('FIS-')===0||String(m.id||'').indexOf('FIP-S-')===0)return;
+      var f=m.fecha_caja||m.fecha;
+      if(f===fecha){var x=Object.assign({},m);x.fecha_historial=f;out.push(x);}
+    });
+    var fd=finData();
+    (fd.fs||[]).forEach(function(f){
+      if(f.fecha_inicio===fecha)out.push({id:'DB-F-'+f.id,fecha_historial:fecha,hora:'—',tipo:'entrada',cuenta:f.cuenta_ingreso,monto:Number(f.monto_original||0),categoria:'Financiamientos',concepto:'Disposición de financiamiento',persona:f.institucion||'Financiamiento',origen:'Financiamientos',estado:'Registrado',db:true});
+    });
+    (fd.ms||[]).forEach(function(m){
+      if(m.fecha===fecha){
+        var f=(fd.fs||[]).find(function(x){return String(x.id)===String(m.financiamiento_id);});
+        var total=m.tipo==='mixto'?Number(m.capital||0)+Number(m.interes||0):Number(m.monto||0);
+        out.push({id:'DB-FM-'+m.id,fecha_historial:fecha,hora:'—',tipo:'salida',cuenta:m.cuenta,monto:total,categoria:'Financiamientos',concepto:m.tipo==='capital'?'Abono a capital':m.tipo==='interes'?'Pago de intereses':'Pago mixto capital + intereses',persona:f?f.institucion:'Financiamiento',origen:'Financiamientos',estado:'Registrado',db:true});
+      }
+    });
+    return out.sort(function(a,b){return String(b.hora||'').localeCompare(String(a.hora||''));});
+  }
+  function renderHistoryOnly(fecha){
+    var tb=document.querySelector('.ca17-table tbody')||document.querySelector('table tbody');
+    if(!tb)return;
+    var data=historyFor(fecha);
+    tb.innerHTML=data.length?data.map(row).join(''):'<tr><td colspan="12" style="text-align:center;color:#77837c;padding:24px">No hay movimientos registrados en esta fecha.</td></tr>';
+    tb.querySelectorAll('[data-ca21-edit-gasto]').forEach(function(b){b.addEventListener('click',function(){if(typeof ga152EditarGasto==='function')ga152EditarGasto(this.dataset.ca21EditGasto);});});
+    tb.querySelectorAll('[data-ca21-del]').forEach(function(b){b.addEventListener('click',function(){if(typeof ca21DeleteMovimiento==='function')ca21DeleteMovimiento(this.dataset.ca21Del,fecha);});});
+  }
+  function bind(){
+    var input=document.getElementById('ca21-fecha');
+    if(!input||input.dataset.c175Bound)return;
+    input.dataset.c175Bound='1';
+    input.addEventListener('change',function(e){e.stopImmediatePropagation();e.preventDefault();renderHistoryOnly(this.value);},true);
+  }
+  var old=window.renderCajaMootsil;
+  if(typeof old==='function'){
+    window.renderCajaMootsil=function(){var r=old.apply(this,arguments);Promise.resolve(r).then(function(){setTimeout(bind,0);});return r;};
+  }
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(bind,500);});
+})();
+</script>
 </body>
 </html>
