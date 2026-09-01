@@ -8000,7 +8000,7 @@ function em69RenderAsistencia(fecha){
       }
       var he=heDia(u.id,f);
       base+=he>0?'<span class="as59-he">H.E. '+he.toFixed(1)+' h</span>':'<span class="as60-he0">H.E. 0.0 h</span>';
-      return '<div class="em69-day" data-uid="'+u.id+'" data-fecha="'+f+'">'+base+'</div>';
+      return '<div class="em69-day" data-uid="'+u.id+'" data-fecha="'+f+'" title="Editar asistencia de este día">'+base+'<span style="display:block;margin-top:4px;font-size:.56rem;font-weight:800;color:#1f6b4f;opacity:.78">✎ Editar</span></div>';
     }
     var dn=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
     var html='<div class="as58-head"><div><div class="as58-title">📋 Asistencia · Semana '+num+'</div><div class="as58-sub">'+inicio+' — '+fin+' · Sólo colaboradores activos</div></div><button class="em59-back" onclick="renderAdministracionMenu()">← Empleados</button></div>';
@@ -8074,9 +8074,27 @@ function em69EditarDia(ctx){
     '<div class="em69-field"><label>Hora de entrada</label><input id="em69-in" type="time" value="'+entrada+'"></div>'+
     '<div class="em69-field"><label>Hora de salida</label><input id="em69-out" type="time" value="'+salida+'"></div>'+
   '</div><div id="em69-msg"></div></div>'+
-  '<div class="em69-modal-f"><button class="btn-sm" onclick="em69Close()">Cancelar</button><button class="btn-sm btn-completar" id="em69-save">Guardar cambio</button></div></div>';
+  '<div class="em69-modal-f"><button class="btn-sm" id="em69-delete" style="margin-right:auto;border-color:#b42318;color:#b42318;background:#fff">🗑 Eliminar registro</button><button class="btn-sm" onclick="em69Close()">Cancelar</button><button class="btn-sm btn-completar" id="em69-save">Guardar cambio</button></div></div>';
   document.body.appendChild(bg);
   document.getElementById('em69-estado').value=estado;
+
+  document.getElementById('em69-delete').onclick=function(){
+    var btn=this;
+    if(!confirm('¿Eliminar la asistencia de '+u.nombre+' del '+f+'?\n\nSe eliminarán únicamente las marcaciones de entrada/salida y el ajuste de H.E. de ese día.'))return;
+    btn.disabled=true;btn.textContent='Eliminando...';
+    var ops=[];
+    if(r.entradaRow&&r.entradaRow.id)ops.push(from('asistencia_registros').eq('id',r.entradaRow.id).delete());
+    if(r.salidaRow&&r.salidaRow.id)ops.push(from('asistencia_registros').eq('id',r.salidaRow.id).delete());
+    hrs.forEach(function(h){if(h&&h.id)ops.push(from('horas_extra_asignadas').eq('id',h.id).update({horas_max:0}));});
+    Promise.all(ops).then(function(){
+      if(typeof as66Set==='function')return Promise.resolve(as66Set(u.id,f,null));
+    }).then(function(){
+      return from('asistencia_registros').select('id').eq('usuario_id',u.id).eq('fecha',f).eq('modalidad','labores').get();
+    }).then(function(rows){
+      if((rows||[]).length)throw new Error('La base todavía conserva marcaciones de ese día.');
+      showToast('🗑 Asistencia eliminada');em69Close();em69RenderAsistencia(f);
+    }).catch(function(e){var msg=document.getElementById('em69-msg');if(msg)msg.innerHTML='<div class="em69-error">No se pudo eliminar: '+e.message+'</div>';btn.disabled=false;btn.textContent='🗑 Eliminar registro';});
+  };
 
   document.getElementById('em69-save').onclick=function(){
     var btn=this,est=document.getElementById('em69-estado').value,
@@ -14628,6 +14646,11 @@ C087
     }).catch(e=>{console.error('C151 persistencia',e);alert('No se pudo guardar en la base compartida: '+e.message);throw e;});
    }catch(e){return Promise.reject(e)}
  };
+ const updateRow=(table,id,row)=>{
+   return api('/rest/v1/'+table+'?id=eq.'+encodeURIComponent(id),{method:'PATCH',body:row,prefer:'return=representation'}).then(function(res){
+     return Array.isArray(res)?res[0]:res;
+   }).catch(e=>{console.error('C157 actualización',e);alert('No se pudo actualizar en la base compartida: '+e.message);throw e;});
+ };
  const parseMoney=v=>Number(String(v??'').replace(/[^0-9.-]/g,''))||0;
  const bindMoney=(root)=>root.querySelectorAll('input[data-money]').forEach(inp=>{
    const fmt=()=>{let n=parseMoney(inp.value);inp.value=n?('$'+n.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2})):''};
@@ -14641,8 +14664,8 @@ C087
  }
  function fi150SyncCaja(){
    try{if(typeof ca21Load!=='function'||typeof ca21Save!=='function')return;let c=ca21Load();c.movimientos=c.movimientos||[];let ids=new Set(c.movimientos.map(x=>x.id));
-    financs().forEach(f=>{let mid='FIS-'+f.id;if(!ids.has(mid)){c.movimientos.push({id:mid,fecha:f.fecha_inicio,hora:'00:00',tipo:'entrada',cuenta:f.cuenta_ingreso,monto:Number(f.monto_original||0),categoria:'Financiamientos',concepto:'Disposición de financiamiento',persona:f.institucion,nota:f.folio||'',origen:'Financiamientos',estado:'Registrado',financiamiento_id:f.id});ids.add(mid)}});
-    movs().forEach(m=>{let mid='FIP-S-'+m.id;if(!ids.has(mid)){let f=financs().find(x=>x.id===m.financiamiento_id),total=m.tipo==='mixto'?Number(m.capital||0)+Number(m.interes||0):Number(m.monto||0);c.movimientos.push({id:mid,fecha:m.fecha,hora:'00:00',tipo:'salida',cuenta:m.cuenta,monto:total,categoria:'Financiamientos',concepto:m.tipo==='capital'?'Abono a capital':m.tipo==='interes'?'Pago de intereses':'Pago mixto capital + intereses',persona:f?f.institucion:'Financiamiento',nota:m.referencia||(f&&f.folio)||'',origen:'Financiamientos',estado:'Registrado',financiamiento_id:m.financiamiento_id});ids.add(mid)}});ca21Save(c);
+    financs().forEach(f=>{let mid='FIS-'+f.id,obj={id:mid,fecha:f.fecha_inicio,hora:'00:00',tipo:'entrada',cuenta:f.cuenta_ingreso,monto:Number(f.monto_original||0),categoria:'Financiamientos',concepto:'Disposición de financiamiento',persona:f.institucion,nota:f.folio||'',origen:'Financiamientos',estado:'Registrado',financiamiento_id:f.id};let ix=c.movimientos.findIndex(x=>x.id===mid);if(ix>=0)c.movimientos[ix]=Object.assign({},c.movimientos[ix],obj);else{c.movimientos.push(obj);ids.add(mid)}});
+    movs().forEach(m=>{let mid='FIP-S-'+m.id,f=financs().find(x=>x.id===m.financiamiento_id),total=m.tipo==='mixto'?Number(m.capital||0)+Number(m.interes||0):Number(m.monto||0),obj={id:mid,fecha:m.fecha,hora:'00:00',tipo:'salida',cuenta:m.cuenta,monto:total,categoria:'Financiamientos',concepto:m.tipo==='capital'?'Abono a capital':m.tipo==='interes'?'Pago de intereses':'Pago mixto capital + intereses',persona:f?f.institucion:'Financiamiento',nota:m.referencia||(f&&f.folio)||'',origen:'Financiamientos',estado:'Registrado',financiamiento_id:m.financiamiento_id};let ix=c.movimientos.findIndex(x=>x.id===mid);if(ix>=0)c.movimientos[ix]=Object.assign({},c.movimientos[ix],obj);else{c.movimientos.push(obj);ids.add(mid)}});ca21Save(c);
    }catch(e){console.warn('C150 sync Caja',e)}
  }
  const id=()=> 'FIN-'+Date.now().toString(36).toUpperCase().slice(-6);
@@ -14680,13 +14703,14 @@ C087
         <div><span class="muted">Original</span><br><strong>${money(f.monto_original)}</strong></div>
         <div><span class="muted">Saldo</span><br><strong>${money(saldo(f))}</strong></div>
         <div><span class="muted">Próximo pago</span><br><strong>${f.proximo_pago||'—'}</strong></div>
-        <div><span class="fi128-pill">${saldo(f)<=0?'Liquidado':'Activo'}</span><br><button class="fi128-btn" style="margin-top:6px;padding:7px 10px" data-fi-detail="${f.id}">Ver detalle</button></div>
+        <div><span class="fi128-pill">${saldo(f)<=0?'Liquidado':'Activo'}</span><br><button class="fi128-btn" style="margin-top:6px;padding:7px 10px" data-fi-detail="${f.id}">Ver detalle</button> <button class="fi128-btn" style="margin-top:6px;padding:7px 10px" data-fi-edit="${f.id}">✎ Editar</button></div>
        </div>`).join(''):`<div class="fi128-empty">Aún no hay financiamientos registrados.</div>`}</div>
      </div></div>`;
    $('#fi128-back').onclick=back;
    $('#fi128-new').onclick=()=>modalNuevo();
    $('#fi130-history').onclick=()=>historialGeneral();
    document.querySelectorAll('[data-fi-detail]').forEach(b=>b.onclick=()=>detalle(b.dataset.fiDetail));
+   document.querySelectorAll('[data-fi-edit]').forEach(b=>b.onclick=()=>editarFinanciamiento(b.dataset.fiEdit));
  }
  function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
  function back(){
@@ -14729,6 +14753,32 @@ C087
    }
   }
  }
+ function editarFinanciamiento(fid){
+  let f=financs().find(x=>x.id===fid);if(!f)return;
+  let d=modal(`<div class="fi128-mhead"><div><strong>✎ Editar financiamiento</strong><div class="fi128-muted">Corrige condiciones o datos del crédito registrado.</div></div><button class="fi128-btn" data-fi-close>×</button></div>
+  <form class="fi128-mbody" id="fi157-editform"><div class="fi128-form">
+   <div><label>Institución / acreedor<input name="institucion" required value="${esc(f.institucion||'')}"></label></div>
+   <div><label>Tipo de financiamiento<select name="tipo_credito"><option>Crédito bancario</option><option>Crédito de avío</option><option>Crédito refaccionario</option><option>SOFOM / Financiera</option><option>Arrendamiento financiero</option><option>Factoraje</option><option>Otro institucional</option></select></label></div>
+   <div><label>Monto original ($)<input name="monto_original" data-money inputmode="decimal" value="${money(f.monto_original)}" required></label></div>
+   <div><label>Fecha de disposición<input name="fecha_inicio" type="date" value="${f.fecha_inicio||today()}" required></label></div>
+   <div><label>Tasa anual (%)<input name="tasa" type="number" min="0" step=".01" value="${f.tasa||''}"></label></div>
+   <div><label>Plazo (meses)<input name="plazo" type="number" min="1" value="${f.plazo||''}"></label></div>
+   <div><label>Periodicidad<select name="periodicidad"><option>Mensual</option><option>Quincenal</option><option>Trimestral</option><option>Semestral</option><option>Anual</option><option>Otro</option></select></label></div>
+   <div><label>Pago programado ($)<input name="pago_programado" data-money inputmode="decimal" value="${f.pago_programado?money(f.pago_programado):''}"></label></div>
+   <div><label>Próxima fecha de pago<input name="proximo_pago" type="date" value="${f.proximo_pago||''}"></label></div>
+   <div><label>Cuenta de ingreso<select name="cuenta_ingreso"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></label></div>
+   <div><label>Contrato / folio<input name="folio" value="${esc(f.folio||'')}"></label></div>
+   <div><label>Vencimiento<input name="vencimiento" type="date" value="${f.vencimiento||''}"></label></div>
+   <div><label>Estado<select name="estado"><option value="activo">Activo</option><option value="cerrado">Cerrado</option></select></label></div>
+   <div class="fi128-span2"><label>Observaciones<textarea name="observaciones" rows="2">${esc(f.observaciones||'')}</textarea></label></div>
+  </div><div class="fi128-actions"><button type="button" class="fi128-btn" data-fi-close>Cancelar</button><button class="fi128-btn primary">Guardar cambios</button></div></form>`);
+  let form=d.querySelector('#fi157-editform');
+  form.querySelector('[name=tipo_credito]').value=f.tipo_credito||'Crédito bancario';
+  form.querySelector('[name=periodicidad]').value=f.periodicidad||'Mensual';
+  form.querySelector('[name=cuenta_ingreso]').value=f.cuenta_ingreso||'efectivo';
+  form.querySelector('[name=estado]').value=f.estado||'activo';bindMoney(d);
+  form.onsubmit=async e=>{e.preventDefault();let btn=form.querySelector('button.primary'),o=Object.fromEntries(new FormData(form).entries());o.monto_original=parseMoney(o.monto_original);o.pago_programado=parseMoney(o.pago_programado);o.tasa=parseMoney(o.tasa);o.plazo=parseInt(o.plazo||0,10)||null;if(o.monto_original<=0)return alert('Captura un monto original válido.');if(btn){btn.disabled=true;btn.textContent='Guardando…'}try{await updateRow('financiamientos',fid,o);await loadShared();fi150SyncCaja();d.remove();render();}catch(err){if(btn){btn.disabled=false;btn.textContent='Guardar cambios'}}};
+ }
  function historialGeneral(){
   let fs=financs().slice().sort((a,b)=>String(b.fecha_inicio||b.creado||'').localeCompare(String(a.fecha_inicio||a.creado||'')));
   let ms=movs();
@@ -14748,14 +14798,31 @@ C087
   let f=financs().find(x=>x.id===fid);if(!f)return;let ms=movs().filter(x=>x.financiamiento_id===fid);
   let cap=ms.reduce((a,m)=>a+(m.tipo==='capital'?Number(m.monto||0):m.tipo==='mixto'?Number(m.capital||0):0),0);
   let inte=ms.reduce((a,m)=>a+(m.tipo==='interes'?Number(m.monto||0):m.tipo==='mixto'?Number(m.interes||0):0),0);
-  let d=modal(`<div class="fi128-mhead"><div><strong>🏦 ${esc(f.institucion)}</strong><div class="fi128-muted">${esc(f.tipo_credito)} · ${esc(f.folio||'Sin folio')}</div></div><button class="fi128-btn" data-fi-close>×</button></div>
+  let d=modal(`<div class="fi128-mhead"><div><strong>🏦 ${esc(f.institucion)}</strong><div class="fi128-muted">${esc(f.tipo_credito)} · ${esc(f.folio||'Sin folio')}</div></div><div style="display:flex;gap:8px"><button class="fi128-btn primary" id="fi158-editfin">✎ Editar financiamiento</button><button class="fi128-btn" data-fi-close>×</button></div></div>
   <div class="fi128-mbody">
    <div class="fi128-grid"><div class="fi128-stat"><small>Capital original</small><strong>${money(f.monto_original)}</strong></div><div class="fi128-stat"><small>Capital pagado</small><strong>${money(cap)}</strong></div><div class="fi128-stat"><small>Intereses pagados</small><strong>${money(inte)}</strong></div><div class="fi128-stat"><small>Saldo pendiente</small><strong>${money(saldo(f))}</strong></div></div>
    <div class="fi128-card"><strong>Condiciones</strong><div class="fi128-form" style="margin-top:10px"><div>Tasa: <b>${f.tasa||'—'}${f.tasa?'%':''}</b></div><div>Plazo: <b>${f.plazo?f.plazo+' meses':'—'}</b></div><div>Periodicidad: <b>${esc(f.periodicidad||'—')}</b></div><div>Pago programado: <b>${money(f.pago_programado)}</b></div><div>Próximo pago: <b>${f.proximo_pago||'—'}</b></div><div>Vencimiento: <b>${f.vencimiento||'—'}</b></div></div></div>
    <div style="display:flex;justify-content:space-between;align-items:center;margin:15px 0 7px"><strong>Historial de pagos</strong>${saldo(f)>0?`<button class="fi128-btn primary" id="fi128-pay">Registrar pago</button>`:''}</div>
-   <table class="fi128-table"><thead><tr><th>Fecha</th><th>Tipo</th><th>Capital</th><th>Interés</th><th>Cuenta</th><th>Referencia</th></tr></thead><tbody>${ms.length?ms.map(m=>`<tr><td>${m.fecha}</td><td>${m.tipo==='mixto'?'Mixto':m.tipo==='capital'?'Capital':'Intereses'}</td><td>${money(m.tipo==='capital'?m.monto:m.capital)}</td><td>${money(m.tipo==='interes'?m.monto:m.interes)}</td><td>${esc(m.cuenta)}</td><td>${esc(m.referencia||'—')}</td></tr>`).join(''):`<tr><td colspan="6" class="fi128-empty">Sin pagos registrados.</td></tr>`}</tbody></table>
+   <table class="fi128-table"><thead><tr><th>Fecha</th><th>Tipo</th><th>Capital</th><th>Interés</th><th>Cuenta</th><th>Referencia</th><th>Acción</th></tr></thead><tbody>${ms.length?ms.map(m=>`<tr><td>${m.fecha}</td><td>${m.tipo==='mixto'?'Mixto':m.tipo==='capital'?'Capital':'Intereses'}</td><td>${money(m.tipo==='capital'?m.monto:m.capital)}</td><td>${money(m.tipo==='interes'?m.monto:m.interes)}</td><td>${esc(m.cuenta)}</td><td>${esc(m.referencia||'—')}</td><td><button class="fi128-btn" style="padding:6px 9px" data-fi-editpay="${m.id}">✎ Editar</button></td></tr>`).join(''):`<tr><td colspan="7" class="fi128-empty">Sin pagos registrados.</td></tr>`}</tbody></table>
   </div>`);
-  let b=d.querySelector('#fi128-pay');if(b)b.onclick=()=>{d.remove();pago(fid)}
+  let eb=d.querySelector('#fi158-editfin');if(eb)eb.onclick=()=>{d.remove();editarFinanciamiento(fid)};
+  let b=d.querySelector('#fi128-pay');if(b)b.onclick=()=>{d.remove();pago(fid)};d.querySelectorAll('[data-fi-editpay]').forEach(x=>x.onclick=()=>{d.remove();editarPago(fid,x.dataset.fiEditpay)});
+ }
+ function editarPago(fid,mid){
+  let f=financs().find(x=>x.id===fid),m=movs().find(x=>x.id===mid);if(!f||!m)return;
+  let d=modal(`<div class="fi128-mhead"><div><strong>✎ Editar pago</strong><div class="fi128-muted">${esc(f.institucion)} · corrige el movimiento sin duplicarlo.</div></div><button class="fi128-btn" data-fi-close>×</button></div>
+  <form class="fi128-mbody" id="fi157-editpay"><div class="fi128-form">
+   <div><label>Tipo de pago<select name="tipo" id="fi157-tipo"><option value="capital">Abono a capital</option><option value="interes">Pago de intereses</option><option value="mixto">Pago mixto</option></select></label></div>
+   <div><label>Fecha<input name="fecha" type="date" value="${m.fecha||today()}" required></label></div>
+   <div id="fi157-one"><label>Monto ($)<input name="monto" data-money inputmode="decimal" value="${m.tipo==='mixto'?'':money(m.monto)}"></label></div>
+   <div id="fi157-cap"><label>Capital ($)<input name="capital" data-money inputmode="decimal" value="${m.capital?money(m.capital):''}"></label></div>
+   <div id="fi157-int"><label>Intereses ($)<input name="interes" data-money inputmode="decimal" value="${m.interes?money(m.interes):''}"></label></div>
+   <div><label>Cuenta de salida<select name="cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></label></div>
+   <div class="fi128-span2"><label>Referencia / observación<input name="referencia" value="${esc(m.referencia||'')}"></label></div>
+  </div><div class="fi128-actions"><button type="button" class="fi128-btn" data-fi-close>Cancelar</button><button class="fi128-btn primary">Guardar cambios</button></div></form>`);
+  let form=d.querySelector('#fi157-editpay'),typ=form.querySelector('#fi157-tipo');typ.value=m.tipo||'capital';form.querySelector('[name=cuenta]').value=m.cuenta||'efectivo';bindMoney(d);
+  function toggle(){let mix=typ.value==='mixto';form.querySelector('#fi157-one').style.display=mix?'none':'';form.querySelector('#fi157-cap').style.display=mix?'':'none';form.querySelector('#fi157-int').style.display=mix?'':'none'}typ.onchange=toggle;toggle();
+  form.onsubmit=async e=>{e.preventDefault();let btn=form.querySelector('button.primary'),o=Object.fromEntries(new FormData(form).entries());o.monto=parseMoney(o.monto);o.capital=parseMoney(o.capital);o.interes=parseMoney(o.interes);let total=o.tipo==='mixto'?o.capital+o.interes:o.monto,capital=o.tipo==='capital'?o.monto:o.tipo==='mixto'?o.capital:0;let otros=movs().filter(x=>x.financiamiento_id===fid&&x.id!==mid).reduce((a,x)=>a+(x.tipo==='capital'?Number(x.monto||0):x.tipo==='mixto'?Number(x.capital||0):0),0);if(total<=0)return alert('Captura un monto válido.');if(capital>Math.max(0,Number(f.monto_original||0)-otros)+.01)return alert('El abono a capital no puede superar el saldo pendiente.');if(btn){btn.disabled=true;btn.textContent='Guardando…'}try{await updateRow('financiamiento_movimientos',mid,o);await loadShared();fi150SyncCaja();d.remove();detalle(fid);}catch(err){if(btn){btn.disabled=false;btn.textContent='Guardar cambios'}}};
  }
  function pago(fid){
   let f=financs().find(x=>x.id===fid);if(!f)return;
@@ -15061,5 +15128,6 @@ C087
 })();
 </script>
 
+<script id="c158-marker">console.info("Mootsil C158: asistencia eliminable + financiamientos editables desde detalle");</script>
 </body>
 </html>
