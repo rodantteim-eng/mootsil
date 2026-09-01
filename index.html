@@ -15632,5 +15632,69 @@ C087
 })();
 </script>
 
+
+<script id="c177-impresion-fecha-consultada">
+/* C177 · Botones de impresión vinculados exclusivamente a la fecha consultada en historial. */
+(function(){
+  function selectedDate(){
+    var i=document.getElementById('ca21-fecha');
+    return (i&&i.value)||window.CAJA_FECHA_BASE;
+  }
+  function ensureButtons(){
+    var input=document.getElementById('ca21-fecha');
+    if(!input)return;
+    var row=input.parentElement;
+    if(!row)return;
+    var host=document.getElementById('ca177-print-actions');
+    if(!host){
+      host=document.createElement('div');
+      host.id='ca177-print-actions';
+      host.style.cssText='display:flex;gap:8px;align-items:center;margin-left:auto;white-space:nowrap';
+      var b1=document.createElement('button');
+      b1.type='button'; b1.className='ca21-action-btn'; b1.id='ca177-print-close';
+      b1.textContent='🖨 Imprimir cierre';
+      b1.onclick=function(){if(typeof ca174ImprimirCierre==='function')ca174ImprimirCierre(selectedDate(),false);};
+      var b2=document.createElement('button');
+      b2.type='button'; b2.className='ca21-action-btn'; b2.id='ca177-print-history';
+      b2.textContent='🖨 Imprimir historial';
+      b2.onclick=function(){if(typeof ca174ImprimirCierre==='function')ca174ImprimirCierre(selectedDate(),true);};
+      host.appendChild(b1);host.appendChild(b2);
+      /* La fila de filtros es el ancestro que contiene fecha + selects + buscador. */
+      var filterRow=input.closest('.ca17-filters')||input.parentElement.parentElement;
+      if(filterRow)filterRow.appendChild(host); else row.appendChild(host);
+    }
+    updateButtons();
+  }
+  function updateButtons(){
+    var fecha=selectedDate(), d=ca21Load(), cut=d.cortes&&d.cortes[fecha];
+    var host=document.getElementById('ca177-print-actions');
+    if(!host)return;
+    host.style.display=cut?'flex':'none';
+    host.querySelectorAll('button').forEach(function(b){b.title=cut?'Imprimir documentos del cierre '+fecha:'No existe cierre para '+fecha;});
+  }
+  document.addEventListener('change',function(e){
+    if(e.target&&e.target.id==='ca21-fecha'){setTimeout(function(){ensureButtons();updateButtons();},0);}
+  });
+  var oldHist=window.ca176RenderHistoryOnly;
+  if(typeof oldHist==='function'){
+    window.ca176RenderHistoryOnly=function(fecha){
+      var r=oldHist.apply(this,arguments);
+      setTimeout(function(){ensureButtons();updateButtons();},0);
+      return r;
+    };
+  }
+  var oldRender=window.renderCajaMootsil;
+  if(typeof oldRender==='function'){
+    window.renderCajaMootsil=function(){
+      var r=oldRender.apply(this,arguments);
+      Promise.resolve(r).then(function(){setTimeout(ensureButtons,30);});
+      return r;
+    };
+  }
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(ensureButtons,700);});
+  setTimeout(ensureButtons,1000);
+})();
+</script>
+
 </body>
 </html>
