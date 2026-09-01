@@ -14674,7 +14674,7 @@ C087
  }
  function fi150SyncCaja(){
    try{if(typeof ca21Load!=='function'||typeof ca21Save!=='function')return;let c=ca21Load();c.movimientos=c.movimientos||[];let ids=new Set(c.movimientos.map(x=>x.id));
-    financs().forEach(f=>{let mid='FIS-'+f.id,obj={id:mid,fecha:f.fecha_inicio,hora:'00:00',tipo:'entrada',cuenta:f.cuenta_ingreso,monto:Number(f.monto_original||0),categoria:'Financiamientos',concepto:'Disposición de financiamiento',persona:f.institucion,nota:f.folio||'',origen:'Financiamientos',estado:'Registrado',financiamiento_id:f.id};let ix=c.movimientos.findIndex(x=>x.id===mid);if(ix>=0)c.movimientos[ix]=Object.assign({},c.movimientos[ix],obj);else{c.movimientos.push(obj);ids.add(mid)}});
+    financs().forEach(f=>{let mid='FIS-'+f.id,ix=c.movimientos.findIndex(x=>x.id===mid),exist=ix>=0?c.movimientos[ix]:null,fechaCaja=(exist&&exist.fecha_caja)||((typeof CAJA_FECHA_BASE!=='undefined'&&CAJA_FECHA_BASE)?CAJA_FECHA_BASE:today()),obj={id:mid,fecha:f.fecha_inicio,fecha_caja:fechaCaja,hora:'00:00',tipo:'entrada',cuenta:f.cuenta_ingreso,monto:Number(f.monto_original||0),categoria:'Financiamientos',concepto:'Disposición de financiamiento',persona:f.institucion,nota:f.folio||'',origen:'Financiamientos',estado:'Registrado',financiamiento_id:f.id};if(ix>=0)c.movimientos[ix]=Object.assign({},c.movimientos[ix],obj);else{c.movimientos.push(obj);ids.add(mid)}});
     movs().forEach(m=>{let mid='FIP-S-'+m.id,f=financs().find(x=>x.id===m.financiamiento_id),total=m.tipo==='mixto'?Number(m.capital||0)+Number(m.interes||0):Number(m.monto||0),obj={id:mid,fecha:m.fecha,hora:'00:00',tipo:'salida',cuenta:m.cuenta,monto:total,categoria:'Financiamientos',concepto:m.tipo==='capital'?'Abono a capital':m.tipo==='interes'?'Pago de intereses':'Pago mixto capital + intereses',persona:f?f.institucion:'Financiamiento',nota:m.referencia||(f&&f.folio)||'',origen:'Financiamientos',estado:'Registrado',financiamiento_id:m.financiamiento_id};let ix=c.movimientos.findIndex(x=>x.id===mid);if(ix>=0)c.movimientos[ix]=Object.assign({},c.movimientos[ix],obj);else{c.movimientos.push(obj);ids.add(mid)}});ca21Save(c);
    }catch(e){console.warn('C150 sync Caja',e)}
  }
@@ -15248,5 +15248,7 @@ C087
   };
 })();
 </script>
+
+<script id="c163-financiamiento-fecha-caja">console.info("Mootsil C163: financiamiento conserva fecha contractual y registra fecha_caja operativa; apertura confirmada Supabase C159");</script>
 </body>
 </html>
