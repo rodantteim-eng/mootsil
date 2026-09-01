@@ -14792,5 +14792,129 @@ C087
 </script>
 
 <!-- C147: Dueño/Dueña unificado al shell visual Admin; permisos intactos -->
+
+<script id="c153-caja-compartida">
+/* C153 · Caja compartida multiusuario en Supabase.
+   Mantiene localStorage únicamente como espejo/cache; Supabase es la fuente compartida.
+*/
+(function(){
+  if(typeof api!=='function' || typeof ca21Load!=='function' || typeof ca21Save!=='function') return;
+
+  var C153_MOV='caja_movimientos';
+  var C153_AP='caja_aperturas';
+  var C153_COR='caja_cortes';
+  var c153OriginalSave=window.ca21Save;
+  var c153OriginalRender=window.renderCajaMootsil;
+  var c153Pending=Promise.resolve();
+  var c153Alerted=false;
+  var c153LoadedOnce=false;
+
+  function c153Clone(x){try{return JSON.parse(JSON.stringify(x));}catch(e){return x;}}
+  function c153Json(x){try{return JSON.stringify(x);}catch(e){return '';}}
+  function c153UserId(){return (typeof usuario!=='undefined'&&usuario&&usuario.id)?usuario.id:null;}
+  function c153Iso(){return new Date().toISOString();}
+  function c153LocalRaw(){
+    try{
+      var x=JSON.parse(localStorage.getItem(CA21_KEY)||'{}')||{};
+      x.movimientos=Array.isArray(x.movimientos)?x.movimientos:[];
+      x.aperturas=x.aperturas&&typeof x.aperturas==='object'?x.aperturas:{};
+      x.cortes=x.cortes&&typeof x.cortes==='object'?x.cortes:{};
+      return x;
+    }catch(e){return {movimientos:[],aperturas:{},cortes:{}};}
+  }
+  function c153SetLocal(x){localStorage.setItem(CA21_KEY,JSON.stringify(x||{movimientos:[],aperturas:{},cortes:{}}));}
+  function c153Post(table,rows){
+    if(!rows||!rows.length)return Promise.resolve();
+    return api('/rest/v1/'+table,{method:'POST',body:rows,prefer:'resolution=merge-duplicates,return=minimal'});
+  }
+  function c153Delete(table,col,val){
+    return api('/rest/v1/'+table+'?'+col+'=eq.'+encodeURIComponent(val),{method:'DELETE',prefer:'return=minimal'});
+  }
+  function c153MovRow(m){
+    return {id:String(m.id),fecha:m.fecha||null,fecha_caja:m.fecha_caja||m.fecha||null,tipo:m.tipo||null,payload:c153Clone(m),actualizado_por:c153UserId(),updated_at:c153Iso()};
+  }
+  function c153DayRow(fecha,payload){
+    return {fecha:fecha,payload:c153Clone(payload),actualizado_por:c153UserId(),updated_at:c153Iso()};
+  }
+  function c153FetchAll(){
+    return Promise.all([
+      api('/rest/v1/'+C153_MOV+'?select=id,payload&order=fecha.desc'),
+      api('/rest/v1/'+C153_AP+'?select=fecha,payload&order=fecha.desc'),
+      api('/rest/v1/'+C153_COR+'?select=fecha,payload&order=fecha.desc')
+    ]).then(function(r){
+      var out={movimientos:[],aperturas:{},cortes:{}};
+      (r[0]||[]).forEach(function(x){if(x&&x.payload){var m=x.payload;if(!m.id)m.id=x.id;out.movimientos.push(m);}});
+      (r[1]||[]).forEach(function(x){if(x&&x.fecha&&x.payload)out.aperturas[x.fecha]=x.payload;});
+      (r[2]||[]).forEach(function(x){if(x&&x.fecha&&x.payload)out.cortes[x.fecha]=x.payload;});
+      return out;
+    });
+  }
+  function c153BootstrapMerge(remote,local){
+    var rm=new Set((remote.movimientos||[]).map(function(x){return String(x.id);}));
+    var addM=(local.movimientos||[]).filter(function(x){return x&&x.id&&!rm.has(String(x.id));});
+    var addA=Object.keys(local.aperturas||{}).filter(function(f){return !remote.aperturas[f];});
+    var addC=Object.keys(local.cortes||{}).filter(function(f){return !remote.cortes[f];});
+    if(!addM.length&&!addA.length&&!addC.length)return Promise.resolve(false);
+    return Promise.all([
+      c153Post(C153_MOV,addM.map(c153MovRow)),
+      c153Post(C153_AP,addA.map(function(f){return c153DayRow(f,local.aperturas[f]);})),
+      c153Post(C153_COR,addC.map(function(f){return c153DayRow(f,local.cortes[f]);}))
+    ]).then(function(){return true;});
+  }
+  function c153LoadShared(){
+    var local=c153LocalRaw();
+    return c153FetchAll().then(function(remote){
+      if(!c153LoadedOnce){
+        return c153BootstrapMerge(remote,local).then(function(changed){
+          c153LoadedOnce=true;
+          return changed?c153FetchAll():remote;
+        });
+      }
+      return remote;
+    }).then(function(remote){c153SetLocal(remote);return remote;});
+  }
+  function c153DiffAndSync(prev,next){
+    prev=prev||{movimientos:[],aperturas:{},cortes:{}};next=next||{movimientos:[],aperturas:{},cortes:{}};
+    var pm=new Map((prev.movimientos||[]).filter(Boolean).map(function(x){return [String(x.id),x];}));
+    var nm=new Map((next.movimientos||[]).filter(Boolean).map(function(x){return [String(x.id),x];}));
+    var upM=[],delM=[];
+    nm.forEach(function(v,k){if(!pm.has(k)||c153Json(pm.get(k))!==c153Json(v))upM.push(c153MovRow(v));});
+    pm.forEach(function(v,k){if(!nm.has(k))delM.push(k);});
+    var upA=[],delA=[],upC=[],delC=[];
+    Object.keys(next.aperturas||{}).forEach(function(f){if(!prev.aperturas||c153Json(prev.aperturas[f])!==c153Json(next.aperturas[f]))upA.push(c153DayRow(f,next.aperturas[f]));});
+    Object.keys(prev.aperturas||{}).forEach(function(f){if(!next.aperturas||!Object.prototype.hasOwnProperty.call(next.aperturas,f))delA.push(f);});
+    Object.keys(next.cortes||{}).forEach(function(f){if(!prev.cortes||c153Json(prev.cortes[f])!==c153Json(next.cortes[f]))upC.push(c153DayRow(f,next.cortes[f]));});
+    Object.keys(prev.cortes||{}).forEach(function(f){if(!next.cortes||!Object.prototype.hasOwnProperty.call(next.cortes,f))delC.push(f);});
+    var jobs=[c153Post(C153_MOV,upM),c153Post(C153_AP,upA),c153Post(C153_COR,upC)];
+    delM.forEach(function(id){jobs.push(c153Delete(C153_MOV,'id',id));});
+    delA.forEach(function(f){jobs.push(c153Delete(C153_AP,'fecha',f));});
+    delC.forEach(function(f){jobs.push(c153Delete(C153_COR,'fecha',f));});
+    return Promise.all(jobs);
+  }
+  function c153Warn(e){
+    console.error('C153 Caja compartida',e);
+    if(!c153Alerted){c153Alerted=true;alert('No se pudo sincronizar Caja con la base compartida. El movimiento permanece en este dispositivo; vuelve a intentar con conexión antes de continuar.');setTimeout(function(){c153Alerted=false;},4000);}
+  }
+
+  window.ca21Save=function(data){
+    var prev=c153LocalRaw(),next=c153Clone(data);
+    c153SetLocal(next);
+    c153Pending=c153Pending.catch(function(){}).then(function(){return c153DiffAndSync(prev,next);}).catch(function(e){c153Warn(e);});
+    return c153Pending;
+  };
+
+  if(typeof c153OriginalRender==='function'){
+    window.renderCajaMootsil=function(){
+      var args=arguments,ctx=this;
+      return c153Pending.catch(function(){}).then(function(){return c153LoadShared();}).catch(function(e){c153Warn(e);return c153LocalRaw();}).then(function(){return c153OriginalRender.apply(ctx,args);});
+    };
+  }
+
+  window.ca153RecargarCaja=function(){
+    return c153Pending.catch(function(){}).then(c153LoadShared).then(function(){if(typeof renderCajaMootsil==='function')return renderCajaMootsil(CAJA_PERIODO,CAJA_FECHA_BASE);});
+  };
+})();
+</script>
+
 </body>
 </html>
