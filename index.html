@@ -14764,18 +14764,36 @@ C087
    }
   }
  }
- /* C161: eliminación compatible con respuestas vacías de PostgREST. */
- function eliminarFinanciamiento(fid){
+ /* C162: eliminación transaccional verificada contra Supabase. */
+ async function eliminarFinanciamiento(fid){
   let f=financs().find(x=>x.id===fid);if(!f)return;
   if(!confirm('¿Eliminar definitivamente el financiamiento de '+f.institucion+' por '+money(f.monto_original)+'?\n\nTambién se eliminarán sus pagos registrados y el movimiento automático relacionado en Caja.'))return;
-  let mids=movs().filter(x=>x.financiamiento_id===fid).map(x=>x.id);
-  let jobs=mids.map(mid=>api('/rest/v1/financiamiento_movimientos?id=eq.'+encodeURIComponent(mid),{method:'DELETE',prefer:'return=minimal'}));
-  Promise.all(jobs).then(()=>api('/rest/v1/financiamientos?id=eq.'+encodeURIComponent(fid),{method:'DELETE',prefer:'return=minimal'})).then(async()=>{
+  try{
+    /* 1. Eliminar pagos/movimientos del financiamiento directamente en Supabase. */
+    await api('/rest/v1/financiamiento_movimientos?financiamiento_id=eq.'+encodeURIComponent(fid),{method:'DELETE',prefer:'return=minimal'});
+    /* 2. Eliminar todos los reflejos de este financiamiento en la Caja compartida. */
+    await api('/rest/v1/caja_movimientos?or=(id.eq.'+encodeURIComponent('FIS-'+fid)+',payload->>financiamiento_id.eq.'+encodeURIComponent(fid)+')',{method:'DELETE',prefer:'return=minimal'});
+    /* 3. Eliminar el financiamiento. */
+    await api('/rest/v1/financiamientos?id=eq.'+encodeURIComponent(fid),{method:'DELETE',prefer:'return=minimal'});
+    /* 4. Verificación real: no declarar éxito si Supabase todavía conserva algo. */
+    let vr=await Promise.all([
+      api('/rest/v1/financiamientos?select=id&id=eq.'+encodeURIComponent(fid)),
+      api('/rest/v1/financiamiento_movimientos?select=id&financiamiento_id=eq.'+encodeURIComponent(fid)),
+      api('/rest/v1/caja_movimientos?select=id&id=eq.'+encodeURIComponent('FIS-'+fid))
+    ]);
+    if((vr[0]||[]).length||(vr[1]||[]).length||(vr[2]||[]).length)throw new Error('Supabase todavía conserva registros relacionados; no se confirmó la eliminación.');
+    /* 5. Limpiar espejo local sólo después de confirmar la base compartida. */
     if(typeof ca21Load==='function'&&typeof ca21Save==='function'){
       let c=ca21Load();c.movimientos=(c.movimientos||[]).filter(x=>x.id!=='FIS-'+fid && x.financiamiento_id!==fid);await ca21Save(c);
     }
-    await loadShared();render();
-  }).catch(e=>{console.error('C160 eliminar financiamiento',e);alert('No se pudo eliminar el financiamiento de la base compartida: '+e.message);});
+    await loadShared();
+    render();
+    alert('Financiamiento eliminado correctamente de Supabase y Caja.');
+  }catch(e){
+    console.error('C162 eliminar financiamiento',e);
+    alert('No se pudo confirmar la eliminación del financiamiento.\n\nDetalle: '+(e&&e.message?e.message:e));
+    try{await loadShared();render();}catch(_e){}
+  }
  }
  function editarFinanciamiento(fid){
   let f=financs().find(x=>x.id===fid);if(!f)return;
