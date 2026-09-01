@@ -9628,7 +9628,7 @@ function renderCajaMootsil(periodo,fechaBase){
 
     cargarClimaRiego();
 
-    var bFecha=document.getElementById('ca21-fecha');if(bFecha)bFecha.addEventListener('change',function(){renderCajaMootsil(CAJA_PERIODO,this.value);});
+    var bFecha=document.getElementById('ca21-fecha');if(bFecha)bFecha.addEventListener('change',function(){if(typeof window.ca176RenderHistoryOnly==='function')window.ca176RenderHistoryOnly(this.value);});
     var bOpen=document.getElementById('ca21-open');if(bOpen)bOpen.addEventListener('click',function(){ca21OpenApertura(CAJA_FECHA_BASE);});
     var bCompras=document.getElementById('ca22-compras'); if(bCompras)bCompras.addEventListener('click',renderNuevaCompraDesdeCaja);
     var bGastos=document.getElementById('ca22-gastos'); if(bGastos)bGastos.addEventListener('click',ga37Nuevo);
@@ -15580,5 +15580,57 @@ C087
   document.addEventListener('DOMContentLoaded',function(){setTimeout(bind,500);});
 })();
 </script>
+
+<script id="c176-selector-historial-aislado">
+/* C176 · El selector inferior jamás vuelve a renderizar Caja.
+   Sólo sustituye las filas del historial de la fecha consultada. */
+(function(){
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function money(v){return '$'+Number(v||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});}
+  function label(x){try{return ca35CuentaLabel(x)||x||'—';}catch(e){return x||'—';}}
+  function financeCache(){
+    var fs=[],ms=[];
+    try{fs=JSON.parse(localStorage.getItem('mootsil_financiamientos_128')||'[]')||[];}catch(e){}
+    try{ms=JSON.parse(localStorage.getItem('mootsil_financiamiento_movimientos_128')||'[]')||[];}catch(e){}
+    return {fs:fs,ms:ms};
+  }
+  function build(fecha){
+    var d=ca21Load(), out=[];
+    (d.movimientos||[]).forEach(function(m){
+      if(String(m.id||'').indexOf('FIS-')===0||String(m.id||'').indexOf('FIP-S-')===0)return;
+      var f=m.fecha_caja||m.fecha;
+      if(f===fecha){var x=Object.assign({},m);x.fecha_historial=f;out.push(x);}
+    });
+    var fd=financeCache();
+    (fd.fs||[]).forEach(function(f){
+      if(f.fecha_inicio===fecha)out.push({id:'DB-F-'+f.id,fecha_historial:fecha,hora:'—',tipo:'entrada',cuenta:f.cuenta_ingreso,monto:Number(f.monto_original||0),categoria:'Financiamientos',concepto:'Disposición de financiamiento',persona:f.institucion||'Financiamiento',origen:'Financiamientos',estado:'Registrado',db:true});
+    });
+    (fd.ms||[]).forEach(function(m){
+      if(m.fecha===fecha){
+        var f=(fd.fs||[]).find(function(x){return String(x.id)===String(m.financiamiento_id);});
+        var total=m.tipo==='mixto'?Number(m.capital||0)+Number(m.interes||0):Number(m.monto||0);
+        out.push({id:'DB-FM-'+m.id,fecha_historial:fecha,hora:'—',tipo:'salida',cuenta:m.cuenta,monto:total,categoria:'Financiamientos',concepto:m.tipo==='capital'?'Abono a capital':m.tipo==='interes'?'Pago de intereses':'Pago mixto capital + intereses',persona:f?f.institucion:'Financiamiento',origen:'Financiamientos',estado:'Registrado',db:true});
+      }
+    });
+    return out.sort(function(a,b){return String(b.hora||'').localeCompare(String(a.hora||''));});
+  }
+  function row(m){
+    var forma=m.tipo==='transferencia'?(label(m.cuenta_origen)+' → '+label(m.cuenta_destino)):(m.forma||label(m.cuenta));
+    var ent=(m.tipo==='entrada'||m.tipo==='transferencia')?money(m.monto):'—';
+    var sal=(m.tipo==='salida'||m.tipo==='transferencia')?money(m.monto):'—';
+    var actions=m.db?'—':((m.origen==='Gasto operativo'?'<button class="ca21-action-btn" data-ca21-edit-gasto="'+esc(m.id)+'">Editar</button> ':'')+'<button class="ca21-action-btn" data-ca21-del="'+esc(m.id)+'">Eliminar</button>');
+    return '<tr><td>'+esc(m.fecha_historial||m.fecha||'—')+'</td><td>'+esc(m.hora||'—')+'</td><td>'+(m.tipo==='entrada'?'⬇️':m.tipo==='salida'?'⬆️':'⇄')+'</td><td><strong>'+esc(m.concepto||'—')+'</strong><div class="ca21-mini">'+esc(m.nota||'')+'</div></td><td><span class="ca17-tag">'+esc(m.categoria||'—')+'</span></td><td>'+esc(m.persona||'—')+'</td><td>'+esc(forma)+'</td><td class="ca17-money-in">'+ent+'</td><td class="ca17-money-out">'+sal+'</td><td><span class="ca17-tag">'+esc(m.origen||'Caja')+'</span></td><td><span class="ca17-tag">'+esc(m.estado||'Registrado')+'</span></td><td>'+actions+'</td></tr>';
+  }
+  window.ca176RenderHistoryOnly=function(fecha){
+    var tb=document.querySelector('.ca17-table tbody');
+    if(!tb)return;
+    var data=build(fecha);
+    tb.innerHTML=data.length?data.map(row).join(''):'<tr><td colspan="12" style="text-align:center;color:#77837c;padding:24px">No hay movimientos registrados en esta fecha.</td></tr>';
+    tb.querySelectorAll('[data-ca21-edit-gasto]').forEach(function(b){b.addEventListener('click',function(){if(typeof ga152EditarGasto==='function')ga152EditarGasto(this.dataset.ca21EditGasto);});});
+    tb.querySelectorAll('[data-ca21-del]').forEach(function(b){b.addEventListener('click',function(){if(typeof ca21DeleteMovimiento==='function')ca21DeleteMovimiento(this.dataset.ca21Del,fecha);});});
+  };
+})();
+</script>
+
 </body>
 </html>
