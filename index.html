@@ -15129,5 +15129,81 @@ C087
 </script>
 
 <script id="c158-marker">console.info("Mootsil C158: asistencia eliminable + financiamientos editables desde detalle");</script>
+
+<script id="c159-apertura-caja-confirmada">
+/* C159 · Apertura de Caja persistida y confirmada directamente en Supabase.
+   No cierra el modal ni actualiza la interfaz hasta confirmar que la fila existe. */
+(function(){
+  if(typeof api!=='function') return;
+
+  function uid(){return (typeof usuario!=='undefined'&&usuario&&usuario.id)?usuario.id:null;}
+  function clone(x){try{return JSON.parse(JSON.stringify(x));}catch(e){return x;}}
+  function errMsg(e){return (e&&e.message)?String(e.message):String(e||'Error desconocido');}
+
+  async function guardarAperturaConfirmada(fecha,payload){
+    var row={fecha:fecha,payload:clone(payload),actualizado_por:uid(),updated_at:new Date().toISOString()};
+    var q='/rest/v1/caja_aperturas?fecha=eq.'+encodeURIComponent(fecha)+'&select=fecha';
+    var found=await api(q);
+    if(Array.isArray(found)&&found.length){
+      await api('/rest/v1/caja_aperturas?fecha=eq.'+encodeURIComponent(fecha),{method:'PATCH',body:row,prefer:'return=minimal'});
+    }else{
+      await api('/rest/v1/caja_aperturas',{method:'POST',body:row,prefer:'return=minimal'});
+    }
+    var verify=await api('/rest/v1/caja_aperturas?fecha=eq.'+encodeURIComponent(fecha)+'&select=fecha,payload,actualizado_por,updated_at&limit=1');
+    if(!Array.isArray(verify)||!verify.length) throw new Error('Supabase no confirmó la apertura guardada.');
+    return verify[0];
+  }
+
+  window.ca21OpenApertura=function(fecha){
+    var dd=ca21DayData(fecha), ap=dd.apertura;
+    var prevDate=new Date(fecha+'T12:00:00'); prevDate.setDate(prevDate.getDate()-1);
+    var prev=prevDate.getFullYear()+'-'+String(prevDate.getMonth()+1).padStart(2,'0')+'-'+String(prevDate.getDate()).padStart(2,'0');
+    var prevCut=dd.data.cortes[prev];
+    var efDefault=ap?ap.efectivo:(prevCut?prevCut.efectivo_contado:0);
+    var bpDefault=ap?ca21Money(ap.banamex_pesos!=null?ap.banamex_pesos:(ap.banamex!=null?ap.banamex:(ap.bancos||0))):(prevCut?ca21Money(prevCut.banamex_pesos_cierre!=null?prevCut.banamex_pesos_cierre:(prevCut.banamex_cierre!=null?prevCut.banamex_cierre:(prevCut.bancos_cierre||0))):0);
+    var bdDefault=ap?ca21Money(ap.banamex_dolares||0):(prevCut?ca21Money(prevCut.banamex_dolares_cierre||0):0);
+    var spDefault=ap?ca21Money(ap.santander_pesos!=null?ap.santander_pesos:(ap.santander||0)):(prevCut?ca21Money(prevCut.santander_pesos_cierre!=null?prevCut.santander_pesos_cierre:(prevCut.santander_cierre||0)):0);
+
+    ca21OpenModal(
+      '<div class="ca21-dialog-head"><div><h3>💵 Apertura de Caja</h3><p>'+cajaFechaCorta(fecha)+'</p></div><button class="ca21-close" onclick="ca21CloseModal()">×</button></div>'+ 
+      '<div class="ca21-dialog-body"><div class="ca21-warning">La apertura se guarda en la Caja compartida. No se cerrará esta ventana hasta recibir confirmación de Supabase.</div><div class="ca21-form" style="margin-top:12px">'+
+      '<div class="ca21-field"><label>Efectivo inicial</label><input id="ca21-ap-ef" type="text" inputmode="decimal" value="'+ca21Money(efDefault)+'"></div>'+ 
+      '<div class="ca21-field"><label>Banamex Pesos inicial</label><input id="ca21-ap-bp" type="text" inputmode="decimal" value="'+ca21Money(bpDefault)+'"></div>'+ 
+      '<div class="ca21-field"><label>Banamex Dólares inicial</label><input id="ca21-ap-bd" type="text" inputmode="decimal" value="'+ca21Money(bdDefault)+'"></div>'+ 
+      '<div class="ca21-field"><label>Santander Pesos inicial</label><input id="ca21-ap-sp" type="text" inputmode="decimal" value="'+ca21Money(spDefault)+'"></div>'+ 
+      '<div class="ca21-field full"><label>Observación</label><textarea id="ca21-ap-nota" placeholder="Opcional">'+(ap&&ap.nota?ap.nota:'')+'</textarea></div>'+ 
+      '</div><div id="ca159-ap-status" style="display:none;margin-top:10px;font-weight:800;color:#7a3f00"></div></div>'+ 
+      '<div class="ca21-dialog-actions"><button onclick="ca21CloseModal()">Cancelar</button><button class="save" id="ca21-ap-save">Guardar apertura</button></div>'
+    );
+
+    ['ca21-ap-ef','ca21-ap-bp','ca21-ap-sp'].forEach(function(id){var e=document.getElementById(id);if(e&&typeof ca152CurrencyInput==='function')ca152CurrencyInput(e,'$');});
+    var usd=document.getElementById('ca21-ap-bd');if(usd&&typeof ca152CurrencyInput==='function')ca152CurrencyInput(usd,'US$ ');
+
+    document.getElementById('ca21-ap-save').addEventListener('click',async function(){
+      var btn=this, st=document.getElementById('ca159-ap-status');
+      var payload={
+        fecha:fecha,
+        efectivo:ca21Money(document.getElementById('ca21-ap-ef').value),
+        banamex_pesos:ca21Money(document.getElementById('ca21-ap-bp').value),
+        banamex_dolares:ca21Money(document.getElementById('ca21-ap-bd').value),
+        santander_pesos:ca21Money(document.getElementById('ca21-ap-sp').value),
+        nota:document.getElementById('ca21-ap-nota').value.trim(),
+        hora:ca21Now(), usuario:(usuario&&usuario.nombre)||'Usuario'
+      };
+      payload.banamex=payload.banamex_pesos; payload.santander=payload.santander_pesos; payload.bancos=payload.banamex_pesos+payload.santander_pesos;
+      btn.disabled=true; btn.textContent='Guardando…'; st.style.display='block';st.textContent='Guardando apertura compartida…';
+      try{
+        await guardarAperturaConfirmada(fecha,payload);
+        var d=ca21Load();d.aperturas[fecha]=payload;localStorage.setItem(CA21_KEY,JSON.stringify(d));
+        st.textContent='✓ Apertura confirmada en Supabase';
+        if(typeof showToast==='function')showToast('✅ Apertura de Caja guardada y compartida');
+        setTimeout(async function(){ca21CloseModal();if(typeof ca153RecargarCaja==='function')await ca153RecargarCaja();else renderCajaMootsil(CAJA_PERIODO,fecha);},250);
+      }catch(e){
+        console.error('C159 apertura',e);st.textContent='No se guardó la apertura: '+errMsg(e);btn.disabled=false;btn.textContent='Guardar apertura';alert('No se guardó la apertura de Caja.\n\n'+errMsg(e));
+      }
+    });
+  };
+})();
+</script>
 </body>
 </html>
