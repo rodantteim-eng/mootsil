@@ -6183,6 +6183,26 @@ var nuevoProductoHtml=esNuevo?('<div class="form-group" style="margin-bottom:.5r
       '</div>';
   }
 
+  function nc154CapturarFilaDOM(rid){
+    var cont=document.getElementById('nc-items');
+    if(!cont) return;
+    var f=filas.find(function(x){return x.row==rid;});
+    if(!f) return;
+    function el(sel){return cont.querySelector(sel+'[data-row="'+rid+'"]');}
+    var x;
+    x=el('.nc-monto'); if(x) f.monto=x.value;
+    x=el('.nc-concepto'); if(x) f.concepto=x.value;
+    x=el('.nc-cantidad'); if(x) f.cantidad=x.value;
+    x=el('.nc-activo-nombre'); if(x) f.activoNombre=x.value;
+    if(f.nuevoProducto){
+      x=el('.nc-nuevo-nombre'); if(x){f.nuevoProducto.nombre=x.value;f.itemNombre=x.value;}
+      x=el('.nc-nuevo-categoria'); if(x) f.nuevoProducto.categoria=x.value;
+      x=el('.nc-nuevo-presentacion'); if(x) f.nuevoProducto.unidad_compra=x.value;
+      x=el('.nc-nuevo-factor'); if(x&&x.value!=='') f.nuevoProducto.factor_compra=parseFloat(x.value)||1;
+      x=el('.nc-nuevo-unidad'); if(x) f.nuevoProducto.unidad=x.value;
+    }
+  }
+
   function pintarItemsCompra(){
     var cont=document.getElementById('nc-items');
     var active=filas.find(function(f){return f.row===activeRowId;});
@@ -6302,17 +6322,19 @@ var nuevoProductoHtml=esNuevo?('<div class="form-group" style="margin-bottom:.5r
     });
     cont.querySelectorAll('.nc-nuevo-unidad').forEach(function(sel){
       sel.addEventListener('change',function(){
-        var rid=this.dataset.row;
+        var rid=this.dataset.row, nuevoValor=this.value;
+        nc154CapturarFilaDOM(rid);
         var f=filas.find(function(x){return x.row==rid;});
-        if(f&&f.nuevoProducto) f.nuevoProducto.unidad=this.value;
+        if(f&&f.nuevoProducto) f.nuevoProducto.unidad=nuevoValor;
         pintarItemsCompra();
       });
     });
     cont.querySelectorAll('.nc-nuevo-presentacion').forEach(function(sel){
       sel.addEventListener('change',function(){
-        var rid=this.dataset.row;
+        var rid=this.dataset.row, nuevoValor=this.value;
+        nc154CapturarFilaDOM(rid);
         var f=filas.find(function(x){return x.row==rid;});
-        if(f&&f.nuevoProducto) f.nuevoProducto.unidad_compra=this.value;
+        if(f&&f.nuevoProducto) f.nuevoProducto.unidad_compra=nuevoValor;
         pintarItemsCompra();
       });
     });
@@ -14794,7 +14816,7 @@ C087
 <!-- C147: Dueño/Dueña unificado al shell visual Admin; permisos intactos -->
 
 <script id="c153-caja-compartida">
-/* C153 · Caja compartida multiusuario en Supabase.
+/* C154 · Caja compartida multiusuario robusta en Supabase.
    Mantiene localStorage únicamente como espejo/cache; Supabase es la fuente compartida.
 */
 (function(){
@@ -14825,7 +14847,22 @@ C087
   function c153SetLocal(x){localStorage.setItem(CA21_KEY,JSON.stringify(x||{movimientos:[],aperturas:{},cortes:{}}));}
   function c153Post(table,rows){
     if(!rows||!rows.length)return Promise.resolve();
-    return api('/rest/v1/'+table,{method:'POST',body:rows,prefer:'resolution=merge-duplicates,return=minimal'});
+    /* C154: evita UPSERT por Prefer: resolution=merge-duplicates.
+       Guardamos cada fila con INSERT o UPDATE explícito según exista la llave primaria.
+       Esto hace la sincronización compatible con las políticas RLS ya creadas en C153. */
+    var key=(table===C153_MOV)?'id':'fecha';
+    function saveOne(row){
+      var val=row&&row[key];
+      if(val===undefined||val===null||val==='') return Promise.reject(new Error('Registro de Caja sin '+key));
+      var filter=key+'=eq.'+encodeURIComponent(String(val));
+      return api('/rest/v1/'+table+'?select='+key+'&'+filter+'&limit=1').then(function(found){
+        if(Array.isArray(found)&&found.length){
+          return api('/rest/v1/'+table+'?'+filter,{method:'PATCH',body:row,prefer:'return=minimal'});
+        }
+        return api('/rest/v1/'+table,{method:'POST',body:row,prefer:'return=minimal'});
+      });
+    }
+    return rows.reduce(function(chain,row){return chain.then(function(){return saveOne(row);});},Promise.resolve());
   }
   function c153Delete(table,col,val){
     return api('/rest/v1/'+table+'?'+col+'=eq.'+encodeURIComponent(val),{method:'DELETE',prefer:'return=minimal'});
@@ -14892,8 +14929,16 @@ C087
     return Promise.all(jobs);
   }
   function c153Warn(e){
-    console.error('C153 Caja compartida',e);
-    if(!c153Alerted){c153Alerted=true;alert('No se pudo sincronizar Caja con la base compartida. El movimiento permanece en este dispositivo; vuelve a intentar con conexión antes de continuar.');setTimeout(function(){c153Alerted=false;},4000);}
+    console.error('C154 Caja compartida',e);
+    if(!c153Alerted){
+      c153Alerted=true;
+      var msg=(e&&e.message)?String(e.message):'';
+      var detalle=/relation .* does not exist|Could not find the table|schema cache/i.test(msg)
+        ? 'No se encontraron las tablas compartidas de Caja en Supabase. Ejecuta una sola vez el SQL de Caja incluido en el candidato.'
+        : 'No se pudo sincronizar Caja con la base compartida. Revisa la conexión e intenta nuevamente.';
+      alert(detalle+(msg?'\n\nDetalle: '+msg:''));
+      setTimeout(function(){c153Alerted=false;},4000);
+    }
   }
 
   window.ca21Save=function(data){
