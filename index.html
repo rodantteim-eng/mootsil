@@ -15342,5 +15342,96 @@ C087
 <script id="c167-financiamientos-caja-index">console.info("Mootsil C167: financiamientos impactan Caja desde Supabase en index.html activo y por cuenta seleccionada");</script>
 <script id="c169-marker">console.info("Mootsil C169: historial protegido, transferencias descuentan origen/suman destino y gastos editables desde Caja");</script>
 <script id="c170-marker">console.info("Mootsil C170: transferencia una sola vez por cuenta; historial muestra entrada/salida y cuentas muestran entradas + salidas");</script>
+
+<script id="c172-cierre-apertura-saldos-automaticos">
+/* C172 · Cierre compartido y arrastre automático de saldos al día siguiente.
+   Regla: el cierre confirmado de cada cuenta es el saldo inicial sugerido de la siguiente apertura.
+*/
+(function(){
+  if(typeof api!=='function' || typeof ca21Money!=='function') return;
+  function clone(x){try{return JSON.parse(JSON.stringify(x));}catch(e){return x;}}
+  function uid(){return (typeof usuario!=='undefined'&&usuario&&usuario.id)?usuario.id:null;}
+  function iso(){return new Date().toISOString();}
+  function prevDate(fecha){
+    var d=new Date(fecha+'T12:00:00'); d.setDate(d.getDate()-1);
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  async function fetchCut(fecha){
+    var r=await api('/rest/v1/caja_cortes?fecha=eq.'+encodeURIComponent(fecha)+'&select=fecha,payload&limit=1');
+    return (Array.isArray(r)&&r[0]&&r[0].payload)?r[0].payload:null;
+  }
+  async function saveCut(fecha,payload){
+    var row={fecha:fecha,payload:clone(payload),actualizado_por:uid(),updated_at:iso()};
+    var found=await api('/rest/v1/caja_cortes?fecha=eq.'+encodeURIComponent(fecha)+'&select=fecha&limit=1');
+    if(Array.isArray(found)&&found.length){
+      await api('/rest/v1/caja_cortes?fecha=eq.'+encodeURIComponent(fecha),{method:'PATCH',body:row,prefer:'return=minimal'});
+    }else{
+      await api('/rest/v1/caja_cortes',{method:'POST',body:row,prefer:'return=minimal'});
+    }
+    var verify=await fetchCut(fecha);
+    if(!verify) throw new Error('Supabase no confirmó el corte.');
+    return verify;
+  }
+
+  window.ca21OpenCorte=function(fecha){
+    var totals=ca21Totals(fecha), dd=ca21DayData(fecha), corte=dd.corte;
+    ca21OpenModal(
+      '<div class="ca21-dialog-head"><div><h3>▣ Corte de Caja</h3><p>'+cajaFechaCorta(fecha)+'</p></div><button class="ca21-close" onclick="ca21CloseModal()">×</button></div>'+
+      '<div class="ca21-dialog-body">'+
+        '<div class="ca21-warning">Estos saldos de cierre quedarán como referencia automática para la apertura del siguiente día.</div>'+
+        '<div class="ca21-form" style="margin-top:12px">'+
+          '<div class="ca21-field"><label>Efectivo contado físicamente</label><input id="ca21-c-ef" type="number" min="0" step="0.01" value="'+(corte?corte.efectivo_contado:totals.efectivo)+'"></div>'+
+          '<div class="ca21-field"><label>Banamex Pesos al cierre</label><input id="ca21-c-bp" type="number" min="0" step="0.01" value="'+(corte&&corte.banamex_pesos_cierre!=null?corte.banamex_pesos_cierre:totals.banamex_pesos)+'"></div>'+
+          '<div class="ca21-field"><label>Banamex Dólares al cierre</label><input id="ca21-c-bd" type="number" min="0" step="0.01" value="'+(corte&&corte.banamex_dolares_cierre!=null?corte.banamex_dolares_cierre:totals.banamex_dolares)+'"></div>'+
+          '<div class="ca21-field"><label>Santander Pesos al cierre</label><input id="ca21-c-sp" type="number" min="0" step="0.01" value="'+(corte&&corte.santander_pesos_cierre!=null?corte.santander_pesos_cierre:totals.santander_pesos)+'"></div>'+
+          '<div class="ca21-field full"><label>Justificación de diferencia</label><textarea id="ca21-c-nota" placeholder="Obligatoria si existe diferencia">'+(corte&&corte.nota?corte.nota:'')+'</textarea></div>'+
+          '<div id="c172-cut-status" class="ca21-field full" style="display:none;font-weight:800;color:#7a3f00"></div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="ca21-dialog-actions"><button onclick="ca21CloseModal()">Cancelar</button><button class="danger" id="ca21-c-save">Cerrar Caja del día</button></div>'
+    );
+    document.getElementById('ca21-c-save').addEventListener('click',async function(){
+      var btn=this, st=document.getElementById('c172-cut-status');
+      var ef=ca21Money(document.getElementById('ca21-c-ef').value),
+          bp=ca21Money(document.getElementById('ca21-c-bp').value),
+          bd=ca21Money(document.getElementById('ca21-c-bd').value),
+          sp=ca21Money(document.getElementById('ca21-c-sp').value);
+      var diferencia=ca21Money(ef-totals.efectivo),nota=document.getElementById('ca21-c-nota').value.trim();
+      if(Math.abs(diferencia)>.009&&!nota){alert('Existe diferencia de efectivo. Captura una justificación.');return;}
+      var payload={
+        fecha:fecha,hora:ca21Now(),efectivo_esperado:totals.efectivo,efectivo_contado:ef,
+        bancos_cierre:ca21Money(bp+sp),banamex_pesos_cierre:bp,banamex_dolares_cierre:bd,
+        santander_pesos_cierre:sp,diferencia:diferencia,nota:nota,
+        usuario:(typeof usuario!=='undefined'&&usuario&&usuario.nombre)||'Usuario'
+      };
+      btn.disabled=true; btn.textContent='Cerrando…'; st.style.display='block'; st.textContent='Guardando corte compartido…';
+      try{
+        await saveCut(fecha,payload);
+        var d=ca21Load(); d.cortes[fecha]=payload; localStorage.setItem(CA21_KEY,JSON.stringify(d));
+        st.textContent='✓ Corte confirmado. Mañana estos saldos se propondrán automáticamente.';
+        if(typeof showToast==='function')showToast('✅ Caja cerrada y saldos listos para la siguiente apertura');
+        setTimeout(async function(){ca21CloseModal();if(typeof ca153RecargarCaja==='function')await ca153RecargarCaja();else renderCajaMootsil(CAJA_PERIODO,fecha);},300);
+      }catch(e){
+        console.error('C172 corte',e); st.textContent='No se pudo confirmar el cierre: '+((e&&e.message)||e);
+        btn.disabled=false;btn.textContent='Cerrar Caja del día';
+      }
+    });
+  };
+
+  var priorOpen=window.ca21OpenApertura;
+  window.ca21OpenApertura=async function(fecha){
+    /* Carga el corte anterior desde Supabase antes de abrir el modal,
+       para que el override C164 encuentre los saldos en el cache local. */
+    try{
+      var prev=prevDate(fecha), cut=await fetchCut(prev);
+      if(cut){
+        var d=ca21Load(); d.cortes[prev]=cut; localStorage.setItem(CA21_KEY,JSON.stringify(d));
+      }
+    }catch(e){console.warn('C172 arrastre de cierre',e);}
+    return priorOpen(fecha);
+  };
+})();
+</script>
+
 </body>
 </html>
