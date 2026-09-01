@@ -552,7 +552,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ca17-accounts{display:grid;grid-template-columns:1fr 1fr;border:1px solid #d8e0da;border-radius:13px;background:#fbfdfb;margin-top:10px;overflow:hidden}.ca17-account{padding:11px 16px;text-align:center}.ca17-account+.ca17-account{border-left:1px solid #d8e0da}
 .ca17-account strong{font-size:.8rem;color:#1a5d42}.ca17-account div{font-size:1.05rem;font-weight:900;color:#165438;margin-top:2px}
 .ca17-actions{display:grid;grid-template-columns:1.25fr 1.25fr 1fr 1fr 1fr;gap:10px;margin-top:12px}.ca17-actions button{border:1px solid #dfe6e1;background:#fff;border-radius:10px;padding:11px 10px;font-size:.68rem;font-weight:900;cursor:pointer}.ca17-actions .entry{background:#0e6b48;color:#fff;border-color:#0e6b48}.ca17-actions .exit{background:#c91515;color:#fff;border-color:#c91515}
-.ca17-controls{display:grid;grid-template-columns:230px 230px 230px 230px 1fr;gap:9px;margin-top:13px}.ca17-controls select,.ca17-controls input{border:1px solid #dce4df;background:#fff;border-radius:9px;padding:8px 10px;font-size:.66rem}
+.ca17-controls{display:grid;grid-template-columns:210px 210px 210px 210px minmax(220px,1fr) auto;gap:9px;margin-top:13px;align-items:center}.ca17-controls select,.ca17-controls input{border:1px solid #dce4df;background:#fff;border-radius:9px;padding:8px 10px;font-size:.66rem}
 .ca17-table-wrap{overflow-x:auto;margin-top:12px}.ca17-table{width:100%;border-collapse:collapse;font-size:.66rem;min-width:1050px}.ca17-table th{background:#104f3a;color:#fff;text-align:left;padding:9px 8px;font-size:.57rem;text-transform:uppercase;letter-spacing:.04em}.ca17-table td{padding:9px 8px;border-bottom:1px solid #edf0ed;vertical-align:top}
 .ca17-money-in{color:#188046;font-weight:900}.ca17-money-out{color:#c51717;font-weight:900}.ca17-tag{display:inline-block;border-radius:8px;padding:3px 7px;font-size:.56rem;font-weight:800;background:#edf4ef;color:#2f6248}
 .ca17-foot{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;background:#eef8f0;border:1px solid #d1e7d7;border-radius:12px;padding:10px 12px;font-size:.63rem;color:#37634d;margin-top:11px}
@@ -9052,13 +9052,16 @@ function no89AbrirModal(titulo,tamano){
 function renderAdministracionMenu(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="ad17-shell"><div class="ad17-head"><div><div class="ad17-eyebrow">Administración</div><div class="ad17-title">Control del Rancho</div><div class="ad17-sub">Finanzas, personal, compras y operación administrativa de Mootsil.</div></div></div><div class="ad17-grid">'+
-    '<div class="ad17-card primary" data-admin="caja"><div class="ic">💵</div><h3>Caja</h3><p>Entradas, salidas, pagos, movimientos y control financiero operativo.</p></div>'+
+    '<div class="ad17-card primary em60-card" data-admin="caja"><div class="ic">💵</div><h3>Caja</h3><p>Entradas, salidas, pagos, movimientos y control financiero operativo.</p><div class="em60-actions"><button type="button" data-cajago="compras">🧾 Compras</button><button type="button" data-cajago="gastos">💳 Gastos</button><button type="button" data-cajago="nomina">💰 Nómina</button></div></div>'+
     '<div class="ad17-card blue em60-card" data-admin="empleados"><div class="ic">👥</div><h3>Empleados</h3><p>Expedientes, asistencia y solicitudes del personal.</p><div class="em60-actions"><button type="button" data-empgo="expedientes">👤 Expedientes</button><button type="button" data-empgo="asistencia">📋 Asistencia</button><button type="button" data-empgo="solicitudes">📨 Solicitudes</button></div></div>'+
     '<div class="ad17-card gold em60-card" data-admin="compensaciones"><div class="ic">💰</div><h3>Nómina y Compensaciones</h3><p>Bonos por objetivos y apoyos económicos al personal.</p><div class="em60-actions"><button type="button" data-compgo="bonos">🎯 Bonos</button><button type="button" data-compgo="apoyos">⛽ Apoyos</button></div></div>'+
     '<div class="ad17-card orange em60-card" data-admin="gastos"><div class="ic">🧾</div><h3>Compras y Proveedores</h3><p>Compras, proveedores, cuentas por pagar, órdenes e historial.</p><div class="em60-actions"><button type="button" data-comprago="nuevo">🧾 Nueva compra</button><button type="button" data-comprago="proveedores">🏢 Proveedores</button><button type="button" data-comprago="cuentas">📆 Cuentas por pagar</button><button type="button" data-comprago="orden">🛒 Órdenes de compra</button></div></div>'+
     '<div class="ad17-card purple" data-admin="inversionistas"><div class="ic">💼</div><h3>Inversionistas y Dueños</h3><p>Perfiles patrimoniales, aportaciones, contratos, movimientos y devoluciones.</p></div>'+
   '</div></div>';
   body.querySelector('[data-admin="caja"]').addEventListener('click',function(){renderCajaMootsil('dia',fechaHoyLocal());});
+  body.querySelector('[data-cajago="compras"]').addEventListener('click',function(e){e.stopPropagation();Promise.resolve(renderCajaMootsil('dia',fechaHoyLocal())).then(function(){setTimeout(function(){if(typeof renderNuevaCompraDesdeCaja==='function')renderNuevaCompraDesdeCaja();},50);});});
+  body.querySelector('[data-cajago="gastos"]').addEventListener('click',function(e){e.stopPropagation();Promise.resolve(renderCajaMootsil('dia',fechaHoyLocal())).then(function(){setTimeout(function(){if(typeof ga37Nuevo==='function')ga37Nuevo();},50);});});
+  body.querySelector('[data-cajago="nomina"]').addEventListener('click',function(e){e.stopPropagation();Promise.resolve(renderCajaMootsil('dia',fechaHoyLocal())).then(function(){setTimeout(function(){if(typeof no50AbrirNominaDesdeCaja==='function')no50AbrirNominaDesdeCaja();},50);});});
   body.querySelector('[data-empgo="expedientes"]').addEventListener('click',function(e){e.stopPropagation();renderAltasBajas();});
   body.querySelector('[data-empgo="asistencia"]').addEventListener('click',function(e){e.stopPropagation();em69RenderAsistencia(fechaHoyLocal());});
   body.querySelector('[data-empgo="solicitudes"]').addEventListener('click',function(e){e.stopPropagation();em69RenderSolicitudes();});
@@ -15649,7 +15652,7 @@ C087
     if(!host){
       host=document.createElement('div');
       host.id='ca177-print-actions';
-      host.style.cssText='display:flex;gap:8px;align-items:center;margin-left:auto;white-space:nowrap';
+      host.style.cssText='display:flex;gap:8px;align-items:center;justify-content:flex-end;white-space:nowrap;grid-column:auto;margin-top:0';
       var b1=document.createElement('button');
       b1.type='button'; b1.className='ca21-action-btn'; b1.id='ca177-print-close';
       b1.textContent='🖨 Imprimir cierre';
@@ -15660,7 +15663,7 @@ C087
       b2.onclick=function(){if(typeof ca174ImprimirCierre==='function')ca174ImprimirCierre(selectedDate(),true);};
       host.appendChild(b1);host.appendChild(b2);
       /* La fila de filtros es el ancestro que contiene fecha + selects + buscador. */
-      var filterRow=input.closest('.ca17-filters')||input.parentElement.parentElement;
+      var filterRow=input.closest('.ca17-controls')||input.parentElement;
       if(filterRow)filterRow.appendChild(host); else row.appendChild(host);
     }
     updateButtons();
