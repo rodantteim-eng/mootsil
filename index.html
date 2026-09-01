@@ -6145,7 +6145,7 @@ function renderNuevaCompra(){
   var comprobanteUrl=null;
   var filaSeq=0;
   function nuevaFilaCompra(){
-    return {row:filaSeq++,categoria:Object.keys(GASTO_CATEGORIAS)[0],itemId:'',itemNombre:'',modoCaptura:'base',cantidad:'',monto:'',concepto:'',activoNombre:'',nuevoProducto:null};
+    return {row:filaSeq++,categoria:Object.keys(GASTO_CATEGORIAS)[0],itemId:'',itemNombre:'',modoCaptura:'base',cantidad:'',precioUnitario:'',monto:'',concepto:'',activoNombre:'',nuevoProducto:null,noInventario:false};
   }
   var filas=[nuevaFilaCompra()];
   if(ordenOrigen&&ordenOrigen.items&&ordenOrigen.items.length){
@@ -6214,15 +6214,18 @@ function renderNuevaCompra(){
         var fila=filas.find(function(f){return f.row==rid2;});
         if(!fila) return;
         if(id==='_nuevo'){
+          fila.noInventario=false;
           fila.itemId='_nuevo';
           fila.itemNombre=(query||'').trim();
           fila.nuevoProducto={nombre:(query||'').trim(),categoria:grupo?GRUPOS_INVENTARIO[grupo].categorias[0]:'',unidad:(grupo==='insumos'?'kg':'pza'),unidad_compra:(grupo==='insumos'?'Saco':'Pieza'),factor_compra:1};
         } else if(id){
+          fila.noInventario=false;
           var it=cats.inventario.find(function(x){return x.id===id;});
           fila.itemId=id;
           fila.itemNombre=it?it.nombre:'';
           fila.nuevoProducto=null;
         } else {
+          fila.noInventario=true;
           fila.itemId='';
           fila.itemNombre='';
           fila.nuevoProducto=null;
@@ -6250,20 +6253,27 @@ function renderNuevaCompra(){
     var equivTxt=esNuevo&&parseFloat(f.cantidad)>0?('= '+numFmt((parseFloat(f.cantidad)||0)*(parseFloat(nuevoProd.factor_compra)||1))+' '+nuevoProd.unidad+' en total'):((conPaquete&&f.modoCaptura==='paquete'&&parseFloat(f.cantidad)>0)?('= '+numFmt(parseFloat(f.cantidad)*parseFloat(it.factor_compra))+' '+it.unidad+' en total'):'');
     var esActivo=!!CATEGORIA_GASTO_A_ACTIVO[f.categoria];
     var buscadorProductoHtml=grupoCat?('<div class="form-group" style="margin-bottom:.5rem;"><label>Producto</label><div class="fcomp-item-wrap" data-row="'+f.row+'" style="position:relative;"><input type="text" class="fcomp-item-buscar nc-item-buscar" data-row="'+f.row+'" autocomplete="off" placeholder="Buscar producto..." value="'+(f.itemNombre?f.itemNombre.replace(/"/g,'&quot;'):'')+'"><div class="fcomp-item-resultados nc-item-resultados" data-row="'+f.row+'" style="display:none;position:absolute;left:0;right:0;top:100%;z-index:30;background:#fff;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);max-height:220px;overflow-y:auto;box-shadow:0 6px 16px rgba(0,0,0,.15);"></div></div></div>'):'';
+    var noInventarioHtml=grupoCat?('<div style="margin:-.15rem 0 .55rem;"><button type="button" class="nc199-noinv'+(f.noInventario?' sel':'')+'" data-row="'+f.row+'" style="border:1px solid '+(f.noInventario?'#157a47':'#d9e2dc')+';background:'+(f.noInventario?'#edf8f1':'#fff')+';color:#174f3c;border-radius:9px;padding:8px 10px;font-size:.68rem;font-weight:800;cursor:pointer;">'+(f.noInventario?'✓ ':'')+'No subir a inventario</button><span class="hint" style="margin-left:7px;">IEPS, impuestos, fletes u otros conceptos sin stock.</span></div>'):'';
+
     var PRESENTACIONES_COMPRA=['Bolsa','Saco','Bote','Cubeta','Garrafa','Caja','Paquete','Rollo','Pieza','Otro'];
         var existenteMetaHtml=tieneItem?('<div class="nc33-info-grid"><div><div class="k">'+(grupoCat==='insumos'?'Subcategoría':'Categoría')+'</div><div class="v">'+(it.categoria||'Sin categoría')+'</div></div><div><div class="k">Presentación</div><div class="v">'+(it.unidad_compra||'Unidad base')+'</div></div><div><div class="k">Contenido</div><div class="v">'+(it.factor_compra?numFmt(it.factor_compra)+' '+it.unidad:('1 '+it.unidad))+'</div></div></div>'):'';
 var nuevoProductoHtml=esNuevo?('<div class="form-group" style="margin-bottom:.5rem;background:var(--verde-tenue);padding:.7rem;border-radius:var(--radio-sm);border:1.5px dashed var(--verde-mid);"><label style="color:var(--verde);">Nuevo producto para Inventario</label><div class="nc32-new-grid"><div><label>Nombre</label><input type="text" class="nc-nuevo-nombre" data-row="'+f.row+'" value="'+(nuevoProd.nombre?nuevoProd.nombre.replace(/"/g,'&quot;'):'')+'" placeholder="Nombre del producto" style="width:100%;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);"></div><div><label>'+(grupoCat==='insumos'?'Subcategoría':'Categoría')+'</label><select class="nc-nuevo-categoria" data-row="'+f.row+'" style="width:100%;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);">'+(grupoCat?GRUPOS_INVENTARIO[grupoCat].categorias.map(function(c){return '<option value="'+c+'"'+(nuevoProd.categoria===c?' selected':'')+'>'+c+'</option>';}).join(''):'')+'</select></div><div><label>Presentación</label><select class="nc-nuevo-presentacion" data-row="'+f.row+'" style="width:100%;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);">'+PRESENTACIONES_COMPRA.map(function(p){return '<option value="'+p+'"'+(nuevoProd.unidad_compra===p?' selected':'')+'>'+p+'</option>';}).join('')+'</select></div><div><label>Contenido por presentación</label><div style="display:flex;gap:5px"><input type="number" min=".001" step=".001" class="nc-nuevo-factor" data-row="'+f.row+'" value="'+(nuevoProd.factor_compra||1)+'" style="min-width:0;width:100%;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);"><select class="nc-nuevo-unidad" data-row="'+f.row+'" style="width:105px;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);">'+Object.keys(UNIDADES_LBL).map(function(u){return '<option value="'+u+'"'+(nuevoProd.unidad===u?' selected':'')+'>'+UNIDADES_LBL[u]+'</option>';}).join('')+'</select></div></div></div><p class="hint" style="margin:.4rem 0 0;">Ejemplo: Saco · 25 kg. Mootsil convertirá automáticamente la cantidad comprada a inventario.</p></div>'):'';
     var activoHtml=esActivo?('<div class="form-group" style="margin-bottom:.5rem;"><label>Nombre de la '+(f.categoria==='herramientas'?'herramienta':'equipo')+' (opcional)</label><input type="text" class="nc-activo-nombre" data-row="'+f.row+'" value="'+(f.activoNombre?f.activoNombre.replace(/"/g,'&quot;'):'')+'" placeholder="Ej. Tijera de poda larga"><p class="hint" style="margin:.3rem 0 0;">Si la llenas, se agrega automáticamente a '+(f.categoria==='herramientas'?'🧰 Herramientas':'⚙️ Equipos')+' como disponible.</p></div>'):'';
+    var cantidadCompra=parseFloat(f.cantidad)||0;
+    var precioUnitarioCompra=parseFloat(f.precioUnitario)||0;
+    var importeCalculado=(cantidadCompra>0&&precioUnitarioCompra>0)?cantidadCompra*precioUnitarioCompra:(parseFloat(f.monto)||0);
+    if(cantidadCompra>0&&precioUnitarioCompra>0) f.monto=importeCalculado;
     var catTabs=Object.keys(GASTO_CATEGORIAS).map(function(k){var c=GASTO_CATEGORIAS[k];return '<button type="button" class="nc31-cat-tab'+(f.categoria===k?' sel':'')+'" data-row="'+f.row+'" data-cat="'+k+'">'+c.lbl+'</button>';}).join('');
     return '<div class="nc31-editor" data-row="'+f.row+'">'+
       '<div class="nc31-editor-head">Agregar producto</div>'+
       '<div class="form-group" style="margin-bottom:.35rem;"><label>Categoría</label><div class="nc31-cat-tabs">'+catTabs+'</div><select class="nc-cat" data-row="'+f.row+'" style="display:none">'+catOpts+'</select></div>'+
       buscadorProductoHtml+
+      noInventarioHtml+
       existenteMetaHtml+
       nuevoProductoHtml+
       activoHtml+
       ((tieneItem||esNuevo||f.ordenOrigen)?(modoTogglesHtml+'<div class="form-group" style="margin-bottom:.2rem;"><label>Cantidad '+(f.ordenOrigen?'recibida':'que entra a inventario')+' ('+(cantLbl||f.unidadOrden||'unidad')+')</label><input type="number" class="nc-cantidad" data-row="'+f.row+'" min="0" step="any" value="'+(f.cantidad||'')+'" placeholder="0">'+(f.ordenOrigen&&!f.itemId?'<p class="hint" style="margin:.3rem 0;color:#9a6415;font-weight:700;">⚠ Vincula este producto con Inventario para que la recepción aumente existencias.</p>':(cantEjemplo?'<p class="hint" style="margin:.3rem 0 0;">'+cantEjemplo+'</p>':''))+'</div><p class="hint nc-equiv" data-row="'+f.row+'" style="margin:0 0 .5rem;font-weight:700;color:var(--verde-mid);">'+equivTxt+'</p>'):'')+
-      (f.precioUnitario!=null?'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><div class="form-group" style="margin-bottom:.5rem;"><label>Precio unitario adjudicado</label><input type="text" value="$'+formatMonto(f.precioUnitario)+'" disabled style="background:#f5f7f6;font-weight:700;"></div><div class="form-group" style="margin-bottom:.5rem;"><label>Importe de la partida ($)</label><input type="number" class="nc-monto" data-row="'+f.row+'" min="0" step="any" value="'+(f.monto||'')+'" placeholder="0.00"></div></div>':'<div class="form-group" style="margin-bottom:.5rem;"><label>Monto ($)</label><input type="number" class="nc-monto" data-row="'+f.row+'" min="0" step="any" value="'+(f.monto||'')+'" placeholder="0.00"></div>')+
+      (f.precioUnitario!=null?'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><div class="form-group" style="margin-bottom:.5rem;"><label>Precio unitario adjudicado</label><input type="text" value="$'+formatMonto(f.precioUnitario)+'" disabled style="background:#f5f7f6;font-weight:700;"></div><div class="form-group" style="margin-bottom:.5rem;"><label>Importe de la partida ($)</label><input type="number" class="nc-monto" data-row="'+f.row+'" min="0" step="any" value="'+(f.monto||'')+'" placeholder="0.00"></div></div>':'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><div class="form-group" style="margin-bottom:.5rem;"><label>Precio unitario ($)</label><input type="number" class="nc199-precio-unitario" data-row="'+f.row+'" min="0" step="any" value="'+(f.precioUnitario||'')+'" placeholder="0.00"></div><div class="form-group" style="margin-bottom:.5rem;"><label>Importe total ($)</label><input type="number" class="nc-monto" data-row="'+f.row+'" min="0" step="any" value="'+(f.monto||'')+'" placeholder="0.00"></div></div>')+
       '<div class="form-group" style="margin-bottom:0;"><label>Concepto / descripción (opcional)</label><input type="text" class="nc-concepto" data-row="'+f.row+'" value="'+(f.concepto?f.concepto.replace(/"/g,'&quot;'):'')+'" placeholder="Ej. Sulfato de amonio 25kg"></div>'+
       (filas.length>1?'<button type="button" class="nc-quitar" data-row="'+f.row+'" style="border:none;background:none;color:var(--rojo);font-size:.78rem;font-weight:600;cursor:pointer;margin-top:.5rem;">🗑️ Quitar producto</button>':'')+
       '</div>';
@@ -6277,6 +6287,7 @@ var nuevoProductoHtml=esNuevo?('<div class="form-group" style="margin-bottom:.5r
     function el(sel){return cont.querySelector(sel+'[data-row="'+rid+'"]');}
     var x;
     x=el('.nc-monto'); if(x) f.monto=x.value;
+    x=el('.nc199-precio-unitario'); if(x) f.precioUnitario=x.value;
     x=el('.nc-concepto'); if(x) f.concepto=x.value;
     x=el('.nc-cantidad'); if(x) f.cantidad=x.value;
     x=el('.nc-activo-nombre'); if(x) f.activoNombre=x.value;
@@ -6352,11 +6363,46 @@ var nuevoProductoHtml=esNuevo?('<div class="form-group" style="margin-bottom:.5r
         pintarItemsCompra();
       });
     });
+    cont.querySelectorAll('.nc199-noinv').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var rid=this.dataset.row;
+        nc154CapturarFilaDOM(rid);
+        var f=filas.find(function(x){return x.row==rid;});
+        if(!f)return;
+        f.noInventario=!f.noInventario;
+        if(f.noInventario){f.itemId='';f.itemNombre='';f.nuevoProducto=null;f.modoCaptura='base';}
+        pintarItemsCompra();
+      });
+    });
+    cont.querySelectorAll('.nc199-precio-unitario').forEach(function(inp){
+      inp.addEventListener('input',function(){
+        var rid=this.dataset.row,val=parseFloat(this.value)||0;
+        var f=filas.find(function(x){return x.row==rid;});
+        if(!f)return;
+        f.precioUnitario=this.value;
+        var cant=parseFloat(f.cantidad)||0;
+        if(cant>0&&val>0){
+          f.monto=String(cant*val);
+          var mi=cont.querySelector('.nc-monto[data-row="'+rid+'"]');
+          if(mi)mi.value=f.monto;
+        }
+        calcularTotal();
+      });
+    });
     cont.querySelectorAll('.nc-cantidad').forEach(function(inp){
       inp.addEventListener('input',function(){
         var rid=this.dataset.row, val=this.value;
         var f=filas.find(function(x){return x.row==rid;});
-        if(f) f.cantidad=val;
+        if(f){
+          f.cantidad=val;
+          var pu=parseFloat(f.precioUnitario)||0,cantNum=parseFloat(val)||0;
+          if(pu>0&&cantNum>0){
+            f.monto=String(pu*cantNum);
+            var mi=cont.querySelector('.nc-monto[data-row="'+rid+'"]');
+            if(mi)mi.value=f.monto;
+            calcularTotal();
+          }
+        }
         var eq=cont.querySelector('.nc-equiv[data-row="'+rid+'"]');
         if(eq&&f){
           var it=cats.inventario.find(function(x){return x.id===f.itemId;});
@@ -6569,7 +6615,7 @@ var nuevoProductoHtml=esNuevo?('<div class="form-group" style="margin-bottom:.5r
     if(!lineas.length){alert('Captura el monto de al menos un producto.');return;}
     for(var i=0;i<lineas.length;i++){
       var lf=lineas[i];
-      if(lf.itemId==='_nuevo'){
+      if(lf.itemId==='_nuevo'&&!lf.noInventario){
         if(!lf.nuevoProducto||!(lf.nuevoProducto.nombre||'').trim()){
           alert('Escribe el nombre del nuevo producto que quieres agregar a inventario.');
           return;
@@ -6582,10 +6628,10 @@ var nuevoProductoHtml=esNuevo?('<div class="form-group" style="margin-bottom:.5r
           alert('Captura cuántas presentaciones compraste de "'+lf.nuevoProducto.nombre+'".');
           return;
         }
-      } else if(lf.ordenOrigen&&!lf.itemId){
+      } else if(lf.ordenOrigen&&!lf.itemId&&!lf.noInventario){
         alert('Vincula "'+lf.itemNombre+'" con un producto de Inventario para registrar la cantidad recibida.');
         return;
-      } else if(lf.itemId&&!(cantidadBaseDe(lf)>0)){
+      } else if(lf.itemId&&!lf.noInventario&&!(cantidadBaseDe(lf)>0)){
         alert('Captura la cantidad que entra a inventario para "'+lf.itemNombre+'", o quita el producto de inventario si no aplica.');
         return;
       }
@@ -9708,7 +9754,7 @@ function renderCajaMootsil(periodo,fechaBase){
         '<div class="ca17-kpi out"><div class="ball">↑</div><div><div class="lbl">Salidas</div><div class="num">$'+formatMonto(localSalidas)+'</div><div class="meta">MXN</div><div class="num" style="font-size:1.05rem;margin-top:3px">US$ '+formatMonto(localSalidasUsd)+'</div><div class="meta">USD</div></div></div>'+
         '<div class="ca17-kpi net"><div class="ball">▰</div><div><div class="lbl">Saldo disponible</div><div class="num">$'+formatMonto(saldoDisponible)+'</div><div class="meta">MXN · Efectivo + bancos en pesos</div><div class="num" style="font-size:1.05rem;margin-top:3px">US$ '+formatMonto(saldoDisponibleUsd)+'</div><div class="meta">USD · Banamex Dólares</div></div></div></div>'+
         '<div class="ca22-accounts" style="grid-template-columns:repeat(5,minmax(0,1fr))"><div class="ca22-account"><strong>💵 EFECTIVO EN CAJA</strong><div class="amt">$'+formatMonto(ef)+'</div><div class="ca40-account-meta">Inicial <strong>$'+formatMonto(saldoInicialEf)+'</strong> · Entradas <strong>$'+formatMonto(entEf)+'</strong> · Salidas <strong>$'+formatMonto(salEf)+'</strong></div></div><div class="ca22-account"><strong>🏦 BANAMEX PESOS</strong><div class="amt">$'+formatMonto(bp)+'</div><div class="ca40-account-meta">Inicial <strong>$'+formatMonto(saldoInicialBp)+'</strong> · Entradas <strong>$'+formatMonto(entBp)+'</strong> · Salidas <strong>$'+formatMonto(salBp)+'</strong></div></div><div class="ca22-account"><strong>🏦 BANAMEX DÓLARES</strong><div class="amt">US$ '+formatMonto(bd)+'</div><div class="ca40-account-meta">Inicial <strong>US$ '+formatMonto(saldoInicialBd)+'</strong> · Entradas <strong>US$ '+formatMonto(entBd)+'</strong> · Salidas <strong>US$ '+formatMonto(salBd)+'</strong></div></div><div class="ca22-account"><strong>🏦 SANTANDER PESOS</strong><div class="amt">$'+formatMonto(sp)+'</div><div class="ca40-account-meta">Inicial <strong>$'+formatMonto(saldoInicialSp)+'</strong> · Entradas <strong>$'+formatMonto(entSp)+'</strong> · Salidas <strong>$'+formatMonto(salSp)+'</strong></div></div><button class="ca22-transfer" id="ca21-transfer" '+(!apertura||corte?'disabled style="opacity:.45"':'')+'><span>⇄</span>Transferir entre cuentas<small>Entre cuentas de la misma moneda</small></button></div>'+
-        '<div class="ca22-ops" style="grid-template-columns:repeat(5,minmax(0,1fr))"><button class="ca22-op orange" id="ca22-compras" type="button">🧾 Compras</button><button class="ca22-op red" id="ca22-gastos" type="button">💳 Gastos</button><button class="ca22-op nomina-gold" id="ca22-nomina" type="button">💰 Nómina</button><button class="ca22-op purple" id="ca22-inversionistas" type="button">💼 Inversionistas</button><button class="ca22-op finance-blue" id="ca25-financiamientos" type="button">🏦 Financiamientos</button></div>'+
+        '<div class="ca22-ops" style="grid-template-columns:repeat(6,minmax(0,1fr))"><button class="ca22-op green" id="ca199-ingresar-efectivo" type="button">➕ Ingresar efectivo</button><button class="ca22-op orange" id="ca22-compras" type="button">🧾 Compras</button><button class="ca22-op red" id="ca22-gastos" type="button">💳 Gastos</button><button class="ca22-op nomina-gold" id="ca22-nomina" type="button">💰 Nómina</button><button class="ca22-op purple" id="ca22-inversionistas" type="button">💼 Inversionistas</button><button class="ca22-op finance-blue" id="ca25-financiamientos" type="button">🏦 Financiamientos</button></div>'+
         '<div class="ca17-controls"><input id="ca21-fecha" type="date" value="'+CAJA_FECHA_BASE+'"><select id="ca21-tipo"><option value="todos">Todos los movimientos</option><option value="entrada">Entradas</option><option value="salida">Salidas</option><option value="transferencia">Transferencias</option></select><select><option>Todas las categorías</option></select><select><option>Todas las formas de pago</option><option>Efectivo</option><option>Transferencia</option></select><input placeholder="Buscar concepto, beneficiario, folio..."></div>'+
         '<div class="ca17-table-wrap"><table class="ca17-table"><thead><tr><th>Fecha</th><th>Hora</th><th>Tipo</th><th>Concepto</th><th>Categoría</th><th>Beneficiario / Proveedor</th><th>Forma de pago</th><th>Entrada</th><th>Salida</th><th>Origen</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
         '<div class="ca17-foot"><div>ⓘ <strong>Caja compartida:</strong> apertura, movimientos y financiamientos se integran por cuenta. Supabase es la fuente compartida.</div><div>'+(corte?'Corte: '+corte.hora+' · Diferencia $'+formatMonto(corte.diferencia):'Caja sin corte')+'</div></div></div>'+
@@ -9718,6 +9764,7 @@ function renderCajaMootsil(periodo,fechaBase){
 
     var bFecha=document.getElementById('ca21-fecha');if(bFecha)bFecha.addEventListener('change',function(){if(typeof window.ca176RenderHistoryOnly==='function')window.ca176RenderHistoryOnly(this.value);});
     var bOpen=document.getElementById('ca21-open');if(bOpen)bOpen.addEventListener('click',function(){ca21OpenApertura(CAJA_FECHA_BASE);});
+    var bIngEf=document.getElementById('ca199-ingresar-efectivo');if(bIngEf)bIngEf.addEventListener('click',function(){ca21OpenMovimiento('entrada',CAJA_FECHA_BASE||fechaHoyLocal());setTimeout(function(){var c=document.getElementById('ca21-m-cuenta');if(c)c.value='efectivo';},0);});
     var bCompras=document.getElementById('ca22-compras'); if(bCompras)bCompras.addEventListener('click',renderNuevaCompraDesdeCaja);
     var bGastos=document.getElementById('ca22-gastos'); if(bGastos)bGastos.addEventListener('click',ga37Nuevo);
     var bNomina=document.getElementById('ca22-nomina'); if(bNomina)bNomina.addEventListener('click',no50AbrirNominaDesdeCaja);

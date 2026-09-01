@@ -435,6 +435,58 @@ input,select,textarea{width:100%;border:1px solid var(--borde);background:#fafbf
   .app:not(.hiring-welcome) .approved-field-copy span:after{font-size:14px!important}
 }
 
+
+/* C199 · Encabezado real de Registro inspirado directamente en Cosecha aprobada */
+.reg199-head{display:none;background:#fff}
+.reg199-top{
+  min-height:142px;padding:27px 20px 16px;position:relative;color:#fff;
+  background:radial-gradient(circle at 84% 18%,#075b34 0,#04472a 48%,#00351f 100%)
+}
+.reg199-title{font-size:30px;font-weight:850;letter-spacing:-.03em;line-height:1.05;margin-top:10px}
+.reg199-title span{color:#f6a000}
+.reg199-sub{margin-top:9px;color:#f6a000;font-size:16px;font-weight:750}
+.reg199-actions{position:absolute;right:16px;top:16px;display:flex;align-items:center;gap:10px}
+.reg199-alert{width:50px;height:50px;border-radius:50%;display:grid;place-items:center;background:#cf2f2f;color:#fff;font-size:24px;font-weight:900;border:1px solid rgba(255,255,255,.45)}
+.reg199-avatar{width:88px;height:88px;border-radius:50%;overflow:hidden;border:3px solid rgba(255,255,255,.9);box-shadow:0 6px 15px rgba(0,0,0,.18)}
+.reg199-avatar img{width:100%;height:100%;object-fit:cover}
+.reg199-ranchbar{
+  height:66px;background:#f6a000;display:grid;grid-template-columns:1fr 145px;align-items:center;position:relative
+}
+.reg199-crest{position:absolute;left:16px;top:-27px;width:96px;height:116px;object-fit:contain;z-index:3}
+.reg199-ranchname{
+  font-family:Georgia,"Times New Roman",serif;font-style:italic;text-align:center;
+  font-size:21px;color:#161109;padding-left:92px;white-space:nowrap
+}
+.reg199-crop{
+  height:100%;display:grid;place-items:center;background:linear-gradient(110deg,#3d0868,#65088c);
+  color:#fff;font-size:23px;font-weight:800
+}
+.reg199-hero{height:205px;position:relative;overflow:hidden;background:#e7efe7}
+.reg199-hero>img{width:100%;height:100%;object-fit:cover;object-position:center 44%}
+.reg199-hero:after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,rgba(255,255,255,.96) 0%,rgba(255,255,255,.72) 38%,rgba(255,255,255,.08) 64%,rgba(255,255,255,0) 100%)
+}
+.reg199-copy{position:absolute;left:26px;top:48px;z-index:2;width:48%}
+.reg199-copy strong{display:block;color:#073a22;font-size:28px;line-height:1.08;margin-bottom:8px}
+.reg199-copy span{display:block;color:#263f32;font-size:16px;line-height:1.38}
+@media(max-width:500px){
+  .reg199-top{min-height:132px;padding:23px 17px 14px}
+  .reg199-title{font-size:25px;max-width:61%}
+  .reg199-sub{font-size:14px}
+  .reg199-actions{right:12px;top:14px;gap:8px}
+  .reg199-alert{width:44px;height:44px;font-size:21px}
+  .reg199-avatar{width:78px;height:78px}
+  .reg199-ranchbar{height:62px;grid-template-columns:1fr 128px}
+  .reg199-crest{width:86px;height:106px;left:12px;top:-25px}
+  .reg199-ranchname{font-size:17px;padding-left:76px}
+  .reg199-crop{font-size:20px}
+  .reg199-hero{height:190px}
+  .reg199-copy{left:22px;top:44px;width:51%}
+  .reg199-copy strong{font-size:24px}
+  .reg199-copy span{font-size:14px}
+}
+
 </style></head><body><div class="app hiring-welcome">
 <header class="approved-head">
   <div class="approved-top">
@@ -455,6 +507,28 @@ input,select,textarea{width:100%;border:1px solid var(--borde);background:#fafbf
     <div class="approved-field-copy">
       <strong>Bienvenido</strong>
       <span>Forma parte del equipo Mootsil</span>
+    </div>
+  </div>
+</header>
+<header id="reg199-head" class="reg199-head">
+  <div class="reg199-top">
+    <div class="reg199-title">Mootsil | <span>Contratación</span></div>
+    <div class="reg199-sub">Registro de personal</div>
+    <div class="reg199-actions">
+      <div class="reg199-alert">!</div>
+      <div class="reg199-avatar"><img src="mootsilito-cosecha.png" alt="Mootsilito"></div>
+    </div>
+  </div>
+  <div class="reg199-ranchbar">
+    <img class="reg199-crest" src="escudo-oficial-rancho.png" alt="Mootsil">
+    <div class="reg199-ranchname">Rancho Sagrado Corazón</div>
+    <div class="reg199-crop">Zarzamora</div>
+  </div>
+  <div class="reg199-hero">
+    <img src="mootsil-cosecha-campo-aprobado.jpg" alt="Rancho Sagrado Corazón">
+    <div class="reg199-copy">
+      <strong>Completa tu registro</strong>
+      <span>Únete al equipo Mootsil.</span>
     </div>
   </div>
 </header>
@@ -479,7 +553,7 @@ input,select,textarea{width:100%;border:1px solid var(--borde);background:#fafbf
 <div class="navitem"><span>♙</span><span>Perfil</span></div>
 </div></div><script>
 const URL_SB="https://ypreafyqnckswvoaerbe.supabase.co"; const KEY_SB="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwcmVhZnlxbmNrc3d2b2FlcmJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NDE0NjAsImV4cCI6MjA5ODQxNzQ2MH0.2Bwg1HdUXKlw9U3a3-3FvpeNV3iKktJchkL6xbD51DU"; let step=1; const selectedFiles={ine:null,curp:null,domicilio:null}, previewUrls={};
-function startForm(){document.querySelector('.app').classList.remove('hiring-welcome');welcome.classList.add('hidden');formapp.classList.remove('hidden');setStep(1)} function setStep(n){step=n;document.querySelectorAll('.step').forEach(x=>x.classList.toggle('hidden',+x.dataset.step!==n));bar.style.width=(n*20)+'%';steplabel.textContent='Paso '+n+' de 5';pct.textContent=(n*20)+'%';back.classList.toggle('hidden',n===1);next.classList.toggle('hidden',n===5);submit.classList.toggle('hidden',n!==5);if(n===5)renderSummary();scrollTo({top:0,behavior:'smooth'})} function pickRole(el){document.querySelectorAll('.role').forEach(x=>x.classList.remove('sel'));el.classList.add('sel');puesto.value=el.dataset.role;saveDraft()}
+function startForm(){document.querySelector('.app').classList.remove('hiring-welcome');var ah=document.querySelector('.approved-head');if(ah)ah.style.display='none';var rh=document.getElementById('reg199-head');if(rh)rh.style.display='block';welcome.classList.add('hidden');formapp.classList.remove('hidden');setStep(1)} function setStep(n){step=n;document.querySelectorAll('.step').forEach(x=>x.classList.toggle('hidden',+x.dataset.step!==n));bar.style.width=(n*20)+'%';steplabel.textContent='Paso '+n+' de 5';pct.textContent=(n*20)+'%';back.classList.toggle('hidden',n===1);next.classList.toggle('hidden',n===5);submit.classList.toggle('hidden',n!==5);if(n===5)renderSummary();scrollTo({top:0,behavior:'smooth'})} function pickRole(el){document.querySelectorAll('.role').forEach(x=>x.classList.remove('sel'));el.classList.add('sel');puesto.value=el.dataset.role;saveDraft()}
 function validStep(n){let ok=true;document.querySelector('.step[data-step="'+n+'"]').querySelectorAll('[required]').forEach(el=>{if(!String(el.value||'').trim()){el.style.borderColor='#c93b2f';ok=false}else el.style.borderColor=''});if(n===2&&!puesto.value){alert('Selecciona el puesto al que te postulas.');return false}if(!ok)alert('Completa los campos obligatorios para continuar.');return ok} function nextStep(){if(validStep(step))setStep(Math.min(5,step+1))} function prevStep(){setStep(Math.max(1,step-1))}
 function val(id){return document.getElementById(id).value.trim()} function esc(s){return String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))} function fmtSize(n){return n<1048576?(n/1024).toFixed(0)+' KB':(n/1048576).toFixed(1)+' MB'} function ext(n){let p=n.lastIndexOf('.');return p>=0?n.slice(p):''}
 function renderSummary(){let docs=[];Object.values(selectedFiles).forEach(f=>{if(f)docs.push(f.name)});summary.innerHTML='<strong>'+esc(val('nombre'))+'</strong><br>'+esc(val('puesto'))+' · Eventual<br>Disponible para ingreso: '+esc(val('ingreso'))+'<br>Tel: '+esc(val('telefono'))+'<br>Domicilio: '+esc(val('direccion'))+'<br><br><strong>Contacto de emergencia:</strong> '+esc(val('em_nombre'))+' · '+esc(val('em_parentesco'))+' · '+esc(val('em_telefono'))+'<br><br><strong>Documentos preparados:</strong> '+(docs.length?esc(docs.join(', ')):'Ninguno · puedes enviar así tu registro.')}
