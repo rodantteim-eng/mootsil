@@ -14621,6 +14621,7 @@ C087
 .fi130-historybar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
 .fi130-status{display:inline-block;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:800;background:#eef1ef;color:#526059}
 .fi130-status.active{background:#e9f5ee;color:#176a49}.fi130-status.closed{background:#eef2f5;color:#4f6370}
+.fi160-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:nowrap;white-space:nowrap}.fi160-delete{border-color:#d9534f!important;color:#b42318!important;background:#fff!important}
 
 /* C138 · registro e incorporación más visual y cierre siempre accesible */
 .c138-info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px;margin-top:10px}
@@ -14703,7 +14704,7 @@ C087
         <div><span class="muted">Original</span><br><strong>${money(f.monto_original)}</strong></div>
         <div><span class="muted">Saldo</span><br><strong>${money(saldo(f))}</strong></div>
         <div><span class="muted">Próximo pago</span><br><strong>${f.proximo_pago||'—'}</strong></div>
-        <div><span class="fi128-pill">${saldo(f)<=0?'Liquidado':'Activo'}</span><br><button class="fi128-btn" style="margin-top:6px;padding:7px 10px" data-fi-detail="${f.id}">Ver detalle</button> <button class="fi128-btn" style="margin-top:6px;padding:7px 10px" data-fi-edit="${f.id}">✎ Editar</button></div>
+        <div class="fi160-actions"><span class="fi128-pill">${saldo(f)<=0?'Liquidado':'Activo'}</span><button class="fi128-btn" style="padding:7px 10px" data-fi-detail="${f.id}">Ver detalle</button><button class="fi128-btn" style="padding:7px 10px" data-fi-edit="${f.id}">✎ Editar</button><button class="fi128-btn fi160-delete" style="padding:7px 10px" data-fi-delete="${f.id}">🗑 Eliminar</button></div>
        </div>`).join(''):`<div class="fi128-empty">Aún no hay financiamientos registrados.</div>`}</div>
      </div></div>`;
    $('#fi128-back').onclick=back;
@@ -14711,6 +14712,7 @@ C087
    $('#fi130-history').onclick=()=>historialGeneral();
    document.querySelectorAll('[data-fi-detail]').forEach(b=>b.onclick=()=>detalle(b.dataset.fiDetail));
    document.querySelectorAll('[data-fi-edit]').forEach(b=>b.onclick=()=>editarFinanciamiento(b.dataset.fiEdit));
+   document.querySelectorAll('[data-fi-delete]').forEach(b=>b.onclick=()=>eliminarFinanciamiento(b.dataset.fiDelete));
  }
  function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
  function back(){
@@ -14752,6 +14754,18 @@ C087
      if(btn){btn.disabled=false;btn.textContent='Registrar financiamiento'}
    }
   }
+ }
+ function eliminarFinanciamiento(fid){
+  let f=financs().find(x=>x.id===fid);if(!f)return;
+  if(!confirm('¿Eliminar definitivamente el financiamiento de '+f.institucion+' por '+money(f.monto_original)+'?\n\nTambién se eliminarán sus pagos registrados y el movimiento automático relacionado en Caja.'))return;
+  let mids=movs().filter(x=>x.financiamiento_id===fid).map(x=>x.id);
+  let jobs=mids.map(mid=>api('/rest/v1/financiamiento_movimientos?id=eq.'+encodeURIComponent(mid),{method:'DELETE',prefer:'return=minimal'}));
+  Promise.all(jobs).then(()=>api('/rest/v1/financiamientos?id=eq.'+encodeURIComponent(fid),{method:'DELETE',prefer:'return=minimal'})).then(async()=>{
+    if(typeof ca21Load==='function'&&typeof ca21Save==='function'){
+      let c=ca21Load();c.movimientos=(c.movimientos||[]).filter(x=>x.id!=='FIS-'+fid && x.financiamiento_id!==fid);await ca21Save(c);
+    }
+    await loadShared();render();
+  }).catch(e=>{console.error('C160 eliminar financiamiento',e);alert('No se pudo eliminar el financiamiento de la base compartida: '+e.message);});
  }
  function editarFinanciamiento(fid){
   let f=financs().find(x=>x.id===fid);if(!f)return;
@@ -15129,6 +15143,7 @@ C087
 </script>
 
 <script id="c158-marker">console.info("Mootsil C158: asistencia eliminable + financiamientos editables desde detalle");</script>
+<script id="c160-marker">console.info("Mootsil C160: financiamiento eliminable + acciones en una sola línea");</script>
 
 <script id="c159-apertura-caja-confirmada">
 /* C159 · Apertura de Caja persistida y confirmada directamente en Supabase.
