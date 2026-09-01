@@ -1059,9 +1059,18 @@ function api(path, opts) {
         if((r.status>=500||r.status===429)&&intento<maxIntentos){
           return esperar(900*intento).then(function(){return intentar(intento+1);});
         }
-        return r.json().catch(function(){return {message:'HTTP '+r.status};}).then(function(e){ throw new Error(e.message||('HTTP '+r.status)); });
+        return r.text().then(function(t){
+          var e={message:'HTTP '+r.status};
+          if(t){try{e=JSON.parse(t);}catch(_){e={message:t||('HTTP '+r.status)};}}
+          throw new Error((e&&e.message)||('HTTP '+r.status));
+        });
       }
-      return r.status===204 ? {} : r.json();
+      /* C161: PostgREST puede responder 204 o incluso 2xx con cuerpo vacío en
+         DELETE/PATCH/POST return=minimal. Un cuerpo vacío es éxito, no JSON inválido. */
+      return r.text().then(function(t){
+        if(!t||!String(t).trim()) return {};
+        try{return JSON.parse(t);}catch(e){throw new Error('Respuesta válida de Supabase con formato inesperado (HTTP '+r.status+').');}
+      });
     }).catch(function(e){
       if(timer) clearTimeout(timer);
       var esTransitorio = e && (e.name==='AbortError' || e.name==='TypeError' || /aborted/i.test(e.message||''));
@@ -14755,6 +14764,7 @@ C087
    }
   }
  }
+ /* C161: eliminación compatible con respuestas vacías de PostgREST. */
  function eliminarFinanciamiento(fid){
   let f=financs().find(x=>x.id===fid);if(!f)return;
   if(!confirm('¿Eliminar definitivamente el financiamiento de '+f.institucion+' por '+money(f.monto_original)+'?\n\nTambién se eliminarán sus pagos registrados y el movimiento automático relacionado en Caja.'))return;
