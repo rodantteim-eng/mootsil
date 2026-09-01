@@ -15184,14 +15184,15 @@ C087
   function errMsg(e){return (e&&e.message)?String(e.message):String(e||'Error desconocido');}
 
   async function guardarAperturaConfirmada(fecha,payload){
-    var row={fecha:fecha,payload:clone(payload),actualizado_por:uid(),updated_at:new Date().toISOString()};
-    var q='/rest/v1/caja_aperturas?fecha=eq.'+encodeURIComponent(fecha)+'&select=fecha';
-    var found=await api(q);
-    if(Array.isArray(found)&&found.length){
-      await api('/rest/v1/caja_aperturas?fecha=eq.'+encodeURIComponent(fecha),{method:'PATCH',body:row,prefer:'return=minimal'});
-    }else{
-      await api('/rest/v1/caja_aperturas',{method:'POST',body:row,prefer:'return=minimal'});
-    }
+    /* C164: la apertura se persiste mediante una RPC transaccional en Supabase.
+       Evita depender del INSERT/PATCH directo del navegador y devuelve la fila guardada. */
+    var rpc=await api('/rest/v1/rpc/c164_guardar_apertura_caja',{method:'POST',body:{
+      p_fecha:fecha,
+      p_payload:clone(payload),
+      p_actualizado_por:uid()
+    },prefer:'return=representation'});
+    var saved=Array.isArray(rpc)?rpc[0]:rpc;
+    if(!saved||saved.fecha!==fecha) throw new Error('Supabase no devolvió confirmación de la apertura.');
     var verify=await api('/rest/v1/caja_aperturas?fecha=eq.'+encodeURIComponent(fecha)+'&select=fecha,payload,actualizado_por,updated_at&limit=1');
     if(!Array.isArray(verify)||!verify.length) throw new Error('Supabase no confirmó la apertura guardada.');
     return verify[0];
@@ -15250,5 +15251,6 @@ C087
 </script>
 
 <script id="c163-financiamiento-fecha-caja">console.info("Mootsil C163: financiamiento conserva fecha contractual y registra fecha_caja operativa; apertura confirmada Supabase C159");</script>
+<script id="c164-apertura-rpc">console.info("Mootsil C164: apertura de Caja guardada por RPC transaccional y verificada en Supabase");</script>
 </body>
 </html>
