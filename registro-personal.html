@@ -111,6 +111,123 @@ input,select,textarea{width:100%;border:1px solid var(--borde);background:#fafbf
   .approved-field-copy span{font-size:15px}
 }
 
+
+/* C193 · Diseño aprobado de Contratación · solo presentación */
+body{background:#edf2ef}
+.app{max-width:520px;background:#fff;overflow:hidden;position:relative}
+
+/* Portada de contratación */
+.approved-head{
+  min-height:520px;position:relative;overflow:hidden;background:#073a27;color:#fff
+}
+.approved-top,.approved-ranchbar{display:none!important}
+.approved-field{
+  position:absolute;inset:0;height:auto;background:#073a27
+}
+.approved-field>img{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center center;
+  filter:saturate(.9) contrast(1.02)
+}
+.approved-field:after{
+  content:"";position:absolute;inset:0;
+  background:
+    linear-gradient(180deg,rgba(0,45,30,.20) 0%,rgba(0,45,30,.18) 26%,rgba(0,35,23,.72) 72%,rgba(0,27,18,.94) 100%)
+}
+.approved-field-copy{
+  position:absolute;left:24px;right:24px;top:auto;bottom:92px;width:auto;z-index:3;
+  display:flex;flex-direction:column;align-items:center;text-align:center;gap:9px
+}
+.approved-field-copy:before{
+  content:"";display:block;width:185px;height:235px;margin-bottom:18px;
+  background:url("escudo-oficial-rancho.png") center/contain no-repeat;
+  filter:drop-shadow(0 12px 18px rgba(0,0,0,.28))
+}
+.approved-field-copy strong{font-size:36px;color:#fff;line-height:1.06;text-shadow:0 2px 10px rgba(0,0,0,.35)}
+.approved-field-copy span{font-size:18px;color:#fff;line-height:1.35;text-shadow:0 2px 8px rgba(0,0,0,.35)}
+.approved-field-copy span::first-line{font-weight:700}
+
+.welcome{
+  position:relative;z-index:5;margin-top:-48px;padding:28px 24px 30px;background:#fff;
+  border-radius:34px 34px 0 0;text-align:center
+}
+.welcome:before{
+  content:"";position:absolute;left:50%;top:12px;transform:translateX(-50%);
+  width:48px;height:5px;border-radius:999px;background:#dce5df
+}
+.welcome .eyebrow{margin-top:3px;color:#17824e}
+.welcome h1{font-size:29px;letter-spacing:-.03em;margin-top:8px}
+.welcome p{font-size:15px;line-height:1.55;max-width:410px}
+.start{
+  max-width:410px;border-radius:16px;padding:16px 18px;
+  background:linear-gradient(180deg,#18a65a 0%,#078541 100%);
+  color:#fff;box-shadow:0 10px 22px rgba(6,130,65,.22);font-size:17px
+}
+.start:before{content:"＋ ";font-weight:900}
+.welcome .note{margin-top:14px!important;background:#f4f7f5;color:#637169;border:1px solid #e9efeb}
+
+/* Formulario */
+.form-mode .approved-head{min-height:188px;background:#06462f}
+.form-mode .approved-field{display:none}
+.form-mode .approved-head:before{
+  content:"";position:absolute;inset:0;background:linear-gradient(145deg,#063c29,#075b3a)
+}
+.form-mode .approved-head:after{
+  content:"";position:absolute;left:50%;top:52px;transform:translateX(-50%);
+  width:112px;height:142px;background:url("escudo-oficial-rancho.png") center/contain no-repeat;
+  filter:drop-shadow(0 8px 12px rgba(0,0,0,.22))
+}
+.form-mode .approved-head .approved-top{display:block!important;min-height:0;padding:0;background:none}
+.form-mode .approved-brand{
+  position:absolute;z-index:3;left:0;right:0;top:16px;text-align:center;font-size:18px;
+  color:#fff;letter-spacing:0;font-weight:800
+}
+.form-mode .approved-brand span{color:#fff}
+.form-mode .approved-brand{font-size:0}
+.form-mode .approved-brand:after{content:"Registro de personal";font-size:18px}
+.form-mode .approved-person,.form-mode .approved-actions,.form-mode .approved-ranchbar{display:none!important}
+
+.progress{
+  top:0;padding:13px 20px 9px;background:rgba(255,255,255,.97);backdrop-filter:blur(8px);
+  border-bottom:1px solid #e8efea
+}
+.track{height:7px;background:#eaf0ec}
+.bar{background:linear-gradient(90deg,#0b8d48,#21b463)}
+.steptext{font-weight:700;color:#758078;margin-top:7px}
+
+.content{padding:18px 18px 30px;background:#f7faf8}
+.card{
+  border:1px solid #e1e9e4;border-radius:20px;padding:18px;margin-bottom:13px;
+  box-shadow:0 7px 22px rgba(20,70,45,.055)
+}
+.card .eyebrow{color:#159052}
+h2{font-size:23px;letter-spacing:-.025em;margin-top:5px}
+.help{color:#748079}
+label{font-size:11px;color:#66736b;letter-spacing:.025em}
+input,select,textarea{
+  border:1px solid #dce5df;background:#fff;border-radius:13px;padding:13px 13px;font-size:15px;
+  box-shadow:inset 0 1px 0 rgba(0,0,0,.01)
+}
+input:focus,select:focus,textarea:focus{border-color:#1d9a59;box-shadow:0 0 0 3px rgba(29,154,89,.10)}
+.role,.doc{border-radius:15px;background:#fff}
+.role.sel{border-color:#159153;background:#f0faf4}
+.actions{position:sticky;bottom:0;z-index:15;margin:0 -18px -30px;padding:12px 18px 16px;background:rgba(247,250,248,.96);backdrop-filter:blur(8px)}
+.back,.next,.submit{border-radius:14px;padding:14px 16px}
+.next,.submit{background:linear-gradient(180deg,#18a65a,#078541);box-shadow:0 8px 18px rgba(6,130,65,.18)}
+.camera-shot{background:#078541;color:#fff}
+.ok{padding-top:54px}
+
+@media(max-width:500px){
+  .app{max-width:none}
+  .approved-head{min-height:500px}
+  .approved-field-copy{bottom:84px}
+  .approved-field-copy:before{width:166px;height:210px;margin-bottom:14px}
+  .approved-field-copy strong{font-size:32px}
+  .approved-field-copy span{font-size:16px}
+  .welcome{padding-left:20px;padding-right:20px}
+  .form-mode .approved-head{min-height:178px}
+  .form-mode .approved-head:after{top:48px;width:100px;height:128px}
+}
+
 </style></head><body><div class="app">
 <header class="approved-head">
   <div class="approved-top">
@@ -129,12 +246,12 @@ input,select,textarea{width:100%;border:1px solid var(--borde);background:#fafbf
   <div class="approved-field">
     <img src="mootsil-cosecha-campo-aprobado.jpg" alt="Rancho Sagrado Corazón">
     <div class="approved-field-copy">
-      <strong>¡Bienvenido!</strong>
-      <span>Queremos conocerte para formar parte del equipo Mootsil.</span>
+      <strong>Bienvenido</strong>
+      <span>Forma parte del equipo Mootsil</span>
     </div>
   </div>
 </header>
-<div id="welcome" class="welcome"><div class="eyebrow">Registro de personal</div><h1>¡Bienvenido a Mootsil!</h1><p>Estamos preparando nuestro equipo de cosecha. Completa tu registro para postularte como <strong>Galerista, Auxiliar de Galera o Cosechador</strong>.</p><button class="start" onclick="startForm()">Iniciar mi registro</button><div class="note" style="margin:15px auto 0;max-width:410px">INE, CURP y comprobante de domicilio son opcionales. Puedes enviar tu registro aunque todavía no tengas esos documentos.</div></div>
+<div id="welcome" class="welcome"><div class="eyebrow">Contratación</div><h1>Registro de personal</h1><p>Completa tu información para postularte como <strong>Galerista, Auxiliar de Galera o Cosechador</strong>.</p><button class="start" onclick="startForm()">Iniciar mi registro</button><div class="note" style="margin:15px auto 0;max-width:410px">INE, CURP y comprobante de domicilio son opcionales. Puedes enviar tu registro aunque todavía no tengas esos documentos.</div></div>
 <div id="formapp" class="hidden"><div class="progress"><div class="track"><div class="bar" id="bar"></div></div><div class="steptext"><span id="steplabel"></span><span id="pct"></span></div></div><form id="regform" class="content" onsubmit="return false">
 <section class="step" data-step="1"><div class="card"><div class="eyebrow">Paso 1</div><h2>Datos personales</h2><div class="help">Información básica para identificarte y comunicarnos contigo.</div><div class="grid"><div class="full"><label>Nombre completo *</label><input id="nombre" required></div><div><label>Fecha de nacimiento *</label><input id="nacimiento" type="date" required></div><div><label>Teléfono *</label><input id="telefono" type="tel" required></div><div class="full"><label>Domicilio *</label><input id="direccion" required placeholder="Calle, colonia, municipio"></div></div></div></section>
 <section class="step hidden" data-step="2"><div class="card"><div class="eyebrow">Paso 2</div><h2>Puesto al que te postulas</h2><div class="help">Las postulaciones se registran inicialmente como personal <strong>Eventual</strong>.</div><div class="roles"><div class="role" data-role="Galerista" onclick="pickRole(this)"><div class="ricon">⚖️</div><div><b>Galerista</b><small>Pesaje, control y recepción de cosecha.</small></div></div><div class="role" data-role="Auxiliar Galera" onclick="pickRole(this)"><div class="ricon">📦</div><div><b>Auxiliar de Galera</b><small>Rack, surtido, cajas, trazabilidad y apoyo de galera.</small></div></div><div class="role" data-role="Cosechador" onclick="pickRole(this)"><div class="ricon">🫐</div><div><b>Cosechador</b><small>Cosecha y manejo de fruta en campo.</small></div></div></div><input type="hidden" id="puesto"><div style="margin-top:12px"><label>Fecha disponible para ingreso *</label><input type="date" id="ingreso" required></div></div></section>
@@ -149,7 +266,7 @@ input,select,textarea{width:100%;border:1px solid var(--borde);background:#fafbf
 <div id="success" class="ok hidden"><div class="okicon">✓</div><div class="eyebrow">Registro completado</div><h1>¡Gracias por registrarte!</h1><p>Tu información fue recibida correctamente y quedó <strong>pendiente de revisión por Administración</strong>.</p><p><strong>El envío de este formulario no genera todavía un expediente ni acceso a Mootsil.</strong> Si tu incorporación es autorizada, Administración continuará el proceso y te proporcionará tus datos de acceso.</p><p>Gracias por tu interés en formar parte del equipo Mootsil.</p><div id="folio" class="note" style="margin:18px auto 0;max-width:370px"></div></div>
 </div><script>
 const URL_SB="https://ypreafyqnckswvoaerbe.supabase.co"; const KEY_SB="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwcmVhZnlxbmNrc3d2b2FlcmJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NDE0NjAsImV4cCI6MjA5ODQxNzQ2MH0.2Bwg1HdUXKlw9U3a3-3FvpeNV3iKktJchkL6xbD51DU"; let step=1; const selectedFiles={ine:null,curp:null,domicilio:null}, previewUrls={};
-function startForm(){welcome.classList.add('hidden');formapp.classList.remove('hidden');setStep(1)} function setStep(n){step=n;document.querySelectorAll('.step').forEach(x=>x.classList.toggle('hidden',+x.dataset.step!==n));bar.style.width=(n*20)+'%';steplabel.textContent='Paso '+n+' de 5';pct.textContent=(n*20)+'%';back.classList.toggle('hidden',n===1);next.classList.toggle('hidden',n===5);submit.classList.toggle('hidden',n!==5);if(n===5)renderSummary();scrollTo({top:0,behavior:'smooth'})} function pickRole(el){document.querySelectorAll('.role').forEach(x=>x.classList.remove('sel'));el.classList.add('sel');puesto.value=el.dataset.role;saveDraft()}
+function startForm(){document.querySelector('.app').classList.add('form-mode');welcome.classList.add('hidden');formapp.classList.remove('hidden');setStep(1)} function setStep(n){step=n;document.querySelectorAll('.step').forEach(x=>x.classList.toggle('hidden',+x.dataset.step!==n));bar.style.width=(n*20)+'%';steplabel.textContent='Paso '+n+' de 5';pct.textContent=(n*20)+'%';back.classList.toggle('hidden',n===1);next.classList.toggle('hidden',n===5);submit.classList.toggle('hidden',n!==5);if(n===5)renderSummary();scrollTo({top:0,behavior:'smooth'})} function pickRole(el){document.querySelectorAll('.role').forEach(x=>x.classList.remove('sel'));el.classList.add('sel');puesto.value=el.dataset.role;saveDraft()}
 function validStep(n){let ok=true;document.querySelector('.step[data-step="'+n+'"]').querySelectorAll('[required]').forEach(el=>{if(!String(el.value||'').trim()){el.style.borderColor='#c93b2f';ok=false}else el.style.borderColor=''});if(n===2&&!puesto.value){alert('Selecciona el puesto al que te postulas.');return false}if(!ok)alert('Completa los campos obligatorios para continuar.');return ok} function nextStep(){if(validStep(step))setStep(Math.min(5,step+1))} function prevStep(){setStep(Math.max(1,step-1))}
 function val(id){return document.getElementById(id).value.trim()} function esc(s){return String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))} function fmtSize(n){return n<1048576?(n/1024).toFixed(0)+' KB':(n/1048576).toFixed(1)+' MB'} function ext(n){let p=n.lastIndexOf('.');return p>=0?n.slice(p):''}
 function renderSummary(){let docs=[];Object.values(selectedFiles).forEach(f=>{if(f)docs.push(f.name)});summary.innerHTML='<strong>'+esc(val('nombre'))+'</strong><br>'+esc(val('puesto'))+' · Eventual<br>Disponible para ingreso: '+esc(val('ingreso'))+'<br>Tel: '+esc(val('telefono'))+'<br>Domicilio: '+esc(val('direccion'))+'<br><br><strong>Contacto de emergencia:</strong> '+esc(val('em_nombre'))+' · '+esc(val('em_parentesco'))+' · '+esc(val('em_telefono'))+'<br><br><strong>Documentos preparados:</strong> '+(docs.length?esc(docs.join(', ')):'Ninguno · puedes enviar así tu registro.')}
