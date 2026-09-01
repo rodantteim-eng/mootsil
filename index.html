@@ -5981,7 +5981,7 @@ function ga152EditarGasto(id){
   '<div class="ca21-field full"><label>Beneficiario / Proveedor</label><input id="ga152-persona" value="'+String(m.persona||'').replace(/"/g,'&quot;')+'"></div>'+
   '<div class="ca21-field full"><label>Observaciones</label><textarea id="ga152-nota">'+(m.nota||'')+'</textarea></div></div></div><div class="ca21-dialog-actions"><button onclick="ca21CloseModal()">Cancelar</button><button class="save" id="ga152-save">Guardar cambios</button></div>');
   document.getElementById('ga152-cuenta').value=m.cuenta;ca152CurrencyInput(document.getElementById('ga152-monto'),'$');
-  document.getElementById('ga152-save').onclick=function(){var nuevo=ca21Money(document.getElementById('ga152-monto').value),cuenta=document.getElementById('ga152-cuenta').value,fechaCaja=m.fecha_caja||CAJA_FECHA_BASE||fechaHoyLocal();if(nuevo<=0){alert('Captura un monto mayor a cero.');return;}var tot=ca21Totals(fechaCaja),disp=ca35CuentaSaldo(tot,cuenta);if(cuenta===m.cuenta)disp+=ca21Money(m.monto);if(nuevo>disp){alert('La cuenta seleccionada no tiene saldo suficiente.');return;}m.fecha=document.getElementById('ga152-fecha').value;m.fecha_caja=fechaCaja;m.categoria=document.getElementById('ga152-cat').value;m.monto=nuevo;m.cuenta=cuenta;m.concepto=document.getElementById('ga152-concepto').value.trim();m.persona=document.getElementById('ga152-persona').value.trim()||'—';m.nota=document.getElementById('ga152-nota').value.trim();m.editado_en=new Date().toISOString();m.editado_por=(usuario&&usuario.nombre)||'Usuario';ca21Save(d);ca21CloseModal();renderGastosCajaMenu(GA37_FILTRO);if(typeof showToast==='function')showToast('✅ Gasto actualizado');};
+  document.getElementById('ga152-save').onclick=function(){var nuevo=ca21Money(document.getElementById('ga152-monto').value),cuenta=document.getElementById('ga152-cuenta').value,fechaCaja=m.fecha_caja||CAJA_FECHA_BASE||fechaHoyLocal();if(nuevo<=0){alert('Captura un monto mayor a cero.');return;}var tot=ca21Totals(fechaCaja),disp=ca35CuentaSaldo(tot,cuenta);if(ca169NormCuenta(cuenta)===ca169NormCuenta(m.cuenta))disp+=ca21Money(m.monto);if(nuevo>disp){alert('La cuenta seleccionada no tiene saldo suficiente.');return;}var patch={fecha:document.getElementById('ga152-fecha').value,fecha_caja:fechaCaja,categoria:document.getElementById('ga152-cat').value,monto:nuevo,cuenta:cuenta,concepto:document.getElementById('ga152-concepto').value.trim(),persona:document.getElementById('ga152-persona').value.trim()||'—',nota:document.getElementById('ga152-nota').value.trim(),editado_en:new Date().toISOString(),editado_por:(usuario&&usuario.nombre)||'Usuario'};if(!ca169UpdateMovimiento(id,patch)){alert('No se encontró el gasto para actualizar.');return;}ca21CloseModal();if(typeof renderCajaMootsil==='function'&&document.getElementById('ca21-fecha'))renderCajaMootsil(CAJA_PERIODO,CAJA_FECHA_BASE);else renderGastosCajaMenu(GA37_FILTRO);if(typeof showToast==='function')showToast('✅ Gasto actualizado');};
 }
 function ga37Nuevo(){
   var hoy=fechaHoyLocal(),cats=GA37_CATS.variable;
@@ -6011,11 +6011,9 @@ function ga37Nuevo(){
     if(monto<=0){alert('Captura un monto mayor a cero.');return;}if(!concepto){alert('Captura el concepto del gasto.');return;}
     var fechaCaja=CAJA_FECHA_BASE||fechaHoyLocal(),tt=ca21Totals(fechaCaja),disp=ca35CuentaSaldo(tt,cuenta);if(monto>disp){alert('La cuenta seleccionada no tiene saldo suficiente.');return;}
     var f=document.getElementById('ga37-file').files[0];
-    var d=ca21Load();
     var mov={id:ca21Id(),fecha:fecha,fecha_caja:fechaCaja,hora:ca21Now(),tipo:'salida',clase_gasto:document.getElementById('ga37-tipo').value,categoria:document.getElementById('ga37-cat').value,concepto:concepto,persona:document.getElementById('ga37-persona').value.trim()||'—',cuenta:cuenta,monto:monto,nota:document.getElementById('ga37-nota').value.trim(),comprobante_nombre:f?f.name:null,origen:'Gasto operativo',estado:'Registrado',usuario:(usuario&&usuario.nombre)||'Usuario'};
-    d.movimientos.push(mov);
     try{
-      ca21Save(d);
+      ca169AppendMovimiento(mov);
       var check=ca21Load().movimientos.some(function(x){return x.id===mov.id;});
       if(!check)throw new Error('No se pudo confirmar el guardado local.');
     }catch(e){alert('No se pudo registrar el gasto: '+e.message);return;}
@@ -9170,13 +9168,36 @@ function ca152CurrencyInput(el,prefix){
 function ca152InitCurrency(root){
   root=root||document;['ca21-m-monto','ca21-t-monto','ga37-monto','ca23-pu','ca23-total','ca21-c-ef','ca21-c-bp','ca21-c-bd','ca21-c-sp'].forEach(function(id){var e=root.querySelector?root.querySelector('#'+id):null;if(e)ca152CurrencyInput(e,id==='ca21-c-bd'?'US$ ':'$');});
 }
+function ca169NormCuenta(c){
+  c=String(c||'').toLowerCase();
+  if(c==='banamex'||c==='bancos'||c==='banamex_pesos')return 'banamex_pesos';
+  if(c==='santander'||c==='santander_pesos')return 'santander_pesos';
+  if(c==='banamex_dolares')return 'banamex_dolares';
+  if(c==='efectivo')return 'efectivo';
+  return c;
+}
 function ca21AccountDelta(m,cuenta){
-  var monto=ca21Money(m.monto), mc=m.cuenta==='bancos'?'banamex':m.cuenta;
-  var co=m.cuenta_origen==='bancos'?'banamex':m.cuenta_origen, cd=m.cuenta_destino==='bancos'?'banamex':m.cuenta_destino;
-  if(m.tipo==='entrada')return mc===cuenta?monto:0;
-  if(m.tipo==='salida')return mc===cuenta?-monto:0;
-  if(m.tipo==='transferencia'){var s=0;if(co===cuenta)s-=monto;if(cd===cuenta)s+=monto;return s;}
+  var monto=ca21Money(m.monto), target=ca169NormCuenta(cuenta);
+  var mc=ca169NormCuenta(m.cuenta),co=ca169NormCuenta(m.cuenta_origen),cd=ca169NormCuenta(m.cuenta_destino);
+  if(m.tipo==='entrada')return mc===target?monto:0;
+  if(m.tipo==='salida')return mc===target?-monto:0;
+  if(m.tipo==='transferencia'){var s=0;if(co===target)s-=monto;if(cd===target)s+=monto;return s;}
   return 0;
+}
+function ca169AppendMovimiento(m){
+  var d=ca21Load();
+  d.movimientos=d.movimientos||[];
+  if(!d.movimientos.some(function(x){return String(x.id)===String(m.id);})){d.movimientos.push(m);ca21Save(d);}
+  return m;
+}
+function ca169UpdateMovimiento(id,patch){
+  var d=ca21Load(),ix=(d.movimientos||[]).findIndex(function(x){return String(x.id)===String(id);});
+  if(ix<0)return false;
+  d.movimientos[ix]=Object.assign({},d.movimientos[ix],patch||{});
+  ca21Save(d);return true;
+}
+function ca169DeleteMovimiento(id){
+  var d=ca21Load();d.movimientos=(d.movimientos||[]).filter(function(x){return String(x.id)!==String(id);});ca21Save(d);
 }
 function ca35CuentaLabel(c){
   return c==='efectivo'?'Efectivo en Caja':
@@ -9298,8 +9319,8 @@ function ca21OpenTransfer(fecha){
     if(o===de){alert('La cuenta de origen y destino deben ser diferentes.');return;} if(m<=0){alert('Captura un monto mayor a cero.');return;}
     if(ca35CuentaMoneda(o)!==ca35CuentaMoneda(de)){alert('La transferencia entre pesos y dólares requiere registrar una operación de cambio de moneda. Por ahora selecciona cuentas de la misma moneda.');return;}
     var tot=ca21Totals(fecha),disp=ca35CuentaSaldo(tot,o);if(m>disp){alert('El monto supera el saldo disponible en la cuenta de origen.');return;}
-    var d=ca21Load();d.movimientos.push({id:ca21Id(),fecha:fecha,hora:ca21Now(),tipo:'transferencia',cuenta_origen:o,cuenta_destino:de,monto:m,categoria:'Transferencia',concepto:document.getElementById('ca21-t-concepto').value.trim()||'Transferencia entre cuentas',persona:'Entre cuentas',nota:document.getElementById('ca21-t-nota').value.trim(),origen:'Caja',estado:'Registrado',usuario:(usuario&&usuario.nombre)||'Usuario'});
-    ca21Save(d);ca21CloseModal();renderCajaMootsil(CAJA_PERIODO,fecha);
+    ca169AppendMovimiento({id:ca21Id(),fecha:fecha,fecha_caja:fecha,hora:ca21Now(),tipo:'transferencia',cuenta_origen:o,cuenta_destino:de,monto:m,categoria:'Transferencia',concepto:document.getElementById('ca21-t-concepto').value.trim()||'Transferencia entre cuentas',persona:'Entre cuentas',nota:document.getElementById('ca21-t-nota').value.trim(),origen:'Caja',estado:'Registrado',usuario:(usuario&&usuario.nombre)||'Usuario'});
+    ca21CloseModal();renderCajaMootsil(CAJA_PERIODO,fecha);
   });
 }
 function ca21OpenCorte(fecha){
@@ -9333,9 +9354,7 @@ function ca21OpenCorte(fecha){
 }
 function ca21DeleteMovimiento(id,fecha){
   if(!confirm('¿Eliminar este movimiento de prueba?'))return;
-  var d=ca21Load();
-  d.movimientos=d.movimientos.filter(function(m){return String(m.id)!==String(id);});
-  ca21Save(d);renderCajaMootsil(CAJA_PERIODO,fecha);
+  ca169DeleteMovimiento(id);renderCajaMootsil(CAJA_PERIODO,fecha);
 }
 
 
@@ -9491,7 +9510,7 @@ function renderCajaMootsil(periodo,fechaBase){
     // Daily test balances are based on local opening + local manual cash flows.
     // Existing DB records are displayed as historical/consolidated movements but are not double-counted
     // into the test opening/closing cash balance until migration rules are approved.
-    var localDay=store.movimientos.filter(function(m){return m.fecha===CAJA_FECHA_BASE&&!String(m.id||'').startsWith('FIS-')&&!String(m.id||'').startsWith('FIP-S-');});
+    var localDay=store.movimientos.filter(function(m){return (m.fecha_caja||m.fecha)===CAJA_FECHA_BASE&&!String(m.id||'').startsWith('FIS-')&&!String(m.id||'').startsWith('FIP-S-');});
     var saldoInicialEf=apertura?ca21Money(apertura.efectivo):0;
     var saldoInicialBp=apertura?ca21Money(apertura.banamex_pesos!=null?apertura.banamex_pesos:(apertura.banamex!=null?apertura.banamex:(apertura.bancos||0))):0;
     var saldoInicialBd=apertura?ca21Money(apertura.banamex_dolares||0):0;
@@ -9527,13 +9546,12 @@ function renderCajaMootsil(periodo,fechaBase){
 
     // C040: referencia por cuenta = saldo inicial, salidas del día y saldo actual.
     function ca40SalidasCuenta(cuenta){
-      return ca21Money(localDay.filter(function(m){
-        return m.tipo==='salida' && (
-          m.cuenta===cuenta ||
-          (cuenta==='banamex_pesos' && (m.cuenta==='banamex'||m.cuenta==='bancos')) ||
-          (cuenta==='santander_pesos' && m.cuenta==='santander')
-        );
-      }).reduce(function(s,m){return s+ca21Money(m.monto);},0));
+      var target=ca169NormCuenta(cuenta);
+      return ca21Money(localDay.reduce(function(s,m){
+        if(m.tipo==='salida'&&ca169NormCuenta(m.cuenta)===target)return s+ca21Money(m.monto);
+        if(m.tipo==='transferencia'&&ca169NormCuenta(m.cuenta_origen)===target)return s+ca21Money(m.monto);
+        return s;
+      },0));
     }
     function ca167FinSalidasCuenta(cuenta){return ca21Money(finDiaSalidas.filter(function(m){return m.cuenta===cuenta;}).reduce(function(s,m){return s+m.monto;},0));}
     var salEf=ca21Money(ca40SalidasCuenta('efectivo')+ca167FinSalidasCuenta('efectivo'));
@@ -9551,7 +9569,7 @@ function renderCajaMootsil(periodo,fechaBase){
       var ent=m.tipo==='entrada'?'$'+formatMonto(m.monto):'—';
       var sal=m.tipo==='salida'?'$'+formatMonto(m.monto):'—';
       var trans=m.tipo==='transferencia'?'$'+formatMonto(m.monto):'—';
-      return '<tr><td>'+(m.fecha?cajaFechaCorta(m.fecha):'—')+'</td><td>'+(m.hora||'—')+'</td><td>'+(m.tipo==='entrada'?'⬇️':m.tipo==='salida'?'⬆️':'⇄')+'</td><td><strong>'+m.concepto+'</strong><div class="ca21-mini">'+(m.nota||'')+'</div></td><td><span class="ca17-tag">'+cat+'</span></td><td>'+(m.persona||'—')+'</td><td>'+forma+'</td><td class="ca17-money-in">'+ent+'</td><td class="ca17-money-out">'+sal+'</td><td><span class="ca17-tag '+(m.db?'ca21-source-existing':'ca21-source-test')+'">'+(m.origen||'Caja')+'</span></td><td><span class="ca17-tag">'+(m.estado||'Registrado')+'</span></td><td>'+(m.db?'—':'<button class="ca21-action-btn" data-ca21-del="'+m.id+'">Eliminar</button>')+'</td></tr>';
+      return '<tr><td>'+(m.fecha?cajaFechaCorta(m.fecha):'—')+'</td><td>'+(m.hora||'—')+'</td><td>'+(m.tipo==='entrada'?'⬇️':m.tipo==='salida'?'⬆️':'⇄')+'</td><td><strong>'+m.concepto+'</strong><div class="ca21-mini">'+(m.nota||'')+'</div></td><td><span class="ca17-tag">'+cat+'</span></td><td>'+(m.persona||'—')+'</td><td>'+forma+'</td><td class="ca17-money-in">'+ent+'</td><td class="ca17-money-out">'+sal+'</td><td><span class="ca17-tag '+(m.db?'ca21-source-existing':'ca21-source-test')+'">'+(m.origen||'Caja')+'</span></td><td><span class="ca17-tag">'+(m.estado||'Registrado')+'</span></td><td>'+(m.db?'—':((m.origen==='Gasto operativo'?'<button class="ca21-action-btn" data-ca21-edit-gasto="'+m.id+'">Editar</button> ':'')+'<button class="ca21-action-btn" data-ca21-del="'+m.id+'">Eliminar</button>'))+'</td></tr>';
     }).join(''):'<tr><td colspan="12" style="text-align:center;color:#77837c;padding:24px">No hay movimientos registrados hasta esta fecha.</td></tr>';
 
     body.innerHTML='<div class="ca17-shell">'+
@@ -9581,6 +9599,7 @@ function renderCajaMootsil(periodo,fechaBase){
       var bt=document.getElementById('ca21-transfer');if(bt)bt.addEventListener('click',function(){ca21OpenTransfer(CAJA_FECHA_BASE);});
       var bc=document.getElementById('ca21-close');if(bc)bc.addEventListener('click',function(){ca21OpenCorte(CAJA_FECHA_BASE);});
     }
+    body.querySelectorAll('[data-ca21-edit-gasto]').forEach(function(b){b.addEventListener('click',function(){ga152EditarGasto(this.dataset.ca21EditGasto);});});
     body.querySelectorAll('[data-ca21-del]').forEach(function(b){b.addEventListener('click',function(){ca21DeleteMovimiento(this.dataset.ca21Del,CAJA_FECHA_BASE);});});
   }).catch(function(e){
     body.innerHTML='<div class="ca17-shell"><div class="ca17-top"><div><div class="ad17-eyebrow">Administración · Caja</div><div class="ca17-title">Caja</div><div class="ad17-sub">No se pudo cargar la información de Caja.</div></div><button class="ca17-back" onclick="renderAdministracionMenu()">← Administración</button></div><div class="ca17-section"><strong>Error:</strong> '+e.message+'</div></div>';
@@ -15296,5 +15315,6 @@ C087
 <script id="c163-financiamiento-fecha-caja">console.info("Mootsil C163: financiamiento conserva fecha contractual y registra fecha_caja operativa; apertura confirmada Supabase C159");</script>
 <script id="c164-apertura-rpc">console.info("Mootsil C164: apertura de Caja guardada por RPC transaccional y verificada en Supabase");</script>
 <script id="c167-financiamientos-caja-index">console.info("Mootsil C167: financiamientos impactan Caja desde Supabase en index.html activo y por cuenta seleccionada");</script>
+<script id="c169-marker">console.info("Mootsil C169: historial protegido, transferencias descuentan origen/suman destino y gastos editables desde Caja");</script>
 </body>
 </html>
