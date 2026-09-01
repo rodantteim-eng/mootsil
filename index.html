@@ -5936,7 +5936,7 @@ function volverCompraAdministracion(){
 var GA37_FILTRO='todos';
 var GA37_CATS={
   fijo:['Renta','Luz','Agua potable','Celulares','Internet','Otros'],
-  variable:['Combustible','Viáticos','Fletes / Transporte','Reparaciones menores','Mantenimiento no programado','Alimentos','Mensajería','Herramientas menores','Servicios operativos','Otros variables']
+  variable:['Combustible','Viáticos','Fletes / Transporte','Reparaciones menores','Mantenimiento no programado','Alimentos','Mensajería','Herramientas menores','Servicios operativos','Pago a tarjetas','Otros variables']
 };
 function ga37Movs(){
   return ca21Load().movimientos.filter(function(m){return m.tipo==='salida'&&m.origen==='Gasto operativo';}).sort(function(a,b){return (b.fecha+b.hora).localeCompare(a.fecha+a.hora);});
@@ -5948,21 +5948,37 @@ function renderGastosCajaMenu(filtro){
   var mxn=rows.filter(function(m){return ca35CuentaMoneda(m.cuenta)==='MXN';}).reduce(function(s,m){return s+ca21Money(m.monto);},0);
   var usd=rows.filter(function(m){return ca35CuentaMoneda(m.cuenta)==='USD';}).reduce(function(s,m){return s+ca21Money(m.monto);},0);
   var html=rows.map(function(m){
-    return '<tr><td>'+m.fecha+'</td><td><span class="ga37-pill '+m.clase_gasto+'">'+(m.clase_gasto==='fijo'?'Fijo':'Variable')+'</span></td><td>'+m.categoria+'</td><td><strong>'+m.concepto+'</strong></td><td>'+(m.persona||'—')+'</td><td>'+ca35CuentaLabel(m.cuenta)+'</td><td>'+(ca35CuentaMoneda(m.cuenta)==='USD'?'US$ ':'$')+formatMonto(m.monto)+'</td><td>'+(m.comprobante_nombre||'—')+'</td></tr>';
+    return '<tr><td>'+m.fecha+'</td><td><span class="ga37-pill '+m.clase_gasto+'">'+(m.clase_gasto==='fijo'?'Fijo':'Variable')+'</span></td><td>'+m.categoria+'</td><td><strong>'+m.concepto+'</strong></td><td>'+(m.persona||'—')+'</td><td>'+ca35CuentaLabel(m.cuenta)+'</td><td>'+(ca35CuentaMoneda(m.cuenta)==='USD'?'US$ ':'$')+formatMonto(m.monto)+'</td><td>'+(m.comprobante_nombre||'—')+'</td><td><button class="ca21-action-btn" data-ga37-edit="'+m.id+'">Editar</button></td></tr>';
   }).join('');
   body.innerHTML='<div class="ga37-shell"><div class="ga37-head"><div><div class="ga37-eyebrow">Administración · Caja</div><div class="ga37-title">Gastos</div><div class="ga37-sub">Control de gastos fijos y variables del rancho.</div></div><button class="ga37-back" id="ga37-back">← Caja</button></div>'+
   '<div class="ga37-actions"><div class="ga37-tabs"><button class="ga37-tab '+(GA37_FILTRO==='todos'?'sel':'')+'" data-ga37="todos">Todos</button><button class="ga37-tab '+(GA37_FILTRO==='fijo'?'sel':'')+'" data-ga37="fijo">Fijos</button><button class="ga37-tab '+(GA37_FILTRO==='variable'?'sel':'')+'" data-ga37="variable">Variables</button></div><button class="ga37-new" id="ga37-new">＋ Registrar gasto</button></div>'+
   '<div class="ga37-kpis"><div class="ga37-kpi"><span>Registros</span><strong>'+rows.length+'</strong></div><div class="ga37-kpi"><span>Total MXN</span><strong>$'+formatMonto(mxn)+'</strong></div><div class="ga37-kpi"><span>Total USD</span><strong>US$ '+formatMonto(usd)+'</strong></div></div>'+
-  '<div class="ga37-table"><table><thead><tr><th>Fecha</th><th>Tipo</th><th>Categoría</th><th>Concepto</th><th>Beneficiario / Proveedor</th><th>Cuenta</th><th>Monto</th><th>Comprobante</th></tr></thead><tbody>'+(html||'<tr><td colspan="8"><div class="ga37-empty">Aún no hay gastos registrados en este filtro.</div></td></tr>')+'</tbody></table></div></div>';
+  '<div class="ga37-table"><table><thead><tr><th>Fecha</th><th>Tipo</th><th>Categoría</th><th>Concepto</th><th>Beneficiario / Proveedor</th><th>Cuenta</th><th>Monto</th><th>Comprobante</th><th>Acción</th></tr></thead><tbody>'+(html||'<tr><td colspan="9"><div class="ga37-empty">Aún no hay gastos registrados en este filtro.</div></td></tr>')+'</tbody></table></div></div>';
   document.getElementById('ga37-back').onclick=function(){renderCajaMootsil('dia',CAJA_FECHA_BASE||fechaHoyLocal());};
   document.getElementById('ga37-new').onclick=ga37Nuevo;
   body.querySelectorAll('[data-ga37]').forEach(function(b){b.onclick=function(){renderGastosCajaMenu(this.dataset.ga37);};});
+  body.querySelectorAll('[data-ga37-edit]').forEach(function(b){b.onclick=function(){ga152EditarGasto(this.dataset.ga37Edit);};});
+}
+
+function ga152EditarGasto(id){
+  var d=ca21Load(),m=(d.movimientos||[]).find(function(x){return x.id===id;});if(!m)return;
+  var cats=GA37_CATS[m.clase_gasto]||GA37_CATS.variable;
+  ca21OpenModal('<div class="ca21-dialog-head"><div><h3>Editar gasto</h3><p>Ajusta el movimiento existente sin duplicarlo.</p></div><button class="ca21-close" onclick="ca21CloseModal()">×</button></div><div class="ca21-dialog-body"><div class="ca21-form">'+
+  '<div class="ca21-field"><label>Fecha del gasto</label><input id="ga152-fecha" type="date" value="'+m.fecha+'" max="'+fechaHoyLocal()+'"></div>'+
+  '<div class="ca21-field"><label>Categoría</label><select id="ga152-cat">'+cats.map(function(c){return '<option '+(c===m.categoria?'selected':'')+'>'+c+'</option>';}).join('')+'</select></div>'+
+  '<div class="ca21-field"><label>Monto</label><input id="ga152-monto" value="'+m.monto+'"></div>'+
+  '<div class="ca21-field"><label>Cuenta de pago</label><select id="ga152-cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div>'+
+  '<div class="ca21-field"><label>Concepto</label><input id="ga152-concepto" value="'+String(m.concepto||'').replace(/"/g,'&quot;')+'"></div>'+
+  '<div class="ca21-field full"><label>Beneficiario / Proveedor</label><input id="ga152-persona" value="'+String(m.persona||'').replace(/"/g,'&quot;')+'"></div>'+
+  '<div class="ca21-field full"><label>Observaciones</label><textarea id="ga152-nota">'+(m.nota||'')+'</textarea></div></div></div><div class="ca21-dialog-actions"><button onclick="ca21CloseModal()">Cancelar</button><button class="save" id="ga152-save">Guardar cambios</button></div>');
+  document.getElementById('ga152-cuenta').value=m.cuenta;ca152CurrencyInput(document.getElementById('ga152-monto'),'$');
+  document.getElementById('ga152-save').onclick=function(){var nuevo=ca21Money(document.getElementById('ga152-monto').value),cuenta=document.getElementById('ga152-cuenta').value,fechaCaja=m.fecha_caja||CAJA_FECHA_BASE||fechaHoyLocal();if(nuevo<=0){alert('Captura un monto mayor a cero.');return;}var tot=ca21Totals(fechaCaja),disp=ca35CuentaSaldo(tot,cuenta);if(cuenta===m.cuenta)disp+=ca21Money(m.monto);if(nuevo>disp){alert('La cuenta seleccionada no tiene saldo suficiente.');return;}m.fecha=document.getElementById('ga152-fecha').value;m.fecha_caja=fechaCaja;m.categoria=document.getElementById('ga152-cat').value;m.monto=nuevo;m.cuenta=cuenta;m.concepto=document.getElementById('ga152-concepto').value.trim();m.persona=document.getElementById('ga152-persona').value.trim()||'—';m.nota=document.getElementById('ga152-nota').value.trim();m.editado_en=new Date().toISOString();m.editado_por=(usuario&&usuario.nombre)||'Usuario';ca21Save(d);ca21CloseModal();renderGastosCajaMenu(GA37_FILTRO);if(typeof showToast==='function')showToast('✅ Gasto actualizado');};
 }
 function ga37Nuevo(){
   var hoy=fechaHoyLocal(),cats=GA37_CATS.variable;
   ca21OpenModal('<div class="ca21-dialog-head"><div><h3>Registrar gasto</h3><p>Gasto operativo del rancho</p></div><button class="ca21-close" onclick="ca21CloseModal()">×</button></div>'+
   '<div class="ca21-dialog-body"><div class="ca21-form">'+
-  '<div class="ca21-field"><label>Fecha</label><input id="ga37-fecha" type="date" value="'+hoy+'" max="'+hoy+'"></div>'+
+  '<div class="ca21-field"><label>Fecha del gasto</label><input id="ga37-fecha" type="date" value="'+hoy+'" max="'+hoy+'"><small>Puede ser anterior a la Caja abierta; se reflejará en la Caja actual.</small></div>'+
   '<div class="ca21-field"><label>Tipo de gasto</label><div class="nc31-cat-tabs"><button type="button" class="nc31-cat-tab ga37-tipo" data-tipo="fijo">Fijo</button><button type="button" class="nc31-cat-tab ga37-tipo sel" data-tipo="variable">Variable</button></div><input type="hidden" id="ga37-tipo" value="variable"></div>'+
   '<div class="ca21-field"><label>Categoría</label><select id="ga37-cat">'+cats.map(function(c){return '<option>'+c+'</option>';}).join('')+'</select></div>'+
   '<div class="ca21-field"><label>Monto</label><input id="ga37-monto" type="number" min=".01" step=".01" placeholder="0.00"></div>'+
@@ -5984,10 +6000,10 @@ function ga37Nuevo(){
 
     var monto=ca21Money(document.getElementById('ga37-monto').value),concepto=document.getElementById('ga37-concepto').value.trim(),cuenta=document.getElementById('ga37-cuenta').value,fecha=document.getElementById('ga37-fecha').value;
     if(monto<=0){alert('Captura un monto mayor a cero.');return;}if(!concepto){alert('Captura el concepto del gasto.');return;}
-    var tt=ca21Totals(fecha),disp=ca35CuentaSaldo(tt,cuenta);if(monto>disp){alert('La cuenta seleccionada no tiene saldo suficiente.');return;}
+    var fechaCaja=CAJA_FECHA_BASE||fechaHoyLocal(),tt=ca21Totals(fechaCaja),disp=ca35CuentaSaldo(tt,cuenta);if(monto>disp){alert('La cuenta seleccionada no tiene saldo suficiente.');return;}
     var f=document.getElementById('ga37-file').files[0];
     var d=ca21Load();
-    var mov={id:ca21Id(),fecha:fecha,hora:ca21Now(),tipo:'salida',clase_gasto:document.getElementById('ga37-tipo').value,categoria:document.getElementById('ga37-cat').value,concepto:concepto,persona:document.getElementById('ga37-persona').value.trim()||'—',cuenta:cuenta,monto:monto,nota:document.getElementById('ga37-nota').value.trim(),comprobante_nombre:f?f.name:null,origen:'Gasto operativo',estado:'Registrado',usuario:(usuario&&usuario.nombre)||'Usuario'};
+    var mov={id:ca21Id(),fecha:fecha,fecha_caja:fechaCaja,hora:ca21Now(),tipo:'salida',clase_gasto:document.getElementById('ga37-tipo').value,categoria:document.getElementById('ga37-cat').value,concepto:concepto,persona:document.getElementById('ga37-persona').value.trim()||'—',cuenta:cuenta,monto:monto,nota:document.getElementById('ga37-nota').value.trim(),comprobante_nombre:f?f.name:null,origen:'Gasto operativo',estado:'Registrado',usuario:(usuario&&usuario.nombre)||'Usuario'};
     d.movimientos.push(mov);
     try{
       ca21Save(d);
@@ -9088,13 +9104,23 @@ function ca21OpenModal(html){
   w.className='ca21-modal';
   w.innerHTML='<div class="ca21-dialog">'+html+'</div>';
   document.body.appendChild(w);
+  setTimeout(function(){ca152InitCurrency(w);},0);
   w.addEventListener('click',function(e){if(e.target===w)ca21CloseModal();});
 }
 function ca21CloseModal(){
   var x=document.getElementById('ca21-modal');
   if(x)x.remove();
 }
-function ca21Money(v){return Math.round((parseFloat(v||0)||0)*100)/100;}
+function ca21Money(v){return Math.round((parseFloat(String(v==null?'':v).replace(/[^0-9.-]/g,''))||0)*100)/100;}
+function ca152CurrencyInput(el,prefix){
+  if(!el)return;prefix=prefix||'$';el.type='text';el.inputMode='decimal';
+  function raw(){var n=ca21Money(el.value);el.value=n?String(n):'';}
+  function fmt(){var n=ca21Money(el.value);el.value=n?prefix+formatMonto(n):'';}
+  el.addEventListener('focus',raw);el.addEventListener('blur',fmt);if(el.value)fmt();
+}
+function ca152InitCurrency(root){
+  root=root||document;['ca21-m-monto','ca21-t-monto','ga37-monto','ca23-pu','ca23-total','ca21-c-ef','ca21-c-bp','ca21-c-bd','ca21-c-sp'].forEach(function(id){var e=root.querySelector?root.querySelector('#'+id):null;if(e)ca152CurrencyInput(e,id==='ca21-c-bd'?'US$ ':'$');});
+}
 function ca21AccountDelta(m,cuenta){
   var monto=ca21Money(m.monto), mc=m.cuenta==='bancos'?'banamex':m.cuenta;
   var co=m.cuenta_origen==='bancos'?'banamex':m.cuenta_origen, cd=m.cuenta_destino==='bancos'?'banamex':m.cuenta_destino;
@@ -9117,7 +9143,7 @@ function ca35CuentaSaldo(t,c){
   return t.banamex_pesos;
 }
 function ca21Totals(fechaHasta){
-  var d=ca21Load(),ap=d.aperturas[fechaHasta]||{},ms=d.movimientos.filter(function(m){return m.fecha===fechaHasta;});
+  var d=ca21Load(),ap=d.aperturas[fechaHasta]||{},ms=d.movimientos.filter(function(m){return (m.fecha_caja||m.fecha)===fechaHasta;});
   var ef=ca21Money(ap.efectivo);
   var bp=ca21Money(ap.banamex_pesos!=null?ap.banamex_pesos:(ap.banamex!=null?ap.banamex:(ap.bancos||0)));
   var bd=ca21Money(ap.banamex_dolares||0);
@@ -9216,7 +9242,7 @@ function ca21OpenTransfer(fecha){
   ca21OpenModal('<div class="ca21-dialog-head"><div><h3>⇄ Transferir entre cuentas</h3><p>Efectivo · Banamex Pesos · Banamex Dólares · Santander Pesos.</p></div><button class="ca21-close" onclick="ca21CloseModal()">×</button></div>'+
   '<div class="ca21-dialog-body"><div class="ca21-form"><div class="ca21-field"><label>Cuenta origen</label><select id="ca21-t-origen"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div>'+
   '<div class="ca21-field"><label>Cuenta destino</label><select id="ca21-t-destino"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div>'+
-  '<div class="ca21-field"><label>Monto</label><input id="ca21-t-monto" type="number" min="0.01" step="0.01" placeholder="0.00"></div><div class="ca21-field"><label>Concepto</label><input id="ca21-t-concepto" value="Transferencia entre cuentas"></div>'+
+  '<div class="ca21-field"><label>Monto</label><input id="ca21-t-monto" type="number" min="0.01" step="0.01" placeholder="0.00"></div><div class="ca21-field"><label>Concepto</label><input id="ca21-t-concepto" placeholder="Ej. Traspaso para pago de nómina"></div>'+
   '<div class="ca21-field full"><label>Referencia / observación</label><textarea id="ca21-t-nota"></textarea></div></div></div><div class="ca21-dialog-actions"><button onclick="ca21CloseModal()">Cancelar</button><button class="save" id="ca21-t-save">Registrar transferencia</button></div>');
   document.getElementById('ca21-t-save').addEventListener('click',function(){
     var o=document.getElementById('ca21-t-origen').value,de=document.getElementById('ca21-t-destino').value,m=ca21Money(document.getElementById('ca21-t-monto').value);
@@ -14572,11 +14598,12 @@ C087
  const money=n=>'$'+(Number(n)||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
  const load=(k)=>{try{return JSON.parse(localStorage.getItem(k)||'[]')}catch(e){return[]}};
  const save=(k,v)=>{
-   localStorage.setItem(k,JSON.stringify(v));
    try{
-    const row=(v&&v.length)?v[v.length-1]:null; if(!row)return Promise.resolve();
-    const table=k===KEY?'financiamientos':k===MOV?'financiamiento_movimientos':null; if(!table)return Promise.resolve();
-    return api('/rest/v1/'+table,{method:'POST',body:row,prefer:'resolution=merge-duplicates,return=minimal'}).catch(e=>{console.error('C150 persistencia',e);alert('No se pudo guardar el financiamiento en la base compartida: '+e.message);throw e;});
+    const row=(v&&v.length)?v[v.length-1]:null; if(!row)return Promise.resolve(null);
+    const table=k===KEY?'financiamientos':k===MOV?'financiamiento_movimientos':null; if(!table)return Promise.resolve(null);
+    return api('/rest/v1/'+table,{method:'POST',body:row,prefer:'return=representation'}).then(function(res){
+      return Array.isArray(res)?res[0]:res;
+    }).catch(e=>{console.error('C151 persistencia',e);alert('No se pudo guardar en la base compartida: '+e.message);throw e;});
    }catch(e){return Promise.reject(e)}
  };
  const parseMoney=v=>Number(String(v??'').replace(/[^0-9.-]/g,''))||0;
@@ -14664,10 +14691,20 @@ C087
    <div class="fi128-span2"><label>Observaciones<textarea name="observaciones" rows="2" placeholder="Garantía, destino del crédito, condiciones especiales..."></textarea></label></div>
   </div><div class="fi128-actions"><button type="button" class="fi128-btn" data-fi-close>Cancelar</button><button class="fi128-btn primary">Registrar financiamiento</button></div></form>`);
   bindMoney(d);
-  d.querySelector('#fi128-form').onsubmit=e=>{
-   e.preventDefault();let o=Object.fromEntries(new FormData(e.target).entries());o.monto_original=parseMoney(o.monto_original);o.pago_programado=parseMoney(o.pago_programado);o.tasa=parseMoney(o.tasa);o.plazo=parseInt(o.plazo||0,10)||null;o.id=id();o.estado='activo';o.creado=today();o.creado_por=(usuario&&usuario.id)||null;
-   let a=financs();a.push(o);save(KEY,a);
-   setTimeout(fi150SyncCaja,250); d.remove();render();
+  d.querySelector('#fi128-form').onsubmit=async e=>{
+   e.preventDefault();
+   const form=e.target, btn=form.querySelector('button.primary');
+   let o=Object.fromEntries(new FormData(form).entries());o.monto_original=parseMoney(o.monto_original);o.pago_programado=parseMoney(o.pago_programado);o.tasa=parseMoney(o.tasa);o.plazo=parseInt(o.plazo||0,10)||null;o.id=id();o.estado='activo';o.creado=today();o.creado_por=(usuario&&usuario.id)||null;
+   if(o.monto_original<=0){alert('Captura un monto original válido.');return}
+   if(btn){btn.disabled=true;btn.textContent='Guardando…'}
+   try{
+     await save(KEY,[o]);
+     await loadShared();
+     d.remove();
+     render();
+   }catch(err){
+     if(btn){btn.disabled=false;btn.textContent='Registrar financiamiento'}
+   }
   }
  }
  function historialGeneral(){
@@ -14711,14 +14748,21 @@ C087
    <div class="fi128-span2"><label>Referencia / observación<input name="referencia" placeholder="Transferencia, folio o comentario"></label></div>
   </div><div class="fi128-actions"><button type="button" class="fi128-btn" data-fi-close>Cancelar</button><button class="fi128-btn primary">Registrar pago</button></div></form>`);
   let typ=d.querySelector('#fi128-tipo');typ.onchange=()=>{let mix=typ.value==='mixto';d.querySelector('#fi128-one').style.display=mix?'none':'';d.querySelector('#fi128-cap').style.display=mix?'':'none';d.querySelector('#fi128-int').style.display=mix?'':'none';d.querySelector('[name=monto]').required=!mix};
-  d.querySelector('#fi128-payform').onsubmit=e=>{
-    e.preventDefault();let o=Object.fromEntries(new FormData(e.target).entries());o.id='MOV-'+Date.now();o.financiamiento_id=fid;
+  d.querySelector('#fi128-payform').onsubmit=async e=>{
+    e.preventDefault();const form=e.target,btn=form.querySelector('button.primary');let o=Object.fromEntries(new FormData(form).entries());o.id='MOV-'+Date.now();o.financiamiento_id=fid;
     let total=o.tipo==='mixto'?Number(o.capital||0)+Number(o.interes||0):Number(o.monto||0);
     let capital=o.tipo==='capital'?Number(o.monto||0):o.tipo==='mixto'?Number(o.capital||0):0;
     if(total<=0)return alert('Captura un monto válido.');
     if(capital>saldo(f)+.01)return alert('El abono a capital no puede superar el saldo pendiente.');
-    o.monto=parseMoney(o.monto);o.capital=parseMoney(o.capital);o.interes=parseMoney(o.interes);o.creado_por=(usuario&&usuario.id)||null;let a=movs();a.push(o);save(MOV,a);setTimeout(fi150SyncCaja,250);
-    d.remove();render();setTimeout(()=>detalle(fid),0);
+    o.monto=parseMoney(o.monto);o.capital=parseMoney(o.capital);o.interes=parseMoney(o.interes);o.creado_por=(usuario&&usuario.id)||null;
+    if(btn){btn.disabled=true;btn.textContent='Guardando…'}
+    try{
+      await save(MOV,[o]);
+      await loadShared();
+      d.remove();render();setTimeout(()=>detalle(fid),0);
+    }catch(err){
+      if(btn){btn.disabled=false;btn.textContent='Registrar pago'}
+    }
   }
  }
  function hook(){
@@ -14734,8 +14778,8 @@ C087
  hook();
 })();
 </script>
-<script id="c150-financiamientos-compartidos">
-/* C150 · Financiamientos Supabase compartidos + reflejo en Caja por sesión */
+<script id="c151-financiamientos-compartidos">
+/* C151 · Financiamientos Supabase compartidos confirmados antes de cerrar + reflejo en Caja */
 (function(){
  const oldCaja=window.renderCajaMootsil;
  if(typeof oldCaja==='function'){window.renderCajaMootsil=function(){let args=arguments;return Promise.all([from('financiamientos').select('*').get(),from('financiamiento_movimientos').select('*').get()]).then(function(r){
