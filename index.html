@@ -8689,7 +8689,8 @@ function sumarMesesFecha(fechaStr,meses){
   return d.toISOString().slice(0,10);
 }
 
-function renderInversionistasMenu(){
+function renderInversionistasMenu(filtroTipo){
+  filtroTipo=filtroTipo||'todos';
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="loading">Cargando expedientes patrimoniales...</div>';
   Promise.all([
@@ -8698,6 +8699,7 @@ function renderInversionistasMenu(){
     from('inversion_movimientos').select('*').get()
   ]).then(function(r){
     var personas=r[0]||[], inversiones=r[1]||[], movimientos=r[2]||[];
+    if(filtroTipo==='inversionista'||filtroTipo==='dueño')personas=personas.filter(function(u){return u.rol===filtroTipo;});
     var porPersona={}, porInv={};
     inversiones.forEach(function(inv){
       (porPersona[inv.inversionista_id]=porPersona[inv.inversionista_id]||[]).push(inv);
@@ -8710,7 +8712,9 @@ function renderInversionistasMenu(){
         devueltoPorPersona[inv.inversionista_id]=(devueltoPorPersona[inv.inversionista_id]||0)+(parseFloat(m.monto)||0);
       }
     });
-    var html='<div class="ex54-head"><div><div class="ex54-eyebrow">Administración · Inversionistas y Dueños</div><div class="ex54-title">Expedientes</div><div class="ex54-sub">Información patrimonial, contratos, aportaciones, devoluciones y utilidades de cada perfil.</div></div><div style="display:flex;gap:7px;align-items:center;"><button class="em59-back" onclick="renderAdministracionMenu()">← Administración</button><button class="btn-sm btn-completar" onclick="renderNuevoUsuario()">+ Nuevo expediente</button></div></div><div class="ex54-list">';
+    var tituloVista=filtroTipo==='inversionista'?'Inversionistas':filtroTipo==='dueño'?'Dueños':'Inversionistas y Dueños';
+    var subVista=filtroTipo==='inversionista'?'Contratos, aportaciones, devoluciones y utilidades de los inversionistas.':filtroTipo==='dueño'?'Expedientes y aportaciones patrimoniales de los dueños.':'Información patrimonial, contratos, aportaciones, devoluciones y utilidades de cada perfil.';
+    var html='<div class="ex54-head"><div><div class="ex54-eyebrow">Administración · '+tituloVista+'</div><div class="ex54-title">'+tituloVista+'</div><div class="ex54-sub">'+subVista+'</div></div><div style="display:flex;gap:7px;align-items:center;"><button class="em59-back" onclick="renderAdministracionMenu()">← Administración</button><button class="btn-sm btn-completar" onclick="renderNuevoUsuario()">+ Nuevo expediente</button></div></div><div class="ex54-list">';
     html+=personas.map(function(u){
       var contratos=porPersona[u.id]||[];
       var aportado=contratos.reduce(function(s,c){return s+(parseFloat(c.monto_invertido)||0);},0);
@@ -8720,7 +8724,7 @@ function renderInversionistasMenu(){
       var badgeClass=u.rol==='dueño'?'em58-eventual':'em58-base';
       return '<div class="ex54-row"><div><div class="ex54-name">'+ex54Esc(u.nombre)+' <span class="em58-badge '+badgeClass+'">'+tipo+'</span></div><div class="ex54-role">'+contratos.length+' contrato(s) · Capital aportado: $'+formatMonto(aportado)+'</div></div><div><div class="ex54-status" style="color:'+(u.activo?'var(--verde-mid)':'var(--gris-3)')+';">'+(u.activo?'Activo':'Inactivo')+'</div><div class="ex54-role">Capital vigente: $'+formatMonto(vigente)+'</div></div><div class="orden-actions"><button class="btn-sm ex55-action-exp" onclick="renderInversionistaDetalle(\''+u.id+'\')">Expediente</button><button class="btn-sm ex55-action-pin" onclick="renderCambiarPin(\''+u.id+'\',\''+ex54Esc(u.nombre).replace(/'/g,"\\'")+'\')">PIN</button><button class="btn-sm ex55-action-cred" onclick="renderCredencialId(\''+u.id+'\')">Credencial</button>'+(u.activo?'<button class="btn-sm ex55-action-baja" onclick="bajaUsuario(\''+u.id+'\')">Dar de baja</button>':'<button class="btn-sm btn-iniciar" onclick="altaUsuario(\''+u.id+'\')">Reactivar</button>')+'</div></div>';
     }).join('');
-    if(!personas.length)html+='<div class="empty">Sin inversionistas o dueños registrados.</div>';
+    if(!personas.length)html+='<div class="empty">Sin '+(filtroTipo==='inversionista'?'inversionistas':filtroTipo==='dueño'?'dueños':'inversionistas o dueños')+' registrados.</div>';
     body.innerHTML=html+'</div><button class="em59-back" style="margin-top:.8rem;" onclick="renderAdministracionMenu()">← Administración</button>';
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
@@ -9056,7 +9060,7 @@ function renderAdministracionMenu(){
     '<div class="ad17-card blue em60-card" data-admin="empleados"><div class="ic">👥</div><h3>Empleados</h3><p>Expedientes, asistencia y solicitudes del personal.</p><div class="em60-actions"><button type="button" data-empgo="expedientes">👤 Expedientes</button><button type="button" data-empgo="asistencia">📋 Asistencia</button><button type="button" data-empgo="solicitudes">📨 Solicitudes</button></div></div>'+
     '<div class="ad17-card gold em60-card" data-admin="compensaciones"><div class="ic">💰</div><h3>Nómina y Compensaciones</h3><p>Bonos por objetivos y apoyos económicos al personal.</p><div class="em60-actions"><button type="button" data-compgo="bonos">🎯 Bonos</button><button type="button" data-compgo="apoyos">⛽ Apoyos</button></div></div>'+
     '<div class="ad17-card orange em60-card" data-admin="gastos"><div class="ic">🧾</div><h3>Compras y Proveedores</h3><p>Compras, proveedores, cuentas por pagar, órdenes e historial.</p><div class="em60-actions"><button type="button" data-comprago="nuevo">🧾 Nueva compra</button><button type="button" data-comprago="proveedores">🏢 Proveedores</button><button type="button" data-comprago="cuentas">📆 Cuentas por pagar</button><button type="button" data-comprago="orden">🛒 Órdenes de compra</button></div></div>'+
-    '<div class="ad17-card purple" data-admin="inversionistas"><div class="ic">💼</div><h3>Inversionistas y Dueños</h3><p>Perfiles patrimoniales, aportaciones, contratos, movimientos y devoluciones.</p></div>'+
+    '<div class="ad17-card purple em60-card" data-admin="inversionistas"><div class="ic">💼</div><h3>Inversionistas y Dueños</h3><p>Perfiles patrimoniales, aportaciones, contratos, movimientos y devoluciones.</p><div class="em60-actions"><button type="button" data-invgo="inversionista">💼 Inversionistas</button><button type="button" data-invgo="dueño">👑 Dueños</button></div></div>'+
   '</div></div>';
   body.querySelector('[data-admin="caja"]').addEventListener('click',function(){renderCajaMootsil('dia',fechaHoyLocal());});
   body.querySelector('[data-cajago="compras"]').addEventListener('click',function(e){e.stopPropagation();Promise.resolve(renderCajaMootsil('dia',fechaHoyLocal())).then(function(){setTimeout(function(){if(typeof renderNuevaCompraDesdeCaja==='function')renderNuevaCompraDesdeCaja();},50);});});
@@ -9072,7 +9076,9 @@ function renderAdministracionMenu(){
   body.querySelector('[data-comprago="cuentas"]').addEventListener('click',function(e){e.stopPropagation();abrirCuentasPorPagarDesdeAdministracion();});
   body.querySelector('[data-comprago="orden"]').addEventListener('click',function(e){e.stopPropagation();renderOrdenCompra();});
   body.querySelector('[data-admin="gastos"]').addEventListener('click',renderComprasMenu);
-  body.querySelector('[data-admin="inversionistas"]').addEventListener('click',renderInversionistasMenu);
+  body.querySelector('[data-admin="inversionistas"]').addEventListener('click',function(){renderInversionistasMenu('todos');});
+  body.querySelector('[data-invgo="inversionista"]').addEventListener('click',function(e){e.stopPropagation();renderInversionistasMenu('inversionista');});
+  body.querySelector('[data-invgo="dueño"]').addEventListener('click',function(e){e.stopPropagation();renderInversionistasMenu('dueño');});
 }
 
 
