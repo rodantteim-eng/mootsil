@@ -9435,9 +9435,11 @@ function renderCajaMootsil(periodo,fechaBase){
     from('pagos_eventuales').select('*,operario:usuarios!operario_id(nombre)').gte('fecha',rg.inicio).lte('fecha',rg.fin).get(),
     from('prestamos').select('*,operario:usuarios!operario_id(nombre)').gte('fecha_inicio',rg.inicio).lte('fecha_inicio',rg.fin).get(),
     from('inversiones').select('*,inversionista:usuarios!inversionista_id(nombre)').gte('fecha_inicio',rg.inicio).lte('fecha_inicio',rg.fin).get(),
-    from('inversion_movimientos').select('*').gte('fecha',rg.inicio).lte('fecha',rg.fin).get()
+    from('inversion_movimientos').select('*').gte('fecha',rg.inicio).lte('fecha',rg.fin).get(),
+    from('financiamientos').select('*').lte('fecha_inicio',CAJA_FECHA_BASE).get(),
+    from('financiamiento_movimientos').select('*').lte('fecha',CAJA_FECHA_BASE).get()
   ]).then(function(r){
-    var externos=[],gastos=r[0]||[],nom=r[1]||[],extras=r[2]||[],eventuales=r[3]||[],prestamos=r[4]||[],inversiones=r[5]||[],invMovs=r[6]||[];
+    var externos=[],gastos=r[0]||[],nom=r[1]||[],extras=r[2]||[],eventuales=r[3]||[],prestamos=r[4]||[],inversiones=r[5]||[],invMovs=r[6]||[],financiamientosDb=r[7]||[],finMovsDb=r[8]||[];
 
     gastos.forEach(function(g){
       var esAp=ap98EsApoyo(g),am=esAp?(ap98Meta(g.concepto)||{}):{};
@@ -9450,8 +9452,35 @@ function renderCajaMootsil(periodo,fechaBase){
     inversiones.forEach(function(i){externos.push({id:'db-i-'+i.id,fecha:i.fecha_inicio,hora:'—',tipo:'entrada',cuenta:'bancos',categoria:'Aportaciones',concepto:'Aportación de inversionista',persona:i.inversionista?i.inversionista.nombre:'Inversionista',monto:cajaMonto(i.monto_invertido),forma:'Transferencia',origen:'Inversionistas',estado:'Registrado',db:true});});
     invMovs.forEach(function(m){if(m.tipo==='rendimiento'||m.tipo==='devolucion_capital')externos.push({id:'db-im-'+m.id,fecha:m.fecha,hora:'—',tipo:'salida',cuenta:'bancos',categoria:'Inversionistas',concepto:m.concepto||(m.tipo==='rendimiento'?'Rendimiento':'Devolución de capital'),persona:'Inversionista',monto:cajaMonto(m.monto),forma:'—',origen:'Inversionistas',estado:'Registrado',db:true});});
 
+    /* C167 · Financiamientos impactan directamente la cuenta seleccionada desde Supabase.
+       Esta lógica vive en index.html, que es el código realmente ejecutado por Cloudflare. */
+    function ca167FinCuenta(c){
+      c=String(c||'').toLowerCase();
+      if(c==='banamex'||c==='bancos'||c==='banamex_pesos')return 'banamex_pesos';
+      if(c==='santander'||c==='santander_pesos')return 'santander_pesos';
+      if(c==='banamex_dolares')return 'banamex_dolares';
+      if(c==='efectivo')return 'efectivo';
+      return 'banamex_pesos';
+    }
+    var finById={};
+    financiamientosDb.forEach(function(f){
+      finById[String(f.id)]=f;
+      if(f.fecha_inicio>=rg.inicio&&f.fecha_inicio<=rg.fin){
+        var cuenta=ca167FinCuenta(f.cuenta_ingreso);
+        externos.push({id:'db-fin-'+f.id,fecha:f.fecha_inicio,hora:'—',tipo:'entrada',cuenta:cuenta,categoria:'Financiamientos',concepto:'Disposición de financiamiento',persona:f.institucion||'Financiamiento',monto:cajaMonto(f.monto_original),forma:ca35CuentaLabel(cuenta),origen:'Financiamientos',estado:'Registrado',db:true});
+      }
+    });
+    finMovsDb.forEach(function(m){
+      if(m.fecha>=rg.inicio&&m.fecha<=rg.fin){
+        var f=finById[String(m.financiamiento_id)],cuenta=ca167FinCuenta(m.cuenta);
+        var total=m.tipo==='mixto'?cajaMonto(Number(m.capital||0)+Number(m.interes||0)):cajaMonto(m.monto);
+        externos.push({id:'db-finp-'+m.id,fecha:m.fecha,hora:'—',tipo:'salida',cuenta:cuenta,categoria:'Financiamientos',concepto:m.tipo==='capital'?'Abono a capital':m.tipo==='interes'?'Pago de intereses':'Pago mixto capital + intereses',persona:f&&f.institucion?f.institucion:'Financiamiento',monto:total,forma:ca35CuentaLabel(cuenta),origen:'Financiamientos',estado:'Registrado',db:true});
+      }
+    });
+
     var store=ca21Load();
-    var locales=store.movimientos.filter(function(m){return m.fecha>=rg.inicio&&m.fecha<=rg.fin;});
+    /* Los reflejos FIS/FIP locales se excluyen para que la fuente financiera sea Supabase una sola vez. */
+    var locales=store.movimientos.filter(function(m){return m.fecha>=rg.inicio&&m.fecha<=rg.fin&&!String(m.id||'').startsWith('FIS-')&&!String(m.id||'').startsWith('FIP-S-');});
     var movimientos=externos.concat(locales).sort(function(a,b){return (String(b.fecha)+String(b.hora||'')).localeCompare(String(a.fecha)+String(a.hora||''));});
 
     var apertura=store.aperturas[CAJA_FECHA_BASE]||null;
@@ -9460,7 +9489,7 @@ function renderCajaMootsil(periodo,fechaBase){
     // Daily test balances are based on local opening + local manual cash flows.
     // Existing DB records are displayed as historical/consolidated movements but are not double-counted
     // into the test opening/closing cash balance until migration rules are approved.
-    var localDay=store.movimientos.filter(function(m){return m.fecha===CAJA_FECHA_BASE;});
+    var localDay=store.movimientos.filter(function(m){return m.fecha===CAJA_FECHA_BASE&&!String(m.id||'').startsWith('FIS-')&&!String(m.id||'').startsWith('FIP-S-');});
     var saldoInicialEf=apertura?ca21Money(apertura.efectivo):0;
     var saldoInicialBp=apertura?ca21Money(apertura.banamex_pesos!=null?apertura.banamex_pesos:(apertura.banamex!=null?apertura.banamex:(apertura.bancos||0))):0;
     var saldoInicialBd=apertura?ca21Money(apertura.banamex_dolares||0):0;
@@ -9472,12 +9501,23 @@ function renderCajaMootsil(periodo,fechaBase){
       bd+=ca21AccountDelta(m,'banamex_dolares');
       sp+=ca21AccountDelta(m,'santander_pesos')+ca21AccountDelta(m,'santander');
     });
+    /* C167: saldo acumulado por cuenta = apertura + movimientos locales + financiamientos reales hasta la fecha. */
+    financiamientosDb.forEach(function(f){
+      var cuenta=ca167FinCuenta(f.cuenta_ingreso),monto=ca21Money(f.monto_original);
+      if(cuenta==='efectivo')ef+=monto;else if(cuenta==='banamex_dolares')bd+=monto;else if(cuenta==='santander_pesos')sp+=monto;else bp+=monto;
+    });
+    finMovsDb.forEach(function(m){
+      var cuenta=ca167FinCuenta(m.cuenta),monto=m.tipo==='mixto'?ca21Money(Number(m.capital||0)+Number(m.interes||0)):ca21Money(m.monto);
+      if(cuenta==='efectivo')ef-=monto;else if(cuenta==='banamex_dolares')bd-=monto;else if(cuenta==='santander_pesos')sp-=monto;else bp-=monto;
+    });
     ef=ca21Money(ef);bp=ca21Money(bp);bd=ca21Money(bd);sp=ca21Money(sp);
 
-    var localEntradas=localDay.filter(function(m){return m.tipo==='entrada'&&ca35CuentaMoneda(m.cuenta)!=='USD';}).reduce(function(s,m){return s+ca21Money(m.monto);},0);
-    var localSalidas=localDay.filter(function(m){return m.tipo==='salida'&&ca35CuentaMoneda(m.cuenta)!=='USD';}).reduce(function(s,m){return s+ca21Money(m.monto);},0);
-    var localEntradasUsd=localDay.filter(function(m){return m.tipo==='entrada'&&ca35CuentaMoneda(m.cuenta)==='USD';}).reduce(function(s,m){return s+ca21Money(m.monto);},0);
-    var localSalidasUsd=localDay.filter(function(m){return m.tipo==='salida'&&ca35CuentaMoneda(m.cuenta)==='USD';}).reduce(function(s,m){return s+ca21Money(m.monto);},0);
+    var finDiaEntradas=financiamientosDb.filter(function(f){return f.fecha_inicio===CAJA_FECHA_BASE;}).map(function(f){return {cuenta:ca167FinCuenta(f.cuenta_ingreso),monto:ca21Money(f.monto_original)};});
+    var finDiaSalidas=finMovsDb.filter(function(m){return m.fecha===CAJA_FECHA_BASE;}).map(function(m){return {cuenta:ca167FinCuenta(m.cuenta),monto:m.tipo==='mixto'?ca21Money(Number(m.capital||0)+Number(m.interes||0)):ca21Money(m.monto)};});
+    var localEntradas=localDay.filter(function(m){return m.tipo==='entrada'&&ca35CuentaMoneda(m.cuenta)!=='USD';}).reduce(function(s,m){return s+ca21Money(m.monto);},0)+finDiaEntradas.filter(function(m){return ca35CuentaMoneda(m.cuenta)!=='USD';}).reduce(function(s,m){return s+m.monto;},0);
+    var localSalidas=localDay.filter(function(m){return m.tipo==='salida'&&ca35CuentaMoneda(m.cuenta)!=='USD';}).reduce(function(s,m){return s+ca21Money(m.monto);},0)+finDiaSalidas.filter(function(m){return ca35CuentaMoneda(m.cuenta)!=='USD';}).reduce(function(s,m){return s+m.monto;},0);
+    var localEntradasUsd=localDay.filter(function(m){return m.tipo==='entrada'&&ca35CuentaMoneda(m.cuenta)==='USD';}).reduce(function(s,m){return s+ca21Money(m.monto);},0)+finDiaEntradas.filter(function(m){return ca35CuentaMoneda(m.cuenta)==='USD';}).reduce(function(s,m){return s+m.monto;},0);
+    var localSalidasUsd=localDay.filter(function(m){return m.tipo==='salida'&&ca35CuentaMoneda(m.cuenta)==='USD';}).reduce(function(s,m){return s+ca21Money(m.monto);},0)+finDiaSalidas.filter(function(m){return ca35CuentaMoneda(m.cuenta)==='USD';}).reduce(function(s,m){return s+m.monto;},0);
     var saldoInicial=ca21Money(saldoInicialEf+saldoInicialBp+saldoInicialSp);
     var saldoInicialUsd=ca21Money(saldoInicialBd);
     var saldoDisponible=ca21Money(ef+bp+sp);
@@ -9493,10 +9533,11 @@ function renderCajaMootsil(periodo,fechaBase){
         );
       }).reduce(function(s,m){return s+ca21Money(m.monto);},0));
     }
-    var salEf=ca40SalidasCuenta('efectivo');
-    var salBp=ca40SalidasCuenta('banamex_pesos');
-    var salBd=ca40SalidasCuenta('banamex_dolares');
-    var salSp=ca40SalidasCuenta('santander_pesos');
+    function ca167FinSalidasCuenta(cuenta){return ca21Money(finDiaSalidas.filter(function(m){return m.cuenta===cuenta;}).reduce(function(s,m){return s+m.monto;},0));}
+    var salEf=ca21Money(ca40SalidasCuenta('efectivo')+ca167FinSalidasCuenta('efectivo'));
+    var salBp=ca21Money(ca40SalidasCuenta('banamex_pesos')+ca167FinSalidasCuenta('banamex_pesos'));
+    var salBd=ca21Money(ca40SalidasCuenta('banamex_dolares')+ca167FinSalidasCuenta('banamex_dolares'));
+    var salSp=ca21Money(ca40SalidasCuenta('santander_pesos')+ca167FinSalidasCuenta('santander_pesos'));
 
     var semana='Semana '+riegoSemanaNumero(CAJA_FECHA_BASE);
     var statusHtml=corte?'<span class="ca21-status-closed">● Caja cerrada</span>':(apertura?'<span class="ca21-status-open">● Caja abierta</span>':'<span class="ca21-status-open">● Pendiente apertura</span>');
@@ -9522,7 +9563,7 @@ function renderCajaMootsil(periodo,fechaBase){
         '<div class="ca22-ops" style="grid-template-columns:repeat(5,minmax(0,1fr))"><button class="ca22-op orange" id="ca22-compras" type="button">🧾 Compras</button><button class="ca22-op red" id="ca22-gastos" type="button">💳 Gastos</button><button class="ca22-op nomina-gold" id="ca22-nomina" type="button">💰 Nómina</button><button class="ca22-op purple" id="ca22-inversionistas" type="button">💼 Inversionistas</button><button class="ca22-op finance-blue" id="ca25-financiamientos" type="button">🏦 Financiamientos</button></div>'+
         '<div class="ca17-controls"><input id="ca21-fecha" type="date" value="'+CAJA_FECHA_BASE+'"><select id="ca21-tipo"><option value="todos">Todos los movimientos</option><option value="entrada">Entradas</option><option value="salida">Salidas</option><option value="transferencia">Transferencias</option></select><select><option>Todas las categorías</option></select><select><option>Todas las formas de pago</option><option>Efectivo</option><option>Transferencia</option></select><input placeholder="Buscar concepto, beneficiario, folio..."></div>'+
         '<div class="ca17-table-wrap"><table class="ca17-table"><thead><tr><th>Hora</th><th>Tipo</th><th>Concepto</th><th>Categoría</th><th>Beneficiario / Proveedor</th><th>Forma de pago</th><th>Entrada</th><th>Salida</th><th>Origen</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
-        '<div class="ca17-foot"><div>ⓘ <strong>Modo prueba:</strong> apertura y movimientos manuales se guardan en este navegador. Los movimientos existentes de Mootsil se muestran como referencia y no se duplican en el saldo de prueba.</div><div>'+(corte?'Corte: '+corte.hora+' · Diferencia $'+formatMonto(corte.diferencia):'Caja sin corte')+'</div></div></div>'+
+        '<div class="ca17-foot"><div>ⓘ <strong>Caja compartida:</strong> apertura, movimientos y financiamientos se integran por cuenta. Supabase es la fuente compartida.</div><div>'+(corte?'Corte: '+corte.hora+' · Diferencia $'+formatMonto(corte.diferencia):'Caja sin corte')+'</div></div></div>'+
       '<div style="display:flex;justify-content:flex-end"><button class="ca17-back" onclick="renderAdministracionMenu()">← Administración</button></div></div>';
 
     cargarClimaRiego();
@@ -15252,5 +15293,6 @@ C087
 
 <script id="c163-financiamiento-fecha-caja">console.info("Mootsil C163: financiamiento conserva fecha contractual y registra fecha_caja operativa; apertura confirmada Supabase C159");</script>
 <script id="c164-apertura-rpc">console.info("Mootsil C164: apertura de Caja guardada por RPC transaccional y verificada en Supabase");</script>
+<script id="c167-financiamientos-caja-index">console.info("Mootsil C167: financiamientos impactan Caja desde Supabase en index.html activo y por cuenta seleccionada");</script>
 </body>
 </html>
