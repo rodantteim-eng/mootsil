@@ -5503,7 +5503,7 @@ function renderAlarmasRevision(){
   ]).then(function(r){
     var rows=r[0]||[], recoms=r[1]||[], evidAll=r[2]||[];
     if(!rows.length){body.innerHTML='<div class="seccion-titulo">🚨 Reportes de campo</div><div class="empty">Sin reportes todavía.</div>';return;}
-    var esIngeniero=usuario.rol==='ingeniero'||usuario.rol==='admin';
+    var esIngeniero=usuario.rol==='ingeniero'||usuario.rol==='admin'||usuario.rol==='dueño';
     var html='<div class="seccion-titulo">🚨 Reportes de campo</div>';
     html+=rows.map(function(a){
       var meta=REPORTE_CATEGORIA_META[a.categoria]||{ic:'🚨',lbl:a.categoria};
@@ -14899,16 +14899,12 @@ C087
     ]).then(function(){return true;});
   }
   function c153LoadShared(){
-    var local=c153LocalRaw();
+    /* C156: Supabase is authoritative. Never re-import stale device data into the shared Caja. */
     return c153FetchAll().then(function(remote){
-      if(!c153LoadedOnce){
-        return c153BootstrapMerge(remote,local).then(function(changed){
-          c153LoadedOnce=true;
-          return changed?c153FetchAll():remote;
-        });
-      }
+      c153LoadedOnce=true;
+      c153SetLocal(remote);
       return remote;
-    }).then(function(remote){c153SetLocal(remote);return remote;});
+    });
   }
   function c153DiffAndSync(prev,next){
     prev=prev||{movimientos:[],aperturas:{},cortes:{}};next=next||{movimientos:[],aperturas:{},cortes:{}};
@@ -14958,6 +14954,110 @@ C087
   window.ca153RecargarCaja=function(){
     return c153Pending.catch(function(){}).then(c153LoadShared).then(function(){if(typeof renderCajaMootsil==='function')return renderCajaMootsil(CAJA_PERIODO,CAJA_FECHA_BASE);});
   };
+})();
+</script>
+
+
+<script id="c156-normalizacion-multiusuario">
+/* C156 · Normalización multiusuario administrativa.
+   Supabase = fuente compartida. localStorage = cache de lectura/offline, no autoridad.
+   Se normalizan: pagos proveedor, ajustes asistencia/HE, expedientes administrativos e inversionistas.
+*/
+(function(){
+  if(typeof api!=='function') return;
+  var TABLE='estado_compartido';
+  var queue=Promise.resolve();
+  var scopes={
+    pagos_proveedor:'mootsil_pagos_credito_proveedor_v1',
+    asistencia_ajustes:'mootsil_asistencia_ajustes_admin_v1',
+    he_ajustes:'mootsil_he_ajustes_admin_v1',
+    inversionistas_expediente:'mootsil_inversionistas_expediente_v1',
+    expedientes:'mootsil_expedientes_preview_v1',
+    expediente_docs:'mootsil_exp_docs_v1',
+    expediente_contracts:'mootsil_exp_contracts_v1',
+    expediente_historial:'mootsil_expediente_historial_v1',
+    expediente_notas:'mootsil_expediente_notas_v1'
+  };
+  function uid(){return (typeof usuario!=='undefined'&&usuario&&usuario.id)?usuario.id:null;}
+  function clone(x){try{return JSON.parse(JSON.stringify(x));}catch(e){return x;}}
+  function localRead(k,def){try{var v=JSON.parse(localStorage.getItem(k)||'null');return v===null?def:v;}catch(e){return def;}}
+  function localWrite(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+  function getScope(scope){
+    return api('/rest/v1/'+TABLE+'?scope=eq.'+encodeURIComponent(scope)+'&select=payload&limit=1').then(function(r){
+      return (r&&r[0]&&r[0].payload!=null)?r[0].payload:null;
+    });
+  }
+  function putScope(scope,payload){
+    var row={scope:scope,payload:clone(payload),actualizado_por:uid(),updated_at:new Date().toISOString()};
+    return api('/rest/v1/'+TABLE+'?scope=eq.'+encodeURIComponent(scope)+'&select=scope&limit=1').then(function(found){
+      if(found&&found.length){return api('/rest/v1/'+TABLE+'?scope=eq.'+encodeURIComponent(scope),{method:'PATCH',body:row,prefer:'return=minimal'});}
+      return api('/rest/v1/'+TABLE,{method:'POST',body:row,prefer:'return=minimal'});
+    });
+  }
+  function syncWrite(scope,key,payload){
+    localWrite(key,payload);
+    queue=queue.catch(function(){}).then(function(){return putScope(scope,payload);}).catch(function(e){console.error('C156 sync '+scope,e);});
+    return queue;
+  }
+  function refresh(scope,key,def){
+    return queue.catch(function(){}).then(function(){return getScope(scope);}).then(function(v){
+      if(v!==null){localWrite(key,v);return v;}
+      /* No automatic upload of stale local data. Empty shared state stays authoritative. */
+      var empty=def; localWrite(key,empty); return empty;
+    }).catch(function(e){console.warn('C156 read '+scope,e);return localRead(key,def);});
+  }
+  function refreshMany(names){return Promise.all(names.map(function(n){return refresh(n,scopes[n], n==='pagos_proveedor'?[]:{});}));}
+
+  /* Pagos / abonos de proveedores */
+  window.ca25LoadPagosProveedor=function(){return localRead(scopes.pagos_proveedor,[]);};
+  window.ca25SavePagosProveedor=function(a){return syncWrite('pagos_proveedor',scopes.pagos_proveedor,a||[]);};
+  if(typeof renderCuentasPorPagar==='function'){
+    var _cxp=renderCuentasPorPagar; window.renderCuentasPorPagar=function(){var a=arguments,c=this;return refresh('pagos_proveedor',scopes.pagos_proveedor,[]).then(function(){return _cxp.apply(c,a);});};
+  }
+  if(typeof renderProveedores==='function'){
+    var _prov=renderProveedores; window.renderProveedores=function(){var a=arguments,c=this;return refresh('pagos_proveedor',scopes.pagos_proveedor,[]).then(function(){return _prov.apply(c,a);});};
+  }
+
+  /* Ajustes administrativos de asistencia y H.E. */
+  window.as66Load=function(){return localRead(scopes.asistencia_ajustes,{});};
+  window.as66Set=function(uidx,fecha,val){var all=as66Load(),k=as66Key(uidx,fecha);if(val)all[k]=val;else delete all[k];return syncWrite('asistencia_ajustes',scopes.asistencia_ajustes,all);};
+  window.he68Load=function(){return localRead(scopes.he_ajustes,{});};
+  window.he68Set=function(uidx,fecha,horas){var a=he68Load();a[he68Key(uidx,fecha)]=Math.max(0,parseFloat(horas)||0);return syncWrite('he_ajustes',scopes.he_ajustes,a);};
+  if(typeof em69RenderAsistencia==='function'){
+    var _asis=em69RenderAsistencia; window.em69RenderAsistencia=function(){var a=arguments,c=this;return refreshMany(['asistencia_ajustes','he_ajustes']).then(function(){return _asis.apply(c,a);});};
+  }
+  if(typeof renderControlAsistencias==='function'){
+    window.renderControlAsistencias=function(fecha){return window.em69RenderAsistencia(fecha);};
+  }
+
+  /* Inversionistas / Dueños: expediente compartido */
+  window.inv124Load=function(){return localRead(scopes.inversionistas_expediente,{});};
+  window.inv124Put=function(id,x){var d=inv124Load();d[id]=Object.assign({},d[id]||{},x||{});return syncWrite('inversionistas_expediente',scopes.inversionistas_expediente,d);};
+  ['renderInversionistasMenu','renderInversionistaDetalle','renderNuevaInversion','renderInversionDetalle','renderEditarInversion'].forEach(function(n){
+    if(typeof window[n]==='function'){var old=window[n];window[n]=(function(fn){return function(){var a=arguments,c=this;return refresh('inversionistas_expediente',scopes.inversionistas_expediente,{}).then(function(){return fn.apply(c,a);});};})(old);}
+  });
+
+  /* Expedientes de empleados, documentos, contratos, historial y notas */
+  window.ex54Load=function(){return localRead(scopes.expedientes,{});};
+  window.ex54Save=function(all){return syncWrite('expedientes',scopes.expedientes,all||{});};
+  window.ex55Load=function(key){return localRead(key,{});};
+  window.ex55Save=function(key,obj){
+    var scope=key===EX55_DOC_KEY?'expediente_docs':key===EX55_CON_KEY?'expediente_contracts':null;
+    if(!scope){localWrite(key,obj||{});return Promise.resolve();}
+    return syncWrite(scope,key,obj||{});
+  };
+  window.ex57Load=function(k){return localRead(k,{});};
+  window.ex57Save=function(k,v){
+    var scope=k===EX57_HIST_KEY?'expediente_historial':k===EX57_NOTAS_KEY?'expediente_notas':null;
+    if(!scope){localWrite(k,v||{});return Promise.resolve();}
+    return syncWrite(scope,k,v||{});
+  };
+  if(typeof renderEditarUsuario==='function'){
+    var _exp=renderEditarUsuario; window.renderEditarUsuario=function(){var a=arguments,c=this;return refreshMany(['expedientes','expediente_docs','expediente_contracts','expediente_historial','expediente_notas']).then(function(){return _exp.apply(c,a);});};
+  }
+
+  /* Helper central para futuras validaciones de paridad administrativa. */
+  window.mootsilEsAdminODueno=function(u){u=u||((typeof usuario!=='undefined')?usuario:null);var r=String((u&&u.rol)||'').toLowerCase();return r==='admin'||r==='dueño'||r==='dueno';};
 })();
 </script>
 
