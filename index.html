@@ -9066,7 +9066,7 @@ function renderAdministracionMenu(){
   body.querySelector('[data-empgo="asistencia"]').addEventListener('click',function(e){e.stopPropagation();em69RenderAsistencia(fechaHoyLocal());});
   body.querySelector('[data-empgo="solicitudes"]').addEventListener('click',function(e){e.stopPropagation();em69RenderSolicitudes();});
   body.querySelector('[data-compgo="bonos"]').addEventListener('click',function(e){e.stopPropagation();no89AbrirModal('🎯 Bonos');renderBonos();});
-  body.querySelector('[data-compgo="apoyos"]').addEventListener('click',function(e){e.stopPropagation();no89AbrirModal('⛽ Apoyos');renderApoyosC092();});
+  body.querySelector('[data-compgo="apoyos"]').addEventListener('click',function(e){e.stopPropagation();no89AbrirModal('⛽ Apoyos','compact');var m=document.querySelector('#no89-overlay .no89-modal');if(m)m.classList.add('apoyos-compact');renderApoyosC092();});
   body.querySelector('[data-comprago="nuevo"]').addEventListener('click',function(e){e.stopPropagation();C027_COMPRA_DESDE_CAJA=false;renderNuevaCompra();});
   body.querySelector('[data-comprago="proveedores"]').addEventListener('click',function(e){e.stopPropagation();renderProveedores();});
   body.querySelector('[data-comprago="cuentas"]').addEventListener('click',function(e){e.stopPropagation();abrirCuentasPorPagarDesdeAdministracion();});
@@ -15698,6 +15698,17 @@ C087
   setTimeout(ensureButtons,1000);
 })();
 </script>
+
+<style id="c179-apoyos-compacto">
+@media (min-width:701px){
+  .no89-modal.apoyos-compact{width:min(760px,88vw);max-height:82vh;border-radius:16px}
+  .no89-modal.apoyos-compact .no89-body{padding:12px 16px 15px}
+  .no89-modal.apoyos-compact .form-card{padding:12px 14px}
+  .no89-modal.apoyos-compact .form-group{margin-bottom:9px}
+  .no89-modal.apoyos-compact .form-group label{margin-bottom:4px}
+  .no89-modal.apoyos-compact input,.no89-modal.apoyos-compact select{padding:.55rem .7rem}
+}
+</style>
 
 </body>
 </html>
