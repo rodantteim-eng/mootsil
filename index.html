@@ -9587,7 +9587,7 @@ function sol59AprobarPrestamo(data){
       bg.innerHTML='<div class="sol59-modal"><div class="sol59-modal-h"><strong>Préstamo · '+data.nombre+'</strong><button class="em59-back" onclick="sol59Close()">✕</button></div><div class="sol59-modal-b"><div class="hint">Este colaborador ya tiene un préstamo activo. No puede aprobarse otro hasta liquidarlo.</div></div><div class="sol59-modal-f"><button class="btn-sm" onclick="sol59Close()">Cerrar</button></div></div>';
       document.body.appendChild(bg);return;
     }
-    bg.innerHTML='<div class="sol59-modal"><div class="sol59-modal-h"><strong>Préstamo · '+data.nombre+'</strong><button class="em59-back" onclick="sol59Close()">✕</button></div><div class="sol59-modal-b"><div class="sol59-grid"><div class="sol59-field"><label>Monto solicitado</label><input id="sol59-monto" type="number" value="'+data.monto+'"></div><div class="sol59-field"><label>Número de pagos semanales</label><input id="sol59-pagos" type="number" min="1" placeholder="Ej. 3"></div><div class="sol59-field"><label>Inicio del descuento</label><input id="sol59-inicio" type="date" value="'+fechaHoyLocal()+'"></div><div class="sol59-field"><label>Cuenta de entrega</label><select id="sol59-cuenta"><option>Efectivo en Caja</option><option>Banamex Pesos</option><option>Banamex Dólares</option><option>Santander Pesos</option></select></div><div class="sol59-field full"><label>Concepto</label><input id="sol59-concepto" value="'+String(data.motivo||'').replace(/"/g,'&quot;')+'"></div></div></div><div class="sol59-modal-f"><button class="btn-sm" onclick="sol59Close()">Cancelar</button><button class="btn-sm btn-completar" id="sol59-aprobar-prestamo">Aprobar y entregar</button></div></div>';
+    bg.innerHTML='<div class="sol59-modal"><div class="sol59-modal-h"><strong>Préstamo · '+data.nombre+'</strong><button class="em59-back" onclick="sol59Close()">✕</button></div><div class="sol59-modal-b"><div class="sol59-grid"><div class="sol59-field"><label>Monto solicitado</label><input id="sol59-monto" type="number" value="'+data.monto+'"></div><div class="sol59-field"><label>Número de pagos semanales</label><input id="sol59-pagos" type="number" min="1" placeholder="Ej. 3"></div><div class="sol59-field"><label>Inicio del descuento</label><input id="sol59-inicio" type="date" value="'+fechaHoyLocal()+'"></div><div class="sol59-field"><label>Cuenta de entrega</label><select id="sol59-cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div><div class="sol59-field full"><label>Concepto</label><input id="sol59-concepto" value="'+String(data.motivo||'').replace(/"/g,'&quot;')+'"></div></div></div><div class="sol59-modal-f"><button class="btn-sm" onclick="sol59Close()">Cancelar</button><button class="btn-sm btn-completar" id="sol59-aprobar-prestamo">Aprobar y entregar</button></div></div>';
     document.body.appendChild(bg);
     document.getElementById('sol59-aprobar-prestamo').onclick=function(){
       var pagos=parseInt(document.getElementById('sol59-pagos').value||'0',10);
@@ -14571,7 +14571,31 @@ C087
  const $=s=>document.querySelector(s);
  const money=n=>'$'+(Number(n)||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
  const load=(k)=>{try{return JSON.parse(localStorage.getItem(k)||'[]')}catch(e){return[]}};
- const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+ const save=(k,v)=>{
+   localStorage.setItem(k,JSON.stringify(v));
+   try{
+    const row=(v&&v.length)?v[v.length-1]:null; if(!row)return Promise.resolve();
+    const table=k===KEY?'financiamientos':k===MOV?'financiamiento_movimientos':null; if(!table)return Promise.resolve();
+    return api('/rest/v1/'+table,{method:'POST',body:row,prefer:'resolution=merge-duplicates,return=minimal'}).catch(e=>{console.error('C150 persistencia',e);alert('No se pudo guardar el financiamiento en la base compartida: '+e.message);throw e;});
+   }catch(e){return Promise.reject(e)}
+ };
+ const parseMoney=v=>Number(String(v??'').replace(/[^0-9.-]/g,''))||0;
+ const bindMoney=(root)=>root.querySelectorAll('input[data-money]').forEach(inp=>{
+   const fmt=()=>{let n=parseMoney(inp.value);inp.value=n?('$'+n.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2})):''};
+   inp.addEventListener('focus',()=>{let n=parseMoney(inp.value);inp.value=n?String(n):''}); inp.addEventListener('blur',fmt);
+ });
+ let sharedReady=false;
+ function loadShared(){
+   return Promise.all([from('financiamientos').select('*').order('fecha_inicio',{ascending:false}).get(),from('financiamiento_movimientos').select('*').order('fecha',{ascending:false}).get()]).then(r=>{
+     localStorage.setItem(KEY,JSON.stringify(r[0]||[])); localStorage.setItem(MOV,JSON.stringify(r[1]||[])); sharedReady=true; fi150SyncCaja(); return r;
+   }).catch(e=>{console.error('C150 carga compartida',e);alert('No se pudieron cargar los financiamientos compartidos. Verifica que el SQL C150 esté instalado.');throw e;});
+ }
+ function fi150SyncCaja(){
+   try{if(typeof ca21Load!=='function'||typeof ca21Save!=='function')return;let c=ca21Load();c.movimientos=c.movimientos||[];let ids=new Set(c.movimientos.map(x=>x.id));
+    financs().forEach(f=>{let mid='FIS-'+f.id;if(!ids.has(mid)){c.movimientos.push({id:mid,fecha:f.fecha_inicio,hora:'00:00',tipo:'entrada',cuenta:f.cuenta_ingreso,monto:Number(f.monto_original||0),categoria:'Financiamientos',concepto:'Disposición de financiamiento',persona:f.institucion,nota:f.folio||'',origen:'Financiamientos',estado:'Registrado',financiamiento_id:f.id});ids.add(mid)}});
+    movs().forEach(m=>{let mid='FIP-S-'+m.id;if(!ids.has(mid)){let f=financs().find(x=>x.id===m.financiamiento_id),total=m.tipo==='mixto'?Number(m.capital||0)+Number(m.interes||0):Number(m.monto||0);c.movimientos.push({id:mid,fecha:m.fecha,hora:'00:00',tipo:'salida',cuenta:m.cuenta,monto:total,categoria:'Financiamientos',concepto:m.tipo==='capital'?'Abono a capital':m.tipo==='interes'?'Pago de intereses':'Pago mixto capital + intereses',persona:f?f.institucion:'Financiamiento',nota:m.referencia||(f&&f.folio)||'',origen:'Financiamientos',estado:'Registrado',financiamiento_id:m.financiamiento_id});ids.add(mid)}});ca21Save(c);
+   }catch(e){console.warn('C150 sync Caja',e)}
+ }
  const id=()=> 'FIN-'+Date.now().toString(36).toUpperCase().slice(-6);
  const today=()=>new Date().toISOString().slice(0,10);
  let returnHTML=null;
@@ -14584,6 +14608,7 @@ C087
    return Math.max(0,Number(f.monto_original||0)-ab-mix);
  }
  function render(){
+   fi150SyncCaja();
    const app=document.getElementById('enc-body');
    if(!app){alert('No se encontró el área de Administración.');return;}
    if(!returnHTML) returnHTML={node:app,html:app.innerHTML};
@@ -14626,24 +14651,23 @@ C087
   <form class="fi128-mbody" id="fi128-form"><div class="fi128-form">
    <div><label>Institución / acreedor<input name="institucion" required placeholder="Ej. Banamex"></label></div>
    <div><label>Tipo de financiamiento<select name="tipo_credito"><option>Crédito bancario</option><option>Crédito de avío</option><option>Crédito refaccionario</option><option>SOFOM / Financiera</option><option>Arrendamiento financiero</option><option>Factoraje</option><option>Otro institucional</option></select></label></div>
-   <div><label>Monto original ($)<input name="monto_original" type="number" min="0" step=".01" required></label></div>
+   <div><label>Monto original ($)<input name="monto_original" data-money inputmode="decimal" placeholder="$0.00" required></label></div>
    <div><label>Fecha de disposición<input name="fecha_inicio" type="date" value="${today()}" required></label></div>
    <div><label>Tasa anual (%)<input name="tasa" type="number" min="0" step=".01"></label></div>
    <div><label>Plazo (meses)<input name="plazo" type="number" min="1"></label></div>
    <div><label>Periodicidad<select name="periodicidad"><option>Mensual</option><option>Quincenal</option><option>Trimestral</option><option>Semestral</option><option>Anual</option><option>Otro</option></select></label></div>
-   <div><label>Pago programado ($)<input name="pago_programado" type="number" min="0" step=".01"></label></div>
+   <div><label>Pago programado ($)<input name="pago_programado" data-money inputmode="decimal" placeholder="$0.00"></label></div>
    <div><label>Próxima fecha de pago<input name="proximo_pago" type="date"></label></div>
-   <div><label>Cuenta de ingreso<select name="cuenta_ingreso"><option>Efectivo en Caja</option><option>Banamex Pesos</option><option>Banamex Dólares</option><option>Santander Pesos</option></select></label></div>
+   <div><label>Cuenta de ingreso<select name="cuenta_ingreso"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></label></div>
    <div><label>Contrato / folio<input name="folio" placeholder="Número de crédito o contrato"></label></div>
    <div><label>Vencimiento<input name="vencimiento" type="date"></label></div>
    <div class="fi128-span2"><label>Observaciones<textarea name="observaciones" rows="2" placeholder="Garantía, destino del crédito, condiciones especiales..."></textarea></label></div>
   </div><div class="fi128-actions"><button type="button" class="fi128-btn" data-fi-close>Cancelar</button><button class="fi128-btn primary">Registrar financiamiento</button></div></form>`);
+  bindMoney(d);
   d.querySelector('#fi128-form').onsubmit=e=>{
-   e.preventDefault();let o=Object.fromEntries(new FormData(e.target).entries());o.id=id();o.estado='activo';o.creado=today();
+   e.preventDefault();let o=Object.fromEntries(new FormData(e.target).entries());o.monto_original=parseMoney(o.monto_original);o.pago_programado=parseMoney(o.pago_programado);o.tasa=parseMoney(o.tasa);o.plazo=parseInt(o.plazo||0,10)||null;o.id=id();o.estado='activo';o.creado=today();o.creado_por=(usuario&&usuario.id)||null;
    let a=financs();a.push(o);save(KEY,a);
-   // Record financing inflow in Caja test ledger when available.
-   try{ if(typeof ca21Load==='function'&&typeof ca21Save==='function'){let c=ca21Load();c.movimientos.push({id:'FI'+Date.now(),fecha:o.fecha_inicio,hora:new Date().toTimeString().slice(0,5),tipo:'entrada',cuenta:o.cuenta_ingreso,monto:Number(o.monto_original),categoria:'Financiamientos',concepto:'Disposición de financiamiento',persona:o.institucion,nota:o.folio||'',origen:'Financiamientos',estado:'Registrado',financiamiento_id:o.id});ca21Save(c)} }catch(_){}
-   d.remove();render();
+   setTimeout(fi150SyncCaja,250); d.remove();render();
   }
  }
  function historialGeneral(){
@@ -14683,7 +14707,7 @@ C087
    <div id="fi128-one"><label>Monto ($)<input name="monto" type="number" min=".01" step=".01" required></label></div>
    <div id="fi128-cap" style="display:none"><label>Capital ($)<input name="capital" type="number" min="0" step=".01"></label></div>
    <div id="fi128-int" style="display:none"><label>Intereses ($)<input name="interes" type="number" min="0" step=".01"></label></div>
-   <div><label>Cuenta de salida<select name="cuenta"><option>Efectivo en Caja</option><option>Banamex Pesos</option><option>Banamex Dólares</option><option>Santander Pesos</option></select></label></div>
+   <div><label>Cuenta de salida<select name="cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></label></div>
    <div class="fi128-span2"><label>Referencia / observación<input name="referencia" placeholder="Transferencia, folio o comentario"></label></div>
   </div><div class="fi128-actions"><button type="button" class="fi128-btn" data-fi-close>Cancelar</button><button class="fi128-btn primary">Registrar pago</button></div></form>`);
   let typ=d.querySelector('#fi128-tipo');typ.onchange=()=>{let mix=typ.value==='mixto';d.querySelector('#fi128-one').style.display=mix?'none':'';d.querySelector('#fi128-cap').style.display=mix?'':'none';d.querySelector('#fi128-int').style.display=mix?'':'none';d.querySelector('[name=monto]').required=!mix};
@@ -14693,8 +14717,7 @@ C087
     let capital=o.tipo==='capital'?Number(o.monto||0):o.tipo==='mixto'?Number(o.capital||0):0;
     if(total<=0)return alert('Captura un monto válido.');
     if(capital>saldo(f)+.01)return alert('El abono a capital no puede superar el saldo pendiente.');
-    let a=movs();a.push(o);save(MOV,a);
-    try{if(typeof ca21Load==='function'&&typeof ca21Save==='function'){let c=ca21Load();c.movimientos.push({id:'FIP'+Date.now(),fecha:o.fecha,hora:new Date().toTimeString().slice(0,5),tipo:'salida',cuenta:o.cuenta,monto:total,categoria:'Financiamientos',concepto:o.tipo==='capital'?'Abono a capital':o.tipo==='interes'?'Pago de intereses':'Pago mixto capital + intereses',persona:f.institucion,nota:o.referencia||f.folio||'',origen:'Financiamientos',estado:'Registrado',financiamiento_id:fid});ca21Save(c)}}catch(_){}
+    o.monto=parseMoney(o.monto);o.capital=parseMoney(o.capital);o.interes=parseMoney(o.interes);o.creado_por=(usuario&&usuario.id)||null;let a=movs();a.push(o);save(MOV,a);setTimeout(fi150SyncCaja,250);
     d.remove();render();setTimeout(()=>detalle(fid),0);
   }
  }
@@ -14704,11 +14727,23 @@ C087
     if(!b)return;
     let txt=(b.textContent||'').trim().toLowerCase();
     if(txt.includes('financiamientos')&&!b.closest('.fi128-wrap')&&!b.closest('.fi128-modalbg')){
-      e.preventDefault();e.stopImmediatePropagation();render();
+      e.preventDefault();e.stopImmediatePropagation();loadShared().then(render);
     }
   },true);
  }
  hook();
+})();
+</script>
+<script id="c150-financiamientos-compartidos">
+/* C150 · Financiamientos Supabase compartidos + reflejo en Caja por sesión */
+(function(){
+ const oldCaja=window.renderCajaMootsil;
+ if(typeof oldCaja==='function'){window.renderCajaMootsil=function(){let args=arguments;return Promise.all([from('financiamientos').select('*').get(),from('financiamiento_movimientos').select('*').get()]).then(function(r){
+   try{localStorage.setItem('mootsil_financiamientos_128',JSON.stringify(r[0]||[]));localStorage.setItem('mootsil_financiamientos_mov_128',JSON.stringify(r[1]||[]));
+    let c=ca21Load(),ids=new Set((c.movimientos||[]).map(x=>x.id));(r[0]||[]).forEach(f=>{let mid='FIS-'+f.id;if(!ids.has(mid)){c.movimientos.push({id:mid,fecha:f.fecha_inicio,hora:'00:00',tipo:'entrada',cuenta:f.cuenta_ingreso,monto:Number(f.monto_original||0),categoria:'Financiamientos',concepto:'Disposición de financiamiento',persona:f.institucion,nota:f.folio||'',origen:'Financiamientos',estado:'Registrado',financiamiento_id:f.id});ids.add(mid)}});
+    (r[1]||[]).forEach(m=>{let mid='FIP-S-'+m.id;if(!ids.has(mid)){let f=(r[0]||[]).find(x=>x.id===m.financiamiento_id),total=m.tipo==='mixto'?Number(m.capital||0)+Number(m.interes||0):Number(m.monto||0);c.movimientos.push({id:mid,fecha:m.fecha,hora:'00:00',tipo:'salida',cuenta:m.cuenta,monto:total,categoria:'Financiamientos',concepto:m.tipo==='capital'?'Abono a capital':m.tipo==='interes'?'Pago de intereses':'Pago mixto capital + intereses',persona:f?f.institucion:'Financiamiento',nota:m.referencia||(f&&f.folio)||'',origen:'Financiamientos',estado:'Registrado',financiamiento_id:m.financiamiento_id});ids.add(mid)}});ca21Save(c);
+   }catch(e){console.warn(e)} return oldCaja.apply(window,args);
+  }).catch(function(){return oldCaja.apply(window,args)});};}
 })();
 </script>
 
