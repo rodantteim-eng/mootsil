@@ -174,91 +174,46 @@ input,select,textarea{width:100%;border:1px solid var(--borde);background:#fafbf
 }
 
 
-/* C195 · Después de bienvenida: visual anterior de formulario */
-.app:not(.hiring-welcome) .approved-head{
-  min-height:0;background:#fff;color:#163426;overflow:visible
-}
-.app:not(.hiring-welcome) .approved-top{
-  min-height:58px;padding:0 18px;background:#06462f;display:flex!important;
-  align-items:center;justify-content:center;position:relative
-}
-.app:not(.hiring-welcome) .approved-brand{
-  margin:0;font-size:0;color:#fff;letter-spacing:0
-}
-.app:not(.hiring-welcome) .approved-brand:before{
-  content:"←";font-size:25px;position:absolute;left:18px;top:13px;font-weight:500
-}
-.app:not(.hiring-welcome) .approved-brand:after{
-  content:"Registro de personal";font-size:18px;font-weight:800
-}
-.app:not(.hiring-welcome) .approved-person,
-.app:not(.hiring-welcome) .approved-actions,
-.app:not(.hiring-welcome) .approved-ranchbar,
-.app:not(.hiring-welcome) .approved-field{
-  display:none!important
-}
-.app:not(.hiring-welcome) .approved-head:after{
-  content:"";display:block;width:118px;height:150px;margin:22px auto 6px;
-  background:url("escudo-oficial-rancho.png") center/contain no-repeat
-}
-.app:not(.hiring-welcome) .progress{
-  position:sticky;top:0;z-index:20;padding:12px 20px 9px;background:#fff;
-  border-top:1px solid #eef2ef;border-bottom:1px solid #e7ede9
-}
-.app:not(.hiring-welcome) .content{
-  background:#fff;padding:10px 18px 28px
-}
-.app:not(.hiring-welcome) .card{
-  border:0;border-radius:0;padding:8px 0 12px;margin:0 0 8px;background:#fff;box-shadow:none
-}
-.app:not(.hiring-welcome) .card:first-child:before{
-  content:"Registro de personal";display:block;text-align:center;font-size:29px;
-  color:#073e29;font-weight:850;letter-spacing:-.03em;margin:2px 0 4px
-}
-.app:not(.hiring-welcome) .card:first-child .eyebrow{display:none}
-.app:not(.hiring-welcome) .card:first-child h2{display:none}
-.app:not(.hiring-welcome) .card:first-child .help{
-  text-align:center;color:#78837c;font-size:14px;margin:0 0 20px
-}
-.app:not(.hiring-welcome) .grid{gap:12px}
-.app:not(.hiring-welcome) label{
-  font-size:12px;text-transform:none;color:#22382d;font-weight:750;margin-bottom:6px
-}
-.app:not(.hiring-welcome) input,
-.app:not(.hiring-welcome) select,
-.app:not(.hiring-welcome) textarea{
-  border:1px solid #d8e1dc;background:#fff;border-radius:13px;padding:14px 13px;
-  font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,.025)
-}
-.app:not(.hiring-welcome) input:focus,
-.app:not(.hiring-welcome) select:focus,
-.app:not(.hiring-welcome) textarea:focus{
-  border-color:#178c50;box-shadow:0 0 0 3px rgba(23,140,80,.10)
-}
-.app:not(.hiring-welcome) .roles{gap:10px}
-.app:not(.hiring-welcome) .role,
-.app:not(.hiring-welcome) .doc{
-  border-radius:14px;border:1px solid #dbe4df;background:#fff;padding:13px
-}
-.app:not(.hiring-welcome) .role.sel{border:2px solid #118749;background:#f0f9f4}
-.app:not(.hiring-welcome) .actions{
-  position:sticky;bottom:0;z-index:12;margin-top:16px;padding:12px 0 3px;background:rgba(255,255,255,.96);
-  backdrop-filter:blur(8px)
-}
-.app:not(.hiring-welcome) .back,
-.app:not(.hiring-welcome) .next,
-.app:not(.hiring-welcome) .submit{
-  border-radius:14px;padding:15px 16px
-}
-.app:not(.hiring-welcome) .next,
-.app:not(.hiring-welcome) .submit{
-  background:linear-gradient(180deg,#18a65a,#078541);color:#fff;
-  box-shadow:0 8px 18px rgba(7,133,65,.18)
-}
-@media(max-width:500px){
-  .app:not(.hiring-welcome) .approved-head:after{width:104px;height:132px;margin-top:18px}
-  .app:not(.hiring-welcome) .card:first-child:before{font-size:27px}
-}
+/* C196 · Registro estilo Cosecha, conservando bienvenida */
+.app:not(.hiring-welcome){max-width:520px;background:#f5f7f5;overflow:hidden}
+.app:not(.hiring-welcome) .approved-top{display:block!important;min-height:150px;padding:28px 22px 18px;position:relative;color:#fff;background:radial-gradient(circle at 84% 22%,#0a6038 0,#06482d 46%,#00341f 100%)}
+.app:not(.hiring-welcome) .approved-brand{margin-top:12px;font-size:0;font-weight:850}
+.app:not(.hiring-welcome) .approved-brand:before{content:"Mootsil | ";font-size:31px;color:#fff}
+.app:not(.hiring-welcome) .approved-brand:after{content:"Contratación";font-size:31px;color:#f6a000}
+.app:not(.hiring-welcome) .approved-person{display:block!important;margin-top:8px;font-size:0}
+.app:not(.hiring-welcome) .approved-person:before{content:"Registro de personal";font-size:16px;font-weight:700;color:#f6a000}
+.app:not(.hiring-welcome) .approved-actions{display:flex!important;position:absolute;right:18px;top:18px;align-items:center;gap:11px}
+.app:not(.hiring-welcome) .approved-round{display:grid!important;width:48px;height:48px;border-radius:50%;place-items:center;background:#ce2d2b;color:#fff;font-size:22px;font-weight:900}
+.app:not(.hiring-welcome) .approved-avatar{display:block!important;width:88px;height:88px;border-radius:50%;overflow:hidden;border:3px solid rgba(255,255,255,.86)}
+.app:not(.hiring-welcome) .approved-ranchbar{display:grid!important;height:70px;background:#f6a000;position:relative;grid-template-columns:1fr 145px;align-items:center}
+.app:not(.hiring-welcome) .approved-crest{position:absolute;left:18px;top:-30px;width:98px;height:122px;object-fit:contain;z-index:4}
+.app:not(.hiring-welcome) .approved-ranchname{font-family:Georgia,"Times New Roman",serif;font-style:italic;text-align:center;font-size:21px;color:#161109;padding-left:92px}
+.app:not(.hiring-welcome) .approved-crop{height:100%;display:grid;place-items:center;background:linear-gradient(110deg,#3d0868,#65088c);color:#fff;font-size:23px;font-weight:800}
+.app:not(.hiring-welcome) .approved-field{display:block!important;height:215px;position:relative;overflow:hidden;background:#e7efe7}
+.app:not(.hiring-welcome) .approved-field>img{width:100%;height:100%;object-fit:cover;object-position:center 45%;filter:none}
+.app:not(.hiring-welcome) .approved-field:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,.96) 0%,rgba(255,255,255,.72) 38%,rgba(255,255,255,.08) 64%,rgba(255,255,255,0) 100%)}
+.app:not(.hiring-welcome) .approved-field-copy{position:absolute;left:28px;top:48px;z-index:2;width:50%;display:flex;flex-direction:column;gap:8px}
+.app:not(.hiring-welcome) .approved-field-copy:before{display:none!important}
+.app:not(.hiring-welcome) .approved-field-copy strong{font-size:0}
+.app:not(.hiring-welcome) .approved-field-copy strong:after{content:"Completa tu registro";font-size:27px;color:#073a22}
+.app:not(.hiring-welcome) .approved-field-copy span{font-size:0}
+.app:not(.hiring-welcome) .approved-field-copy span:after{content:"Únete al equipo Mootsil.";font-size:16px;color:#263f32}
+.app:not(.hiring-welcome) .progress{position:sticky;top:0;z-index:20;padding:13px 18px 8px;background:#fff;border-bottom:1px solid #e7ece8}
+.app:not(.hiring-welcome) .content{padding:16px 16px 88px;background:#f5f7f5}
+.app:not(.hiring-welcome) .card{border:1px solid #e0e6e2;border-radius:18px;padding:17px;margin-bottom:12px;background:#fff;box-shadow:0 7px 20px rgba(26,66,44,.06)}
+.app:not(.hiring-welcome) .card .eyebrow{color:#14834d}
+.app:not(.hiring-welcome) h2{font-size:23px;color:#073b26}
+.app:not(.hiring-welcome) input,.app:not(.hiring-welcome) select,.app:not(.hiring-welcome) textarea{border:1px solid #dce4df;background:#fbfcfb;border-radius:12px;padding:13px 12px;font-size:15px}
+.app:not(.hiring-welcome) .role,.app:not(.hiring-welcome) .doc{border:1px solid #dde5df;border-radius:14px;background:#fff}
+.app:not(.hiring-welcome) .role.sel{border:2px solid #0d8748;background:#eef9f2}
+.app:not(.hiring-welcome) .actions{position:sticky;bottom:64px;z-index:25;margin:14px -16px -88px;padding:11px 16px 12px;background:rgba(245,247,245,.97)}
+.app:not(.hiring-welcome) .next,.app:not(.hiring-welcome) .submit{background:linear-gradient(180deg,#159651,#087b3f);color:#fff}
+.registration-bottom-nav{display:none}
+.app:not(.hiring-welcome) .registration-bottom-nav{display:grid;position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:min(520px,100vw);height:66px;z-index:40;grid-template-columns:repeat(5,1fr);background:linear-gradient(180deg,#07472d,#03341f)}
+.registration-bottom-nav .navitem{color:#fff;text-align:center;font-size:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+.registration-bottom-nav .navitem span:first-child{font-size:20px}
+.registration-bottom-nav .navitem.active{color:#f6a000;font-weight:800}
+@media(max-width:500px){.app:not(.hiring-welcome) .approved-brand:before,.app:not(.hiring-welcome) .approved-brand:after{font-size:25px}.app:not(.hiring-welcome) .approved-avatar{width:74px;height:74px}.app:not(.hiring-welcome) .approved-ranchbar{height:62px;grid-template-columns:1fr 122px}.app:not(.hiring-welcome) .approved-crest{width:82px;height:104px;left:11px;top:-25px}.app:not(.hiring-welcome) .approved-ranchname{font-size:16px;padding-left:69px}.app:not(.hiring-welcome) .approved-crop{font-size:18px}.app:not(.hiring-welcome) .approved-field{height:195px}}
 
 </style></head><body><div class="app hiring-welcome">
 <header class="approved-head">
@@ -296,7 +251,13 @@ input,select,textarea{width:100%;border:1px solid var(--borde);background:#fafbf
 <section class="step hidden" data-step="5"><div class="card"><div class="eyebrow">Paso 5</div><h2>Revisa tu información</h2><div id="summary" class="summary"></div></div><div class="card"><label class="check"><input type="checkbox" id="consent"><span>Confirmo que los datos proporcionados son correctos y autorizo su uso para el proceso de incorporación y conformación de mi expediente en Mootsil.</span></label><div id="senderror"></div></div></section>
 <div class="actions"><button type="button" id="back" class="back hidden" onclick="prevStep()">Anterior</button><button type="button" id="next" class="next" onclick="nextStep()">Continuar</button><button type="button" id="submit" class="submit hidden" onclick="submitForm()">Enviar mi registro</button></div></form></div>
 <div id="success" class="ok hidden"><div class="okicon">✓</div><div class="eyebrow">Registro completado</div><h1>¡Gracias por registrarte!</h1><p>Tu información fue recibida correctamente y quedó <strong>pendiente de revisión por Administración</strong>.</p><p><strong>El envío de este formulario no genera todavía un expediente ni acceso a Mootsil.</strong> Si tu incorporación es autorizada, Administración continuará el proceso y te proporcionará tus datos de acceso.</p><p>Gracias por tu interés en formar parte del equipo Mootsil.</p><div id="folio" class="note" style="margin:18px auto 0;max-width:370px"></div></div>
-</div><script>
+<div class="registration-bottom-nav" aria-hidden="true">
+<div class="navitem active"><span>⌂</span><span>Inicio</span></div>
+<div class="navitem"><span>▣</span><span>Documentos</span></div>
+<div class="navitem"><span>◉</span><span>Progreso</span></div>
+<div class="navitem"><span>✉</span><span>Enviar</span></div>
+<div class="navitem"><span>♙</span><span>Perfil</span></div>
+</div></div><script>
 const URL_SB="https://ypreafyqnckswvoaerbe.supabase.co"; const KEY_SB="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwcmVhZnlxbmNrc3d2b2FlcmJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NDE0NjAsImV4cCI6MjA5ODQxNzQ2MH0.2Bwg1HdUXKlw9U3a3-3FvpeNV3iKktJchkL6xbD51DU"; let step=1; const selectedFiles={ine:null,curp:null,domicilio:null}, previewUrls={};
 function startForm(){document.querySelector('.app').classList.remove('hiring-welcome');welcome.classList.add('hidden');formapp.classList.remove('hidden');setStep(1)} function setStep(n){step=n;document.querySelectorAll('.step').forEach(x=>x.classList.toggle('hidden',+x.dataset.step!==n));bar.style.width=(n*20)+'%';steplabel.textContent='Paso '+n+' de 5';pct.textContent=(n*20)+'%';back.classList.toggle('hidden',n===1);next.classList.toggle('hidden',n===5);submit.classList.toggle('hidden',n!==5);if(n===5)renderSummary();scrollTo({top:0,behavior:'smooth'})} function pickRole(el){document.querySelectorAll('.role').forEach(x=>x.classList.remove('sel'));el.classList.add('sel');puesto.value=el.dataset.role;saveDraft()}
 function validStep(n){let ok=true;document.querySelector('.step[data-step="'+n+'"]').querySelectorAll('[required]').forEach(el=>{if(!String(el.value||'').trim()){el.style.borderColor='#c93b2f';ok=false}else el.style.borderColor=''});if(n===2&&!puesto.value){alert('Selecciona el puesto al que te postulas.');return false}if(!ok)alert('Completa los campos obligatorios para continuar.');return ok} function nextStep(){if(validStep(step))setStep(Math.min(5,step+1))} function prevStep(){setStep(Math.max(1,step-1))}
