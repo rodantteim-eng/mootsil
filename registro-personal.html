@@ -222,7 +222,7 @@ input,select,textarea{width:100%;border:1px solid var(--borde);background:#fafbf
   filter:drop-shadow(0 5px 7px rgba(0,0,0,.18))
 }
 .reg202-ranch{
-  padding-left:110px;text-align:center;white-space:nowrap;
+  padding-left:124px;padding-right:10px;text-align:center;white-space:nowrap;
   font-family:Georgia,"Times New Roman",serif;font-style:italic;font-size:22px;color:#171109
 }
 .reg202-crop{
@@ -246,8 +246,65 @@ input,select,textarea{width:100%;border:1px solid var(--borde);background:#fafbf
   .reg202-avatar{width:94px;height:94px;border-width:3px}
   .reg202-ranchbar{height:68px;grid-template-columns:minmax(0,1fr) 132px}
   .reg202-crest{left:11px;top:-31px;width:100px;height:125px}
-  .reg202-ranch{padding-left:86px;font-size:18px}
+  .reg202-ranch{padding-left:96px;padding-right:6px;font-size:17px}
   .reg202-crop{font-size:20px}
+}
+
+
+/* C203 · Completa la composición Cosecha: hero bajo escudo + navegación inferior */
+.reg202-hero{
+  height:245px;position:relative;overflow:hidden;background:#e5eee7
+}
+.reg202-hero>img{
+  width:100%;height:100%;object-fit:cover;object-position:center 48%;display:block
+}
+.reg202-hero:after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,rgba(255,255,255,.98) 0%,rgba(255,255,255,.88) 28%,rgba(255,255,255,.32) 49%,rgba(255,255,255,0) 67%)
+}
+.reg202-hero-copy{
+  position:absolute;left:26px;top:56px;z-index:2;width:48%;color:#063a24
+}
+.reg202-hero-copy strong{
+  display:block;font-size:29px;line-height:1.05;letter-spacing:-.02em;margin-bottom:9px
+}
+.reg202-hero-copy span{
+  display:block;font-size:15px;line-height:1.42;color:#294437
+}
+.app:not(.hiring-welcome) #formapp{
+  padding-bottom:76px!important
+}
+.registration-bottom-nav{
+  display:none
+}
+.app:not(.hiring-welcome) .registration-bottom-nav{
+  position:fixed;left:50%;bottom:0;transform:translateX(-50%);
+  width:min(520px,100vw);height:70px;box-sizing:border-box;z-index:999;
+  display:grid!important;grid-template-columns:repeat(5,1fr);align-items:stretch;
+  background:linear-gradient(180deg,#07522f 0%,#003b23 100%);
+  border-top:1px solid rgba(255,255,255,.13);
+  box-shadow:0 -8px 24px rgba(0,48,29,.18)
+}
+.registration-bottom-nav .navitem{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  color:#fff;font-size:11px;font-weight:700;line-height:1;text-align:center
+}
+.registration-bottom-nav .navitem>span:first-child{
+  font-size:23px;line-height:1
+}
+.registration-bottom-nav .navitem.active,
+.registration-bottom-nav .navitem.active>span:first-child{
+  color:#f6a000
+}
+@media(max-width:500px){
+  .reg202-hero{height:225px}
+  .reg202-hero-copy{left:21px;top:50px;width:47%}
+  .reg202-hero-copy strong{font-size:25px}
+  .reg202-hero-copy span{font-size:13px}
+  .registration-bottom-nav{height:66px}
+  .registration-bottom-nav .navitem{font-size:10px}
+  .registration-bottom-nav .navitem>span:first-child{font-size:21px}
+  .app:not(.hiring-welcome) #formapp{padding-bottom:72px!important}
 }
 
 </style></head><body><div class="app hiring-welcome">
@@ -287,6 +344,13 @@ input,select,textarea{width:100%;border:1px solid var(--borde);background:#fafbf
     <img class="reg202-crest" src="escudo-oficial-rancho.png" alt="Mootsil">
     <div class="reg202-ranch">Rancho Sagrado Corazón</div>
     <div class="reg202-crop">Zarzamora</div>
+  </div>
+  <div class="reg202-hero">
+    <img src="mootsil-cosecha-campo-aprobado.jpg" alt="Mootsilito de cosecha en el Rancho Sagrado Corazón">
+    <div class="reg202-hero-copy">
+      <strong>Completa tu registro</strong>
+      <span>Forma parte del equipo Mootsil.</span>
+    </div>
   </div>
 </header>
 
