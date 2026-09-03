@@ -417,6 +417,81 @@ input,select,textarea{width:100%;border:1px solid var(--borde);background:#fafbf
   border:1px solid #dfe8e2
 }
 
+
+/* C213 · Estado de solicitud con jerarquía visual */
+.c205-status-pill{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-width:180px!important;
+  padding:10px 18px!important;
+  border-radius:999px!important;
+  font-size:13px!important;
+  font-weight:900!important;
+  letter-spacing:.02em!important;
+  margin-top:8px!important
+}
+.c212-status-detail{
+  max-width:390px!important;
+  margin:16px auto 0!important;
+  padding:18px 16px!important;
+  border-radius:18px!important;
+  font-size:15px!important;
+  line-height:1.5!important;
+  text-align:center!important;
+  border:2px solid #dbe8df!important;
+  background:#f7fbf8!important;
+  color:#2f4c3d!important;
+  box-shadow:0 8px 20px rgba(12,92,54,.08)!important
+}
+.c212-status-detail:before{
+  display:block;
+  margin-bottom:7px;
+  font-size:12px;
+  font-weight:900;
+  letter-spacing:.08em;
+  text-transform:uppercase
+}
+.c210-status-mode #c205StatusTitle{
+  font-size:30px!important;
+  line-height:1.08!important;
+  margin-bottom:10px!important
+}
+.c210-status-mode #c205StatusText{
+  max-width:390px!important;
+  margin:0 auto 12px!important;
+  font-size:15px!important;
+  line-height:1.5!important;
+  color:#56675e!important
+}
+.c210-status-mode.status-confirmado #c205StatusPill{
+  background:#dff4e7!important;color:#0b6d3d!important
+}
+.c210-status-mode.status-confirmado .c212-status-detail{
+  background:#edf9f1!important;border-color:#bfe2cc!important;color:#164c32!important
+}
+.c210-status-mode.status-confirmado .c212-status-detail:before{
+  content:"Solicitud aceptada";color:#0b6d3d
+}
+.c210-status-mode.status-revision #c205StatusPill{
+  background:#fff1d5!important;color:#a66500!important
+}
+.c210-status-mode.status-revision .c212-status-detail{
+  background:#fffaf0!important;border-color:#efd7a2!important;color:#6a521e!important
+}
+.c210-status-mode.status-revision .c212-status-detail:before{
+  content:"Solicitud en revisión";color:#a66500
+}
+.c210-status-mode.status-rechazado #c205StatusPill{
+  background:#fde9e7!important;color:#a6332b!important
+}
+.c210-status-mode.status-rechazado .c212-status-detail{
+  background:#fff4f2!important;border-color:#edc7c2!important;color:#6c3c37!important
+}
+.c210-status-mode.status-rechazado .c212-status-detail:before{
+  content:"Proceso concluido";color:#a6332b
+}
+
 </style></head><body><div class="app hiring-welcome">
 <header class="approved-head">
   <div class="approved-top">
@@ -827,6 +902,13 @@ const draftIds=['nombre','nacimiento','telefono','direccion','puesto','ingreso',
     if(x)x.textContent=text;
     if(p)p.textContent=pill;
     if(i)i.textContent=icon;
+    const app=document.querySelector('.app');
+    if(app){
+      app.classList.remove('status-confirmado','status-revision','status-rechazado');
+      if(['autorizada','autorizado','aprobada','aprobado','confirmada','confirmado'].includes(e))app.classList.add('status-confirmado');
+      else if(['rechazada','rechazado','no_seleccionada','no seleccionado'].includes(e))app.classList.add('status-rechazado');
+      else app.classList.add('status-revision');
+    }
     const detail=document.getElementById('c212StatusDetail');
     if(detail){
       if(['autorizada','autorizado','aprobada','aprobado','confirmada','confirmado'].includes(e)){
@@ -896,7 +978,7 @@ const draftIds=['nombre','nacimiento','telefono','direccion','puesto','ingreso',
   window.c205Salir=function(){
     document.getElementById('success').classList.add('hidden');
     document.getElementById('welcome').classList.remove('hidden');
-    document.querySelector('.app').classList.remove('c210-status-mode');
+    document.querySelector('.app').classList.remove('c210-status-mode','status-confirmado','status-revision','status-rechazado');
     document.querySelector('.app').classList.add('hiring-welcome');
     window.scrollTo({top:0,behavior:'smooth'});
   };
