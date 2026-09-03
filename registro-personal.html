@@ -335,6 +335,28 @@ input,select,textarea{width:100%;border:1px solid var(--borde);background:#fafbf
   .app:not(.hiring-welcome) #formapp{padding-bottom:64px!important}
 }
 
+
+/* C205 · navegación real + comentarios + seguimiento de solicitud */
+.c205-consult{display:block;margin:10px auto 0;border:1px solid rgba(7,82,47,.24);background:#fff;color:#07522f;border-radius:14px;padding:11px 18px;font-weight:800;cursor:pointer}
+.c205-comments{width:100%;box-sizing:border-box;min-height:98px;resize:vertical;border:1px solid #d8e0db;border-radius:14px;padding:12px 14px;font:inherit;color:#173e2d;background:#fff}
+.c205-optional{font-weight:400;color:#7d8c84}
+.registration-bottom-nav{pointer-events:auto!important}
+.registration-bottom-nav .navitem{cursor:pointer}
+.registration-bottom-nav .navitem.c205-active{color:#f6a000!important}
+.c205-status-pill{display:inline-flex;align-items:center;justify-content:center;min-width:145px;padding:9px 15px;border-radius:999px;background:#fff3d6;color:#9a6500;font-weight:800;margin-top:4px}
+.c205-success-actions{display:flex;gap:10px;max-width:370px;margin:18px auto 0}
+.c205-success-actions button{flex:1;border:0;border-radius:14px;padding:12px 10px;background:#075d38;color:#fff;font:inherit;font-weight:800}
+.c205-success-actions button.secondary{background:#edf2ef;color:#174632}
+.c205-modal{position:fixed;inset:0;z-index:7000;background:rgba(0,35,23,.72);display:grid;place-items:center;padding:18px}
+.c205-modal.hidden{display:none!important}
+.c205-modal-card{position:relative;width:min(420px,100%);box-sizing:border-box;background:#fff;border-radius:24px;padding:26px 20px 20px;box-shadow:0 24px 60px rgba(0,0,0,.3)}
+.c205-modal-card h2{margin:5px 0 8px;color:#06482d}
+.c205-modal-card p{color:#65756d;line-height:1.4}
+.c205-modal-card label{display:block;margin:11px 0 5px;font-weight:800;color:#174632}
+.c205-modal-card input{width:100%;box-sizing:border-box;border:1px solid #d6dfda;border-radius:12px;padding:11px 12px;font:inherit}
+.c205-close{position:absolute;right:12px;top:10px;border:0;background:transparent;font-size:28px;color:#53655c;cursor:pointer}
+.c205-error{min-height:20px;margin-top:9px;color:#b23229;font-size:13px}
+
 </style></head><body><div class="app hiring-welcome">
 <header class="approved-head">
   <div class="approved-top">
@@ -382,7 +404,7 @@ input,select,textarea{width:100%;border:1px solid var(--borde);background:#fafbf
   </div>
 </header>
 
-<div id="welcome" class="welcome"><div class="eyebrow">Contratación</div><h1>Registro de personal</h1><p>Completa tu información para postularte como <strong>Galerista, Auxiliar de Galera o Cosechador</strong>.</p><button class="start" onclick="startForm()">Iniciar mi registro</button><div class="note" style="margin:15px auto 0;max-width:410px">INE, CURP y comprobante de domicilio son opcionales. Puedes enviar tu registro aunque todavía no tengas esos documentos.</div></div>
+<div id="welcome" class="welcome"><div class="eyebrow">Contratación</div><h1>Registro de personal</h1><p>Completa tu información para postularte como <strong>Galerista, Auxiliar de Galera o Cosechador</strong>.</p><button class="start" onclick="startForm()">Iniciar mi registro</button><button class="c205-consult" type="button" onclick="c205AbrirConsulta()">Consultar mi solicitud</button><div class="note" style="margin:15px auto 0;max-width:410px">INE, CURP y comprobante de domicilio son opcionales. Puedes enviar tu registro aunque todavía no tengas esos documentos.</div></div>
 <div id="formapp" class="hidden"><div class="progress"><div class="track"><div class="bar" id="bar"></div></div><div class="steptext"><span id="steplabel"></span><span id="pct"></span></div></div><form id="regform" class="content" onsubmit="return false">
 <section class="step" data-step="1"><div class="card"><div class="eyebrow">Paso 1</div><h2>Datos personales</h2><div class="help">Información básica para identificarte y comunicarnos contigo.</div><div class="grid"><div class="full"><label>Nombre completo *</label><input id="nombre" required></div><div><label>Fecha de nacimiento *</label><input id="nacimiento" type="date" required></div><div><label>Teléfono *</label><input id="telefono" type="tel" required></div><div class="full"><label>Domicilio *</label><input id="direccion" required placeholder="Calle, colonia, municipio"></div></div></div></section>
 <section class="step hidden" data-step="2"><div class="card"><div class="eyebrow">Paso 2</div><h2>Puesto al que te postulas</h2><div class="help">Las postulaciones se registran inicialmente como personal <strong>Eventual</strong>.</div><div class="roles"><div class="role" data-role="Galerista" onclick="pickRole(this)"><div class="ricon">⚖️</div><div><b>Galerista</b><small>Pesaje, control y recepción de cosecha.</small></div></div><div class="role" data-role="Auxiliar Galera" onclick="pickRole(this)"><div class="ricon">📦</div><div><b>Auxiliar de Galera</b><small>Rack, surtido, cajas, trazabilidad y apoyo de galera.</small></div></div><div class="role" data-role="Cosechador" onclick="pickRole(this)"><div class="ricon">🫐</div><div><b>Cosechador</b><small>Cosecha y manejo de fruta en campo.</small></div></div></div><input type="hidden" id="puesto"><div style="margin-top:12px"><label>Fecha disponible para ingreso *</label><input type="date" id="ingreso" required></div></div></section>
@@ -392,9 +414,9 @@ input,select,textarea{width:100%;border:1px solid var(--borde);background:#fafbf
 <div class="doc"><div class="dochead"><b>CURP</b><span class="optional">Opcional</span></div><div class="doc-actions"><button type="button" class="camera-btn" onclick="openCamera(\'curp\')">📷 Tomar foto</button><label class="gallery" for="doc_curp">🖼️ Elegir archivo</label></div><input class="doc-input" id="doc_curp" type="file" accept="image/*,.pdf"><div class="docstatus" id="st_curp"><img class="thumb" id="th_curp"><div class="fileok"><b>✓ Archivo listo</b><div class="filename" id="nm_curp"></div><div id="sz_curp"></div></div></div></div>
 <div class="doc"><div class="dochead"><b>Comprobante de domicilio</b><span class="optional">Opcional</span></div><div class="doc-actions"><button type="button" class="camera-btn" onclick="openCamera(\'domicilio\')">📷 Tomar foto</button><label class="gallery" for="doc_domicilio">🖼️ Elegir archivo</label></div><input class="doc-input" id="doc_domicilio" type="file" accept="image/*,.pdf"><div class="docstatus" id="st_domicilio"><img class="thumb" id="th_domicilio"><div class="fileok"><b>✓ Archivo listo</b><div class="filename" id="nm_domicilio"></div><div id="sz_domicilio"></div></div></div></div>
 </div><div class="note" style="margin-top:10px">Si la cámara no permite preparar la foto, puedes continuar sin el documento o elegir una imagen desde la galería.</div></div></section>
-<section class="step hidden" data-step="5"><div class="card"><div class="eyebrow">Paso 5</div><h2>Revisa tu información</h2><div id="summary" class="summary"></div></div><div class="card"><label class="check"><input type="checkbox" id="consent"><span>Confirmo que los datos proporcionados son correctos y autorizo su uso para el proceso de incorporación y conformación de mi expediente en Mootsil.</span></label><div id="senderror"></div></div></section>
+<section class="step hidden" data-step="5"><div class="card"><div class="eyebrow">Paso 5</div><h2>Revisa tu información</h2><div id="summary" class="summary"></div></div><div class="card"><label>Comentarios adicionales <span class="c205-optional">(opcional)</span></label><textarea id="comentarios_candidato" class="c205-comments" rows="4" placeholder="¿Hay algo que quieras comentarnos sobre tu disponibilidad, experiencia o situación laboral?"></textarea></div><div class="card"><label class="check"><input type="checkbox" id="consent"><span>Confirmo que los datos proporcionados son correctos y autorizo su uso para el proceso de incorporación y conformación de mi expediente en Mootsil.</span></label><div id="senderror"></div></div></section>
 <div class="actions"><button type="button" id="back" class="back hidden" onclick="prevStep()">Anterior</button><button type="button" id="next" class="next" onclick="nextStep()">Continuar</button><button type="button" id="submit" class="submit hidden" onclick="submitForm()">Enviar mi registro</button></div></form></div>
-<div id="success" class="ok hidden"><div class="okicon">✓</div><div class="eyebrow">Registro completado</div><h1>¡Gracias por registrarte!</h1><p>Tu información fue recibida correctamente y quedó <strong>pendiente de revisión por Administración</strong>.</p><p><strong>El envío de este formulario no genera todavía un expediente ni acceso a Mootsil.</strong> Si tu incorporación es autorizada, Administración continuará el proceso y te proporcionará tus datos de acceso.</p><p>Gracias por tu interés en formar parte del equipo Mootsil.</p><div id="folio" class="note" style="margin:18px auto 0;max-width:370px"></div></div>
+<div id="success" class="ok hidden"><div class="okicon" id="c205StatusIcon">✓</div><div class="eyebrow">Solicitud de contratación</div><h1 id="c205StatusTitle">¡Registro enviado!</h1><p id="c205StatusText">Tu información fue recibida correctamente y quedó <strong>pendiente de revisión por Administración</strong>.</p><div id="c205StatusPill" class="c205-status-pill">En revisión</div><div id="folio" class="note" style="margin:18px auto 0;max-width:370px"></div><div id="c205StatusReason" class="note hidden" style="margin:12px auto 0;max-width:370px"></div><div class="c205-success-actions"><button type="button" onclick="c205ConsultarGuardada()">Consultar estado</button><button type="button" class="secondary" onclick="c205Salir()">Salir</button></div></div>
 <div class="registration-bottom-nav" aria-hidden="true">
 <div class="navitem active"><span>⌂</span><span>Inicio</span></div>
 <div class="navitem"><span>▣</span><span>Documentos</span></div>
@@ -480,6 +502,143 @@ async function captureCamera(){
   await handleFile(cameraTarget,file);
 }
 
-async function submitForm(){if(!consent.checked){alert('Confirma la autorización para enviar tu registro.');return}let btn=submit;btn.disabled=true;btn.textContent='Enviando...';senderror.innerHTML='';let id=crypto.randomUUID();let p={id,nombre_completo:val('nombre'),fecha_nacimiento:val('nacimiento'),telefono:val('telefono'),direccion:val('direccion'),puesto:val('puesto'),tipo_colaborador:'Eventual',fecha_disponible_ingreso:val('ingreso')||null,banco:val('banco')||null,numero_tarjeta:val('tarjeta')||null,emergencia_nombre:val('em_nombre'),emergencia_parentesco:val('em_parentesco'),emergencia_telefono:val('em_telefono'),tipo_sangre:val('sangre')||null,salud_emergencia:val('salud')||null,estado:'recibida',consentimiento:true};try{await restInsert('postulaciones_personal',p);for(let [tipo,key] of [['INE','ine'],['CURP','curp'],['Comprobante domicilio','domicilio']]){let f=selectedFiles[key];if(!f)continue;let u=await uploadDoc(id,tipo,f);await restInsert('postulacion_documentos',{postulacion_id:id,tipo,nombre_archivo:f.name,url_documento:u})}formapp.classList.add('hidden');success.classList.remove('hidden');folio.textContent='Folio de registro: '+id.slice(0,8).toUpperCase();localStorage.removeItem('mootsil_prereg_draft')}catch(e){senderror.innerHTML='<div class="error"><strong>No se pudo enviar todavía.</strong><br>'+esc(e.message)+'<br>Tu información permanece guardada en este teléfono.</div>';btn.disabled=false;btn.textContent='Enviar mi registro'}}
-const draftIds=['nombre','nacimiento','telefono','direccion','puesto','ingreso','banco','tarjeta','em_nombre','em_parentesco','em_telefono','sangre','salud'];function saveDraft(){let d={};draftIds.forEach(id=>d[id]=document.getElementById(id)?.value||'');localStorage.setItem('mootsil_prereg_draft',JSON.stringify(d))}document.addEventListener('input',saveDraft);document.addEventListener('change',saveDraft);
-</script></body></html>
+async function submitForm(){if(!consent.checked){alert('Confirma la autorización para enviar tu registro.');return}let btn=submit;btn.disabled=true;btn.textContent='Enviando...';senderror.innerHTML='';let id=crypto.randomUUID();let p={id,nombre_completo:val('nombre'),fecha_nacimiento:val('nacimiento'),telefono:val('telefono'),direccion:val('direccion'),puesto:val('puesto'),tipo_colaborador:'Eventual',fecha_disponible_ingreso:val('ingreso')||null,banco:val('banco')||null,numero_tarjeta:val('tarjeta')||null,emergencia_nombre:val('em_nombre'),emergencia_parentesco:val('em_parentesco'),emergencia_telefono:val('em_telefono'),tipo_sangre:val('sangre')||null,salud_emergencia:val('salud')||null,comentarios_candidato:val('comentarios_candidato')||null,estado:'recibida',consentimiento:true};try{await restInsert('postulaciones_personal',p);for(let [tipo,key] of [['INE','ine'],['CURP','curp'],['Comprobante domicilio','domicilio']]){let f=selectedFiles[key];if(!f)continue;let u=await uploadDoc(id,tipo,f);await restInsert('postulacion_documentos',{postulacion_id:id,tipo,nombre_archivo:f.name,url_documento:u})}formapp.classList.add('hidden');success.classList.remove('hidden');let folioC205=id.slice(0,8).toUpperCase();folio.textContent='Folio de registro: '+folioC205;localStorage.setItem('mootsil_postulacion_folio',folioC205);localStorage.setItem('mootsil_postulacion_telefono',val('telefono'));c205RenderEstado('recibida',null);localStorage.removeItem('mootsil_prereg_draft')}catch(e){senderror.innerHTML='<div class="error"><strong>No se pudo enviar todavía.</strong><br>'+esc(e.message)+'<br>Tu información permanece guardada en este teléfono.</div>';btn.disabled=false;btn.textContent='Enviar mi registro'}}
+const draftIds=['nombre','nacimiento','telefono','direccion','puesto','ingreso','banco','tarjeta','em_nombre','em_parentesco','em_telefono','sangre','salud','comentarios_candidato'];function saveDraft(){let d={};draftIds.forEach(id=>d[id]=document.getElementById(id)?.value||'');localStorage.setItem('mootsil_prereg_draft',JSON.stringify(d))}document.addEventListener('input',saveDraft);document.addEventListener('change',saveDraft);
+</script>
+<div id="c205ConsultModal" class="c205-modal hidden">
+  <div class="c205-modal-card">
+    <button type="button" class="c205-close" onclick="c205CerrarConsulta()">×</button>
+    <div class="eyebrow">Seguimiento</div>
+    <h2>Consulta tu solicitud</h2>
+    <p>Ingresa el folio que recibiste al enviar tu registro y tu teléfono.</p>
+    <label>Folio</label>
+    <input id="c205FolioInput" maxlength="8" placeholder="Ej. A1B2C3D4">
+    <label>Teléfono</label>
+    <input id="c205TelefonoInput" type="tel" placeholder="Tu teléfono">
+    <div id="c205ConsultaError" class="c205-error"></div>
+    <button type="button" class="start" onclick="c205ConsultarManual()">Consultar estado</button>
+  </div>
+</div>
+
+
+<script>
+(function(){
+  function c205SetActive(idx){
+    document.querySelectorAll('.registration-bottom-nav .navitem').forEach((el,i)=>{
+      el.classList.toggle('c205-active',i===idx);
+      el.classList.toggle('active',i===idx);
+    });
+  }
+  function c205GoStep(n,idx){
+    if(typeof setStep==='function') setStep(n);
+    c205SetActive(idx);
+  }
+  window.c205NavInicio=()=>c205GoStep(1,0);
+  window.c205NavDocumentos=()=>c205GoStep(4,1);
+  window.c205NavProgreso=()=>{ c205SetActive(2); if(typeof setStep==='function') setStep(step||1); };
+  window.c205NavEnviar=()=>c205GoStep(5,3);
+  window.c205NavPerfil=()=>c205GoStep(5,4);
+
+  function wire(){
+    const items=document.querySelectorAll('.registration-bottom-nav .navitem');
+    const f=[c205NavInicio,c205NavDocumentos,c205NavProgreso,c205NavEnviar,c205NavPerfil];
+    items.forEach((el,i)=>{
+      if(!f[i]) return;
+      el.removeAttribute('aria-hidden');
+      el.setAttribute('role','button');
+      el.setAttribute('tabindex','0');
+      el.onclick=f[i];
+      el.onkeydown=(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();f[i]();}};
+    });
+    const savedFolio=localStorage.getItem('mootsil_postulacion_folio');
+    const savedTel=localStorage.getItem('mootsil_postulacion_telefono');
+    if(savedFolio) document.getElementById('c205FolioInput').value=savedFolio;
+    if(savedTel) document.getElementById('c205TelefonoInput').value=savedTel;
+  }
+  document.addEventListener('DOMContentLoaded',wire);
+
+  window.c205AbrirConsulta=function(){
+    document.getElementById('c205ConsultModal').classList.remove('hidden');
+    document.getElementById('c205ConsultaError').textContent='';
+  };
+  window.c205CerrarConsulta=function(){document.getElementById('c205ConsultModal').classList.add('hidden')};
+
+  async function c205FetchEstado(folioVal,telVal){
+    const r=await fetch(URL_SB+'/rest/v1/rpc/consultar_estado_postulacion_folio',{
+      method:'POST',
+      headers:{apikey:KEY_SB,Authorization:'Bearer '+KEY_SB,'Content-Type':'application/json'},
+      body:JSON.stringify({p_folio:folioVal,p_telefono:telVal})
+    });
+    if(!r.ok) throw new Error('No fue posible consultar el estado.');
+    const data=await r.json();
+    return Array.isArray(data)&&data.length?data[0]:null;
+  }
+
+  window.c205RenderEstado=function(estado,motivo){
+    const e=String(estado||'recibida').toLowerCase();
+    let title='Registro enviado', text='Tu información fue recibida correctamente y se encuentra en revisión.', pill='En revisión', icon='✓';
+    if(['autorizada','autorizado','aprobada','aprobado','confirmada','confirmado'].includes(e)){
+      title='¡Solicitud confirmada!';
+      text='Tu solicitud fue revisada y confirmada. Administración continuará contigo el proceso de incorporación.';
+      pill='Confirmado'; icon='✓';
+    }else if(['rechazada','rechazado','no_seleccionada','no seleccionado'].includes(e)){
+      title='Proceso concluido';
+      text='Tu solicitud fue revisada y en esta ocasión no fue seleccionada.';
+      pill='No seleccionado'; icon='—';
+    }
+    const t=document.getElementById('c205StatusTitle'), x=document.getElementById('c205StatusText'),
+          p=document.getElementById('c205StatusPill'), i=document.getElementById('c205StatusIcon'),
+          mr=document.getElementById('c205StatusReason');
+    if(t)t.textContent=title;
+    if(x)x.textContent=text;
+    if(p)p.textContent=pill;
+    if(i)i.textContent=icon;
+    if(mr){
+      if(motivo){mr.textContent='Observación: '+motivo;mr.classList.remove('hidden')}
+      else{mr.textContent='';mr.classList.add('hidden')}
+    }
+  };
+
+  async function c205Consultar(folioVal,telVal){
+    const row=await c205FetchEstado(folioVal,telVal);
+    if(!row) throw new Error('No encontramos una solicitud con ese folio y teléfono.');
+    localStorage.setItem('mootsil_postulacion_folio',folioVal.toUpperCase());
+    localStorage.setItem('mootsil_postulacion_telefono',telVal);
+    c205RenderEstado(row.estado,row.motivo_rechazo);
+    document.querySelector('.app').classList.remove('hiring-welcome');
+    document.getElementById('welcome').classList.add('hidden');
+    document.getElementById('formapp').classList.add('hidden');
+    document.getElementById('success').classList.remove('hidden');
+    document.getElementById('folio').textContent='Folio de registro: '+folioVal.toUpperCase();
+    c205CerrarConsulta();
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  window.c205ConsultarManual=async function(){
+    const f=document.getElementById('c205FolioInput').value.trim();
+    const t=document.getElementById('c205TelefonoInput').value.trim();
+    const err=document.getElementById('c205ConsultaError');
+    if(f.length!==8||!t){err.textContent='Ingresa tu folio de 8 caracteres y tu teléfono.';return}
+    err.textContent='Consultando...';
+    try{await c205Consultar(f,t);err.textContent=''}
+    catch(e){err.textContent=e.message}
+  };
+
+  window.c205ConsultarGuardada=async function(){
+    const f=localStorage.getItem('mootsil_postulacion_folio')||'';
+    const t=localStorage.getItem('mootsil_postulacion_telefono')||'';
+    if(!f||!t){c205AbrirConsulta();return}
+    try{await c205Consultar(f,t)}
+    catch(e){alert(e.message)}
+  };
+
+  window.c205Salir=function(){
+    document.getElementById('success').classList.add('hidden');
+    document.getElementById('welcome').classList.remove('hidden');
+    document.querySelector('.app').classList.add('hiring-welcome');
+    window.scrollTo({top:0,behavior:'smooth'});
+  };
+})();
+</script>
+
+</body></html>
