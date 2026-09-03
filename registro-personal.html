@@ -357,6 +357,33 @@ input,select,textarea{width:100%;border:1px solid var(--borde);background:#fafbf
 .c205-close{position:absolute;right:12px;top:10px;border:0;background:transparent;font-size:28px;color:#53655c;cursor:pointer}
 .c205-error{min-height:20px;margin-top:9px;color:#b23229;font-size:13px}
 
+
+/* C206 · Vacantes reales y urgencia responsable */
+.c206-callout{margin:12px 0 14px;padding:12px 14px;border-radius:14px;background:#edf7f1;border:1px solid #d4e7dc;color:#174632;line-height:1.4;font-size:13px}
+.c206-callout strong{display:block;margin-bottom:2px}
+.c206-vacancies{display:grid;gap:12px}
+.c206-role{display:block!important;padding:14px!important;border-radius:18px!important}
+.c206-role-head{display:grid;grid-template-columns:46px minmax(0,1fr) auto;gap:10px;align-items:center}
+.c206-role-title{min-width:0}.c206-role-title b{display:block;color:#0c5634;font-size:18px;line-height:1.1}.c206-role-title small{display:block;margin-top:4px;color:#64736b;font-size:12px;line-height:1.3}
+.c206-badge{justify-self:end;white-space:nowrap;border-radius:999px;padding:6px 9px;background:#e5f4eb;color:#0b6a3d;font-size:10px;font-weight:800}
+.c206-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:12px;border-top:1px solid #eef1ef;padding-top:10px}
+.c206-stats>div{padding:0 8px;text-align:center;border-right:1px solid #e4e9e6}.c206-stats>div:first-child{padding-left:0}.c206-stats>div:last-child{padding-right:0;border-right:0}
+.c206-stats strong{display:block;color:#153d2d;font-size:14px}.c206-stats span{display:block;margin-top:2px;color:#6e7b74;font-size:9px;line-height:1.2}
+.c206-bar{height:6px;background:#e5e9e7;border-radius:999px;margin-top:10px;overflow:hidden}.c206-bar span{display:block;height:100%;background:#13834f;border-radius:999px;transition:width .3s ease}
+.c206-availability{text-align:center;margin-top:6px;color:#13834f;font-size:11px;font-weight:800}
+.c206-role[data-level="medium"] .c206-badge{background:#fff0d9;color:#b46500}.c206-role[data-level="medium"] .c206-bar span{background:#f3a11b}.c206-role[data-level="medium"] .c206-availability{color:#b46500}
+.c206-role[data-level="high"] .c206-badge{background:#ffe5e5;color:#c52920}.c206-role[data-level="high"] .c206-bar span{background:#e2342d}.c206-role[data-level="high"] .c206-availability{color:#c52920}
+.c206-role[data-level="full"] .c206-badge{background:#ecefed;color:#5f6c65}.c206-role[data-level="full"] .c206-bar span{background:#75827b}.c206-role[data-level="full"] .c206-availability{color:#5f6c65}
+.c206-note{margin-top:14px;padding:11px 13px;border-radius:13px;background:#f7faf8;color:#56665e;font-size:12px;line-height:1.4}
+@media(max-width:500px){
+  .c206-role{padding:12px!important}
+  .c206-role-head{grid-template-columns:42px minmax(0,1fr);gap:8px}
+  .c206-role-head .c206-badge{grid-column:2;justify-self:start;margin-top:2px}
+  .c206-role-title b{font-size:17px}
+  .c206-stats strong{font-size:13px}
+  .c206-stats span{font-size:8.5px}
+}
+
 </style></head><body><div class="app hiring-welcome">
 <header class="approved-head">
   <div class="approved-top">
@@ -407,7 +434,70 @@ input,select,textarea{width:100%;border:1px solid var(--borde);background:#fafbf
 <div id="welcome" class="welcome"><div class="eyebrow">Contratación</div><h1>Registro de personal</h1><p>Completa tu información para postularte como <strong>Galerista, Auxiliar de Galera o Cosechador</strong>.</p><button class="start" onclick="startForm()">Iniciar mi registro</button><button class="c205-consult" type="button" onclick="c205AbrirConsulta()">Consultar mi solicitud</button><div class="note" style="margin:15px auto 0;max-width:410px">INE, CURP y comprobante de domicilio son opcionales. Puedes enviar tu registro aunque todavía no tengas esos documentos.</div></div>
 <div id="formapp" class="hidden"><div class="progress"><div class="track"><div class="bar" id="bar"></div></div><div class="steptext"><span id="steplabel"></span><span id="pct"></span></div></div><form id="regform" class="content" onsubmit="return false">
 <section class="step" data-step="1"><div class="card"><div class="eyebrow">Paso 1</div><h2>Datos personales</h2><div class="help">Información básica para identificarte y comunicarnos contigo.</div><div class="grid"><div class="full"><label>Nombre completo *</label><input id="nombre" required></div><div><label>Fecha de nacimiento *</label><input id="nacimiento" type="date" required></div><div><label>Teléfono *</label><input id="telefono" type="tel" required></div><div class="full"><label>Domicilio *</label><input id="direccion" required placeholder="Calle, colonia, municipio"></div></div></div></section>
-<section class="step hidden" data-step="2"><div class="card"><div class="eyebrow">Paso 2</div><h2>Puesto al que te postulas</h2><div class="help">Las postulaciones se registran inicialmente como personal <strong>Eventual</strong>.</div><div class="roles"><div class="role" data-role="Galerista" onclick="pickRole(this)"><div class="ricon">⚖️</div><div><b>Galerista</b><small>Pesaje, control y recepción de cosecha.</small></div></div><div class="role" data-role="Auxiliar Galera" onclick="pickRole(this)"><div class="ricon">📦</div><div><b>Auxiliar de Galera</b><small>Rack, surtido, cajas, trazabilidad y apoyo de galera.</small></div></div><div class="role" data-role="Cosechador" onclick="pickRole(this)"><div class="ricon">🫐</div><div><b>Cosechador</b><small>Cosecha y manejo de fruta en campo.</small></div></div></div><input type="hidden" id="puesto"><div style="margin-top:12px"><label>Fecha disponible para ingreso *</label><input type="date" id="ingreso" required></div></div></section>
+
+<section class="step hidden" data-step="2">
+  <div class="card">
+    <div class="eyebrow">Paso 2</div>
+    <h2>Puesto al que te postulas</h2>
+    <div class="c206-callout">
+      <strong>Los espacios de esta convocatoria son limitados.</strong>
+      Completa tu registro para participar en el proceso de selección.
+    </div>
+
+    <div class="c206-vacancies" id="c206Vacancies">
+      <div class="c206-role role" data-role="Cosechador" data-public-role="Cosecha" data-total="18" onclick="pickRole(this)">
+        <div class="c206-role-head">
+          <div class="ricon">🫐</div>
+          <div class="c206-role-title"><b>Cosecha</b><small>Cosecha y manejo de fruta en campo.</small></div>
+          <span class="c206-badge" id="c206Badge_Cosecha">Espacios disponibles</span>
+        </div>
+        <div class="c206-stats">
+          <div><strong id="c206Confirmed_Cosecha">0 de 18</strong><span>vacantes cubiertas</span></div>
+          <div><strong id="c206Apps_Cosecha">0</strong><span>postulaciones recibidas</span></div>
+          <div><strong id="c206Available_Cosecha">18</strong><span>vacantes disponibles</span></div>
+        </div>
+        <div class="c206-bar"><span id="c206Bar_Cosecha" style="width:0%"></span></div>
+        <div class="c206-availability" id="c206Text_Cosecha">Quedan 18 espacios disponibles</div>
+      </div>
+
+      <div class="c206-role role" data-role="Galerista" data-public-role="Galerista" data-total="3" onclick="pickRole(this)">
+        <div class="c206-role-head">
+          <div class="ricon">⚖️</div>
+          <div class="c206-role-title"><b>Galerista</b><small>Pesaje, control y recepción de cosecha.</small></div>
+          <span class="c206-badge" id="c206Badge_Galerista">Espacios disponibles</span>
+        </div>
+        <div class="c206-stats">
+          <div><strong id="c206Confirmed_Galerista">0 de 3</strong><span>vacantes cubiertas</span></div>
+          <div><strong id="c206Apps_Galerista">0</strong><span>postulaciones recibidas</span></div>
+          <div><strong id="c206Available_Galerista">3</strong><span>vacantes disponibles</span></div>
+        </div>
+        <div class="c206-bar"><span id="c206Bar_Galerista" style="width:0%"></span></div>
+        <div class="c206-availability" id="c206Text_Galerista">Quedan 3 espacios disponibles</div>
+      </div>
+
+      <div class="c206-role role" data-role="Auxiliar Galera" data-public-role="Auxiliar de Galera" data-total="2" onclick="pickRole(this)">
+        <div class="c206-role-head">
+          <div class="ricon">📦</div>
+          <div class="c206-role-title"><b>Auxiliar de Galera</b><small>Rack, surtido, cajas, trazabilidad y apoyo de galera.</small></div>
+          <span class="c206-badge" id="c206Badge_Auxiliar_de_Galera">Espacios disponibles</span>
+        </div>
+        <div class="c206-stats">
+          <div><strong id="c206Confirmed_Auxiliar_de_Galera">0 de 2</strong><span>vacantes cubiertas</span></div>
+          <div><strong id="c206Apps_Auxiliar_de_Galera">0</strong><span>postulaciones recibidas</span></div>
+          <div><strong id="c206Available_Auxiliar_de_Galera">2</strong><span>vacantes disponibles</span></div>
+        </div>
+        <div class="c206-bar"><span id="c206Bar_Auxiliar_de_Galera" style="width:0%"></span></div>
+        <div class="c206-availability" id="c206Text_Auxiliar_de_Galera">Quedan 2 espacios disponibles</div>
+      </div>
+    </div>
+
+    <input type="hidden" id="puesto">
+    <div class="c206-note">
+      <strong>Importante:</strong> El registro te permite participar en el proceso de selección; no garantiza la contratación.
+    </div>
+    <div style="margin-top:12px"><label>Fecha disponible para ingreso *</label><input type="date" id="ingreso" required></div>
+  </div>
+</section>
 <section class="step hidden" data-step="3"><div class="card"><div class="eyebrow">Paso 3</div><h2>Datos bancarios</h2><div class="grid"><div><label>Banco</label><input id="banco"></div><div><label>Número de tarjeta</label><input id="tarjeta" inputmode="numeric"></div></div></div><div class="card"><h2 style="font-size:18px">Contacto de emergencia</h2><div class="grid"><div class="full"><label>Nombre *</label><input id="em_nombre" required></div><div><label>Parentesco *</label><input id="em_parentesco" required></div><div><label>Teléfono *</label><input id="em_telefono" required></div></div></div><div class="card"><h2 style="font-size:18px">Información básica para emergencias</h2><div class="grid"><div><label>Tipo de sangre</label><input id="sangre"></div><div><label>Alergias / dato relevante</label><input id="salud"></div></div></div></section>
 <section class="step hidden" data-step="4"><div class="card"><div class="eyebrow">Paso 4</div><h2>Documentos</h2><div class="help">Puedes tomar una foto o elegirla de tu galería. Las fotos se optimizan antes de subirlas para evitar archivos demasiado pesados. <strong>Los documentos siguen siendo opcionales.</strong></div><div class="docs">
 <div class="doc"><div class="dochead"><b>INE</b><span class="optional">Opcional</span></div><div class="doc-actions"><button type="button" class="camera-btn" onclick="openCamera(\'ine\')">📷 Tomar foto</button><label class="gallery" for="doc_ine">🖼️ Elegir archivo</label></div><input class="doc-input" id="doc_ine" type="file" accept="image/*,.pdf"><div class="docstatus" id="st_ine"><img class="thumb" id="th_ine"><div class="fileok"><b>✓ Archivo listo</b><div class="filename" id="nm_ine"></div><div id="sz_ine"></div></div></div></div>
@@ -638,6 +728,80 @@ const draftIds=['nombre','nacimiento','telefono','direccion','puesto','ingreso',
     document.querySelector('.app').classList.add('hiring-welcome');
     window.scrollTo({top:0,behavior:'smooth'});
   };
+})();
+</script>
+
+
+<script>
+(function(){
+  const C206_ROLE_KEYS={
+    'Cosecha':'Cosecha',
+    'Galerista':'Galerista',
+    'Auxiliar de Galera':'Auxiliar_de_Galera'
+  };
+
+  function c206Level(total, available){
+    if(available<=0) return 'full';
+    const ratio=available/Math.max(total,1);
+    if(available<=2 || ratio<=0.20) return 'high';
+    if(ratio<=0.50) return 'medium';
+    return 'open';
+  }
+
+  function c206Paint(row){
+    const publicRole=row.puesto;
+    const key=C206_ROLE_KEYS[publicRole];
+    if(!key) return;
+    const total=Number(row.vacantes_total)||0;
+    const apps=Number(row.postulaciones)||0;
+    const confirmed=Number(row.confirmados)||0;
+    const available=Math.max(Number(row.disponibles)||0,0);
+    const level=c206Level(total,available);
+    const card=document.querySelector('.c206-role[data-public-role="'+publicRole+'"]');
+    if(!card) return;
+    card.dataset.level=level;
+
+    const confirmedEl=document.getElementById('c206Confirmed_'+key);
+    const appsEl=document.getElementById('c206Apps_'+key);
+    const availableEl=document.getElementById('c206Available_'+key);
+    const bar=document.getElementById('c206Bar_'+key);
+    const badge=document.getElementById('c206Badge_'+key);
+    const text=document.getElementById('c206Text_'+key);
+
+    if(confirmedEl) confirmedEl.textContent=confirmed+' de '+total;
+    if(appsEl) appsEl.textContent=apps;
+    if(availableEl) availableEl.textContent=available;
+    if(bar) bar.style.width=Math.min(100,total?confirmed/total*100:0)+'%';
+
+    if(level==='full'){
+      if(badge) badge.textContent='Convocatoria completa';
+      if(text) text.textContent='Vacantes cubiertas · puedes registrarte para lista de espera';
+    }else if(level==='high'){
+      if(badge) badge.textContent='¡Últimos lugares!';
+      if(text) text.textContent='Solo '+available+' '+(available===1?'espacio disponible':'espacios disponibles');
+    }else if(level==='medium'){
+      if(badge) badge.textContent='Quedan pocos';
+      if(text) text.textContent='Quedan '+available+' espacios disponibles';
+    }else{
+      if(badge) badge.textContent='Espacios disponibles';
+      if(text) text.textContent='Quedan '+available+' espacios disponibles';
+    }
+  }
+
+  window.c206LoadVacancies=async function(){
+    try{
+      const r=await fetch(URL_SB+'/rest/v1/c206_resumen_vacantes?select=puesto,vacantes_total,postulaciones,confirmados,disponibles',{
+        headers:{apikey:KEY_SB,Authorization:'Bearer '+KEY_SB}
+      });
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const rows=await r.json();
+      if(Array.isArray(rows)) rows.forEach(c206Paint);
+    }catch(e){
+      console.warn('C206: no se pudieron actualizar los contadores',e);
+    }
+  };
+
+  document.addEventListener('DOMContentLoaded',c206LoadVacancies);
 })();
 </script>
 
