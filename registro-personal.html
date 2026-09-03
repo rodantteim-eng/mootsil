@@ -388,6 +388,18 @@ input,select,textarea{width:100%;border:1px solid var(--borde);background:#fafbf
 /* C207 · Blindaje del flujo de candidato */
 .c207-nextstage{max-width:390px;margin:14px auto 0;padding:11px 13px;border-radius:12px;background:#f3f7f4;color:#5b6a62;font-size:12px;line-height:1.45}
 
+
+/* C210 · Consulta de estado: evita que la barra inferior bloquee los botones */
+.app.c210-status-mode .registration-bottom-nav{display:none!important}
+.app.c210-status-mode #success{padding-bottom:34px!important}
+.app.c210-status-mode .c205-success-actions{
+  position:relative;z-index:1200;margin-bottom:8px
+}
+.app.c210-status-mode .c205-success-actions button{
+  min-height:52px;touch-action:manipulation
+}
+.c210-checking{opacity:.72;pointer-events:none}
+
 </style></head><body><div class="app hiring-welcome">
 <header class="approved-head">
   <div class="approved-top">
@@ -695,7 +707,7 @@ async function submitForm(){
       let u=await uploadDoc(id,tipo,f);
       await restInsert('postulacion_documentos',{postulacion_id:id,tipo,nombre_archivo:f.name,url_documento:u})
     }
-    formapp.classList.add('hidden');success.classList.remove('hidden');
+    formapp.classList.add('hidden');success.classList.remove('hidden');document.querySelector('.app').classList.add('c210-status-mode');
     let folioC205=id.slice(0,8).toUpperCase();
     folio.textContent='Folio de registro: '+folioC205;
     localStorage.setItem('mootsil_postulacion_folio',folioC205);
@@ -783,7 +795,7 @@ const draftIds=['nombre','nacimiento','telefono','direccion','puesto','ingreso',
     let title='Registro enviado', text='Tu información fue recibida correctamente y se encuentra en revisión.', pill='En revisión', icon='✓';
     if(['autorizada','autorizado','aprobada','aprobado','confirmada','confirmado'].includes(e)){
       title='¡Solicitud confirmada!';
-      text='Tu solicitud fue revisada y confirmada. Administración continuará contigo el proceso de incorporación.';
+      text='Tu solicitud fue aceptada. Ya estás en proceso de incorporación al Rancho Sagrado Corazón. Administración continuará contigo los siguientes pasos.';
       pill='Confirmado'; icon='✓';
     }else if(['rechazada','rechazado','no_seleccionada','no seleccionado'].includes(e)){
       title='Proceso concluido';
@@ -813,6 +825,7 @@ const draftIds=['nombre','nacimiento','telefono','direccion','puesto','ingreso',
     document.getElementById('welcome').classList.add('hidden');
     document.getElementById('formapp').classList.add('hidden');
     document.getElementById('success').classList.remove('hidden');
+    document.querySelector('.app').classList.add('c210-status-mode');
     document.getElementById('folio').textContent='Folio de registro: '+folioVal.toUpperCase();
     c205CerrarConsulta();
     window.scrollTo({top:0,behavior:'smooth'});
@@ -832,13 +845,22 @@ const draftIds=['nombre','nacimiento','telefono','direccion','puesto','ingreso',
     const f=localStorage.getItem('mootsil_postulacion_folio')||'';
     const t=localStorage.getItem('mootsil_postulacion_telefono')||'';
     if(!f||!t){c205AbrirConsulta();return}
-    try{await c205Consultar(f,t)}
-    catch(e){alert(e.message)}
+    const btn=document.querySelector('.c205-success-actions button:first-child');
+    const original=btn?btn.textContent:'Consultar estado';
+    if(btn){btn.textContent='Consultando...';btn.classList.add('c210-checking')}
+    try{
+      await c205Consultar(f,t);
+    }catch(e){
+      alert(e.message);
+    }finally{
+      if(btn){btn.textContent=original;btn.classList.remove('c210-checking')}
+    }
   };
 
   window.c205Salir=function(){
     document.getElementById('success').classList.add('hidden');
     document.getElementById('welcome').classList.remove('hidden');
+    document.querySelector('.app').classList.remove('c210-status-mode');
     document.querySelector('.app').classList.add('hiring-welcome');
     window.scrollTo({top:0,behavior:'smooth'});
   };
