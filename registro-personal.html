@@ -384,6 +384,10 @@ input,select,textarea{width:100%;border:1px solid var(--borde);background:#fafbf
   .c206-stats span{font-size:8.5px}
 }
 
+
+/* C207 · Blindaje del flujo de candidato */
+.c207-nextstage{max-width:390px;margin:14px auto 0;padding:11px 13px;border-radius:12px;background:#f3f7f4;color:#5b6a62;font-size:12px;line-height:1.45}
+
 </style></head><body><div class="app hiring-welcome">
 <header class="approved-head">
   <div class="approved-top">
@@ -431,7 +435,7 @@ input,select,textarea{width:100%;border:1px solid var(--borde);background:#fafbf
   </div>
 </header>
 
-<div id="welcome" class="welcome"><div class="eyebrow">Contratación</div><h1>Registro de personal</h1><p>Completa tu información para postularte como <strong>Galerista, Auxiliar de Galera o Cosechador</strong>.</p><button class="start" onclick="startForm()">Iniciar mi registro</button><button class="c205-consult" type="button" onclick="c205AbrirConsulta()">Consultar mi solicitud</button><div class="note" style="margin:15px auto 0;max-width:410px">INE, CURP y comprobante de domicilio son opcionales. Puedes enviar tu registro aunque todavía no tengas esos documentos.</div></div>
+<div id="welcome" class="welcome"><div class="eyebrow">Contratación</div><h1>Registro de personal</h1><p>Completa tu información para postularte como <strong>Cosecha, Galerista o Auxiliar de Galera</strong>.</p><button class="start" onclick="startForm()">Iniciar mi registro</button><button class="c205-consult" type="button" onclick="c205AbrirConsulta()">Consultar mi solicitud</button><div class="note" style="margin:15px auto 0;max-width:410px">INE, CURP y comprobante de domicilio son opcionales. Puedes enviar tu registro aunque todavía no tengas esos documentos.</div></div>
 <div id="formapp" class="hidden"><div class="progress"><div class="track"><div class="bar" id="bar"></div></div><div class="steptext"><span id="steplabel"></span><span id="pct"></span></div></div><form id="regform" class="content" onsubmit="return false">
 <section class="step" data-step="1"><div class="card"><div class="eyebrow">Paso 1</div><h2>Datos personales</h2><div class="help">Información básica para identificarte y comunicarnos contigo.</div><div class="grid"><div class="full"><label>Nombre completo *</label><input id="nombre" required></div><div><label>Fecha de nacimiento *</label><input id="nacimiento" type="date" required></div><div><label>Teléfono *</label><input id="telefono" type="tel" required></div><div class="full"><label>Domicilio *</label><input id="direccion" required placeholder="Calle, colonia, municipio"></div></div></div></section>
 
@@ -498,15 +502,14 @@ input,select,textarea{width:100%;border:1px solid var(--borde);background:#fafbf
     <div style="margin-top:12px"><label>Fecha disponible para ingreso *</label><input type="date" id="ingreso" required></div>
   </div>
 </section>
-<section class="step hidden" data-step="3"><div class="card"><div class="eyebrow">Paso 3</div><h2>Datos bancarios</h2><div class="grid"><div><label>Banco</label><input id="banco"></div><div><label>Número de tarjeta</label><input id="tarjeta" inputmode="numeric"></div></div></div><div class="card"><h2 style="font-size:18px">Contacto de emergencia</h2><div class="grid"><div class="full"><label>Nombre *</label><input id="em_nombre" required></div><div><label>Parentesco *</label><input id="em_parentesco" required></div><div><label>Teléfono *</label><input id="em_telefono" required></div></div></div><div class="card"><h2 style="font-size:18px">Información básica para emergencias</h2><div class="grid"><div><label>Tipo de sangre</label><input id="sangre"></div><div><label>Alergias / dato relevante</label><input id="salud"></div></div></div></section>
-<section class="step hidden" data-step="4"><div class="card"><div class="eyebrow">Paso 4</div><h2>Documentos</h2><div class="help">Puedes tomar una foto o elegirla de tu galería. Las fotos se optimizan antes de subirlas para evitar archivos demasiado pesados. <strong>Los documentos siguen siendo opcionales.</strong></div><div class="docs">
+<section class="step hidden" data-step="3"><div class="card"><div class="eyebrow">Paso 3</div><h2>Documentos</h2><div class="help">Puedes tomar una foto o elegirla de tu galería. Las fotos se optimizan antes de subirlas para evitar archivos demasiado pesados. <strong>Los documentos siguen siendo opcionales.</strong></div><div class="docs">
 <div class="doc"><div class="dochead"><b>INE</b><span class="optional">Opcional</span></div><div class="doc-actions"><button type="button" class="camera-btn" onclick="openCamera(\'ine\')">📷 Tomar foto</button><label class="gallery" for="doc_ine">🖼️ Elegir archivo</label></div><input class="doc-input" id="doc_ine" type="file" accept="image/*,.pdf"><div class="docstatus" id="st_ine"><img class="thumb" id="th_ine"><div class="fileok"><b>✓ Archivo listo</b><div class="filename" id="nm_ine"></div><div id="sz_ine"></div></div></div></div>
 <div class="doc"><div class="dochead"><b>CURP</b><span class="optional">Opcional</span></div><div class="doc-actions"><button type="button" class="camera-btn" onclick="openCamera(\'curp\')">📷 Tomar foto</button><label class="gallery" for="doc_curp">🖼️ Elegir archivo</label></div><input class="doc-input" id="doc_curp" type="file" accept="image/*,.pdf"><div class="docstatus" id="st_curp"><img class="thumb" id="th_curp"><div class="fileok"><b>✓ Archivo listo</b><div class="filename" id="nm_curp"></div><div id="sz_curp"></div></div></div></div>
 <div class="doc"><div class="dochead"><b>Comprobante de domicilio</b><span class="optional">Opcional</span></div><div class="doc-actions"><button type="button" class="camera-btn" onclick="openCamera(\'domicilio\')">📷 Tomar foto</button><label class="gallery" for="doc_domicilio">🖼️ Elegir archivo</label></div><input class="doc-input" id="doc_domicilio" type="file" accept="image/*,.pdf"><div class="docstatus" id="st_domicilio"><img class="thumb" id="th_domicilio"><div class="fileok"><b>✓ Archivo listo</b><div class="filename" id="nm_domicilio"></div><div id="sz_domicilio"></div></div></div></div>
 </div><div class="note" style="margin-top:10px">Si la cámara no permite preparar la foto, puedes continuar sin el documento o elegir una imagen desde la galería.</div></div></section>
-<section class="step hidden" data-step="5"><div class="card"><div class="eyebrow">Paso 5</div><h2>Revisa tu información</h2><div id="summary" class="summary"></div></div><div class="card"><label>Comentarios adicionales <span class="c205-optional">(opcional)</span></label><textarea id="comentarios_candidato" class="c205-comments" rows="4" placeholder="¿Hay algo que quieras comentarnos sobre tu disponibilidad, experiencia o situación laboral?"></textarea></div><div class="card"><label class="check"><input type="checkbox" id="consent"><span>Confirmo que los datos proporcionados son correctos y autorizo su uso para el proceso de incorporación y conformación de mi expediente en Mootsil.</span></label><div id="senderror"></div></div></section>
+<section class="step hidden" data-step="4"><div class="card"><div class="eyebrow">Paso 4</div><h2>Revisa tu información</h2><div id="summary" class="summary"></div></div><div class="card"><label>Comentarios adicionales <span class="c205-optional">(opcional)</span></label><textarea id="comentarios_candidato" class="c205-comments" rows="4" placeholder="¿Hay algo que quieras comentarnos sobre tu disponibilidad, experiencia o situación laboral?"></textarea></div><div class="card"><label class="check"><input type="checkbox" id="consent"><span>Confirmo que los datos proporcionados son correctos y autorizo su uso para el proceso de incorporación y conformación de mi expediente en Mootsil.</span></label><div id="senderror"></div></div></section>
 <div class="actions"><button type="button" id="back" class="back hidden" onclick="prevStep()">Anterior</button><button type="button" id="next" class="next" onclick="nextStep()">Continuar</button><button type="button" id="submit" class="submit hidden" onclick="submitForm()">Enviar mi registro</button></div></form></div>
-<div id="success" class="ok hidden"><div class="okicon" id="c205StatusIcon">✓</div><div class="eyebrow">Solicitud de contratación</div><h1 id="c205StatusTitle">¡Registro enviado!</h1><p id="c205StatusText">Tu información fue recibida correctamente y quedó <strong>pendiente de revisión por Administración</strong>.</p><div id="c205StatusPill" class="c205-status-pill">En revisión</div><div id="folio" class="note" style="margin:18px auto 0;max-width:370px"></div><div id="c205StatusReason" class="note hidden" style="margin:12px auto 0;max-width:370px"></div><div class="c205-success-actions"><button type="button" onclick="c205ConsultarGuardada()">Consultar estado</button><button type="button" class="secondary" onclick="c205Salir()">Salir</button></div></div>
+<div id="success" class="ok hidden"><div class="okicon" id="c205StatusIcon">✓</div><div class="eyebrow">Solicitud de contratación</div><h1 id="c205StatusTitle">¡Registro enviado!</h1><p id="c205StatusText">Tu información fue recibida correctamente y quedó <strong>pendiente de revisión por Administración</strong>.</p><div id="c205StatusPill" class="c205-status-pill">En revisión</div><div class="c207-nextstage">Si tu solicitud es confirmada, Administración te solicitará posteriormente los datos bancarios, contacto de emergencia y la información necesaria para completar tu expediente.</div><div id="folio" class="note" style="margin:18px auto 0;max-width:370px"></div><div id="c205StatusReason" class="note hidden" style="margin:12px auto 0;max-width:370px"></div><div class="c205-success-actions"><button type="button" onclick="c205ConsultarGuardada()">Consultar estado</button><button type="button" class="secondary" onclick="c205Salir()">Salir</button></div></div>
 <div class="registration-bottom-nav" aria-hidden="true">
 <div class="navitem active"><span>⌂</span><span>Inicio</span></div>
 <div class="navitem"><span>▣</span><span>Documentos</span></div>
@@ -515,10 +518,61 @@ input,select,textarea{width:100%;border:1px solid var(--borde);background:#fafbf
 <div class="navitem"><span>♙</span><span>Perfil</span></div>
 </div></div><script>
 const URL_SB="https://ypreafyqnckswvoaerbe.supabase.co"; const KEY_SB="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwcmVhZnlxbmNrc3d2b2FlcmJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NDE0NjAsImV4cCI6MjA5ODQxNzQ2MH0.2Bwg1HdUXKlw9U3a3-3FvpeNV3iKktJchkL6xbD51DU"; let step=1; const selectedFiles={ine:null,curp:null,domicilio:null}, previewUrls={};
-function startForm(){document.querySelector('.app').classList.remove('hiring-welcome');welcome.classList.add('hidden');formapp.classList.remove('hidden');setStep(1)} function setStep(n){step=n;document.querySelectorAll('.step').forEach(x=>x.classList.toggle('hidden',+x.dataset.step!==n));bar.style.width=(n*20)+'%';steplabel.textContent='Paso '+n+' de 5';pct.textContent=(n*20)+'%';back.classList.toggle('hidden',n===1);next.classList.toggle('hidden',n===5);submit.classList.toggle('hidden',n!==5);if(n===5)renderSummary();scrollTo({top:0,behavior:'smooth'})} function pickRole(el){document.querySelectorAll('.role').forEach(x=>x.classList.remove('sel'));el.classList.add('sel');puesto.value=el.dataset.role;saveDraft()}
-function validStep(n){let ok=true;document.querySelector('.step[data-step="'+n+'"]').querySelectorAll('[required]').forEach(el=>{if(!String(el.value||'').trim()){el.style.borderColor='#c93b2f';ok=false}else el.style.borderColor=''});if(n===2&&!puesto.value){alert('Selecciona el puesto al que te postulas.');return false}if(!ok)alert('Completa los campos obligatorios para continuar.');return ok} function nextStep(){if(validStep(step))setStep(Math.min(5,step+1))} function prevStep(){setStep(Math.max(1,step-1))}
+function c207ApplyDraft(){
+  let raw=localStorage.getItem('mootsil_prereg_draft');
+  if(!raw)return false;
+  try{
+    let d=JSON.parse(raw);
+    Object.entries(d||{}).forEach(([id,v])=>{
+      let el=document.getElementById(id);
+      if(el && typeof v==='string')el.value=v;
+    });
+    if(d.puesto){
+      document.querySelectorAll('.role').forEach(x=>x.classList.toggle('sel',x.dataset.role===d.puesto));
+    }
+    return true;
+  }catch(e){return false}
+}
+function startForm(){
+  document.querySelector('.app').classList.remove('hiring-welcome');
+  welcome.classList.add('hidden');formapp.classList.remove('hidden');
+  let hasDraft=!!localStorage.getItem('mootsil_prereg_draft');
+  if(hasDraft){
+    if(confirm('Encontramos un registro sin terminar. ¿Deseas continuar donde lo dejaste?')){
+      c207ApplyDraft();
+    }else{
+      localStorage.removeItem('mootsil_prereg_draft');
+      regform.reset();
+      document.querySelectorAll('.role').forEach(x=>x.classList.remove('sel'));
+      puesto.value='';
+    }
+  }
+  setStep(1)
+}
+function setStep(n){
+  n=Math.max(1,Math.min(4,n));step=n;
+  document.querySelectorAll('.step').forEach(x=>x.classList.toggle('hidden',+x.dataset.step!==n));
+  bar.style.width=(n*25)+'%';steplabel.textContent='Paso '+n+' de 4';pct.textContent=(n*25)+'%';
+  back.classList.toggle('hidden',n===1);next.classList.toggle('hidden',n===4);submit.classList.toggle('hidden',n!==4);
+  if(n===4)renderSummary();
+  scrollTo({top:0,behavior:'smooth'})
+}
+function pickRole(el){
+  document.querySelectorAll('.role').forEach(x=>x.classList.remove('sel'));
+  el.classList.add('sel');puesto.value=el.dataset.role;saveDraft()
+}
+function validStep(n){let ok=true;document.querySelector('.step[data-step="'+n+'"]').querySelectorAll('[required]').forEach(el=>{if(!String(el.value||'').trim()){el.style.borderColor='#c93b2f';ok=false}else el.style.borderColor=''});if(n===2&&!puesto.value){alert('Selecciona el puesto al que te postulas.');return false}if(!ok)alert('Completa los campos obligatorios para continuar.');return ok} function nextStep(){if(validStep(step))setStep(Math.min(4,step+1))} function prevStep(){setStep(Math.max(1,step-1))}
 function val(id){return document.getElementById(id).value.trim()} function esc(s){return String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))} function fmtSize(n){return n<1048576?(n/1024).toFixed(0)+' KB':(n/1048576).toFixed(1)+' MB'} function ext(n){let p=n.lastIndexOf('.');return p>=0?n.slice(p):''}
-function renderSummary(){let docs=[];Object.values(selectedFiles).forEach(f=>{if(f)docs.push(f.name)});summary.innerHTML='<strong>'+esc(val('nombre'))+'</strong><br>'+esc(val('puesto'))+' · Eventual<br>Disponible para ingreso: '+esc(val('ingreso'))+'<br>Tel: '+esc(val('telefono'))+'<br>Domicilio: '+esc(val('direccion'))+'<br><br><strong>Contacto de emergencia:</strong> '+esc(val('em_nombre'))+' · '+esc(val('em_parentesco'))+' · '+esc(val('em_telefono'))+'<br><br><strong>Documentos preparados:</strong> '+(docs.length?esc(docs.join(', ')):'Ninguno · puedes enviar así tu registro.')}
+function renderSummary(){
+  let docs=[];Object.values(selectedFiles).forEach(f=>{if(f)docs.push(f.name)});
+  summary.innerHTML='<strong>'+esc(val('nombre'))+'</strong><br>'+
+    esc(val('puesto'))+' · Personal eventual<br>'+
+    'Disponible para ingreso: '+esc(val('ingreso'))+'<br>'+
+    'Tel: '+esc(val('telefono'))+'<br>'+
+    'Domicilio: '+esc(val('direccion'))+
+    '<br><br><strong>Documentos preparados:</strong> '+(docs.length?esc(docs.join(', ')):'Ninguno · puedes enviar así tu registro.')+
+    '<br><br><strong>Después de ser confirmado:</strong> Administración solicitará los datos bancarios, contacto de emergencia y la información necesaria para integrar tu expediente.';
+}
 async function compressImage(file){if(!file.type.startsWith('image/'))return file;try{if(!('createImageBitmap'in window))return file;let bmp=await createImageBitmap(file);let max=1600,sc=Math.min(1,max/Math.max(bmp.width,bmp.height)),cw=Math.max(1,Math.round(bmp.width*sc)),ch=Math.max(1,Math.round(bmp.height*sc)),cv=document.createElement('canvas');cv.width=cw;cv.height=ch;cv.getContext('2d',{alpha:false}).drawImage(bmp,0,0,cw,ch);bmp.close&&bmp.close();let blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',.76));cv.width=cv.height=1;return blob?new File([blob],file.name.replace(/\.[^.]+$/,'')+'.jpg',{type:'image/jpeg',lastModified:Date.now()}):file}catch(e){return file}}
 async function handleFile(key,file){if(!file)return;let prepared=await compressImage(file);selectedFiles[key]=prepared;if(previewUrls[key])URL.revokeObjectURL(previewUrls[key]);previewUrls[key]=URL.createObjectURL(prepared);document.getElementById('nm_'+key).textContent=prepared.name;document.getElementById('sz_'+key).textContent=fmtSize(prepared.size)+(prepared!==file?' · foto optimizada':'');let th=document.getElementById('th_'+key);if(prepared.type.startsWith('image/')){th.src=previewUrls[key];th.style.display='block'}else th.style.display='none';document.getElementById('st_'+key).classList.add('show')}
 ['ine','curp','domicilio'].forEach(k=>{document.getElementById('doc_'+k).addEventListener('change',e=>handleFile(k,e.target.files[0]))})
@@ -592,8 +646,68 @@ async function captureCamera(){
   await handleFile(cameraTarget,file);
 }
 
-async function submitForm(){if(!consent.checked){alert('Confirma la autorización para enviar tu registro.');return}let btn=submit;btn.disabled=true;btn.textContent='Enviando...';senderror.innerHTML='';let id=crypto.randomUUID();let p={id,nombre_completo:val('nombre'),fecha_nacimiento:val('nacimiento'),telefono:val('telefono'),direccion:val('direccion'),puesto:val('puesto'),tipo_colaborador:'Eventual',fecha_disponible_ingreso:val('ingreso')||null,banco:val('banco')||null,numero_tarjeta:val('tarjeta')||null,emergencia_nombre:val('em_nombre'),emergencia_parentesco:val('em_parentesco'),emergencia_telefono:val('em_telefono'),tipo_sangre:val('sangre')||null,salud_emergencia:val('salud')||null,comentarios_candidato:val('comentarios_candidato')||null,estado:'recibida',consentimiento:true};try{await restInsert('postulaciones_personal',p);for(let [tipo,key] of [['INE','ine'],['CURP','curp'],['Comprobante domicilio','domicilio']]){let f=selectedFiles[key];if(!f)continue;let u=await uploadDoc(id,tipo,f);await restInsert('postulacion_documentos',{postulacion_id:id,tipo,nombre_archivo:f.name,url_documento:u})}formapp.classList.add('hidden');success.classList.remove('hidden');let folioC205=id.slice(0,8).toUpperCase();folio.textContent='Folio de registro: '+folioC205;localStorage.setItem('mootsil_postulacion_folio',folioC205);localStorage.setItem('mootsil_postulacion_telefono',val('telefono'));c205RenderEstado('recibida',null);localStorage.removeItem('mootsil_prereg_draft')}catch(e){senderror.innerHTML='<div class="error"><strong>No se pudo enviar todavía.</strong><br>'+esc(e.message)+'<br>Tu información permanece guardada en este teléfono.</div>';btn.disabled=false;btn.textContent='Enviar mi registro'}}
-const draftIds=['nombre','nacimiento','telefono','direccion','puesto','ingreso','banco','tarjeta','em_nombre','em_parentesco','em_telefono','sangre','salud','comentarios_candidato'];function saveDraft(){let d={};draftIds.forEach(id=>d[id]=document.getElementById(id)?.value||'');localStorage.setItem('mootsil_prereg_draft',JSON.stringify(d))}document.addEventListener('input',saveDraft);document.addEventListener('change',saveDraft);
+function c207ValidateAll(){
+  const required=['nombre','nacimiento','telefono','direccion','ingreso'];
+  let missing=[];
+  required.forEach(id=>{
+    const el=document.getElementById(id);
+    const ok=!!String(el?.value||'').trim();
+    if(el)el.style.borderColor=ok?'':'#c93b2f';
+    if(!ok)missing.push(id);
+  });
+  if(!puesto.value)missing.push('puesto');
+  if(missing.length){
+    alert('Falta información obligatoria. Revisa tus datos personales, el puesto y tu fecha disponible antes de enviar.');
+    if(missing.includes('nombre')||missing.includes('nacimiento')||missing.includes('telefono')||missing.includes('direccion'))setStep(1);
+    else if(missing.includes('puesto')||missing.includes('ingreso'))setStep(2);
+    return false;
+  }
+  const digits=val('telefono').replace(/\D/g,'');
+  if(digits.length<10){
+    alert('Revisa tu teléfono. Debe contener al menos 10 dígitos.');
+    setStep(1);document.getElementById('telefono').focus();return false;
+  }
+  return true;
+}
+
+async function submitForm(){
+  if(!c207ValidateAll())return;
+  if(!consent.checked){alert('Confirma la autorización para enviar tu registro.');return}
+  let btn=submit;btn.disabled=true;btn.textContent='Enviando...';senderror.innerHTML='';
+  let id=crypto.randomUUID();
+  let p={
+    id,
+    nombre_completo:val('nombre'),
+    fecha_nacimiento:val('nacimiento')||null,
+    telefono:val('telefono'),
+    direccion:val('direccion'),
+    puesto:val('puesto'),
+    tipo_colaborador:'Eventual',
+    fecha_disponible_ingreso:val('ingreso')||null,
+    comentarios_candidato:val('comentarios_candidato')||null,
+    estado:'recibida',
+    consentimiento:true
+  };
+  try{
+    await restInsert('postulaciones_personal',p);
+    for(let [tipo,key] of [['INE','ine'],['CURP','curp'],['Comprobante domicilio','domicilio']]){
+      let f=selectedFiles[key];if(!f)continue;
+      let u=await uploadDoc(id,tipo,f);
+      await restInsert('postulacion_documentos',{postulacion_id:id,tipo,nombre_archivo:f.name,url_documento:u})
+    }
+    formapp.classList.add('hidden');success.classList.remove('hidden');
+    let folioC205=id.slice(0,8).toUpperCase();
+    folio.textContent='Folio de registro: '+folioC205;
+    localStorage.setItem('mootsil_postulacion_folio',folioC205);
+    localStorage.setItem('mootsil_postulacion_telefono',val('telefono'));
+    c205RenderEstado('recibida',null);
+    localStorage.removeItem('mootsil_prereg_draft')
+  }catch(e){
+    senderror.innerHTML='<div class="error"><strong>No se pudo enviar todavía.</strong><br>'+esc(e.message)+'<br>Tu información permanece guardada en este teléfono.</div>';
+    btn.disabled=false;btn.textContent='Enviar mi registro'
+  }
+}
+const draftIds=['nombre','nacimiento','telefono','direccion','puesto','ingreso','comentarios_candidato'];function saveDraft(){let d={};draftIds.forEach(id=>d[id]=document.getElementById(id)?.value||'');localStorage.setItem('mootsil_prereg_draft',JSON.stringify(d))}document.addEventListener('input',saveDraft);document.addEventListener('change',saveDraft);
 </script>
 <div id="c205ConsultModal" class="c205-modal hidden">
   <div class="c205-modal-card">
@@ -624,10 +738,10 @@ const draftIds=['nombre','nacimiento','telefono','direccion','puesto','ingreso',
     c205SetActive(idx);
   }
   window.c205NavInicio=()=>c205GoStep(1,0);
-  window.c205NavDocumentos=()=>c205GoStep(4,1);
+  window.c205NavDocumentos=()=>c205GoStep(3,1);
   window.c205NavProgreso=()=>{ c205SetActive(2); if(typeof setStep==='function') setStep(step||1); };
-  window.c205NavEnviar=()=>c205GoStep(5,3);
-  window.c205NavPerfil=()=>c205GoStep(5,4);
+  window.c205NavEnviar=()=>c205GoStep(4,3);
+  window.c205NavPerfil=()=>c205GoStep(4,4);
 
   function wire(){
     const items=document.querySelectorAll('.registration-bottom-nav .navitem');
