@@ -408,10 +408,13 @@ input,select,textarea{width:100%;border:1px solid var(--borde);background:#fafbf
   display:block!important;
   padding-top:26px!important;
 }
-.c211-updated{
-  max-width:360px;margin:10px auto 0;padding:9px 12px;border-radius:12px;
-  background:#e9f7ef;color:#0e7141;font-size:12px;font-weight:800;
-  text-align:center
+
+
+/* C212 · Estado persistente y legible */
+.c212-status-detail{
+  max-width:390px;margin:14px auto 0;padding:13px 15px;border-radius:14px;
+  background:#f3f7f4;color:#42584d;font-size:14px;line-height:1.45;text-align:center;
+  border:1px solid #dfe8e2
 }
 
 </style></head><body><div class="app hiring-welcome">
@@ -535,7 +538,7 @@ input,select,textarea{width:100%;border:1px solid var(--borde);background:#fafbf
 </div><div class="note" style="margin-top:10px">Si la cámara no permite preparar la foto, puedes continuar sin el documento o elegir una imagen desde la galería.</div></div></section>
 <section class="step hidden" data-step="4"><div class="card"><div class="eyebrow">Paso 4</div><h2>Revisa tu información</h2><div id="summary" class="summary"></div></div><div class="card"><label>Comentarios adicionales <span class="c205-optional">(opcional)</span></label><textarea id="comentarios_candidato" class="c205-comments" rows="4" placeholder="¿Hay algo que quieras comentarnos sobre tu disponibilidad, experiencia o situación laboral?"></textarea></div><div class="card"><label class="check"><input type="checkbox" id="consent"><span>Confirmo que los datos proporcionados son correctos y autorizo su uso para el proceso de incorporación y conformación de mi expediente en Mootsil.</span></label><div id="senderror"></div></div></section>
 <div class="actions"><button type="button" id="back" class="back hidden" onclick="prevStep()">Anterior</button><button type="button" id="next" class="next" onclick="nextStep()">Continuar</button><button type="button" id="submit" class="submit hidden" onclick="submitForm()">Enviar mi registro</button></div></form></div>
-<div id="success" class="ok hidden"><div class="okicon" id="c205StatusIcon">✓</div><div class="eyebrow">Solicitud de contratación</div><h1 id="c205StatusTitle">¡Registro enviado!</h1><p id="c205StatusText">Tu información fue recibida correctamente y quedó <strong>pendiente de revisión por Administración</strong>.</p><div id="c205StatusPill" class="c205-status-pill">En revisión</div><div id="c211Updated" class="c211-updated hidden">Estado actualizado</div><div class="c207-nextstage">Si tu solicitud es confirmada, Administración te solicitará posteriormente los datos bancarios, contacto de emergencia y la información necesaria para completar tu expediente.</div><div id="folio" class="note" style="margin:18px auto 0;max-width:370px"></div><div id="c205StatusReason" class="note hidden" style="margin:12px auto 0;max-width:370px"></div><div class="c205-success-actions"><button type="button" onclick="c205ConsultarGuardada()">Consultar estado</button><button type="button" class="secondary" onclick="c205Salir()">Salir</button></div></div>
+<div id="success" class="ok hidden"><div class="okicon" id="c205StatusIcon">✓</div><div class="eyebrow">Solicitud de contratación</div><h1 id="c205StatusTitle">¡Registro enviado!</h1><p id="c205StatusText">Tu información fue recibida correctamente y quedó <strong>pendiente de revisión por Administración</strong>.</p><div id="c205StatusPill" class="c205-status-pill">En revisión</div><div id="c212StatusDetail" class="c212-status-detail">Tu solicitud se encuentra en revisión.</div><div class="c207-nextstage">Si tu solicitud es confirmada, Administración te solicitará posteriormente los datos bancarios, contacto de emergencia y la información necesaria para completar tu expediente.</div><div id="folio" class="note" style="margin:18px auto 0;max-width:370px"></div><div id="c205StatusReason" class="note hidden" style="margin:12px auto 0;max-width:370px"></div><div class="c205-success-actions"><button type="button" onclick="c205ConsultarGuardada()">Consultar estado</button><button type="button" class="secondary" onclick="c205Salir()">Salir</button></div></div>
 <div class="registration-bottom-nav" aria-hidden="true">
 <div class="navitem active"><span>⌂</span><span>Inicio</span></div>
 <div class="navitem"><span>▣</span><span>Documentos</span></div>
@@ -824,6 +827,16 @@ const draftIds=['nombre','nacimiento','telefono','direccion','puesto','ingreso',
     if(x)x.textContent=text;
     if(p)p.textContent=pill;
     if(i)i.textContent=icon;
+    const detail=document.getElementById('c212StatusDetail');
+    if(detail){
+      if(['autorizada','autorizado','aprobada','aprobado','confirmada','confirmado'].includes(e)){
+        detail.textContent='Tu solicitud fue aceptada y ya estás en proceso de incorporación. Conserva tu folio para futuras consultas.';
+      }else if(['rechazada','rechazado','no_seleccionada','no seleccionado'].includes(e)){
+        detail.textContent='Tu proceso de selección ha concluido. Puedes conservar tu folio como referencia.';
+      }else{
+        detail.textContent='Tu solicitud continúa en revisión. Puedes volver a consultar este folio más adelante.';
+      }
+    }
     if(mr){
       if(motivo){mr.textContent='Observación: '+motivo;mr.classList.remove('hidden')}
       else{mr.textContent='';mr.classList.add('hidden')}
@@ -884,7 +897,6 @@ const draftIds=['nombre','nacimiento','telefono','direccion','puesto','ingreso',
     document.getElementById('success').classList.add('hidden');
     document.getElementById('welcome').classList.remove('hidden');
     document.querySelector('.app').classList.remove('c210-status-mode');
-    document.getElementById('c211Updated')?.classList.add('hidden');
     document.querySelector('.app').classList.add('hiring-welcome');
     window.scrollTo({top:0,behavior:'smooth'});
   };
