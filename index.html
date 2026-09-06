@@ -1225,6 +1225,59 @@ function c231Icon(name, cls){
 @media(max-width:520px){.c231-pay-wrap,.c237-page{padding-left:12px;padding-right:12px}.c231-pay-hero .amount{font-size:2rem!important}.c237-title h2{font-size:1.2rem}}
 </style>
 
+
+<style id="c238-asistencia-iconografia">
+.c228-heading-left .c228-icon{
+  width:46px;height:46px;border-radius:14px!important;
+  background:linear-gradient(145deg,#e8f4eb,#dcecdf)!important;
+  color:#1f6843;display:grid;place-items:center;
+  border:1px solid #d1e5d6;box-shadow:0 3px 8px rgba(20,70,45,.06);
+}
+.c228-heading-left .c228-icon .c231-svg{width:27px;height:27px}
+.c228-special-grid button{
+  border:1px solid #e0e8e2!important;background:#fff!important;border-radius:14px!important;
+  box-shadow:0 3px 9px rgba(20,60,40,.05)!important;padding:11px 6px!important;
+}
+.c228-special-grid button span{
+  width:42px;height:42px;margin:0 auto 7px!important;border-radius:12px;
+  display:grid!important;place-items:center!important;
+}
+.c228-special-grid button span .c231-svg{width:25px;height:25px}
+.c228-special-grid button:nth-child(1) span{background:#e9f5ed;color:#267149}
+.c228-special-grid button:nth-child(2) span{background:#fff0df;color:#c66b25}
+.c228-special-grid button:nth-child(3) span{background:#e8f1f6;color:#3f7191}
+.c228-special-grid button:nth-child(4) span{background:#f4eaf4;color:#795381}
+.c228-special-grid button b{color:#294536!important;font-weight:800!important}
+.c228-state-icon{box-shadow:inset 0 0 0 1px rgba(255,255,255,.12),0 3px 8px rgba(0,0,0,.08)}
+.c228-history-row>span{
+  width:28px;height:28px;border-radius:9px;display:grid;place-items:center;
+  font-size:.8rem;background:#eef5f0;color:#2f6847
+}
+.c228-history-row>span .c231-svg{width:18px;height:18px}
+@media(max-width:600px){
+  .c228-special-grid button{min-height:96px!important}
+  .c228-special-grid button span{width:38px;height:38px}
+}
+</style>
+
+
+<style id="c238-problema-pago">
+.c238-pay-help{
+  width:100%;margin-top:10px;border:1px solid #e0e8e2;background:#f7faf8;border-radius:13px;
+  padding:11px 13px;color:#456154;font-size:.72rem;font-weight:800;
+  display:flex;justify-content:center;align-items:center;gap:7px;
+}
+.c238-pay-help .c231-svg{width:20px;height:20px;color:#b56a2d}
+.c238-report{max-width:720px;margin:0 auto;padding:0 12px 24px}
+.c238-report-card{background:#fff;border:1px solid #e0e8e2;border-radius:15px;padding:14px;box-shadow:0 3px 9px rgba(20,60,40,.05)}
+.c238-report-card label{display:block;color:#294536;font-weight:800;font-size:.76rem;margin:10px 0 5px}
+.c238-report-card select,.c238-report-card textarea{
+  width:100%;box-sizing:border-box;border:1.5px solid #d8e3db;border-radius:10px;padding:10px;
+  font:inherit;background:#fff;color:#294536
+}
+.c238-report-note{background:#fff4e6;border:1px solid #ecd4ad;color:#7f5b31;border-radius:10px;padding:9px 10px;font-size:.69rem;margin-bottom:10px}
+</style>
+
 </head>
 <body>
 
@@ -12881,6 +12934,45 @@ function renderPagosHistorial(){
     body.innerHTML=html+'</div>';
   }).catch(function(e){body.innerHTML='<div class="c237-page"><div class="c237-empty">No se pudo cargar el historial.</div><button class="c237-back" onclick="renderPagosMenu()">← Pagos</button></div>';});
 }
+
+function renderProblemaPago(){
+  var body=document.getElementById('op-body');
+  body.innerHTML='<div class="c238-report">'+
+    '<div class="c237-title"><h2>Problema con mi pago</h2><button class="c237-back" onclick="renderPagosMenu()">← Pagos</button></div>'+
+    '<div class="c238-report-note">Este reporte no modifica tu nómina. Administración revisará la diferencia y te dará seguimiento.</div>'+
+    '<div class="c238-report-card">'+
+      '<label>¿Qué no coincide?</label>'+
+      '<select id="c238-pay-type"><option>Monto total</option><option>Días pagados</option><option>Horas extra</option><option>Bono o apoyo</option><option>Descuento o préstamo</option><option>Otro</option></select>'+
+      '<label>Cuéntanos brevemente</label>'+
+      '<textarea id="c238-pay-detail" rows="4" placeholder="Ej. Me aparecen 5 días y trabajé 6..."></textarea>'+
+      '<button class="btn-primary" id="c238-pay-send" style="margin-top:12px;">Enviar a Administración</button>'+
+    '</div>'+
+  '</div>';
+  var b=document.getElementById('c238-pay-send');
+  if(b)b.onclick=enviarProblemaPago;
+}
+function enviarProblemaPago(){
+  var tipo=(document.getElementById('c238-pay-type')||{}).value||'Otro';
+  var detalle=((document.getElementById('c238-pay-detail')||{}).value||'').trim();
+  if(!detalle){alert('Escribe brevemente qué no coincide.');return;}
+  var btn=document.getElementById('c238-pay-send');
+  if(btn){btn.disabled=true;btn.textContent='Enviando...';}
+  var mensaje='[PAGO] '+tipo+' — '+detalle;
+  from('solicitudes_operario').insert({operario_id:usuario.id,tipo:'otro',mensaje:mensaje,estado:'pendiente'}).then(function(){
+    return from('notificaciones').insert({
+      titulo:'💳 Revisión de pago',
+      cuerpo:(usuario.nombre||'Colaborador')+' reportó una diferencia: '+tipo,
+      icono:'💳',leida:false,para_rol:'admin'
+    });
+  }).then(function(){
+    showToast('✅ Reporte enviado a Administración');
+    renderPagosMenu();
+  }).catch(function(e){
+    if(btn){btn.disabled=false;btn.textContent='Enviar a Administración';}
+    alert('No se pudo enviar: '+e.message);
+  });
+}
+
 function renderPagosMenu(){
   if(usuario.rol==='labores_eventual'){renderMisPagosEventuales();return;}
   renderCartera(new Date());
@@ -13179,6 +13271,7 @@ function renderCartera(fechaRef){
       var mostrarRecibo=String(cfg.mostrar_recibo_colaborador||'false').toLowerCase()==='true';
       if(mostrarRecibo) html+='<button type="button" id="cart-recibo" class="c231-receipt">'+c231Icon('receipt')+' Ver recibo de nómina</button>';
       html+='<div class="c231-secondary"><button type="button" id="c231-hist">'+c231Icon('history')+' Historial de pagos</button><button type="button" id="c231-debo">'+c231Icon('debt')+' Préstamos / adeudos</button></div>';
+      html+='<button type="button" class="c238-pay-help" id="c238-report-pay">'+c231Icon('warning')+' ¿Algo no coincide? Reportar problema con mi pago</button>';
       html+='</div>';
 
       body.innerHTML=html;
@@ -13186,6 +13279,8 @@ function renderCartera(fechaRef){
       if(btnHist) btnHist.onclick=renderPagosHistorial;
       var btnDebo=document.getElementById('c231-debo');
       if(btnDebo) btnDebo.onclick=renderDebo;
+      var btnRepPago=document.getElementById('c238-report-pay');
+      if(btnRepPago) btnRepPago.onclick=renderProblemaPago;
       var btnAnt=document.getElementById('cart-ant');
       if(btnAnt) btnAnt.addEventListener('click',function(){var d=new Date(lunes);d.setDate(d.getDate()-7);renderCartera(d);});
       var btnSig=document.getElementById('cart-sig');
@@ -13322,11 +13417,11 @@ function renderAsistenciaMenu(){
     '</div>';
 
     var histRows=[];
-    if(ent) histRows.push(['🟢','Entrada registrada',c226FmtHora(ent.registrado_en)]);
-    if(ent) histRows.push(['▶️','Inicio jornada normal',c226FmtHora(ent.registrado_en)]);
-    if(sal) histRows.push(['⭐','Fin jornada normal',c226FmtHora(sal.registrado_en)]);
-    if(entEx) histRows.push(['🟠','Inicio hora extra',c226FmtHora(entEx.registrado_en)]);
-    if(salEx) histRows.push(['🟥','Salida registrada',c226FmtHora(salEx.registrado_en)]);
+    if(ent) histRows.push([c231Icon('attendance'),'Entrada registrada',c226FmtHora(ent.registrado_en)]);
+    if(ent) histRows.push([c231Icon('clock'),'Inicio jornada normal',c226FmtHora(ent.registrado_en)]);
+    if(sal) histRows.push([c231Icon('exit'),'Fin jornada normal',c226FmtHora(sal.registrado_en)]);
+    if(entEx) histRows.push([c231Icon('clock'),'Inicio hora extra',c226FmtHora(entEx.registrado_en)]);
+    if(salEx) histRows.push([c231Icon('exit'),'Salida registrada',c226FmtHora(salEx.registrado_en)]);
     var histHtml=histRows.length?histRows.map(function(x){
       return '<div class="c228-history-row"><span>'+x[0]+'</span><div><b>'+x[1]+'</b></div><strong>'+x[2]+'</strong></div>';
     }).join(''):'<div class="c228-empty">Aún no hay movimientos registrados hoy.</div>';
@@ -13334,7 +13429,7 @@ function renderAsistenciaMenu(){
     body.innerHTML=
       '<div class="c228-wrap">'+
         '<div class="c228-heading">'+
-          '<div class="c228-heading-left"><div class="c228-icon">🗓️</div><div><h2>Asistencia</h2><p>Control de jornada con validación automática</p></div></div>'+
+          '<div class="c228-heading-left"><div class="c228-icon">'+c231Icon('attendance')+'</div><div><h2>Asistencia</h2><p>Control de jornada con validación automática</p></div></div>'+
           '<div class="c228-sync" style="cursor:default;">'+(navigator.onLine?'✓ Todo sincronizado':'☁️ Sin conexión')+'</div>'+
         '</div>'+
         '<div class="c228-state '+stateClass+'">'+
