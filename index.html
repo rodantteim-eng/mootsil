@@ -1213,7 +1213,11 @@ function c231Icon(name, cls){
 .p233-summary{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.p233-stat{background:#f7faf8;border:1px solid #e4ebe6;border-radius:13px;padding:12px}.p233-stat small{display:block;color:#7c8580;font-size:.62rem}.p233-stat b{display:block;color:#173f2c;font-size:1.12rem;margin-top:3px}.p233-stat b.orange{color:#d97c00}.p233-stat b.red{color:#bd3e34}
 .p233-listitem{background:#fff;border:1px solid #dfe7e1;border-radius:14px;margin-bottom:8px;padding:12px 13px}.p233-listtop{display:flex;justify-content:space-between;gap:8px;align-items:center}.p233-listtop b{font-size:.8rem;color:#173e2b}.p233-listtop strong{font-size:.82rem;color:#17623a}.p233-meta{font-size:.65rem;color:#7c8580;margin-top:4px;line-height:1.45}.p233-badge{display:inline-block;border-radius:14px;padding:4px 8px;background:#edf6ef;color:#17623a;font-size:.61rem;font-weight:850}.p233-badge.wait{background:#fff0df;color:#9b5900}
 @media(max-width:520px){.p233{padding-left:12px;padding-right:12px}.p233-head h2{font-size:1.32rem}.p233-hero-amount{font-size:2.15rem}.p233-card{padding:11px 12px}.p233-grid2{grid-template-columns:1fr 1fr}}
-</style>\n</head>
+</style>\n
+<style id="p235-pagos-visual">
+.p235-wrap{max-width:790px;margin:0 auto;padding:8px 14px 90px}.p235-head{display:flex;align-items:center;justify-content:space-between;margin:4px 0 14px}.p235-back{border:0;background:transparent;color:#164c35;font-weight:800;padding:8px 0}.p235-title{font-size:1.35rem;font-weight:900;color:#153f2e;margin:0}.p235-sub{font-size:.78rem;color:#7b8580;margin-top:3px}.p235-summary{background:linear-gradient(135deg,#0d5a39,#0b442f);color:white;border-radius:18px;padding:18px;box-shadow:0 8px 24px rgba(10,60,40,.14);margin-bottom:12px}.p235-summary small{opacity:.8;font-weight:700}.p235-summary strong{display:block;font-size:1.7rem;margin-top:4px}.p235-card{background:#fff;border:1px solid #e3e9e5;border-radius:16px;padding:14px;margin-bottom:10px;box-shadow:0 5px 18px rgba(24,55,40,.06)}.p235-week{display:flex;justify-content:space-between;gap:12px;align-items:center}.p235-week b{color:#174a34}.p235-week .amt{font-size:1.08rem;font-weight:900;color:#12673f}.p235-meta{font-size:.73rem;color:#87908b;margin-top:4px}.p235-chip{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;background:#e9f5ec;color:#17643e;font-size:.68rem;font-weight:800;margin-top:8px}.p235-debt-top{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end}.p235-debt-top strong{font-size:1.35rem;color:#b74337}.p235-progress{height:8px;border-radius:99px;background:#edf1ee;overflow:hidden;margin:11px 0 6px}.p235-progress i{display:block;height:100%;background:#2d7b50;border-radius:99px}.p235-payrow{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid #edf1ee;font-size:.76rem}.p235-empty{text-align:center;padding:28px 18px;background:#fff;border:1px solid #e3e9e5;border-radius:16px;color:#68756f}.p235-empty .ico{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;margin:0 auto 10px;background:#eef6f0;color:#17643e}.p235-section{font-size:.75rem;font-weight:900;color:#174a34;text-transform:uppercase;letter-spacing:.04em;margin:16px 2px 8px}@media(max-width:600px){.p235-wrap{padding-left:12px;padding-right:12px}.p235-summary strong{font-size:1.5rem}.p235-title{font-size:1.25rem}}
+</style>
+</head>
 <body>
 
 <div id="screen-login" class="screen active">
@@ -11181,7 +11185,11 @@ function n215ImprimirNominaActual(){
     return '<tr><td><strong>'+n215Esc(a.nombre)+'</strong></td><td>'+n215Esc(a.tipo)+'</td><td class="num">'+Number(dias||0).toFixed(1)+'</td><td class="num">'+n215Money(r.sueldoBase)+'</td><td class="num">'+n215Money(a.totalSueldo)+'</td><td class="num">'+Number(a.horasExtra||0).toFixed(1)+' h<br><small>'+n215Money(a.totalExtra)+'</small></td><td class="num">'+n215Money(bonos)+'</td><td class="num">'+n215Money(apoyos)+'</td><td class="num">-'+n215Money(prestamos)+'</td><td class="num net">'+n215Money(a.granTotal)+'</td><td>'+(a.pagado?'Pagado':'Pendiente')+'</td></tr>';
   }).join('');
   var generado=new Date().toLocaleString('es-MX');
-  var doc='<!doctype html><html><head><meta charset="utf-8"><title>Nómina semana '+c.numSemana+'</title><style>@page{size:landscape;margin:7mm}*{box-sizing:border-box}html,body{width:100%;margin:0;padding:0}body{font-family:Arial,sans-serif;color:#173d2b;font-size:9px;overflow-x:hidden}h1{margin:0;font-size:18px}h2{margin:2px 0 9px;font-size:11px;font-weight:normal;color:#555}.meta{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #17613f;padding-bottom:6px;margin-bottom:7px}.brand{font-weight:bold}.totals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin:7px 0}.box{border:1px solid #ccc;border-radius:5px;padding:5px;min-width:0}.box small{display:block;color:#666;text-transform:uppercase;font-size:8px}.box b{font-size:11px}table{width:100%;max-width:100%;border-collapse:collapse;table-layout:fixed}th{background:#17613f;color:white;text-align:left;padding:4px 3px;font-size:7.5px;white-space:nowrap}td{border-bottom:1px solid #ddd;padding:4px 3px;vertical-align:top;font-size:7.8px;overflow-wrap:anywhere}th:nth-child(1),td:nth-child(1){width:13%}th:nth-child(2),td:nth-child(2){width:7%}th:nth-child(3),td:nth-child(3){width:5%}th:nth-child(4),td:nth-child(4){width:7%}th:nth-child(5),td:nth-child(5){width:8%}th:nth-child(6),td:nth-child(6){width:8%}th:nth-child(7),td:nth-child(7){width:7%}th:nth-child(8),td:nth-child(8){width:8%}th:nth-child(9),td:nth-child(9){width:8%}th:nth-child(10),td:nth-child(10){width:9%}th:nth-child(11),td:nth-child(11){width:8%}.num{text-align:right;white-space:nowrap}.net{font-weight:bold}.foot{display:flex;justify-content:flex-end;gap:16px;margin-top:8px;font-size:10px;font-weight:bold;white-space:nowrap}.note{margin-top:8px;color:#666;font-size:8px}.no-print{margin:8px 0;text-align:right}.no-print button{padding:7px 12px;border:0;border-radius:6px;background:#17613f;color:white;font-weight:bold;font-size:10px}@media print{body{zoom:.96}.no-print{display:none}}</style></head><body><div class="no-print"><button onclick="window.print()">Imprimir / Guardar PDF</button></div><div class="meta"><div><div class="brand">Rancho Sagrado Corazón · Mootsil</div><h1>Reporte semanal de nómina</h1><h2>Semana '+c.numSemana+' · '+n215Esc(c.semanaInicio)+' a '+n215Esc(c.semanaFin)+'</h2></div><div>Generado: '+n215Esc(generado)+'</div></div><div class="totals"><div class="box"><small>Sueldos</small><b>'+n215Money(c.totalSueldos)+'</b></div><div class="box"><small>Horas extra</small><b>+'+n215Money(c.totalExtra)+'</b></div><div class="box"><small>Bonos</small><b>+'+n215Money(c.totalBonos)+'</b></div><div class="box"><small>Apoyos</small><b>+'+n215Money(c.totalApoyos)+'</b></div><div class="box"><small>Préstamos</small><b>-'+n215Money(c.totalPrestamos)+'</b></div><div class="box"><small>Neto semana</small><b>'+n215Money(c.totalNeto)+'</b></div><div class="box"><small>Pagado</small><b>'+n215Money(c.totalPagado)+'</b></div><div class="box"><small>Pendiente</small><b>'+n215Money(c.totalPendiente)+'</b></div></div><table><thead><tr><th>Colaborador</th><th>Tipo</th><th>Días</th><th>Jornal</th><th>Sueldo</th><th>H.E.</th><th>Bonos</th><th>Apoyos</th><th>Préstamos</th><th>Neto</th><th>Estado</th></tr></thead><tbody>'+rows+'</tbody></table><div class="foot"><span>Pendiente: '+n215Money(c.totalPendiente)+'</span><span>Pagado: '+n215Money(c.totalPagado)+'</span><span>Neto: '+n215Money(c.totalNeto)+'</span></div><div class="note">Reporte informativo generado desde Nómina. La impresión no registra ni modifica pagos.</div></body></html>';
+  var doc='<!doctype html><html><head><meta charset="utf-8"><title>Nómina semana '+c.numSemana+'</title><style>@page{size:landscape;margin:7mm}*{box-sizing:border-box}html,body{width:100%;margin:0;padding:0}body{font-family:Arial,sans-serif;color:#173d2b;font-size:9px;overflow-x:hidden}h1{margin:0;font-size:18px}h2{margin:2px 0 9px;font-size:11px;font-weight:normal;color:#555}.meta{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #17613f;padding-bottom:6px;margin-bottom:7px}.brand{font-weight:bold}.totals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin:7px 0}.box{border:1px solid #ccc;border-radius:5px;padding:5px;min-width:0}.box small{display:block;color:#666;text-transform:uppercase;font-size:8px}.box b{font-size:11px}table{width:100%;max-width:100%;border-collapse:collapse;table-layout:fixed}th{background:#17613f;color:white;text-align:left;padding:4px 3px;font-size:7.5px;white-space:nowrap}td{border-bottom:1px solid #ddd;padding:4px 3px;vertical-align:top;font-size:7.8px;overflow-wrap:anywhere}th:nth-child(1),td:nth-child(1){width:13%}th:nth-child(2),td:nth-child(2){width:7%}th:nth-child(3),td:nth-child(3){width:5%}th:nth-child(4),td:nth-child(4){width:7%}th:nth-child(5),td:nth-child(5){width:8%}th:nth-child(6),td:nth-child(6){width:8%}th:nth-child(7),td:nth-child(7){width:7%}th:nth-child(8),td:nth-child(8){width:8%}th:nth-child(9),td:nth-child(9){width:8%}th:nth-child(10),td:nth-child(10){width:9%}th:nth-child(11),td:nth-child(11){width:8%}.num{text-align:right;white-space:nowrap}.net{font-weight:bold}.foot{display:flex;justify-content:flex-end;gap:16px;margin-top:8px;font-size:10px;font-weight:bold;white-space:nowrap}.note{margin-top:8px;color:#666;font-size:8px}.no-print{margin:8px 0;text-align:right}.no-print button{padding:7px 12px;border:0;border-radius:6px;background:#17613f;color:white;font-weight:bold;font-size:10px}@media print{body{zoom:.96}.no-print{display:none}}</style>
+<style id="p235-pagos-visual">
+.p235-wrap{max-width:790px;margin:0 auto;padding:8px 14px 90px}.p235-head{display:flex;align-items:center;justify-content:space-between;margin:4px 0 14px}.p235-back{border:0;background:transparent;color:#164c35;font-weight:800;padding:8px 0}.p235-title{font-size:1.35rem;font-weight:900;color:#153f2e;margin:0}.p235-sub{font-size:.78rem;color:#7b8580;margin-top:3px}.p235-summary{background:linear-gradient(135deg,#0d5a39,#0b442f);color:white;border-radius:18px;padding:18px;box-shadow:0 8px 24px rgba(10,60,40,.14);margin-bottom:12px}.p235-summary small{opacity:.8;font-weight:700}.p235-summary strong{display:block;font-size:1.7rem;margin-top:4px}.p235-card{background:#fff;border:1px solid #e3e9e5;border-radius:16px;padding:14px;margin-bottom:10px;box-shadow:0 5px 18px rgba(24,55,40,.06)}.p235-week{display:flex;justify-content:space-between;gap:12px;align-items:center}.p235-week b{color:#174a34}.p235-week .amt{font-size:1.08rem;font-weight:900;color:#12673f}.p235-meta{font-size:.73rem;color:#87908b;margin-top:4px}.p235-chip{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;background:#e9f5ec;color:#17643e;font-size:.68rem;font-weight:800;margin-top:8px}.p235-debt-top{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end}.p235-debt-top strong{font-size:1.35rem;color:#b74337}.p235-progress{height:8px;border-radius:99px;background:#edf1ee;overflow:hidden;margin:11px 0 6px}.p235-progress i{display:block;height:100%;background:#2d7b50;border-radius:99px}.p235-payrow{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid #edf1ee;font-size:.76rem}.p235-empty{text-align:center;padding:28px 18px;background:#fff;border:1px solid #e3e9e5;border-radius:16px;color:#68756f}.p235-empty .ico{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;margin:0 auto 10px;background:#eef6f0;color:#17643e}.p235-section{font-size:.75rem;font-weight:900;color:#174a34;text-transform:uppercase;letter-spacing:.04em;margin:16px 2px 8px}@media(max-width:600px){.p235-wrap{padding-left:12px;padding-right:12px}.p235-summary strong{font-size:1.5rem}.p235-title{font-size:1.25rem}}
+</style>
+</head><body><div class="no-print"><button onclick="window.print()">Imprimir / Guardar PDF</button></div><div class="meta"><div><div class="brand">Rancho Sagrado Corazón · Mootsil</div><h1>Reporte semanal de nómina</h1><h2>Semana '+c.numSemana+' · '+n215Esc(c.semanaInicio)+' a '+n215Esc(c.semanaFin)+'</h2></div><div>Generado: '+n215Esc(generado)+'</div></div><div class="totals"><div class="box"><small>Sueldos</small><b>'+n215Money(c.totalSueldos)+'</b></div><div class="box"><small>Horas extra</small><b>+'+n215Money(c.totalExtra)+'</b></div><div class="box"><small>Bonos</small><b>+'+n215Money(c.totalBonos)+'</b></div><div class="box"><small>Apoyos</small><b>+'+n215Money(c.totalApoyos)+'</b></div><div class="box"><small>Préstamos</small><b>-'+n215Money(c.totalPrestamos)+'</b></div><div class="box"><small>Neto semana</small><b>'+n215Money(c.totalNeto)+'</b></div><div class="box"><small>Pagado</small><b>'+n215Money(c.totalPagado)+'</b></div><div class="box"><small>Pendiente</small><b>'+n215Money(c.totalPendiente)+'</b></div></div><table><thead><tr><th>Colaborador</th><th>Tipo</th><th>Días</th><th>Jornal</th><th>Sueldo</th><th>H.E.</th><th>Bonos</th><th>Apoyos</th><th>Préstamos</th><th>Neto</th><th>Estado</th></tr></thead><tbody>'+rows+'</tbody></table><div class="foot"><span>Pendiente: '+n215Money(c.totalPendiente)+'</span><span>Pagado: '+n215Money(c.totalPagado)+'</span><span>Neto: '+n215Money(c.totalNeto)+'</span></div><div class="note">Reporte informativo generado desde Nómina. La impresión no registra ni modifica pagos.</div></body></html>';
   var w=window.open('','_blank');
   if(!w){alert('El navegador bloqueó la ventana de impresión. Permite ventanas emergentes para Mootsil e intenta de nuevo.');return;}
   w.document.open();w.document.write(doc);w.document.close();w.focus();
@@ -11351,6 +11359,7 @@ function renderGenerarNomina(fechaRef){
     var todosUsuarios=r[0]||[], registros=r[1]||[], estados=r[2]||[], estadosExtra=r[3]||[];
     var ajustesSemana=r[11]||[];
     var cfg={}; (r[4]||[]).forEach(function(c){cfg[c.clave]=c.valor;});
+    var mostrarReciboColaborador=['true','1','si','sí','on'].indexOf(String(cfg.mostrar_recibo_colaborador||'').toLowerCase())>=0;
     var tarifa=parseFloat(cfg.tarifa_hora_extra)||70;
     var permisosAprobados=r[5]||[], bonosActivos=r[6]||[], bonoBeneficiarios=r[7]||[];
     var prestamosActivos=r[8]||[], pagosSemanaPrestamos=r[9]||[], horasExtraAsignadas=r[10]||[];
@@ -11922,7 +11931,7 @@ function abrirRecibo(d){
   modal.id='rn81-modal';
   modal._reciboData=d;
   modal.innerHTML='<style>'+
-    '#rn81-modal{position:fixed;inset:0;background:rgba(10,35,24,.42);z-index:9999;display:flex;align-items:center;justify-content:center;padding:18px}.rn81-card{width:min(620px,100%);max-height:88vh;overflow:auto;background:#fff;border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.24)}.rn81-brand{background:#0e5137;color:#fff;padding:16px 18px;border-radius:16px 16px 0 0}.rn81-brand-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.rn81-brand h2{margin:0;font-size:1.18rem}.rn81-rancho{margin-top:3px;font-size:.76rem;color:#ffd080;font-weight:750}.rn81-folio{font-size:.6rem;color:#d8eee3;text-align:right}.rn81-body{padding:16px 18px}.rn81-person{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#f6f9f7;border:1px solid #e0e8e3;border-radius:10px;padding:10px;margin-bottom:10px;font-size:.68rem}.rn81-person strong{display:block;color:var(--verde);font-size:.78rem}.rn81-att{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 11px;font-size:.65rem;color:var(--gris-5)}.rn81-att span{background:#f4f6f5;padding:4px 7px;border-radius:999px}.rn81-ret{background:#fff7e8!important;color:#835b08!important}.rn81-row{display:flex;justify-content:space-between;gap:12px;padding:8px 2px;border-bottom:1px solid #edf1ee;font-size:.74rem}.rn99-head,.rn99-row{display:grid;grid-template-columns:.72fr 1.8fr .65fr;gap:9px;align-items:start}.rn99-head{padding:5px 2px;border-bottom:1px solid #dfe6e2;font-size:.61rem;font-weight:800;color:var(--gris-5);text-transform:uppercase}.rn99-row strong{text-align:right}.rn99-desc{color:var(--gris-5);font-size:.68rem}.rn81-row strong{color:var(--verde)}.rn81-row strong.neg{color:var(--rojo)}.rn81-total{display:flex;justify-content:space-between;align-items:center;background:#eef7f1;border:1px solid #d3e7d9;border-radius:10px;padding:11px 12px;margin-top:10px}.rn81-total span{font-size:.7rem;font-weight:800;color:var(--verde)}.rn81-total strong{font-size:1.15rem;color:var(--verde)}.rn81-note{margin-top:10px;font-size:.61rem;color:var(--gris-5);line-height:1.4}.rn81-actions{display:flex;justify-content:flex-end;gap:8px;padding:0 18px 16px}.rn81-actions button{height:38px;border-radius:9px;padding:0 14px;font-weight:800}.rn81-close{background:#fff;border:1px solid var(--gris-2);color:var(--verde)}.rn81-pdf{background:var(--verde-mid);border:0;color:#fff}@media(max-width:560px){.rn81-person{grid-template-columns:1fr}.rn81-brand-top{flex-direction:column}.rn81-folio{text-align:left}}'+
+    '#rn81-modal{position:fixed;inset:0;background:rgba(10,35,24,.42);z-index:9999;display:flex;align-items:center;justify-content:center;padding:18px}.rn81-card{width:min(620px,100%);max-height:88vh;overflow:auto;background:#fff;border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.24)}.rn81-brand{background:#0e5137;color:#fff;padding:16px 18px;border-radius:16px 16px 0 0}.rn81-brand-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.rn81-brand h2{margin:0;font-size:1.18rem}.rn81-rancho{margin-top:3px;font-size:.76rem;color:#F5A623;font-weight:850}.rn81-folio{font-size:.6rem;color:#d8eee3;text-align:right}.rn81-body{padding:16px 18px}.rn81-person{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#f6f9f7;border:1px solid #e0e8e3;border-radius:10px;padding:10px;margin-bottom:10px;font-size:.68rem}.rn81-person strong{display:block;color:var(--verde);font-size:.78rem}.rn81-att{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 11px;font-size:.65rem;color:var(--gris-5)}.rn81-att span{background:#f4f6f5;padding:4px 7px;border-radius:999px}.rn81-ret{background:#fff7e8!important;color:#835b08!important}.rn81-row{display:flex;justify-content:space-between;gap:12px;padding:8px 2px;border-bottom:1px solid #edf1ee;font-size:.74rem}.rn99-head,.rn99-row{display:grid;grid-template-columns:.72fr 1.8fr .65fr;gap:9px;align-items:start}.rn99-head{padding:5px 2px;border-bottom:1px solid #dfe6e2;font-size:.61rem;font-weight:800;color:var(--gris-5);text-transform:uppercase}.rn99-row strong{text-align:right}.rn99-desc{color:var(--gris-5);font-size:.68rem}.rn81-row strong{color:var(--verde)}.rn81-row strong.neg{color:var(--rojo)}.rn81-total{display:flex;justify-content:space-between;align-items:center;background:#eef7f1;border:1px solid #d3e7d9;border-radius:10px;padding:11px 12px;margin-top:10px}.rn81-total span{font-size:.7rem;font-weight:800;color:var(--verde)}.rn81-total strong{font-size:1.15rem;color:var(--verde)}.rn81-note{margin-top:10px;font-size:.61rem;color:var(--gris-5);line-height:1.4}.rn81-actions{display:flex;justify-content:flex-end;gap:8px;padding:0 18px 16px}.rn81-actions button{height:38px;border-radius:9px;padding:0 14px;font-weight:800}.rn81-close{background:#fff;border:1px solid var(--gris-2);color:var(--verde)}.rn81-pdf{background:var(--verde-mid);border:0;color:#fff}@media(max-width:560px){.rn81-person{grid-template-columns:1fr}.rn81-brand-top{flex-direction:column}.rn81-folio{text-align:left}}'+
   '</style>'+
   '<div class="rn81-card">'+
     '<div class="rn81-brand"><div class="rn81-brand-top"><div><h2>Mootsil</h2><div class="rn81-rancho">Rancho Sagrado Corazón · Zarzamora</div><div style="font-size:.7rem;margin-top:4px">Recibo de Nómina</div></div><div class="rn81-folio">'+folio+'<br>Semana '+d.numSemana+'</div></div></div>'+
@@ -11931,13 +11940,12 @@ function abrirRecibo(d){
       '<div class="rn81-att"><span>Días pagados: '+(r.diasPagados||0)+'</span><span>H.E.: '+(d.horasExtra||0).toFixed(1)+' h</span><span class="rn81-ret">Retardos: '+(r.retardos||0)+' · informativo, sin descuento automático</span></div>'+
       filas+
       '<div class="rn81-total"><span>NETO A PAGAR</span><strong>$'+d.granTotal.toFixed(2)+'</strong></div>'+
-      '<div class="rn81-note">El registro de retardos es informativo y no genera descuento automático de salario. Al imprimir o descargar se genera una hoja Carta con <strong>2 recibos media carta horizontal</strong>: Administración y Empleado. Estatus: '+(d.nominaCompleta?'Pagada':'Pendiente de pago')+'.</div>'+
+      '<div class="rn81-note">El registro de retardos es informativo y no genera descuento automático de salario. Al descargar se genera el recibo de nómina autorizado. Estatus: '+(d.nominaCompleta?'Pagada':'Pendiente de pago')+'.</div>'+
     '</div>'+
-    '<div class="rn81-actions"><button class="rn81-close" id="rn81-close">Cerrar</button><button class="rn81-close" id="rn83-print">🖨️ Imprimir</button><button class="rn81-pdf" id="rn81-pdf">📄 Descargar PDF</button></div>'+
+    '<div class="rn81-actions"><button class="rn81-close" id="rn81-close">Cerrar</button><button class="rn81-pdf" id="rn81-pdf">📄 Descargar PDF</button></div>'+
   '</div>';
   document.body.appendChild(modal);
   document.getElementById('rn81-close').onclick=function(){modal.remove();};
-  document.getElementById('rn83-print').onclick=function(){imprimirReciboNominaMediaCarta(d,folio);};
   document.getElementById('rn81-pdf').onclick=function(){generarPdfReciboNomina(d,folio,this);};
 }
 
@@ -12837,63 +12845,22 @@ function actualizarAvatarHeader(){
 
 function renderPagosHistorial(){
   var body=document.getElementById('op-body');
-  body.innerHTML='<div class="seccion-titulo">📊 Historial de pagos</div><div class="loading">Cargando...</div>';
+  body.innerHTML='<div class="p235-wrap"><div class="loading">Cargando historial...</div></div>';
   Promise.all([
     from('pagos_semana_estado').select('*').eq('operario_id',usuario.id).eq('estado','pagado').order('semana_inicio',{ascending:false}).limit(25).get(),
     from('pagos_extra_estado').select('*').eq('operario_id',usuario.id).eq('estado','pagado').order('semana_inicio',{ascending:false}).limit(25).get()
   ]).then(function(r){
-    var normales=r[0]||[], extras=r[1]||[];
-    var porSemana={};
-    normales.forEach(function(p){
-      if(!porSemana[p.semana_inicio]) porSemana[p.semana_inicio]={semana_inicio:p.semana_inicio,semana_fin:p.semana_fin,sueldo:0,extra:0,pagado_en:p.pagado_en};
-      porSemana[p.semana_inicio].sueldo=parseFloat(p.monto_pagado)||0;
-      if(p.pagado_en>porSemana[p.semana_inicio].pagado_en) porSemana[p.semana_inicio].pagado_en=p.pagado_en;
-    });
-    extras.forEach(function(p){
-      if(!porSemana[p.semana_inicio]) porSemana[p.semana_inicio]={semana_inicio:p.semana_inicio,semana_fin:p.semana_fin,sueldo:0,extra:0,pagado_en:p.pagado_en};
-      porSemana[p.semana_inicio].extra=parseFloat(p.monto_pagado)||0;
-      if(p.pagado_en>porSemana[p.semana_inicio].pagado_en) porSemana[p.semana_inicio].pagado_en=p.pagado_en;
-    });
+    var normales=r[0]||[], extras=r[1]||[], porSemana={};
+    normales.forEach(function(p){if(!porSemana[p.semana_inicio])porSemana[p.semana_inicio]={semana_inicio:p.semana_inicio,semana_fin:p.semana_fin,sueldo:0,extra:0,pagado_en:p.pagado_en};porSemana[p.semana_inicio].sueldo=parseFloat(p.monto_pagado)||0;});
+    extras.forEach(function(p){if(!porSemana[p.semana_inicio])porSemana[p.semana_inicio]={semana_inicio:p.semana_inicio,semana_fin:p.semana_fin,sueldo:0,extra:0,pagado_en:p.pagado_en};porSemana[p.semana_inicio].extra=parseFloat(p.monto_pagado)||0;});
     var semanas=Object.values(porSemana).sort(function(a,b){return b.semana_inicio.localeCompare(a.semana_inicio);});
-    if(!semanas.length){body.innerHTML='<div class="seccion-titulo">📊 Historial de pagos</div><div class="empty">Aún no tienes pagos registrados.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderPagosMenu()">← Volver a Pagos</button>';return;}
-    var totalHistorico=semanas.reduce(function(s,w){return s+w.sueldo+w.extra;},0);
-    var html='<div class="seccion-titulo">📊 Historial de pagos</div><p class="hint" style="margin-bottom:.75rem;">Total pagado (últimas '+semanas.length+' semanas): <strong>$'+totalHistorico.toFixed(2)+'</strong></p>';
-    html+=semanas.map(function(w){
-      var f=w.pagado_en?new Date(w.pagado_en).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}):'';
-      var total=w.sueldo+w.extra;
-      return '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem;">Semana del '+w.semana_inicio+' al '+w.semana_fin+'</strong><strong style="color:var(--verde-mid);">$'+total.toFixed(2)+'</strong></div><div class="orden-meta">'+(w.sueldo?'Sueldo: $'+w.sueldo.toFixed(2)+' ':'')+(w.extra?' · Hora extra: $'+w.extra.toFixed(2):'')+'<br/>Pagado el '+f+'</div></div>';
-    }).join('');
-    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderPagosMenu()">← Volver a Pagos</button>';
-  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
-}
-
-function renderPagosMenu(){
-  if(usuario.rol==='labores_eventual'){renderMisPagosEventuales();return;}
-  renderCartera(new Date());
-}
-
-function renderMisPagosEventuales(){
-  var body=document.getElementById('op-body');
-  body.innerHTML='<div class="seccion-titulo">💳 Mis pagos</div><div class="loading">Cargando...</div>';
-  from('pagos_eventuales').select('*').eq('operario_id',usuario.id).order('fecha',{ascending:false}).get().then(function(rows){
-    rows=rows||[];
-    var total=rows.reduce(function(s,p){return s+parseFloat(p.monto);},0);
-    var html='<div class="seccion-titulo">💳 Mis pagos</div><p class="hint" style="margin-bottom:.75rem;">Como colaborador eventual, se te paga por día trabajado — aquí ves lo que se te ha registrado.</p>';
-    html+='<div class="form-card" style="text-align:center;"><div style="font-size:.8rem;color:var(--gris-3);">Total recibido</div><div style="font-size:1.8rem;font-weight:800;color:var(--verde-mid);">$'+total.toFixed(2)+'</div></div>';
-    if(!rows.length){html+='<div class="empty" style="margin-top:1rem;">Aún no tienes pagos registrados.</div>';}
-    else html+=rows.map(function(p){
-      var f=new Date(p.fecha+'T00:00:00').toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});
-      return '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.85rem;text-transform:capitalize;">'+f+'</strong><strong style="color:var(--verde-mid);">$'+parseFloat(p.monto).toFixed(2)+'</strong></div>'+(p.concepto?'<div class="orden-meta">'+p.concepto+'</div>':'')+'</div>';
-    }).join('');
-    body.innerHTML=html;
-  }).catch(function(e){body.innerHTML='<div class="empty">No se pudieron cargar tus pagos.<br/><span style="font-size:.7rem;color:var(--gris-3);">('+e.message+')</span></div>';});
-}
-
-function inicioDeSemana(fecha){
-  var d=new Date(fecha); d.setHours(0,0,0,0);
-  var dia=d.getDay();
-  d.setDate(d.getDate()-((dia+6)%7));
-  return d;
+    var total=semanas.reduce(function(a,w){return a+w.sueldo+w.extra;},0);
+    var html='<div class="p235-wrap"><button class="p235-back" onclick="renderPagosMenu()">← Volver a Pagos</button><div class="p235-head"><div><h2 class="p235-title">Historial de pagos</h2><div class="p235-sub">Consulta los depósitos que ya recibiste.</div></div></div>';
+    if(!semanas.length){html+='<div class="p235-empty"><div class="ico">'+c231Icon('history')+'</div><b>Aún no tienes pagos registrados</b><div class="p235-meta">Cuando Administración registre un pago, aparecerá aquí.</div></div></div>';body.innerHTML=html;return;}
+    html+='<div class="p235-summary"><small>TOTAL RECIBIDO</small><strong>$'+total.toFixed(2)+'</strong><small>'+semanas.length+' semana(s) pagada(s)</small></div><div class="p235-section">Pagos realizados</div>';
+    semanas.forEach(function(w){var t=w.sueldo+w.extra, ns=numeroSemanaISO(new Date(w.semana_inicio+'T00:00:00'));html+='<div class="p235-card"><div class="p235-week"><div><b>Semana '+ns+'</b><div class="p235-meta">'+w.semana_inicio+' al '+w.semana_fin+'</div></div><div class="amt">$'+t.toFixed(2)+'</div></div><div class="p235-meta">Labores $'+w.sueldo.toFixed(2)+(w.extra>0?' · Horas extra $'+w.extra.toFixed(2):'')+'</div><span class="p235-chip">✓ Pagado'+(w.pagado_en?' · '+String(w.pagado_en).slice(0,10):'')+'</span></div>';});
+    html+='</div>';body.innerHTML=html;
+  }).catch(function(e){body.innerHTML='<div class="p235-wrap"><button class="p235-back" onclick="renderPagosMenu()">← Volver a Pagos</button><div class="p235-empty">No fue posible cargar el historial.</div></div>';});
 }
 
 function renderPagoSemana(fechaRef){
@@ -13030,36 +12997,18 @@ function renderPagoHorasExtras(fechaRef){
 
 function renderDebo(){
   var body=document.getElementById('op-body');
-  body.innerHTML='<div class="seccion-titulo">📝 Debo</div><div class="loading">Cargando...</div>';
+  body.innerHTML='<div class="p235-wrap"><div class="loading">Cargando préstamos y adeudos...</div></div>';
   from('prestamos').select('*').eq('operario_id',usuario.id).eq('estado','activo').order('creado_en',{ascending:false}).get().then(function(prestamos){
-    if(!prestamos||!prestamos.length){
-      body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📝 Debo<button type="button" onclick="renderPagosMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Pagos</button></div><div class="empty">🎉 No tienes préstamos ni adelantos activos.</div>';
-      return;
-    }
+    var base='<div class="p235-wrap"><button class="p235-back" onclick="renderPagosMenu()">← Volver a Pagos</button><div class="p235-head"><div><h2 class="p235-title">Préstamos y adeudos</h2><div class="p235-sub">Consulta tus saldos y descuentos programados.</div></div></div>';
+    if(!prestamos||!prestamos.length){body.innerHTML=base+'<div class="p235-empty"><div class="ico">'+c231Icon('debt')+'</div><b>No tienes préstamos ni adelantos activos</b><div class="p235-meta">Cuando exista un movimiento autorizado por Administración, podrás consultar aquí su saldo y avance.</div></div></div>';return;}
     var ids=prestamos.map(function(p){return p.id;});
     from('prestamo_pagos').select('*').in('prestamo_id',ids).order('numero_pago',{ascending:true}).get().then(function(pagos){
-      var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📝 Debo<button type="button" onclick="renderPagosMenu()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Pagos</button></div>';
-      html+='<p class="hint" style="margin-bottom:1rem;">Tienes '+prestamos.length+' préstamo(s) activo(s)</p>';
-      prestamos.forEach(function(p){
-        var pagosDe=pagos.filter(function(x){return x.prestamo_id===p.id;});
-        var pagados=pagosDe.filter(function(x){return x.estado==='descontado';});
-        var pendientes=pagosDe.filter(function(x){return x.estado==='pendiente';});
-        var restante=pendientes.reduce(function(s,x){return s+parseFloat(x.monto);},0);
-        var proximo=pendientes.sort(function(a,b){return a.semana_inicio.localeCompare(b.semana_inicio);})[0];
-        var numSemProx=proximo?numeroSemanaISO(new Date(proximo.semana_inicio+'T00:00:00')):null;
-        html+='<div class="form-card" style="margin-bottom:.75rem;"><div style="font-weight:800;font-size:.95rem;">'+p.concepto+'</div><div class="hint" style="margin:.2rem 0 .6rem;">Monto total: $'+parseFloat(p.monto_total).toFixed(2)+'</div>';
-        html+=pagosDe.map(function(pg){
-          var ns=numeroSemanaISO(new Date(pg.semana_inicio+'T00:00:00'));
-          var pagado=pg.estado==='descontado';
-          return '<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--gris-1);"><span>Pago '+pg.numero_pago+' de '+p.num_pagos+' · Sem '+ns+'</span><span style="font-weight:700;color:'+(pagado?'var(--verde-mid)':'var(--tierra)')+';">$'+parseFloat(pg.monto).toFixed(2)+' '+(pagado?'✅':'⏳')+'</span></div>';
-        }).join('');
-        html+='<div style="margin-top:.6rem;padding-top:.5rem;border-top:2px solid var(--gris-1);display:flex;justify-content:space-between;"><strong style="font-size:.85rem;">Resta por pagar</strong><strong style="font-size:.95rem;color:var(--tierra);">$'+restante.toFixed(2)+'</strong></div>';
-        if(proximo) html+='<div class="hint" style="margin-top:.2rem;">Próximo descuento: semana '+numSemProx+' ('+proximo.semana_inicio+')</div>';
-        html+='</div>';
-      });
-      body.innerHTML=html;
+      var totalPend=0;prestamos.forEach(function(p){totalPend+=(pagos||[]).filter(function(x){return x.prestamo_id===p.id&&x.estado==='pendiente';}).reduce(function(a,x){return a+(parseFloat(x.monto)||0);},0);});
+      var html=base+'<div class="p235-summary"><small>SALDO PENDIENTE</small><strong>$'+totalPend.toFixed(2)+'</strong><small>'+prestamos.length+' movimiento(s) activo(s)</small></div><div class="p235-section">Detalle</div>';
+      prestamos.forEach(function(p){var pp=(pagos||[]).filter(function(x){return x.prestamo_id===p.id;}), done=pp.filter(function(x){return x.estado==='descontado';}), pend=pp.filter(function(x){return x.estado==='pendiente';}), restante=pend.reduce(function(a,x){return a+(parseFloat(x.monto)||0);},0), total=parseFloat(p.monto_total)||0, pct=total?Math.max(0,Math.min(100,(total-restante)/total*100)):0, prox=pend.slice().sort(function(a,b){return a.semana_inicio.localeCompare(b.semana_inicio);})[0];html+='<div class="p235-card"><div class="p235-debt-top"><div><b>'+p.concepto+'</b><div class="p235-meta">Monto original $'+total.toFixed(2)+' · '+done.length+' de '+pp.length+' descuento(s) aplicado(s)</div></div><strong>$'+restante.toFixed(2)+'</strong></div><div class="p235-progress"><i style="width:'+pct.toFixed(0)+'%"></i></div><div class="p235-meta">'+pct.toFixed(0)+'% cubierto'+(prox?' · Próximo descuento: semana '+numeroSemanaISO(new Date(prox.semana_inicio+'T00:00:00')):'')+'</div>';pp.forEach(function(pg){html+='<div class="p235-payrow"><span>Pago '+pg.numero_pago+' · Semana '+numeroSemanaISO(new Date(pg.semana_inicio+'T00:00:00'))+'</span><b style="color:'+(pg.estado==='descontado'?'#17643e':'#a66d00')+'">$'+parseFloat(pg.monto).toFixed(2)+' '+(pg.estado==='descontado'?'✓':'⌛')+'</b></div>';});html+='</div>';});
+      html+='</div>';body.innerHTML=html;
     });
-  }).catch(function(e){body.innerHTML='<div class="empty">Error: '+e.message+'</div><button class="btn-back" style="margin-top:1rem;" onclick="renderPagosMenu()">← Volver a Pagos</button>';});
+  }).catch(function(e){body.innerHTML='<div class="p235-wrap"><button class="p235-back" onclick="renderPagosMenu()">← Volver a Pagos</button><div class="p235-empty">No fue posible cargar préstamos y adeudos.</div></div>';});
 }
 
 function renderCartera(fechaRef){
@@ -13088,6 +13037,7 @@ function renderCartera(fechaRef){
     var estSemana=r[2]&&r[2][0];
     var estExtra=r[3]&&r[3][0];
     var cfg={}; (r[4]||[]).forEach(function(c){cfg[c.clave]=c.valor;});
+    var mostrarReciboColaborador=['true','1','si','sí','on'].indexOf(String(cfg.mostrar_recibo_colaborador||'').toLowerCase())>=0;
     var tarifa=parseFloat(cfg.tarifa_hora_extra)||70;
     var bonosActivos=r[5]||[];
     var prestamosActivos=r[6]||[];
@@ -13147,7 +13097,7 @@ function renderCartera(fechaRef){
       html+='<div class="p233-weeknav"><button class="p233-pill" id="cart-ant">← Semana anterior</button>'+(esSemanaActual?'':'<button class="p233-pill" id="cart-sig">Semana siguiente →</button>')+'</div>';
       html+='<section class="p233-hero"><div class="p233-fieldmark">'+c231Icon('payments')+'</div><div class="p233-hero-kicker">POR RECIBIR ESTA SEMANA</div><div class="p233-hero-week">Semana '+numSemana+' · '+rango+'</div><div class="p233-hero-amount">$'+total.toFixed(2)+'</div><div class="p233-status '+(todoLoAplicablePagado?'ok':'')+'">'+(todoLoAplicablePagado?'✓ Depositado':'⌛ Pendiente de depósito')+'</div></section>';
       html+='<div class="p233-note"><strong>Nómina oficial.</strong> Este total corresponde a lo registrado en Administración → Caja → Nómina.</div>';
-      html+='<section class="p233-card"><div class="p233-card-title">¿De dónde sale mi pago?</div>';
+      html+='<section class="p233-card"><div class="p233-card-title">Detalle de mi pago</div>';
       html+='<div class="p233-row"><span class="p233-ic p233-green">'+c231Icon('money')+'</span><span class="p233-copy"><b>Labores · sueldo</b><small>'+diasPagados.toFixed(1)+' días pagados</small></span><span class="p233-val">+$'+totalSueldo.toFixed(2)+'</span></div>';
       if(hayExtra) html+='<div class="p233-row" onclick="renderPagoHorasExtras(new Date(\''+semanaInicio+'T00:00:00\'))" style="cursor:pointer"><span class="p233-ic p233-orange">'+c231Icon('clock')+'</span><span class="p233-copy"><b>Horas extra</b><small>'+horasExtra.toFixed(1)+' h autorizadas · toca para ver detalle</small></span><span class="p233-val">+$'+totalExtra.toFixed(2)+'</span></div>';
       bonosQueCalifican.forEach(function(b){var conceptoBono=bo97ConceptoBono(b);html+='<div class="p233-row"><span class="p233-ic p233-blue">'+c231Icon('shield')+'</span><span class="p233-copy"><b>Bono</b><small>'+conceptoBono+'</small></span><span class="p233-val">+$'+parseFloat(b.monto||0).toFixed(2)+'</span></div>';});
@@ -13155,7 +13105,7 @@ function renderCartera(fechaRef){
       deducciones.forEach(function(d){var pr=prestamosActivos.find(function(p){return p.id===d.prestamo_id;});html+='<div class="p233-row"><span class="p233-ic p233-red">'+c231Icon('debt')+'</span><span class="p233-copy"><b>'+(pr?pr.concepto:'Préstamo / adeudo')+'</b><small>Descuento programado · pago '+d.numero_pago+'</small></span><span class="p233-val red">-$'+parseFloat(d.monto).toFixed(2)+'</span></div>';});
       if(resumen.retardos) html+='<div class="p233-row"><span class="p233-ic p233-orange">'+c231Icon('clock')+'</span><span class="p233-copy"><b>Retardo</b><small>'+resumen.retardos+' registro(s) · informativo, sin descuento automático</small></span><span class="p233-val">—</span></div>';
       html+='<div class="p233-net"><span>Neto de la semana</span><strong>$'+total.toFixed(2)+'</strong></div></section>';
-      html+='<button type="button" id="cart-recibo" class="p233-mainbtn">'+c231Icon('receipt')+' Ver recibo de nómina</button>';
+      if(mostrarReciboColaborador) html+='<button type="button" id="cart-recibo" class="p233-mainbtn">'+c231Icon('receipt')+' Ver recibo de nómina</button>';
       html+='<div class="p233-grid2"><button type="button" id="c231-hist" class="p233-softbtn">'+c231Icon('history')+' Historial</button><button type="button" id="c231-debo" class="p233-softbtn">'+c231Icon('debt')+' Préstamos / adeudos</button></div>';
       html+='</div>';
 
@@ -16500,7 +16450,11 @@ C087
     w.document.open();
     w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+esc(title)+'</title><style>'+
       '@page{size:letter;margin:12mm}body{font-family:Arial,sans-serif;color:#173b2e;font-size:11px}h1{font-size:22px;margin:0}h2{font-size:15px;margin:18px 0 7px}.head{border-bottom:3px solid #17633f;padding-bottom:10px;margin-bottom:12px}.muted{color:#66756e}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.card{border:1px solid #cfd9d4;border-radius:8px;padding:9px}.card b{display:block;margin-bottom:4px}table{width:100%;border-collapse:collapse;margin-top:8px}th{background:#14583d;color:#fff;text-align:left;padding:6px;font-size:9px}td{border-bottom:1px solid #dde4e0;padding:6px;vertical-align:top}.num{text-align:right;white-space:nowrap}.foot{margin-top:18px;border-top:1px solid #ccd6d1;padding-top:8px;font-size:9px;color:#66756e}@media print{button{display:none}}'+
-      '</style></head><body>'+html+'<script>window.onload=function(){setTimeout(function(){window.print()},200)}<\/script></body></html>');
+      '</style>
+<style id="p235-pagos-visual">
+.p235-wrap{max-width:790px;margin:0 auto;padding:8px 14px 90px}.p235-head{display:flex;align-items:center;justify-content:space-between;margin:4px 0 14px}.p235-back{border:0;background:transparent;color:#164c35;font-weight:800;padding:8px 0}.p235-title{font-size:1.35rem;font-weight:900;color:#153f2e;margin:0}.p235-sub{font-size:.78rem;color:#7b8580;margin-top:3px}.p235-summary{background:linear-gradient(135deg,#0d5a39,#0b442f);color:white;border-radius:18px;padding:18px;box-shadow:0 8px 24px rgba(10,60,40,.14);margin-bottom:12px}.p235-summary small{opacity:.8;font-weight:700}.p235-summary strong{display:block;font-size:1.7rem;margin-top:4px}.p235-card{background:#fff;border:1px solid #e3e9e5;border-radius:16px;padding:14px;margin-bottom:10px;box-shadow:0 5px 18px rgba(24,55,40,.06)}.p235-week{display:flex;justify-content:space-between;gap:12px;align-items:center}.p235-week b{color:#174a34}.p235-week .amt{font-size:1.08rem;font-weight:900;color:#12673f}.p235-meta{font-size:.73rem;color:#87908b;margin-top:4px}.p235-chip{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;background:#e9f5ec;color:#17643e;font-size:.68rem;font-weight:800;margin-top:8px}.p235-debt-top{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end}.p235-debt-top strong{font-size:1.35rem;color:#b74337}.p235-progress{height:8px;border-radius:99px;background:#edf1ee;overflow:hidden;margin:11px 0 6px}.p235-progress i{display:block;height:100%;background:#2d7b50;border-radius:99px}.p235-payrow{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid #edf1ee;font-size:.76rem}.p235-empty{text-align:center;padding:28px 18px;background:#fff;border:1px solid #e3e9e5;border-radius:16px;color:#68756f}.p235-empty .ico{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;margin:0 auto 10px;background:#eef6f0;color:#17643e}.p235-section{font-size:.75rem;font-weight:900;color:#174a34;text-transform:uppercase;letter-spacing:.04em;margin:16px 2px 8px}@media(max-width:600px){.p235-wrap{padding-left:12px;padding-right:12px}.p235-summary strong{font-size:1.5rem}.p235-title{font-size:1.25rem}}
+</style>
+</head><body>'+html+'<script>window.onload=function(){setTimeout(function(){window.print()},200)}<\/script></body></html>');
     w.document.close();
   }
   function header(fecha,cut){
