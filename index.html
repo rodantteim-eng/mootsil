@@ -971,6 +971,28 @@ body.c140-preinc .op-body-shell{padding-bottom:78px}
 .c224-filterbar button.active{background:var(--verde);color:#fff;border-color:var(--verde)}
 </style>
 
+
+<style id="c225-colaborador-simple">
+.c225-task-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:0 0 12px}
+.c225-task-tabs .rep-view-btn{padding:9px 6px;font-size:.76rem}
+.c225-card-actions{margin-top:10px}
+.c225-card-actions button{width:100%;padding:10px 12px;border-radius:10px;font-weight:800}
+.c225-detail{max-width:680px;margin:0 auto}
+.c225-back{border:0;background:none;color:var(--verde);font-weight:800;padding:4px 0 12px;cursor:pointer}
+.c225-eyebrow{font-size:.72rem;font-weight:850;color:var(--tierra);letter-spacing:.05em;margin-bottom:4px}
+.c225-detail h2{margin:0;color:var(--verde);font-size:1.45rem}
+.c225-status{display:inline-block;margin:8px 0 14px;padding:5px 10px;border-radius:999px;background:#eaf6ee;color:#17613f;font-weight:800;font-size:.72rem}
+.c225-detail-card{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#e3e8e5;border:1px solid #e3e8e5;border-radius:13px;overflow:hidden;margin-bottom:12px}
+.c225-detail-card>div{background:#fff;padding:12px}
+.c225-detail-card small,.c225-instruction small{display:block;color:#7a837e;font-size:.68rem;font-weight:800;text-transform:uppercase;margin-bottom:3px}
+.c225-detail-card strong{display:block;color:#173d2b;font-size:.9rem}
+.c225-instruction{background:#fff8e9;border:1px solid #efd79b;border-radius:12px;padding:12px;margin-bottom:10px}
+.c225-instruction strong{display:block;color:#644600;font-size:.92rem}
+.c225-simple-note{background:#eef5ff;border-radius:10px;padding:10px 12px;color:#35506d;font-size:.78rem;line-height:1.45;margin-bottom:12px}
+.c225-start{width:100%;border:0;border-radius:12px;padding:14px;background:var(--verde);color:#fff;font-weight:900;font-size:1rem;cursor:pointer}
+@media(max-width:560px){.c225-detail-card{grid-template-columns:1fr}.op-body-shell{padding-left:12px!important;padding-right:12px!important}}
+</style>
+
 </head>
 <body>
 
@@ -1054,7 +1076,7 @@ body.c140-preinc .op-body-shell{padding-bottom:78px}
   <div class="op-bottom-nav">
     <button class="op-nav-item active" id="op-nav-inicio" onclick="tabOperario('inicio')"><span class="op-nav-ic">🏠</span><span class="op-nav-lbl">Inicio</span></button>
     <button class="op-nav-item" id="op-nav-asistencia" onclick="tabOperario('asistencia')"><span class="op-nav-ic">🕐</span><span class="op-nav-lbl">Asistencia</span></button>
-    <button class="op-nav-item" id="op-nav-tareas" onclick="tabOperario('tareas')"><span class="op-nav-ic">📋</span><span class="op-nav-lbl">Tareas</span></button>
+    <button class="op-nav-item" id="op-nav-tareas" onclick="tabOperario('tareas')"><span class="op-nav-ic">📋</span><span class="op-nav-lbl">Mis tareas</span></button>
     <button class="op-nav-item" id="op-nav-pagos" onclick="tabOperario('pagos')"><span class="op-nav-ic">💰</span><span class="op-nav-lbl">Pagos</span></button>
     <button class="op-nav-item" id="op-nav-perfil" onclick="tabOperario('perfil')"><span class="op-nav-ic">👤</span><span class="op-nav-lbl">Perfil</span></button>
   </div>
@@ -1062,7 +1084,7 @@ body.c140-preinc .op-body-shell{padding-bottom:78px}
 
 <div id="screen-exito" class="screen">
   <div class="exito-ic">✅</div>
-  <div class="exito-tit">¡Labor completada!</div>
+  <div class="exito-tit">¡Avance registrado!</div>
   <div class="exito-sub" id="exito-sub">El registro se guardó correctamente.</div>
   <button class="btn-nuevo" onclick="mostrar('screen-operario');cargarTareas()">Ver mis tareas</button>
 </div>
@@ -1088,7 +1110,7 @@ body.c140-preinc .op-body-shell{padding-bottom:78px}
   </div>
 </div>
 <script>
-/* MOOTSIL C133 · Registro personal seguro: RLS + RPC administrativo */
+/* MOOTSIL C225 · Colaborador simple + Registro personal seguro: RLS + RPC administrativo */
 var ca45OtrosInventario=false;
 
 var URL_SB = 'https://ypreafyqnckswvoaerbe.supabase.co';
@@ -12343,7 +12365,7 @@ function renderEjecAplicacion(planta,tabla){
   } else {
     var evid=capturaEjec.foto?'<div style="padding:.75rem;background:var(--verde-tenue);border-radius:var(--radio);color:var(--verde);font-size:.85rem;text-align:center;margin-bottom:1rem;">✅ Evidencia capturada</div>':'';
     var herrChkAplic=capturaEjec.requiereLimpieza?'<label style="display:flex;align-items:center;gap:.6rem;padding:.75rem;background:var(--gris-1);border-radius:var(--radio);margin-top:.75rem;cursor:pointer;"><input type="checkbox" id="chk-herramienta" '+(capturaEjec.herramientaLimpia?'checked':'')+' style="width:22px;height:22px;flex-shrink:0;"><span style="font-size:.85rem;">🧹 Ya limpié y guardé mi equipo de aplicación (bomba/mochila) en su lugar</span></label>':'';
-    body.innerHTML=bar+'<div class="step-label">Paso 4 de 4</div><div class="step-title">Evidencia (obligatoria)</div><div style="display:flex;gap:8px;margin-bottom:1rem;"><button onclick="abrirCamaraApp()" style="flex:1;padding:1rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio);background:var(--verde-tenue);color:var(--verde);font-size:.9rem;font-weight:600;cursor:pointer;">📷 Cámara</button><button onclick="abrirGaleria()" style="flex:1;padding:1rem;border:1.5px solid var(--gris-2);border-radius:var(--radio);background:var(--gris-1);font-size:.9rem;cursor:pointer;">🖼️ Galería</button></div>'+evid+'<div class="resumen-card" style="margin-top:.5rem;"><div class="resumen-row"><span class="resumen-key">Fórmula</span><span class="resumen-val">'+(f.nombre||'')+'</span></div><div class="resumen-row"><span class="resumen-key">Área</span><span class="resumen-val">'+(planta?planta.nombre:'')+' · '+tabla.nombre+'</span></div></div>'+herrChkAplic+'<div class="nav-row"><button class="btn-back" onclick="pasoEjec--;renderEjec()">← Atrás</button><button class="btn-next" onclick="guardarEjec()" style="background:var(--tierra)">✅ Guardar</button></div>';
+    body.innerHTML=bar+'<div class="step-label">Paso 4 de 4</div><div class="step-title">Evidencia (obligatoria)</div><div style="display:flex;gap:8px;margin-bottom:1rem;"><button onclick="abrirCamaraApp()" style="flex:1;padding:1rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio);background:var(--verde-tenue);color:var(--verde);font-size:.9rem;font-weight:600;cursor:pointer;">📷 Cámara</button><button onclick="abrirGaleria()" style="flex:1;padding:1rem;border:1.5px solid var(--gris-2);border-radius:var(--radio);background:var(--gris-1);font-size:.9rem;cursor:pointer;">🖼️ Galería</button></div>'+evid+'<div class="resumen-card" style="margin-top:.5rem;"><div class="resumen-row"><span class="resumen-key">Fórmula</span><span class="resumen-val">'+(f.nombre||'')+'</span></div><div class="resumen-row"><span class="resumen-key">Área</span><span class="resumen-val">'+(planta?planta.nombre:'')+' · '+tabla.nombre+'</span></div></div>'+herrChkAplic+'<div class="nav-row"><button class="btn-back" onclick="pasoEjec--;renderEjec()">← Atrás</button><button class="btn-next" onclick="guardarEjec()" style="background:var(--verde)">✓ Finalizar mi participación</button></div>';
     var herrChkAplicEl=document.getElementById('chk-herramienta');
     if(herrChkAplicEl) herrChkAplicEl.addEventListener('change',function(){capturaEjec.herramientaLimpia=this.checked;});
   }
@@ -13603,15 +13625,15 @@ function cargarTareas(subtab){
 }
 
 function barraSubtabsTareas(){
-  var tabs=[['porhacer','Por Hacer'],['pendientes','Pendientes'],['terminadas','Terminadas'],['rendimiento','Rendimiento']];
-  return '<div style="display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap;">'+tabs.map(function(t){
+  var tabs=[['porhacer','Hoy'],['pendientes','En curso'],['terminadas','Terminadas']];
+  return '<div class="c225-task-tabs">'+tabs.map(function(t){
     return '<button type="button" class="rep-view-btn'+(SUBTAB_TAREAS_ACTUAL===t[0]?' active':'')+'" data-subtab="'+t[0]+'" onclick="cargarTareas(\''+t[0]+'\')">'+t[1]+'</button>';
   }).join('')+'</div>';
 }
 
 function construirTarjetaTarea(t,hoy,horasExtraPorClave,componentesPorFormula,opts){
   horasExtraPorClave=horasExtraPorClave||{}; componentesPorFormula=componentesPorFormula||{};
-  var botones=(opts&&opts.sinBotones)?'':('<div style="margin-top:.75rem;display:flex;gap:8px;">'+(t.estado==='pendiente'?'<button class="btn-sm btn-iniciar" data-ini="'+t.id+'">▶ Iniciar</button>':'')+(t.estado==='en_proceso'?'<button class="btn-sm btn-completar" data-eje="'+t.id+'">✅ Registrar avance</button>':'')+'</div>');
+  var botones=(opts&&opts.sinBotones)?'':('<div class="c225-card-actions">'+(t.estado==='pendiente'?'<button class="btn-sm btn-iniciar" data-ver="'+t.id+'">Ver tarea</button>':'')+(t.estado==='en_proceso'?'<button class="btn-sm btn-completar" data-eje="'+t.id+'">Continuar</button>':'')+'</div>');
   if(t.activo_rancho_id){
     var an=t.activo_rancho?t.activo_rancho.nombre:'Herramienta';
     var atrasadaM=t.fecha_asignacion<hoy;
@@ -13718,13 +13740,7 @@ function pintarTareas(todas,hoyOrdenes,esCache,completadas,evidenciaPorOrden,com
 
     var prefijo=esCache?'<p class="hint" style="text-align:center;margin-bottom:.75rem;">📡 Sin señal — mostrando tus tareas guardadas.</p>':'';
     cont.innerHTML=prefijo+html;
-    cont.querySelectorAll('[data-ini]').forEach(function(b){b.addEventListener('click',function(){
-      var oid=this.dataset.ini;
-      var t=todas.find(function(x){return x.id===oid;});
-      if(t) t.estado='en_proceso';
-      pintarTareas(todas,hoyOrdenes,false,completadas,evidenciaPorOrden,componentesPorFormula);
-      marcarOrdenEnProceso(oid);
-    });});
+    cont.querySelectorAll('[data-ver]').forEach(function(b){b.addEventListener('click',function(){c225VerTarea(this.dataset.ver);});});
     cont.querySelectorAll('[data-eje]').forEach(function(b){b.addEventListener('click',function(){iniciarEjecucion(this.dataset.eje);});});
   }catch(err){
     cont.innerHTML='<div class="empty">Ocurrió un problema mostrando tus tareas.<br/>Cierra sesión y vuelve a entrar. Si persiste, avisa al admin.<br/><span style="font-size:.7rem;color:var(--gris-3);">('+err.message+')</span></div>';
@@ -14023,6 +14039,72 @@ function prepararEjecucion(o,esOffline){
     renderEjec();
   }
 }
+
+function c225Esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function c225SurcosResumen(o){
+  var a=(o.surcos_asignados||[]).slice().sort(function(x,y){return Number(x)-Number(y);});
+  if(!a.length && o.tabla && o.tabla.cantidad_surcos){
+    return 'Tabla completa · '+o.tabla.cantidad_surcos+' surcos';
+  }
+  if(!a.length) return 'Actividad general';
+  var min=a[0],max=a[a.length-1];
+  return (a.length===Number(max)-Number(min)+1)?('Surcos '+min+' – '+max):(a.length+' surcos asignados');
+}
+function c225ComenzarTarea(){
+  var o=ordenEjecutando;
+  if(!o)return cargarTareas();
+  var btn=document.getElementById('c225-start');
+  if(btn){btn.disabled=true;btn.textContent='Iniciando...';}
+  function abrir(){
+    o.estado='en_proceso';
+    prepararEjecucion(fusionarSurcosLocales(o),!navigator.onLine);
+  }
+  if(!navigator.onLine){riegoEncolar(o.id,{estado:'en_proceso'});abrir();return;}
+  from('ordenes_trabajo').eq('id',o.id).update({estado:'en_proceso'}).then(abrir).catch(function(e){
+    if(btn){btn.disabled=false;btn.textContent='▶ Comenzar tarea';}
+    alert('No se pudo iniciar la tarea. '+e.message);
+  });
+}
+function c225VerTarea(oid){
+  var body=document.getElementById('op-body');
+  body.innerHTML='<div class="loading">Abriendo tu tarea...</div>';
+  function pintar(o){
+    ordenEjecutando=fusionarSurcosLocales(o);
+    var p=(o.tabla&&cats.plantaciones||[]).find(function(x){return x.id===o.tabla.plantacion_id;});
+    var labor=(o.tipo_labor&&o.tipo_labor.nombre)||'Labor';
+    var subt=o.subtipo&&o.subtipo.nombre?(' · '+o.subtipo.nombre):'';
+    var lugar=o.tabla?((p?p.nombre+' · ':'')+o.tabla.nombre):'Actividad general';
+    var herramienta=o.activo_rancho&&o.activo_rancho.nombre?o.activo_rancho.nombre:'';
+    var nota=o.notas_encargado||'Sigue las indicaciones de tu encargado.';
+    var fecha=o.fecha_asignacion||fechaHoyLocal();
+    body.innerHTML='<div class="c225-detail">'+
+      '<button class="c225-back" onclick="ordenEjecutando=null;cargarTareas()">← Mis tareas</button>'+
+      '<div class="c225-eyebrow">TAREA ASIGNADA</div>'+
+      '<h2>'+c225Esc(labor+subt)+'</h2>'+
+      '<div class="c225-status">● Lista para comenzar</div>'+
+      '<div class="c225-detail-card">'+
+        '<div><small>Dónde</small><strong>'+c225Esc(lugar)+'</strong></div>'+
+        '<div><small>Qué trabajar</small><strong>'+c225Esc(c225SurcosResumen(o))+'</strong></div>'+
+        '<div><small>Fecha</small><strong>'+c225Esc(fecha)+'</strong></div>'+
+        (herramienta?'<div><small>Herramienta / equipo</small><strong>'+c225Esc(herramienta)+'</strong></div>':'')+
+      '</div>'+
+      '<div class="c225-instruction"><small>INDICACIÓN</small><strong>'+c225Esc(nota)+'</strong></div>'+
+      '<div class="c225-simple-note">Al comenzar, Mootsil te llevará directamente al registro de tu trabajo. Solo tendrás que indicar hasta dónde llegaste y cerrar tu participación.</div>'+
+      '<button class="c225-start" id="c225-start" onclick="c225ComenzarTarea()">▶ Comenzar tarea</button>'+
+    '</div>';
+  }
+  if(!navigator.onLine){
+    var c=buscarOrdenEnCacheTareas(oid);
+    if(!c){body.innerHTML='<div class="empty">Esta tarea no está disponible sin conexión todavía.</div>';return;}
+    pintar(c);return;
+  }
+  from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_cantidad_insumo,unidad_insumo,requiere_formula),subtipo:subtipos_labor(nombre),activo_rancho:activos_rancho(nombre,imagen_url,descripcion)').eq('id',oid).single()
+  .then(pintar).catch(function(e){
+    var c=buscarOrdenEnCacheTareas(oid);
+    if(c)pintar(c);else body.innerHTML='<div class="empty">No se pudo abrir esta tarea.<br>'+c225Esc(e.message)+'</div>';
+  });
+}
+
 function iniciarEjecucion(oid){
   from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_cantidad_insumo,unidad_insumo,requiere_formula),subtipo:subtipos_labor(nombre),activo_rancho:activos_rancho(nombre,imagen_url,descripcion)').eq('id',oid).single().then(function(o){
     prepararEjecucion(fusionarSurcosLocales(o),false);
@@ -14108,7 +14190,7 @@ function renderEjec(){
     var inicioEjOp=calcularInicioEjecucion(ordenEjecutando);
     var rangoActualOp=calcularRangoAutomatico(totalAsig,inicioEjOp,capturaEjec.surcoTocado);
     capturaEjec.surcos=rangoActualOp.map(Number); // registros_labor.surcos_trabajados es int4[]
-    var html=bar+'<div class="step-label">Paso 1 de '+tot+'</div><div class="step-title">Surcos trabajados'+(yaComplOp.length?' ('+yaComplOp.length+'/'+totalAsig.length+' ya registrados)':'')+'</div><p class="hint" style="margin-bottom:.75rem">📍 '+(planta?planta.nombre:'')+' · '+tabla.nombre+'</p>';
+    var html=bar+'<div class="step-label">REGISTRAR AVANCE</div><div class="step-title">¿Hasta dónde llegaste hoy?'+(yaComplOp.length?' ('+yaComplOp.length+'/'+totalAsig.length+' ya registrados)':'')+'</div><p class="hint" style="margin-bottom:.75rem">📍 '+(planta?planta.nombre:'')+' · '+tabla.nombre+'</p>';
     html+='<div class="surcos-grid" style="grid-template-columns:repeat(4,1fr);">';
     totalAsig.forEach(function(num){
       var completado=yaComplOp.indexOf(num)>-1;
@@ -14116,7 +14198,7 @@ function renderEjec(){
       var enEjecucion=rangoActualOp.indexOf(num)>-1;
       html+='<button class="surco-btn '+(enEjecucion?'actual':'')+'" data-s="'+num+'">'+num+'</button>';
     });
-    html+='</div><p class="hint">Toca el último surco que trabajaste hoy. Los surcos anteriores (desde donde empezaste hoy) se marcan en automático.</p><div class="nav-row"><button class="btn-back" onclick="ordenEjecutando=null;cargarTareas()">← Cancelar</button><button class="btn-next" id="esig" '+(capturaEjec.surcos.length?'':'disabled')+' onclick="pasoEjec++;renderEjec()">Siguiente →</button></div>';
+    html+='</div><p class="hint">Toca únicamente el último surco que trabajaste. Mootsil marcará automáticamente los anteriores.</p><div class="nav-row"><button class="btn-back" onclick="ordenEjecutando=null;cargarTareas()">← Cancelar</button><button class="btn-next" id="esig" '+(capturaEjec.surcos.length?'':'disabled')+' onclick="pasoEjec++;renderEjec()">Siguiente →</button></div>';
     body.innerHTML=html;
     body.querySelectorAll('[data-s]').forEach(function(b){b.addEventListener('click',function(){
       capturaEjec.surcoTocado=this.dataset.s;
@@ -14127,16 +14209,12 @@ function renderEjec(){
   } else {
     var cant=labor.requiere_cantidad_insumo?'<div class="resumen-row"><span class="resumen-key">Cantidad</span><span class="resumen-val">'+capturaEjec.cantidad+' '+(labor.unidad_insumo||'litros')+'</span></div>':'';
     var evid=capturaEjec.foto?'<div style="padding:.75rem;background:var(--verde-tenue);border-radius:var(--radio);color:var(--verde);font-size:.85rem;text-align:center;margin-bottom:1rem;">✅ Evidencia capturada</div>':'';
-    body.innerHTML=bar+'<div class="step-label">Último paso</div><div class="step-title">Evidencia (obligatoria)</div><div style="display:flex;gap:8px;margin-bottom:1rem;"><div style="display:flex;gap:8px;margin-bottom:1rem;"><button onclick="abrirCamaraApp()" style="flex:1;padding:1rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio);background:var(--verde-tenue);color:var(--verde);font-size:.9rem;font-weight:600;cursor:pointer;">📷 Cámara</button><button onclick="abrirGaleria()" style="flex:1;padding:1rem;border:1.5px solid var(--gris-2);border-radius:var(--radio);background:var(--gris-1);font-size:.9rem;cursor:pointer;">🖼️ Galería</button></div></div>'+evid+'<input type="file" id="inp-ev" accept="image/*,video/*" style="display:none" onchange="capturaEjec.foto=true;renderEjec();"><div class="resumen-card" style="margin-top:.5rem;"><div class="resumen-row"><span class="resumen-key">Labor</span><span class="resumen-val">'+labor.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Área</span><span class="resumen-val">'+(planta?planta.nombre:'')+' · '+tabla.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Surcos</span><span class="resumen-val">'+capturaEjec.surcos.join(', ')+'</span></div>'+cant+'</div><div class="nav-row"><button class="btn-back" onclick="pasoEjec--;renderEjec()">← Atrás</button><button class="btn-next" onclick="guardarEjec()" style="background:var(--tierra)">✅ Guardar</button></div>';
+    body.innerHTML=bar+'<div class="step-label">CIERRE DE PARTICIPACIÓN</div><div class="step-title">Revisa tu avance</div><div style="display:flex;gap:8px;margin-bottom:1rem;"><div style="display:flex;gap:8px;margin-bottom:1rem;"><button onclick="abrirCamaraApp()" style="flex:1;padding:1rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio);background:var(--verde-tenue);color:var(--verde);font-size:.9rem;font-weight:600;cursor:pointer;">📷 Cámara</button><button onclick="abrirGaleria()" style="flex:1;padding:1rem;border:1.5px solid var(--gris-2);border-radius:var(--radio);background:var(--gris-1);font-size:.9rem;cursor:pointer;">🖼️ Galería</button></div></div>'+evid+'<input type="file" id="inp-ev" accept="image/*,video/*" style="display:none" onchange="capturaEjec.foto=true;renderEjec();"><div class="resumen-card" style="margin-top:.5rem;"><div class="resumen-row"><span class="resumen-key">Labor</span><span class="resumen-val">'+labor.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Área</span><span class="resumen-val">'+(planta?planta.nombre:'')+' · '+tabla.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Surcos</span><span class="resumen-val">'+capturaEjec.surcos.join(', ')+'</span></div>'+cant+'</div><div class="nav-row"><button class="btn-back" onclick="pasoEjec--;renderEjec()">← Atrás</button><button class="btn-next" onclick="guardarEjec()" style="background:var(--tierra)">✅ Guardar</button></div>';
   }
 }
 
 function guardarEjec(){
   var o=ordenEjecutando;
-  if(!capturaEjec.foto && !esLimpiezaCintillas(o)){
-    alert('Debes tomar una foto o video de evidencia antes de concluir la labor.');
-    return;
-  }
   if(capturaEjec.requiereLimpieza&&!capturaEjec.herramientaLimpia){
     alert('Marca la casilla confirmando que limpiaste y guardaste tu equipo.');
     return;
@@ -14279,10 +14357,10 @@ function ejecutarGuardadoFinal(o){
     Promise.all([avisoOverage,avisoSobrante]).then(function(){
       return from('notificaciones').insert({titulo: nuevoEstado==='completada'?'✅ Labor completada':'🔶 Avance parcial registrado',cuerpo:usuario.nombre+' '+verbo+' '+(lb?lb.nombre:'')+' en '+(tb?tb.nombre:'')+' — '+detalle,icono: nuevoEstado==='completada'?'✅':'🔶',leida:false,para_rol:'encargado'});
     }).then(function(){
-      document.getElementById('exito-sub').textContent = nuevoEstado==='completada' ? 'Registro guardado. El encargado recibirá un aviso.' : 'Avance guardado. Faltan '+progreso.faltan.length+' surco(s) — seguirá apareciendo en tus tareas.';
+      document.getElementById('exito-sub').textContent = nuevoEstado==='completada' ? 'Tu participación quedó registrada.' : 'Avance guardado. Faltan '+progreso.faltan.length+' surco(s) — seguirá apareciendo en tus tareas.';
       mostrar('screen-exito'); ordenEjecutando=null;
     }).catch(function(){
-      document.getElementById('exito-sub').textContent = nuevoEstado==='completada' ? 'Registro guardado. El encargado recibirá un aviso.' : 'Avance guardado. Faltan '+progreso.faltan.length+' surco(s) — seguirá apareciendo en tus tareas.';
+      document.getElementById('exito-sub').textContent = nuevoEstado==='completada' ? 'Tu participación quedó registrada.' : 'Avance guardado. Faltan '+progreso.faltan.length+' surco(s) — seguirá apareciendo en tus tareas.';
       mostrar('screen-exito'); ordenEjecutando=null;
     });
   }).catch(function(){
