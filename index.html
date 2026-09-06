@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<title>Mootsil · Tablero del Rancho · C035 · Conteo Discreto y Cuentas Bancarias</title>
+<title>Mootsil · Tablero del Rancho · C224 · Navegación Simple y Pendientes Útiles</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
@@ -949,6 +949,28 @@ body.c140-preinc .op-body-shell{padding-bottom:78px}
 
 </style>
 <!-- C143: expediente en incorporación + rol cosecha + seguimiento sin duplicidad -->
+
+<style id="c224-simple-ui">
+.c224-legacy-nav{display:none!important}
+.c224-main-tabs{gap:2px}
+.c224-main-tabs .tab{white-space:nowrap}
+.c224-pending-box{border:1px solid #dfe7e2;border-radius:12px;background:#fff;padding:12px 14px;margin-bottom:12px}
+.c224-pending-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+.c224-pending-title{font-weight:850;color:var(--verde);font-size:.9rem}
+.c224-pending-count{font-weight:850;background:#fff3d6;color:#9a6200;border-radius:999px;padding:3px 9px;font-size:.7rem}
+.c224-pending-grid{display:flex;gap:6px;flex-wrap:wrap}
+.c224-pending-chip{border:1px solid #dfe7e2;background:#f8faf9;border-radius:999px;padding:7px 10px;font-size:.72rem;font-weight:750;color:#234b38;cursor:pointer}
+.c224-pending-chip.urgent{border-color:#efc2bb;background:#fff4f2;color:#a13327}
+.c224-pending-chip.warn{border-color:#efd79b;background:#fff9ea;color:#8a6200}
+.c224-empty-ok{color:#1e6c45;font-weight:800;font-size:.76rem}
+.c224-admin-tools{grid-column:1/-1}
+.c224-admin-tools .em60-actions{display:flex;flex-wrap:wrap;gap:8px}
+.c224-admin-tools .em60-actions button{min-width:150px}
+.c224-filterbar{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 12px}
+.c224-filterbar button{border:1px solid var(--gris-2);background:#fff;border-radius:20px;padding:7px 11px;font-weight:750;color:var(--verde);cursor:pointer}
+.c224-filterbar button.active{background:var(--verde);color:#fff;border-color:var(--verde)}
+</style>
+
 </head>
 <body>
 
@@ -987,19 +1009,21 @@ body.c140-preinc .op-body-shell{padding-bottom:78px}
       <button class="btn-salir" onclick="salir()">Salir</button>
     </div>
   </div>
-  <div class="tabs">
-    <button class="tab" id="tab-tablero" onclick="tabEncargado('tablero')" style="display:none">Tablero</button>
+  <div class="tabs c224-main-tabs">
+    <button class="tab" id="tab-tablero" onclick="tabEncargado('tablero')" style="display:none">Inicio</button>
     <button class="tab" id="tab-asignar" onclick="tabEncargado('asignar')" style="display:none">🧰 Labores</button>
     <button class="tab" id="tab-aplicaciones" onclick="tabEncargado('aplicaciones')" style="display:none">🧪 Aplicaciones</button>
     <button class="tab" id="tab-riego" onclick="tabEncargado('riego')" style="display:none">💧 Riego</button>
     <button class="tab" id="tab-cosecha" onclick="tabEncargado('cosecha')" style="display:none">🧺 Cosecha</button>
-    <button class="tab" id="tab-labores" onclick="tabEncargado('labores')" style="display:none">📋 Solicitudes</button>
-    <button class="tab" id="tab-reporte" onclick="tabEncargado('reporte')">Reporte</button>
-    <button class="tab" id="tab-notif" onclick="tabEncargado('notif')">Avisos <span id="badge-avisos" style="display:none;background:var(--tierra);color:#fff;border-radius:50%;width:16px;height:16px;font-size:.6rem;font-weight:700;align-items:center;justify-content:center;margin-left:3px;vertical-align:middle;">0</span></button>
-    <button class="tab" id="tab-alarmas" onclick="tabEncargado('alarmas')" style="display:none">🚨 Alarmas</button>
+    <button class="tab" id="tab-inventario" onclick="tabEncargado('inventario')" style="display:none">📦 Inventario</button>
     <button class="tab" id="tab-admin" onclick="tabEncargado('admin')" style="display:none">🏛️ Administración</button>
-    <button class="tab" id="tab-inventario" onclick="tabEncargado('inventario')" style="display:none">Inventario</button>
-    <button class="tab" id="tab-config" onclick="tabEncargado('config')" style="display:none">⚙️</button>
+
+    <!-- C224: funciones conservadas, fuera del menú principal -->
+    <button class="tab c224-legacy-nav" id="tab-labores" onclick="tabEncargado('labores')" style="display:none">Solicitudes</button>
+    <button class="tab c224-legacy-nav" id="tab-reporte" onclick="tabEncargado('reporte')" style="display:none">Reporte</button>
+    <button class="tab c224-legacy-nav" id="tab-notif" onclick="tabEncargado('notif')" style="display:none">Avisos <span id="badge-avisos" style="display:none;">0</span></button>
+    <button class="tab c224-legacy-nav" id="tab-alarmas" onclick="tabEncargado('alarmas')" style="display:none">Alarmas</button>
+    <button class="tab c224-legacy-nav" id="tab-config" onclick="tabEncargado('config')" style="display:none">Configuración</button>
   </div>
   <div class="app-body" id="enc-body"><div class="loading">Cargando...</div></div>
 </div>
@@ -1580,14 +1604,11 @@ function entrarSegunRol(){
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='dueño') document.getElementById('tab-tablero').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='dueño') document.getElementById('tab-asignar').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='dueño') document.getElementById('tab-cosecha').style.display='';
-    if(usuario.rol==='admin'||usuario.rol==='dueño') document.getElementById('tab-config').style.display='';
-    if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='dueño'||usuario.rol==='ingeniero') document.getElementById('tab-alarmas').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='dueño') document.getElementById('tab-admin').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='dueño') document.getElementById('tab-admin').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='ingeniero'||usuario.rol==='dueño') document.getElementById('tab-inventario').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='ingeniero'||usuario.rol==='dueño') document.getElementById('tab-aplicaciones').style.display='';
     if(usuario.rol==='admin'||usuario.rol==='encargado'||usuario.rol==='ingeniero'||usuario.rol==='dueño') document.getElementById('tab-riego').style.display='';
-    if(usuario.rol==='admin'||usuario.rol==='ingeniero'||usuario.rol==='dueño') document.getElementById('tab-labores').style.display='';
 
     if(usuario.rol==='ingeniero'){
       tabEncargado('aplicaciones');
@@ -1673,7 +1694,7 @@ function activarVistaDueno(){
     '<nav class="dueno-nav">'+
     '<div class="dueno-nav-label">Dirección</div>'+duenoNavBtn('tablero','⌂','Inicio')+
     '<div class="dueno-nav-label">Operación</div>'+duenoNavBtn('asignar','🧰','Labores')+duenoNavBtn('aplicaciones','🧪','Aplicaciones')+duenoNavBtn('riego','💧','Riego')+duenoNavBtn('cosecha','🫐','Cosecha')+
-    '<div class="dueno-nav-label">Control</div>'+duenoNavBtn('reporte','▥','Reportes')+duenoNavBtn('inventario','▣','Inventario')+duenoNavBtn('admin','⚙','Administración')+duenoNavBtn('notif','🔔','Avisos','dueno-badge-avisos')+
+    '<div class="dueno-nav-label">Control</div>'+duenoNavBtn('inventario','▣','Inventario')+duenoNavBtn('admin','⚙','Administración')+
     '</nav><div class="dueno-sidebar-foot">Mootsil · Rancho Sagrado Corazón<br><span id="dueno-sync-label">● En línea · Sincronizado</span></div>';
   var top=document.createElement('header');top.id='dueno-topbar';top.className='dueno-topbar';
   top.innerHTML='<div class="dueno-top-user"><div class="dueno-avatar">👤</div><div style="min-width:0"><div class="dueno-user-name" id="dueno-user-name"></div><div class="dueno-user-role">Dueño · Control general del rancho</div></div></div>'+
@@ -2011,6 +2032,14 @@ function renderTablero(){
     }
     if(riegoFaltantes){
       avisoHtml+='<div style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);border-radius:var(--radio-sm);padding:.85rem;margin-bottom:1rem;cursor:pointer;" id="aviso-riego-semanal"><strong style="color:var(--rojo);">🚿 '+riegoFaltantes+' tabla(s) sin aplicación de riego programada esta semana</strong><div class="hint" style="margin-top:.25rem;">Toca para ver cuáles y programarlas (o marcarlas como no requeridas)</div></div>';
+    }
+    var pendientesAtencion=permisosPendientes.length+postulacionesPendientes.length+solicitudesOpPendientes.length+activosVencidos.length+solicitudesPendientes.length+pendientesFormula.length+riegoFaltantes;
+    if(avisoHtml){
+      avisoHtml='<div class="c224-pending-box"><div class="c224-pending-head"><div class="c224-pending-title">Pendientes por atender</div><div class="c224-pending-count">'+pendientesAtencion+'</div></div><div class="c224-pending-grid">'+avisoHtml+'</div></div>';
+      avisoHtml=avisoHtml.replace(/style="background:[^"]*;border:[^"]*;border-radius:[^"]*;padding:[^"]*;margin-bottom:[^"]*;cursor:pointer;"/g,'class="c224-pending-chip warn" style="cursor:pointer"');
+      avisoHtml=avisoHtml.replace(/<div class="hint" style="margin-top:.25rem;">[^<]*<\/div>/g,'');
+    }else{
+      avisoHtml='<div class="c224-pending-box"><div class="c224-pending-head"><div class="c224-pending-title">Pendientes por atender</div></div><div class="c224-empty-ok">✓ Operación sin pendientes críticos</div></div>';
     }
     var pend=todas.filter(function(o){return o.estado==='pendiente';}).length;
     var enP=todas.filter(function(o){return o.estado==='en_proceso';}).length;
@@ -3201,6 +3230,16 @@ function guardarOrden(){
   }).then(function(){showToast((esExtra?'⏰ Hora extra asignada: ':'📋 Labor asignada: ')+(lb?lb.nombre:'')+'. Puedes asignar otra.');renderFormAsignar();}).catch(function(e){alert('Error: '+e.message);});
 }
 
+var C224_AVISOS_MODO='pendientes';
+function c224AvisoAccionable(n){
+  var s=((n&&n.titulo)||'')+' '+((n&&n.cuerpo)||'');
+  s=s.toLowerCase();
+  return /emerg|incid|faltante|sin stock|stock insuf|por vencer|vencid|solicitud|mantenimiento|error|urgente|pago/.test(s);
+}
+function c224AbrirAvisos(modo){
+  C224_AVISOS_MODO=modo||'pendientes';
+  renderNotifs('enc-body');
+}
 function renderNotifs(bodyId){
   var body=document.getElementById(bodyId);
   body.innerHTML='<div class="loading">Cargando avisos...</div>';
@@ -3209,17 +3248,22 @@ function renderNotifs(bodyId){
     consultaNotifsPropias(false).then(function(rows){return (rows||[]).slice(0,30);}),
     esPanelLiderazgo?from('config_app').select('*').get():Promise.resolve([])
   ]).then(function(r){
-    var data=r[0], cfgRows=r[1]||[];
+    var data=r[0]||[], cfgRows=r[1]||[];
     var cfg={}; cfgRows.forEach(function(c){cfg[c.clave]=c.valor;});
-    if(!data||!data.length){body.innerHTML='<div class="empty">📭 Sin avisos por ahora</div>';return;}
-    body.innerHTML=data.map(function(n){
+    var esHistorial=esPanelLiderazgo&&C224_AVISOS_MODO==='historial';
+    if(esPanelLiderazgo && !esHistorial){
+      data=data.filter(function(n){return !n.leida && c224AvisoAccionable(n);});
+    }
+    var barra=esPanelLiderazgo?'<div class="c224-filterbar"><button class="'+(!esHistorial?'active':'')+'" onclick="c224AbrirAvisos(\'pendientes\')">Pendientes</button><button class="'+(esHistorial?'active':'')+'" onclick="c224AbrirAvisos(\'historial\')">Historial</button><button onclick="renderAdministracionMenu()">← Administración</button></div>':'';
+    if(!data.length){body.innerHTML=barra+'<div class="empty">✓ Sin avisos pendientes que requieran atención.</div>';return;}
+    body.innerHTML=barra+data.map(function(n){
       var diff=Math.floor((Date.now()-new Date(n.creado_en))/1000);
       var t=diff<60?'hace un momento':diff<3600?'hace '+Math.floor(diff/60)+' min':diff<86400?'hace '+Math.floor(diff/3600)+' h':'hace '+Math.floor(diff/86400)+' días';
       var esEmergencia = esPanelLiderazgo && n.icono==='🆘';
       var botonesLlamada = esEmergencia?'<div style="display:flex;gap:6px;margin-top:.5rem;flex-wrap:wrap;"><a href="tel:'+(cfg.emergencia_policia||'911')+'" style="text-decoration:none;"><span style="display:inline-block;padding:.4rem .7rem;border-radius:20px;background:var(--rojo);color:#fff;font-size:.75rem;font-weight:700;">🚓 Llamar Policía</span></a><a href="tel:'+(cfg.emergencia_bomberos||'911')+'" style="text-decoration:none;"><span style="display:inline-block;padding:.4rem .7rem;border-radius:20px;background:var(--rojo);color:#fff;font-size:.75rem;font-weight:700;">🚒 Llamar Bomberos</span></a><a href="tel:'+(cfg.emergencia_ambulancia||'911')+'" style="text-decoration:none;"><span style="display:inline-block;padding:.4rem .7rem;border-radius:20px;background:var(--rojo);color:#fff;font-size:.75rem;font-weight:700;">🚑 Llamar Ambulancia</span></a></div>':'';
       return '<div class="notif-item" style="'+(esEmergencia?'border:2px solid var(--rojo);border-radius:var(--radio);':'')+(n.leida?'':'background:var(--verde-tenue);')+'"><div class="notif-ic">'+(n.icono||'🔔')+'</div><div class="notif-texto"><strong>'+n.titulo+'</strong>'+n.cuerpo+botonesLlamada+'<div class="notif-tiempo">'+t+'</div></div></div>';
     }).join('');
-    var noLeidas=data.filter(function(n){return !n.leida;});
+    var noLeidas=(esPanelLiderazgo&&C224_AVISOS_MODO==='historial')?[]:data.filter(function(n){return !n.leida;});
     if(noLeidas.length){
       Promise.all(noLeidas.map(function(n){return from('notificaciones').eq('id',n.id).update({leida:true});})).then(function(){
         actualizarBadgeAvisos();
@@ -3247,7 +3291,8 @@ function consultaNotifsPropias(soloNoLeidas){
 
 function actualizarBadgeAvisos(){
   consultaNotifsPropias(true).then(function(data){
-    var n=data?data.length:0;
+    var esLider=usuario&&['admin','dueño','encargado','ingeniero'].indexOf(usuario.rol)>=0;
+    var n=data?(esLider?data.filter(c224AvisoAccionable).length:data.length):0;
     var badge=document.getElementById('badge-avisos')||document.getElementById('op-badge-alertas');
     if(badge){badge.textContent=n;badge.style.display=n>0?'inline-flex':'none';}
   }).catch(function(){});
@@ -5532,18 +5577,22 @@ function guardarAplicacion(){
   }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='✅ Asignar aplicación';});
 }
 
+var C224_ALARMAS_MODO='pendientes';
+function c224AbrirAlarmas(modo){C224_ALARMAS_MODO=modo||'pendientes';renderAlarmasRevision();}
 function renderAlarmasRevision(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="seccion-titulo">🚨 Reportes de campo</div><div class="loading">Cargando...</div>';
   Promise.all([
-    from('alertas_campo').select('*,usuario:usuarios(nombre),tabla:tablas(nombre,plantacion_id),activo:activos_rancho(nombre)').order('creado_en',{ascending:false}).limit(50).get(),
+    from('alertas_campo').select('*,usuario:usuarios!alertas_campo_usuario_id_fkey(nombre),tabla:tablas(nombre,plantacion_id),activo:activos_rancho(nombre)').order('creado_en',{ascending:false}).limit(100).get(),
     from('alertas_recomendaciones').select('*,autor:usuarios!creado_por(nombre)').get(),
     from('alertas_campo_evidencias').select('alerta_id,url,tipo').get()
   ]).then(function(r){
     var rows=r[0]||[], recoms=r[1]||[], evidAll=r[2]||[];
-    if(!rows.length){body.innerHTML='<div class="seccion-titulo">🚨 Reportes de campo</div><div class="empty">Sin reportes todavía.</div>';return;}
+    var historial=C224_ALARMAS_MODO==='historial';
+    if(!historial) rows=rows.filter(function(a){return a.estado!=='atendida'&&a.estado!=='rechazada';});
     var esIngeniero=usuario.rol==='ingeniero'||usuario.rol==='admin'||usuario.rol==='dueño';
-    var html='<div class="seccion-titulo">🚨 Reportes de campo</div>';
+    var html='<div class="seccion-titulo">🚨 Reportes de campo</div><div class="c224-filterbar"><button class="'+(!historial?'active':'')+'" onclick="c224AbrirAlarmas(\'pendientes\')">Pendientes</button><button class="'+(historial?'active':'')+'" onclick="c224AbrirAlarmas(\'historial\')">Historial</button><button onclick="renderAdministracionMenu()">← Administración</button></div>';
+    if(!rows.length){body.innerHTML=html+'<div class="empty">✓ Sin reportes de campo pendientes.</div>';return;}
     html+=rows.map(function(a){
       var meta=REPORTE_CATEGORIA_META[a.categoria]||{ic:'🚨',lbl:a.categoria};
       var p=a.tabla?cats.plantaciones.find(function(x){return x.id===a.tabla.plantacion_id;}):null;
@@ -9226,6 +9275,7 @@ function renderAdministracionMenu(){
     '<div class="ad17-card gold em60-card" data-admin="compensaciones"><div class="ic">💰</div><h3>Nómina y Compensaciones</h3><p>Bonos por objetivos y apoyos económicos al personal.</p><div class="em60-actions"><button type="button" data-compgo="bonos">🎯 Bonos</button><button type="button" data-compgo="apoyos">⛽ Apoyos</button></div></div>'+
     '<div class="ad17-card orange em60-card" data-admin="gastos"><div class="ic">🧾</div><h3>Compras y Proveedores</h3><p>Compras, proveedores, cuentas por pagar, órdenes e historial.</p><div class="em60-actions"><button type="button" data-comprago="nuevo">🧾 Nueva compra</button><button type="button" data-comprago="historial">📜 Historial de compras</button><button type="button" data-comprago="proveedores">🏢 Proveedores</button><button type="button" data-comprago="cuentas">📆 Cuentas por pagar</button><button type="button" data-comprago="orden">🛒 Órdenes de compra</button></div></div>'+
     '<div class="ad17-card purple em60-card" data-admin="inversionistas"><div class="ic">💼</div><h3>Inversionistas y Dueños</h3><p>Perfiles patrimoniales, aportaciones, contratos, movimientos y devoluciones.</p><div class="em60-actions"><button type="button" data-invgo="inversionista">💼 Inversionistas</button><button type="button" data-invgo="dueño">👑 Dueños</button></div></div>'+
+    '<div class="ad17-card em60-card c224-admin-tools"><div class="ic">⚙️</div><h3>Configuración y registros</h3><p>Opciones de uso poco frecuente e históricos que no deben saturar la operación diaria.</p><div class="em60-actions"><button type="button" data-c224go="avisos">🔔 Historial de avisos</button><button type="button" data-c224go="alarmas">🚨 Reportes de campo</button><button type="button" data-c224go="config">⚙️ Configuración</button></div></div>'+
   '</div></div>';
   body.querySelector('[data-admin="caja"]').addEventListener('click',function(){renderCajaMootsil('dia',fechaHoyLocal());});
   body.querySelector('[data-cajago="ingresar"]').addEventListener('click',function(e){e.stopPropagation();Promise.resolve(renderCajaMootsil('dia',fechaHoyLocal())).then(function(){setTimeout(function(){if(typeof ca21OpenMovimiento==='function')ca21OpenMovimiento('entrada',CAJA_FECHA_BASE||fechaHoyLocal());var c=document.getElementById('ca21-m-cuenta');if(c)c.value='efectivo';},50);});});
@@ -9246,6 +9296,9 @@ function renderAdministracionMenu(){
   /* C182: las tarjetas principales son contenedores visuales; sólo Caja conserva acción principal. */
   body.querySelector('[data-invgo="inversionista"]').addEventListener('click',function(e){e.stopPropagation();renderInversionistasMenu('inversionista');});
   body.querySelector('[data-invgo="dueño"]').addEventListener('click',function(e){e.stopPropagation();renderInversionistasMenu('dueño');});
+  body.querySelector('[data-c224go="avisos"]').addEventListener('click',function(e){e.stopPropagation();c224AbrirAvisos('historial');});
+  body.querySelector('[data-c224go="alarmas"]').addEventListener('click',function(e){e.stopPropagation();c224AbrirAlarmas('pendientes');});
+  body.querySelector('[data-c224go="config"]').addEventListener('click',function(e){e.stopPropagation();renderConfig();});
 }
 
 
