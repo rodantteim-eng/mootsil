@@ -1093,6 +1093,29 @@ body.c140-preinc .op-body-shell{padding-bottom:78px}
 }
 </style>
 
+
+<style id="c230-salida-anticipada">
+.c230-perm-wrap{max-width:820px;margin:0 auto;padding:4px 2px 18px}
+.c230-back{border:0;background:transparent;color:#184a32;font-weight:800;padding:3px 0 12px;cursor:pointer}
+.c230-perm-title{font-size:1.45rem;font-weight:900;color:#173f2b;margin-bottom:3px}
+.c230-perm-sub{font-size:.76rem;color:#748078;margin-bottom:12px}
+.c230-perm-card{background:#fff;border:1px solid #e2e8e4;border-radius:14px;overflow:hidden;box-shadow:0 3px 10px rgba(18,55,36,.06);margin-bottom:12px}
+.c230-perm-option{width:100%;border:0;border-bottom:1px solid #edf1ee;background:#fff;display:grid;grid-template-columns:48px 1fr 20px;gap:10px;align-items:center;text-align:left;padding:16px 14px;cursor:pointer}
+.c230-perm-option:last-child{border-bottom:0}
+.c230-perm-option .ico{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#eef6f0;font-size:1.25rem}
+.c230-perm-option b{display:block;color:#173f2b;font-size:.92rem;margin-bottom:3px}
+.c230-perm-option small{display:block;color:#748078;font-size:.7rem;line-height:1.35}
+.c230-perm-option strong{font-size:1.4rem;color:#617069}
+.c230-perm-note{background:#f4f8f5;border:1px solid #e1e9e3;border-radius:11px;padding:10px 12px;color:#56655d;font-size:.72rem;line-height:1.4}
+.c230-perm-none{background:#f4f8f5;border-radius:10px;padding:10px 12px;color:#67756d;font-size:.72rem;margin-bottom:12px}
+.c230-perm-pending{background:#fff1da;border:1px solid #f2cd8d;border-radius:10px;padding:10px 12px;color:#8b5a00;font-size:.72rem;font-weight:800;margin-bottom:12px}
+@media(max-width:600px){
+  .c230-perm-wrap{padding:0 10px 18px}
+  .c230-perm-title{font-size:1.3rem}
+  .c230-perm-option{padding:14px 12px}
+}
+</style>
+
 </head>
 <body>
 
@@ -13455,10 +13478,10 @@ function renderSolicitarPrestamo(){
       ? '<div style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);border-radius:var(--radio-sm);padding:.75rem .9rem;margin-bottom:1rem;"><strong style="color:var(--rojo);">🚫 Ya tienes '+usados+' préstamo(s) activo(s) este mes</strong><div class="hint" style="margin-top:.25rem;">El máximo permitido es '+maxMes+' por mes. Podrás solicitar otro a partir del próximo mes.</div></div>'
       : '<div style="background:var(--verde-tenue);border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);padding:.75rem .9rem;margin-bottom:1rem;"><strong style="color:var(--verde-mid);">Llevas '+usados+'/'+maxMes+' préstamo(s) usados este mes</strong></div>';
     if(alTope){
-      body.innerHTML='<div class="seccion-titulo">💰 Solicitar préstamo</div>'+estadoTxt+'<button class="btn-back" style="margin-top:1rem;" onclick="renderSolicitudesMenu()">← Volver a Solicitudes</button>';
+      body.innerHTML='<div class="seccion-titulo">💰 Solicitar préstamo</div>'+estadoTxt+'<button class="btn-back" style="margin-top:1rem;" onclick="(window._origenPermisoAsistencia?renderAsistenciaMenu():renderSolicitudesMenu())">← Volver a Asistencia</button>';
       return;
     }
-    body.innerHTML='<div class="seccion-titulo">💰 Solicitar préstamo</div>'+estadoTxt+'<div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Tu solicitud llega directo a administración para revisión — no es automático, te avisarán cuando la resuelvan.'+(montoMax!=null?' Monto máximo por préstamo: $'+montoMax.toFixed(2)+'.':'')+'</p><div class="form-group"><label>¿Cuánto necesitas?</label><input type="number" id="sp-monto" min="0" step="any" placeholder="$0.00"></div><div class="form-group"><label>¿Para qué lo necesitas?</label><textarea id="sp-motivo" rows="4" placeholder="Cuéntanos brevemente el motivo..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="sp-enviar">Enviar solicitud</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderSolicitudesMenu()">← Volver a Solicitudes</button>';
+    body.innerHTML='<div class="seccion-titulo">💰 Solicitar préstamo</div>'+estadoTxt+'<div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Tu solicitud llega directo a administración para revisión — no es automático, te avisarán cuando la resuelvan.'+(montoMax!=null?' Monto máximo por préstamo: $'+montoMax.toFixed(2)+'.':'')+'</p><div class="form-group"><label>¿Cuánto necesitas?</label><input type="number" id="sp-monto" min="0" step="any" placeholder="$0.00"></div><div class="form-group"><label>¿Para qué lo necesitas?</label><textarea id="sp-motivo" rows="4" placeholder="Cuéntanos brevemente el motivo..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="sp-enviar">Enviar solicitud</button></div><button class="btn-back" style="margin-top:1rem;" onclick="(window._origenPermisoAsistencia?renderAsistenciaMenu():renderSolicitudesMenu())">← Volver a Asistencia</button>';
     document.getElementById('sp-enviar').addEventListener('click',function(){
       var monto=parseFloat(document.getElementById('sp-monto').value)||0;
       var motivo=(document.getElementById('sp-motivo').value||'').trim();
@@ -13504,31 +13527,63 @@ function renderMisSolicitudes(){
         generales=(r[0]||[]).map(function(s){return {tipo:s.tipo,estado:s.estado,texto:(s.tipo==='prestamo'?'💰 Préstamo · $'+parseFloat(s.monto_solicitado||0).toFixed(2):(solicitudTipoIc[s.tipo]||'💬 ')+s.mensaje.slice(0,60)),respuesta:s.respuesta,fecha:s.creado_en};}),
         permisos=(r[1]||[]).map(function(p){return {tipo:'permiso',estado:p.estado,texto:(p.tipo==='medico'?'🩺 Permiso médico':'👤 Permiso personal')+' · '+p.fecha_inicio,respuesta:null,fecha:p.creado_en};});
     var todas=generales.concat(permisos).sort(function(a,b){return new Date(b.fecha)-new Date(a.fecha);});
-    if(!todas.length){body.innerHTML='<div class="seccion-titulo">📋 Mis solicitudes</div><div class="empty">Aún no has enviado ninguna solicitud.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderSolicitudesMenu()">← Volver a Solicitudes</button>';return;}
+    if(!todas.length){body.innerHTML='<div class="seccion-titulo">📋 Mis solicitudes</div><div class="empty">Aún no has enviado ninguna solicitud.</div><button class="btn-back" style="margin-top:1rem;" onclick="(window._origenPermisoAsistencia?renderAsistenciaMenu():renderSolicitudesMenu())">← Volver a Asistencia</button>';return;}
     var badges={pendiente:['⏳ Pendiente','var(--tierra)'],atendida:['✅ Atendida','var(--verde-mid)'],aprobado:['✅ Aprobada','var(--verde-mid)'],rechazado:['❌ Rechazada','var(--rojo)'],rechazada:['❌ Rechazada','var(--rojo)']};
     var html='<div class="seccion-titulo">📋 Mis solicitudes</div>'+todas.map(function(s){
       var b=badges[s.estado]||['⏳ '+s.estado,'var(--gris-3)'];
       var f=new Date(s.fecha).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
       return '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.87rem;">'+s.texto+'</strong><span style="font-size:.72rem;font-weight:700;color:'+b[1]+';">'+b[0]+'</span></div><div class="orden-meta">'+f+(s.respuesta?'<br/>📩 '+s.respuesta:'')+'</div></div>';
     }).join('');
-    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderSolicitudesMenu()">← Volver a Solicitudes</button>';
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="(window._origenPermisoAsistencia?renderAsistenciaMenu():renderSolicitudesMenu())">← Volver a Asistencia</button>';
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
+
 function renderAsisPermisos(){
+  window._origenPermisoAsistencia=true;
   var body=document.getElementById('op-body');
-  body.innerHTML='<div class="seccion-titulo">📝 Permisos</div><div style="display:flex;gap:10px;margin-bottom:1rem;"><button type="button" class="labor-tile" style="flex:1;" onclick="renderFormPermiso(\'personal\')"><div class="labor-tile-ic">👤</div><div class="labor-tile-lbl">Personal</div></button><button type="button" class="labor-tile" style="flex:1;" onclick="renderFormPermiso(\'medico\')"><div class="labor-tile-ic">🩺</div><div class="labor-tile-lbl">Médico</div></button></div><div id="permisos-resumen"><div class="loading">Cargando...</div></div><button class="btn-back" style="margin-top:1rem;" onclick="renderSolicitudesMenu()">← Volver a Solicitudes</button>';
+  body.innerHTML=`<div class="c230-perm-wrap">
+    <button class="c230-back" onclick="renderAsistenciaMenu()">← Asistencia</button>
+    <div class="c230-perm-title">🕒 Salida anticipada</div>
+    <div class="c230-perm-sub">Si necesitas retirarte antes de terminar tu jornada, selecciona el motivo.</div>
+
+    <div class="c230-perm-card">
+      <button class="c230-perm-option" onclick="renderFormPermiso('personal')">
+        <span class="ico">👤</span>
+        <div><b>Permiso personal</b><small>Trámite, asunto familiar, emergencia u otro motivo.</small></div>
+        <strong>›</strong>
+      </button>
+
+      <button class="c230-perm-option" onclick="renderFormPermiso('medico')">
+        <span class="ico">🩺</span>
+        <div><b>Permiso médico</b><small>Consulta, enfermedad o malestar.</small></div>
+        <strong>›</strong>
+      </button>
+    </div>
+
+    <div id="permisos-resumen"><div class="loading">Cargando...</div></div>
+
+    <div class="c230-perm-note">
+      La salida anticipada quedará registrada para revisión o autorización según corresponda.
+      Después podrás volver directamente a Asistencia.
+    </div>
+  </div>`;
+
   from('permisos').select('tipo,estado').eq('usuario_id',usuario.id).eq('estado','pendiente').get().then(function(rows){
     var cont=document.getElementById('permisos-resumen');
     if(!cont) return;
-    if(!rows||!rows.length){cont.innerHTML='<p class="hint">No tienes solicitudes pendientes.</p>';return;}
+    if(!rows||!rows.length){
+      cont.innerHTML='<div class="c230-perm-none">No tienes solicitudes de permiso pendientes.</div>';
+      return;
+    }
     var medico=rows.filter(function(r){return r.tipo==='medico';}).length;
     var personal=rows.filter(function(r){return r.tipo==='personal';}).length;
     var txt=[];
-    if(medico) txt.push('Tienes '+medico+' solicitud'+(medico>1?'es':'')+' médica'+(medico>1?'s':'')+' pendiente'+(medico>1?'s':''));
-    if(personal) txt.push('Tienes '+personal+' solicitud'+(personal>1?'es':'')+' personal'+(personal>1?'es':'')+' pendiente'+(personal>1?'s':''));
-    cont.innerHTML='<div style="background:var(--tierra-tenue);border-radius:var(--radio-sm);padding:.85rem;font-size:.82rem;color:var(--tierra);font-weight:700;">'+txt.join('<br>')+'</div>';
+    if(medico) txt.push('Permiso médico pendiente: '+medico);
+    if(personal) txt.push('Permiso personal pendiente: '+personal);
+    cont.innerHTML='<div class="c230-perm-pending">'+txt.join('<br>')+'</div>';
   });
 }
+
 
 var permisoEvidenciaBlob=null;
 
