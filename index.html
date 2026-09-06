@@ -13116,7 +13116,7 @@ function renderAsistenciaMenu(){
     from('asistencia_registros').select('*').eq('usuario_id',usuario.id).eq('fecha',hoy).order('registrado_en',{ascending:true}).get(),
     from('horas_extra_asignadas').select('*,tipo_labor:tipos_labor(nombre)').eq('operario_id',usuario.id).eq('fecha',hoy).eq('estado','aprobada').get()
   ]).then(function(r){
-    var regs=r[0]||[], extras=r[1]||[];
+    var regsTodos=r[0]||[], regs=regsTodos.filter(function(x){return x.fuera_de_zona!==true;}), extras=r[1]||[];
     var extra=extras[0]||null;
     window._extraHoyId=extra?extra.id:null;
 
@@ -13196,9 +13196,9 @@ function renderAsistenciaMenu(){
 
     var casos = '<div class="c228-special-grid">'+
       '<button onclick="renderAsisPermisos()"><span>🕒</span><b>Salida anticipada</b></button>'+
-      '<button onclick="renderMisSolicitudes()"><span>❗</span><b>Jornada sin cerrar</b></button>'+
-      '<button onclick="renderSolicitudOtro()"><span>📶</span><b>Problemas de registro</b></button>'+
-      '<button onclick="renderMisSolicitudes()"><span>🛡️</span><b>Registros no válidos</b></button>'+
+      '<button onclick="renderAsisJornadaSinCerrar()"><span>❗</span><b>Jornada sin cerrar</b></button>'+
+      '<button onclick="renderAsisProblemaRegistro()"><span>📶</span><b>Problemas de registro</b></button>'+
+      '<button onclick="renderAsisRegistrosInvalidos()"><span>🛡️</span><b>Registros no válidos</b></button>'+
     '</div>';
 
     var histRows=[];
@@ -13215,7 +13215,7 @@ function renderAsistenciaMenu(){
       '<div class="c228-wrap">'+
         '<div class="c228-heading">'+
           '<div class="c228-heading-left"><div class="c228-icon">🗓️</div><div><h2>Asistencia</h2><p>Control de jornada con validación automática</p></div></div>'+
-          '<button class="c228-sync" onclick="renderAsistenciaMenu()">↻ Sincronizar</button>'+
+          '<div class="c228-sync" style="cursor:default;">'+(navigator.onLine?'✓ Todo sincronizado':'☁️ Sin conexión')+'</div>'+
         '</div>'+
         '<div class="c228-state '+stateClass+'">'+
           '<div class="c228-state-main"><div class="c228-state-icon">'+stateIcon+'</div><div><small>ESTADO ACTUAL</small><h3>'+stateTitle+'</h3><p>'+stateSub+(ent&&!sal?' · '+c226FmtHora(ent.registrado_en):'')+'</p></div></div>'+
@@ -13231,7 +13231,7 @@ function renderAsistenciaMenu(){
           '<div class="c228-day-row total"><span>Total trabajado</span><b>'+totalTxt+'</b></div>'+
           '<button class="c228-history-btn" onclick="renderAsisHistorial()">📅 Ver historial del día <span>›</span></button>'+
         '</div>'+
-        '<div class="c228-section-head"><h4>CASOS ESPECIALES</h4><button onclick="c226CasosEspeciales()">Ver todos</button></div>'+
+        '<div class="c228-section-head"><h4>CASOS ESPECIALES</h4></div>'+
         casos+
         '<div class="c228-section-head"><h4>HISTORIAL DEL DÍA</h4><button onclick="renderAsisHistorial()">Calendario</button></div>'+
         '<div class="c228-history">'+histHtml+'</div>'+
@@ -13241,16 +13241,52 @@ function renderAsistenciaMenu(){
   });
 }
 
-function c226CasosEspeciales(){
+function c226CasosEspeciales(){ renderAsistenciaMenu(); }
+
+function renderAsisJornadaSinCerrar(){
   var body=document.getElementById('op-body');
-  body.innerHTML='<div class="c226-shell">'+
-    '<button class="c225-back" onclick="renderAsistenciaMenu()">← Asistencia</button>'+
-    '<div class="c226-title">⚠️ Casos especiales</div>'+
-    '<div class="c226-sub" style="margin-bottom:12px;">Usa estas opciones solo cuando realmente lo necesites.</div>'+
-    '<button class="c226-link-card" onclick="renderAsisPermisos()"><span>📝</span><div><b>Permiso personal o médico</b><small>Solicita autorización a Administración.</small></div><strong>›</strong></button>'+
-    '<button class="c226-link-card" onclick="renderSolicitudOtro()"><span>📶</span><div><b>Problema con mi registro</b><small>Reporta GPS, conexión u otro problema técnico.</small></div><strong>›</strong></button>'+
-    '<button class="c226-link-card" onclick="renderMisSolicitudes()"><span>📋</span><div><b>Ver mis solicitudes</b><small>Consulta el estado de lo que reportaste.</small></div><strong>›</strong></button>'+
-  '</div>';
+  body.innerHTML='<div class="c226-shell"><button class="c225-back" onclick="renderAsistenciaMenu()">← Asistencia</button><div class="c226-title">❗ Jornada sin cerrar</div><div class="c226-sub">Revisaremos únicamente jornadas anteriores que tengan entrada y no tengan salida.</div><div id="asis-jsc-list" class="loading">Buscando jornada pendiente...</div></div>';
+  from('asistencia_registros').select('*').eq('usuario_id',usuario.id).eq('modalidad','labores').order('registrado_en',{ascending:false}).limit(60).get().then(function(rows){
+    rows=(rows||[]).filter(function(x){return x.fuera_de_zona!==true;});
+    var por={}; rows.forEach(function(x){(por[x.fecha]||(por[x.fecha]=[])).push(x);});
+    var fechas=Object.keys(por).sort().reverse();
+    var pendiente=null;
+    for(var i=0;i<fechas.length;i++){
+      if(fechas[i]===fechaHoyLocal()) continue;
+      var rr=por[fechas[i]], ent=rr.filter(function(x){return x.tipo==='entrada';}), sal=rr.filter(function(x){return x.tipo==='salida';});
+      if(ent.length&&!sal.length){pendiente={fecha:fechas[i],entrada:ent[ent.length-1]};break;}
+    }
+    var el=document.getElementById('asis-jsc-list'); if(!el)return;
+    if(!pendiente){el.className='c228-day-card';el.innerHTML='<h4>✓ SIN PENDIENTES</h4><p style="margin:.5rem 0 0;">No encontramos jornadas anteriores sin cerrar.</p>';return;}
+    window._asisJornadaPendiente=pendiente;
+    el.className='';
+    el.innerHTML='<div class="c228-day-card"><h4>JORNADA PENDIENTE</h4><div class="c228-day-row"><span>Fecha</span><b>'+pendiente.fecha+'</b></div><div class="c228-day-row"><span>Entrada</span><b>'+c226FmtHora(pendiente.entrada.registrado_en)+'</b></div></div><div class="form-card" style="margin-top:12px;"><div class="form-group"><label>¿Qué pasó?</label><select id="jsc-motivo"><option>Olvidé registrar mi salida</option><option>Problema técnico</option><option>Otro motivo</option></select></div><div class="form-group"><label>Hora aproximada de salida</label><input type="time" id="jsc-hora"></div><div class="form-group"><label>Comentario (opcional)</label><textarea id="jsc-com" rows="3"></textarea></div><button class="btn-primary" onclick="enviarRevisionJornada()">Enviar a revisión</button></div>';
+  }).catch(function(e){var el=document.getElementById('asis-jsc-list');if(el)el.innerHTML='No se pudo revisar: '+e.message;});
+}
+function enviarRevisionJornada(){
+  var p=window._asisJornadaPendiente;if(!p)return;
+  var hora=(document.getElementById('jsc-hora').value||'').trim();if(!hora){alert('Indica la hora aproximada de salida.');return;}
+  var motivo=document.getElementById('jsc-motivo').value, com=(document.getElementById('jsc-com').value||'').trim();
+  var mensaje='[ASISTENCIA · JORNADA SIN CERRAR] Fecha '+p.fecha+' · Entrada '+c226FmtHora(p.entrada.registrado_en)+' · Salida aproximada '+hora+' · '+motivo+(com?' · '+com:'');
+  from('solicitudes_operario').insert({operario_id:usuario.id,tipo:'otro',mensaje:mensaje,estado:'pendiente'}).then(function(){return from('notificaciones').insert({titulo:'❗ Jornada sin cerrar',cuerpo:usuario.nombre+' requiere revisión de asistencia del '+p.fecha,icono:'❗',leida:false,para_rol:'encargado'});}).then(function(){showToast('✅ Enviado a revisión');renderAsistenciaMenu();}).catch(function(e){alert('Error: '+e.message);});
+}
+function renderAsisProblemaRegistro(){
+  var body=document.getElementById('op-body');
+  body.innerHTML='<div class="c226-shell"><button class="c225-back" onclick="renderAsistenciaMenu()">← Asistencia</button><div class="c226-title">📶 Problema con mi registro</div><div class="c226-sub">Reporta únicamente problemas de entrada o salida.</div><div class="form-card"><div class="form-group"><label>¿Qué sucede?</label><select id="apr-tipo"><option>Sin señal GPS</option><option>Sin conexión a internet</option><option>No pude registrar entrada</option><option>No pude registrar salida</option><option>Otro problema</option></select></div><div class="form-group"><label>Detalle</label><textarea id="apr-det" rows="4" placeholder="Cuéntanos brevemente qué ocurrió..."></textarea></div><button class="btn-primary" onclick="enviarProblemaAsistencia()">Reportar problema</button></div></div>';
+}
+function enviarProblemaAsistencia(){
+  var tipo=document.getElementById('apr-tipo').value,det=(document.getElementById('apr-det').value||'').trim();
+  var mensaje='[ASISTENCIA · PROBLEMA DE REGISTRO] '+tipo+(det?' · '+det:'');
+  from('solicitudes_operario').insert({operario_id:usuario.id,tipo:'otro',mensaje:mensaje,estado:'pendiente'}).then(function(){return from('notificaciones').insert({titulo:'📶 Problema de asistencia',cuerpo:usuario.nombre+': '+tipo,icono:'📶',leida:false,para_rol:'encargado'});}).then(function(){showToast('✅ Problema reportado');renderAsistenciaMenu();}).catch(function(e){alert('Error: '+e.message);});
+}
+function renderAsisRegistrosInvalidos(){
+  var body=document.getElementById('op-body');
+  body.innerHTML='<div class="c226-shell"><button class="c225-back" onclick="renderAsistenciaMenu()">← Asistencia</button><div class="c226-title">🛡️ Registros no válidos</div><div class="c226-sub">Intentos rechazados que no afectaron tu asistencia.</div><div id="ari-list" class="loading">Cargando...</div></div>';
+  from('asistencia_registros').select('*').eq('usuario_id',usuario.id).eq('fuera_de_zona',true).order('registrado_en',{ascending:false}).limit(30).get().then(function(rows){
+    var el=document.getElementById('ari-list');if(!el)return;
+    if(!rows||!rows.length){el.className='c228-day-card';el.innerHTML='<h4>✓ SIN REGISTROS INVÁLIDOS</h4><p style="margin:.5rem 0 0;">No tienes intentos rechazados registrados.</p>';return;}
+    el.className='';el.innerHTML=rows.map(function(x){return '<div class="c228-day-card" style="margin-bottom:10px;"><div class="c228-day-row"><span>'+((x.tipo==='entrada')?'Entrada':'Salida')+' · '+x.fecha+'</span><b>'+c226FmtHora(x.registrado_en)+'</b></div><div style="color:var(--rojo);font-weight:700;margin-top:8px;">❌ Fuera de la zona autorizada</div><div class="hint">No afectó tu asistencia.</div></div>';}).join('');
+  }).catch(function(e){var el=document.getElementById('ari-list');if(el)el.innerHTML='No se pudo cargar: '+e.message;});
 }
 
 function renderAsisEntrada(){
@@ -13366,7 +13402,7 @@ function marcarAsistencia(tipo,modalidad){
       if(lat!=null&&lng!=null&&cfg.rancho_lat&&cfg.rancho_lng){
         var radio=parseFloat(cfg.rancho_radio_metros)||500;
         var d=haversineMetros(lat,lng,parseFloat(cfg.rancho_lat),parseFloat(cfg.rancho_lng));
-        if(d>radio){ mostrarErrorUbicacion(tipo,d,radio); return; }
+        if(d>radio){ payload.lat=lat; payload.lng=lng; payload.fuera_de_zona=true; from('asistencia_registros').insert(payload).catch(function(){}); mostrarErrorUbicacion(tipo,d,radio); return; }
         guardarRegistro(lat,lng,false);
       } else {
         guardarRegistro(lat,lng,null);
