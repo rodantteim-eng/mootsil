@@ -993,6 +993,56 @@ body.c140-preinc .op-body-shell{padding-bottom:78px}
 @media(max-width:560px){.c225-detail-card{grid-template-columns:1fr}.op-body-shell{padding-left:12px!important;padding-right:12px!important}}
 </style>
 
+
+<style id="c226-asistencia-simple">
+.c226-shell{max-width:760px;margin:0 auto}
+.c226-title-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px}
+.c226-title{font-size:1.35rem;font-weight:900;color:var(--verde)}
+.c226-sub{font-size:.78rem;color:var(--gris-3);margin-top:2px}
+.c226-date{font-size:.76rem;font-weight:750;color:var(--verde);white-space:nowrap;padding-top:4px}
+.c226-state{display:flex;align-items:center;gap:14px;border-radius:16px;padding:16px;background:#f5f7f6;border:1px solid #e2e8e4;margin-bottom:10px}
+.c226-state.active{background:linear-gradient(135deg,#0f4e31,#063921);color:#fff}
+.c226-state.extra{background:#fff4e5;border-color:#efc071}
+.c226-state.done{background:#edf8ef;border-color:#cce8d1}
+.c226-state-icon{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#fff;color:var(--verde);font-size:1.55rem;font-weight:900;flex:0 0 auto}
+.c226-state.active .c226-state-icon{background:#1d6b3e;color:#fff}
+.c226-state.extra .c226-state-icon{color:#d98200}
+.c226-state small{font-size:.64rem;font-weight:850;letter-spacing:.04em;opacity:.75}
+.c226-state h2{font-size:1.25rem;margin:2px 0 2px;color:inherit}
+.c226-state p{font-size:.8rem;margin:0;color:inherit;opacity:.88}
+.c226-alert{border-radius:12px;padding:10px 12px;margin-bottom:10px;display:flex;flex-direction:column;gap:2px;font-size:.76rem}
+.c226-alert.warn{background:#fff3dd;border:1px solid #efc77f;color:#955e00}
+.c226-actions{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.c226-action{width:100%;border:0;border-radius:12px;padding:13px 14px;font-size:.92rem;font-weight:900;cursor:pointer}
+.c226-action.primary{background:var(--verde);color:#fff}
+.c226-action.extra{background:#f08b00;color:#fff}
+.c226-action.danger{background:#c62828;color:#fff}
+.c226-card{background:#fff;border:1px solid #e1e7e3;border-radius:14px;padding:13px;margin-bottom:10px}
+.c226-card h3{margin:0 0 10px;color:var(--verde);font-size:.88rem}
+.c226-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#e5e9e7;border-radius:10px;overflow:hidden}
+.c226-summary>div{background:#fff;padding:10px;text-align:center}
+.c226-summary small{display:block;font-size:.65rem;color:var(--gris-3);margin-bottom:4px}
+.c226-summary b{font-size:.92rem;color:#183c2b}
+.c226-summary b.pending{color:#d97a00}
+.c226-running{margin-top:10px;background:#f2f5f3;border-radius:9px;padding:9px 10px;font-size:.74rem;color:#53635b;text-align:center}
+.c226-extra-row{display:flex;justify-content:space-between;gap:12px;padding:8px 2px;border-top:1px solid #edf0ee;font-size:.75rem}
+.c226-extra-row:first-of-type{margin-top:8px}
+.c226-extra-note{background:#fff5e5;border:1px solid #f0d29b;border-radius:10px;padding:9px 11px;font-size:.74rem;color:#8b5a00;margin-bottom:10px}
+.c226-extra-note.strong{font-weight:800}
+.c226-link-card{width:100%;border:1px solid #e1e7e3;background:#fff;border-radius:13px;padding:12px 13px;display:grid;grid-template-columns:32px 1fr 18px;align-items:center;gap:8px;text-align:left;margin-bottom:9px;cursor:pointer}
+.c226-link-card>span{font-size:1.2rem}
+.c226-link-card b{display:block;color:#173d2b;font-size:.82rem}
+.c226-link-card small{display:block;color:var(--gris-3);font-size:.68rem;margin-top:2px}
+.c226-link-card>strong{font-size:1.4rem;color:#617069;text-align:right}
+@media(max-width:560px){
+  .c226-shell{padding:0 2px}
+  .c226-title-row{align-items:center}
+  .c226-date{font-size:.68rem}
+  .c226-summary>div{padding:9px 4px}
+  .c226-summary b{font-size:.82rem}
+}
+</style>
+
 </head>
 <body>
 
@@ -1110,7 +1160,7 @@ body.c140-preinc .op-body-shell{padding-bottom:78px}
   </div>
 </div>
 <script>
-/* MOOTSIL C225 · Colaborador simple + Registro personal seguro: RLS + RPC administrativo */
+/* MOOTSIL C226 · Asistencia simple autorizada + Colaborador simple: RLS + RPC administrativo */
 var ca45OtrosInventario=false;
 
 var URL_SB = 'https://ypreafyqnckswvoaerbe.supabase.co';
@@ -12988,9 +13038,133 @@ function renderCartera(fechaRef){
   }).catch(function(e){body.innerHTML='<div class="empty">No se pudo calcular tu cartera.<br/><span style="font-size:.7rem;color:var(--gris-3);">('+e.message+')</span></div><button class="btn-back" style="margin-top:1rem;" onclick="renderPagosMenu()">← Volver a Pagos</button>';});
 }
 
+
+function c226FmtHora(iso){
+  if(!iso)return '—';
+  try{return new Date(iso).toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',hour12:true});}
+  catch(e){return '—';}
+}
+function c226Duracion(a,b){
+  if(!a||!b)return null;
+  var ms=new Date(b).getTime()-new Date(a).getTime();
+  if(!isFinite(ms)||ms<0)return null;
+  var min=Math.round(ms/60000), h=Math.floor(min/60), m=min%60;
+  return {min:min,h:h,m:m,text:h+' h '+String(m).padStart(2,'0')+' min'};
+}
+function c226PrimerNombre(){
+  return ((usuario&&usuario.nombre)||'').trim().split(/\s+/)[0]||'Colaborador';
+}
+
 function renderAsistenciaMenu(){
   var body=document.getElementById('op-body');
-  body.innerHTML='<div class="seccion-titulo">Asistencia</div><div style="display:flex;flex-direction:column;gap:.75rem;"><div class="tarea-card" style="cursor:pointer;" onclick="renderAsisEntrada()"><div class="tarea-title">📥 Entrada</div><div class="tarea-meta">Registra tu llegada al rancho</div></div><div class="tarea-card" style="cursor:pointer;" onclick="renderAsisSalida()"><div class="tarea-title">📤 Salida</div><div class="tarea-meta">Registra tu salida del rancho</div></div><div class="tarea-card" style="cursor:pointer;" onclick="renderAsisHistorial()"><div class="tarea-title">📊 Historial</div><div class="tarea-meta">Tu registro de asistencias y permisos</div></div></div>';
+  var hoy=fechaHoyLocal();
+  body.innerHTML='<div class="c226-shell"><div class="loading">Cargando tu asistencia...</div></div>';
+
+  Promise.all([
+    from('asistencia_registros').select('*').eq('usuario_id',usuario.id).eq('fecha',hoy).order('registrado_en',{ascending:true}).get(),
+    from('horas_extra_asignadas').select('*,tipo_labor:tipos_labor(nombre)').eq('operario_id',usuario.id).eq('fecha',hoy).eq('estado','aprobada').get()
+  ]).then(function(r){
+    var regs=r[0]||[], extras=r[1]||[];
+    var extra=extras[0]||null;
+    window._extraHoyId=extra?extra.id:null;
+
+    function reg(tipo,modalidad){
+      var arr=regs.filter(function(x){return x.tipo===tipo&&x.modalidad===modalidad;});
+      return arr.length?arr[arr.length-1]:null;
+    }
+
+    var ent=reg('entrada','labores');
+    var sal=reg('salida','labores');
+    var entEx=reg('entrada','extras');
+    var salEx=reg('salida','extras');
+
+    var nombre=c226PrimerNombre();
+    var normalDur=c226Duracion(ent&&ent.registrado_en,sal&&sal.registrado_en);
+    var extraDur=c226Duracion(entEx&&entEx.registrado_en,salEx&&salEx.registrado_en);
+    var totalMin=(normalDur?normalDur.min:0)+(extraDur?extraDur.min:0);
+    var totalTxt=totalMin?(Math.floor(totalMin/60)+' h '+String(totalMin%60).padStart(2,'0')+' min'):'—';
+
+    var estadoTitulo='Fuera de turno', estadoSub='Listo para registrar tu entrada', estadoClase='neutral';
+    var accion='', extraInfo='', retardoHtml='';
+
+    if(!ent){
+      estadoTitulo='Listo para comenzar';
+      estadoSub='Registra tu entrada al llegar al rancho';
+      accion=`<button class="c226-action primary" onclick="marcarAsistencia('entrada','labores')">↪ Registrar entrada</button>`;
+    } else if(ent && !sal){
+      estadoTitulo='Jornada en curso';
+      estadoSub='Entrada registrada '+c226FmtHora(ent.registrado_en);
+      estadoClase='active';
+      accion=`<button class="c226-action primary" onclick="marcarAsistencia('salida','labores')">↪ Registrar salida</button>`;
+      if(ent.retardo){
+        retardoHtml='<div class="c226-alert warn"><b>⚠ Con retardo</b><span>Tu entrada quedó registrada después del horario.</span></div>';
+      }
+      if(extra){
+        extraInfo='<div class="c226-extra-note">⏰ Hora extra autorizada: <b>'+numFmt(extra.horas_max)+' h</b>. Se habilitará al finalizar tu jornada normal.</div>';
+      }
+    } else if(sal && extra && !entEx){
+      estadoTitulo='Jornada normal finalizada';
+      estadoSub='Tu hora extra está autorizada';
+      estadoClase='active';
+      accion=`<button class="c226-action extra" onclick="marcarAsistencia('entrada','extras')">⏰ Iniciar hora extra · ${numFmt(extra.horas_max)} h</button>`;
+      extraInfo='<div class="c226-extra-note strong">Autorizada por Encargado/Dueño · '+numFmt(extra.horas_max)+' h</div>';
+    } else if(entEx && !salEx){
+      estadoTitulo='Hora extra en curso';
+      estadoSub='Inició '+c226FmtHora(entEx.registrado_en)+' · '+numFmt(extra&&extra.horas_max||0)+' h autorizadas';
+      estadoClase='extra';
+      accion=`<button class="c226-action danger" onclick="marcarAsistencia('salida','extras')">■ Terminar hora extra</button>`;
+    } else {
+      estadoTitulo='¡Jornada completada!';
+      estadoSub='Gracias por tu trabajo, '+nombre;
+      estadoClase='done';
+      accion='';
+    }
+
+    var estadoIcon=estadoClase==='done'?'✓':(estadoClase==='extra'?'⏰':(estadoClase==='active'?'▶':'◉'));
+
+    var resumen='<div class="c226-summary">'+
+      '<div><small>Entrada</small><b>'+c226FmtHora(ent&&ent.registrado_en)+'</b></div>'+
+      '<div><small>Salida</small><b class="'+(!sal?'pending':'')+'">'+(sal?c226FmtHora(sal.registrado_en):'Pendiente')+'</b></div>'+
+      '<div><small>Tiempo trabajado</small><b>'+totalTxt+'</b></div>'+
+    '</div>';
+
+    var extraRows='';
+    if(extra){
+      extraRows='<div class="c226-extra-row"><span>Hora extra autorizada</span><b>'+numFmt(extra.horas_max)+' h</b></div>';
+      if(entEx) extraRows+='<div class="c226-extra-row"><span>Inicio H.E.</span><b>'+c226FmtHora(entEx.registrado_en)+'</b></div>';
+      if(salEx) extraRows+='<div class="c226-extra-row"><span>Fin H.E.</span><b>'+c226FmtHora(salEx.registrado_en)+'</b></div>';
+    }
+
+    var fechaBonita='';
+    try{fechaBonita=new Date(hoy+'T12:00:00').toLocaleDateString('es-MX',{weekday:'short',day:'numeric',month:'short',year:'numeric'});}
+    catch(e){fechaBonita=hoy;}
+
+    body.innerHTML=
+      '<div class="c226-shell">'+
+        '<div class="c226-title-row"><div><div class="c226-title">🕐 Asistencia</div><div class="c226-sub">Control de jornada con validación automática</div></div><div class="c226-date">📅 '+fechaBonita+'</div></div>'+
+        '<div class="c226-state '+estadoClase+'"><div class="c226-state-icon">'+estadoIcon+'</div><div><small>ESTADO ACTUAL</small><h2>'+estadoTitulo+'</h2><p>'+estadoSub+'</p></div></div>'+
+        retardoHtml+
+        '<div class="c226-actions">'+accion+'</div>'+
+        '<div class="c226-card"><h3>Resumen del día</h3>'+resumen+extraRows+'<div class="c226-running">'+(sal?'Jornada registrada.':'Tu jornada sigue en curso.')+'</div></div>'+
+        extraInfo+
+        '<button class="c226-link-card" onclick="c226CasosEspeciales()"><span>⚠️</span><div><b>Casos especiales</b><small>Permisos o problemas con tu registro.</small></div><strong>›</strong></button>'+
+        '<button class="c226-link-card" onclick="renderAsisHistorial()"><span>📊</span><div><b>Historial de asistencia</b><small>Consulta horas, faltas, retardos y H.E.</small></div><strong>›</strong></button>'+
+      '</div>';
+  }).catch(function(e){
+    body.innerHTML='<div class="empty">No se pudo cargar tu asistencia.<br><span class="hint">'+e.message+'</span></div>';
+  });
+}
+
+function c226CasosEspeciales(){
+  var body=document.getElementById('op-body');
+  body.innerHTML='<div class="c226-shell">'+
+    '<button class="c225-back" onclick="renderAsistenciaMenu()">← Asistencia</button>'+
+    '<div class="c226-title">⚠️ Casos especiales</div>'+
+    '<div class="c226-sub" style="margin-bottom:12px;">Usa estas opciones solo cuando realmente lo necesites.</div>'+
+    '<button class="c226-link-card" onclick="renderAsisPermisos()"><span>📝</span><div><b>Permiso personal o médico</b><small>Solicita autorización a Administración.</small></div><strong>›</strong></button>'+
+    '<button class="c226-link-card" onclick="renderSolicitudOtro()"><span>📶</span><div><b>Problema con mi registro</b><small>Reporta GPS, conexión u otro problema técnico.</small></div><strong>›</strong></button>'+
+    '<button class="c226-link-card" onclick="renderMisSolicitudes()"><span>📋</span><div><b>Ver mis solicitudes</b><small>Consulta el estado de lo que reportaste.</small></div><strong>›</strong></button>'+
+  '</div>';
 }
 
 function renderAsisEntrada(){
@@ -13095,8 +13269,8 @@ function marcarAsistencia(tipo,modalidad){
     if(lng!=null) payload.lng=lng;
     if(fueraDeZona!=null) payload.fuera_de_zona=fueraDeZona;
     from('asistencia_registros').insert(payload).then(function(){
-      pintarMensajeAsistencia(tipo,modalidad,ahora,retardo);
       showToast('✅ '+(tipo==='entrada'?'Entrada':'Salida')+' registrada'+(retardo?' — con retardo':''));
+      renderAsistenciaMenu();
     }).catch(function(e){asisReactivarBotones(); if(msg) msg.innerHTML=''; alert('Error: '+e.message);});
   }
 
