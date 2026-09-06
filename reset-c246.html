@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache,no-store,must-revalidate">
+<title>Mootsil · Activar C246</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0b422c;color:#fff;margin:0;min-height:100vh;display:grid;place-items:center;padding:20px}
+.card{max-width:420px;background:#fff;color:#183b2b;border-radius:18px;padding:24px;box-shadow:0 16px 50px rgba(0,0,0,.25)}
+h1{margin:0 0 8px;color:#0b5938}p{line-height:1.45;color:#526158}
+.state{padding:12px;border-radius:12px;background:#eef6f0;margin:16px 0;font-weight:800}
+button{width:100%;border:0;border-radius:12px;padding:14px;background:#0b5938;color:#fff;font-size:16px;font-weight:800}
+small{display:block;margin-top:12px;color:#7a877f}
+</style>
+</head>
+<body><div class="card">
+<h1>Mootsil C246</h1>
+<p>Esta pantalla elimina la versión anterior guardada en el teléfono y abre el candidato nuevo.</p>
+<div class="state" id="st">Preparando actualización…</div>
+<button id="go" disabled>Abrir Mootsil C246</button>
+<small>Al abrir la plataforma, abajo a la derecha debe decir <b>C246</b>, no C087.</small>
+</div>
+<script>
+(async function(){
+  const st=document.getElementById('st'),go=document.getElementById('go');
+  try{
+    if('serviceWorker' in navigator){
+      const regs=await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=>r.unregister()));
+    }
+    if('caches' in window){
+      const keys=await caches.keys();
+      await Promise.all(keys.map(k=>caches.delete(k)));
+    }
+    try{
+      Object.keys(localStorage).filter(k=>/mootsil_sw_/i.test(k)).forEach(k=>localStorage.removeItem(k));
+      sessionStorage.clear();
+    }catch(e){}
+    st.textContent='✓ Caché anterior eliminada. C246 listo.';
+    go.disabled=false;
+    go.onclick=function(){location.replace('./?build=C246&t='+Date.now());};
+  }catch(e){
+    st.textContent='No se pudo limpiar automáticamente. Toca el botón para abrir C246.';
+    go.disabled=false;
+    go.onclick=function(){location.replace('./?build=C246&t='+Date.now());};
+  }
+})();
+</script>
+</body></html>
