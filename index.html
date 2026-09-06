@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C242';
+  window.MOOTSIL_BUILD='C243';
 </script>
 
 </head>
@@ -13228,6 +13228,9 @@ function construirBloqueRendimientoProvisional(score){
   '</div>';
 }
 function pintarInicio(jornada,datosTareas,score,esCache){
+  var _opScroll=document.getElementById('op-body');
+  if(_opScroll) _opScroll.scrollTop=0;
+
   try{window.scrollTo(0,0);}catch(_e){}
   var body=document.getElementById('op-body');
   var hoy=fechaHoyLocal();
@@ -13270,6 +13273,9 @@ function pintarInicio(jornada,datosTareas,score,esCache){
   body.innerHTML=prefijo+'<div class="op-inicio c239-home">'+bienvenidaHtml+
     '<div class="c239-today-grid">'+jornadaHtml+laborHtml+'</div>'+
     accesosHtml+proximasHtml+rendimientoHtml+'</div>';
+  body.scrollTop=0;
+  requestAnimationFrame(function(){body.scrollTop=0;});
+  setTimeout(function(){body.scrollTop=0;},80);
 
   var btnJornadaIr=document.getElementById('op-jornada-ir'); if(btnJornadaIr) btnJornadaIr.addEventListener('click',function(){tabOperario('asistencia');});
   var btnTareas=document.getElementById('op-acceso-tareas'); if(btnTareas) btnTareas.addEventListener('click',function(){tabOperario('tareas');});
@@ -16218,9 +16224,9 @@ guardarProgramacionRiegoV1=function(){
 function salir(){usuario=null;pin='';dibujarPin();setErr('');mostrar('screen-login');}
 
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('./sw.js?v=C242',{updateViaCache:'none'}).then(function(reg){
+  navigator.serviceWorker.register('./sw.js?v=C243',{updateViaCache:'none'}).then(function(reg){
     try{reg.update();}catch(e){}
-    var recargaKey='mootsil_sw_c242_recargado';
+    var recargaKey='mootsil_sw_c243_recargado';
     navigator.serviceWorker.addEventListener('controllerchange',function(){
       try{
         if(sessionStorage.getItem(recargaKey))return;
@@ -16271,7 +16277,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C087
+C243
 </div>
 
 <style id="fi128-css">
