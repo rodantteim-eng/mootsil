@@ -9424,7 +9424,7 @@ function seleccionUnica(btn){
 var N215_PRINT_CONTEXT=null;
 var N215_AUTO_PRINT=false;
 
-function n215Money(v){return '$'+Number(v||0).toFixed(2);}
+function n215Money(v){return '$'+Number(v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function n215Esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function n221SemanaISO(fecha){
   var d=new Date(fecha);
@@ -9475,13 +9475,49 @@ function n215AbrirHistorialNomina(){
     }
     (rr[0]||[]).forEach(function(x){add(x,'sueldo');});
     (rr[1]||[]).forEach(function(x){add(x,'extra');});
-    var weeks=Object.keys(map).sort().reverse().map(function(k){return map[k];});
+    var paidWeeks=Object.keys(map).sort().reverse().map(function(k){return map[k];});
+    var cur=N215_PRINT_CONTEXT||null;
+    var allMap={};
+    paidWeeks.forEach(function(w){allMap[w.inicio]=w;});
+
+    if(cur&&cur.semanaInicio){
+      allMap[cur.semanaInicio]={
+        inicio:cur.semanaInicio,fin:cur.semanaFin||'',pagado:Number(cur.totalPagado||0),
+        pendiente:Number(cur.totalPendiente||0),neto:Number(cur.totalNeto||0),
+        registros:Number(cur.totalPagado||0)>0?1:0,actual:true
+      };
+    }
+
+    var starts=Object.keys(allMap).sort();
+    var earliest=starts.length?starts[0]:(cur&&cur.semanaInicio?cur.semanaInicio:null);
+    var latest=(cur&&cur.semanaInicio)?cur.semanaInicio:(starts.length?starts[starts.length-1]:null);
+    var weeks=[];
+
+    if(earliest&&latest){
+      var d0=new Date(earliest+'T12:00:00');
+      var d1=new Date(latest+'T12:00:00');
+      for(var d=new Date(d1); d>=d0; d.setDate(d.getDate()-7)){
+        var iso=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+        var w=allMap[iso];
+        if(w){
+          weeks.push(w);
+        }else{
+          var fin=new Date(d); fin.setDate(fin.getDate()+6);
+          var finIso=fin.getFullYear()+'-'+String(fin.getMonth()+1).padStart(2,'0')+'-'+String(fin.getDate()).padStart(2,'0');
+          weeks.push({inicio:iso,fin:finIso,pagado:0,pendiente:0,neto:0,registros:0,actual:false,sinMovimientos:true});
+        }
+      }
+    }
     var body=document.getElementById('n215-history-body');
     if(!weeks.length){body.innerHTML='<div class="empty">Todavía no hay semanas con movimientos de nómina registrados.</div>';return;}
-    body.innerHTML='<style>.n215-hrow{display:grid;grid-template-columns:1.5fr .7fr .7fr auto;gap:10px;align-items:center;background:#fff;border:1px solid var(--gris-2);border-radius:11px;padding:10px 12px;margin-bottom:8px}.n215-hrow strong{color:var(--verde)}.n215-hrow small{display:block;color:var(--gris-5);margin-top:2px}.n215-hamount{font-weight:850;color:var(--verde)}.n215-hstate{font-size:.6rem;font-weight:850;color:#17613f;background:#eaf6ee;padding:4px 7px;border-radius:999px;text-align:center}.n215-hactions{display:flex;gap:5px}.n215-hactions button{border:1px solid var(--gris-2);background:#fff;color:var(--verde);border-radius:7px;padding:7px 9px;font-weight:800;font-size:.62rem}@media(max-width:700px){.n215-hrow{grid-template-columns:1fr 1fr}.n215-hactions{grid-column:1/-1}}</style>'+
+    body.innerHTML='<style>.n215-hrow{display:grid;grid-template-columns:1.5fr .8fr .8fr auto;gap:10px;align-items:center;background:#fff;border:1px solid var(--gris-2);border-radius:11px;padding:10px 12px;margin-bottom:8px}.n215-hrow strong{color:var(--verde)}.n215-hrow small{display:block;color:var(--gris-5);margin-top:2px}.n215-hamount{font-weight:850;color:var(--verde)}.n215-hstate{font-size:.6rem;font-weight:850;padding:4px 7px;border-radius:999px;text-align:center}.n215-hstate.paid{color:#17613f;background:#eaf6ee}.n215-hstate.pending{color:#9a6200;background:#fff3d6}.n215-hstate.empty{color:#6c7570;background:#f0f3f1}.n215-hactions{display:flex;gap:5px}.n215-hactions button{border:1px solid var(--gris-2);background:#fff;color:var(--verde);border-radius:7px;padding:7px 9px;font-weight:800;font-size:.62rem}@media(max-width:700px){.n215-hrow{grid-template-columns:1fr 1fr}.n215-hactions{grid-column:1/-1}}</style>'+
       weeks.map(function(w){
         var d=new Date(w.inicio+'T12:00:00');var num=n221SemanaISO(d);
-        return '<div class="n215-hrow"><div><strong>Semana '+num+'</strong><small>'+n215Esc(w.inicio)+' a '+n215Esc(w.fin||'—')+'</small></div><div><small>Pagado registrado</small><div class="n215-hamount">'+n215Money(w.pagado)+'</div></div><div class="n215-hstate">'+(w.registros?'Con pagos':'Sin pagos')+'</div><div class="n215-hactions"><button data-n215-ver="'+w.inicio+'">Ver detalle</button><button data-n215-print="'+w.inicio+'">🖨 Imprimir</button></div></div>';
+        var estado='Sin movimientos',cls='empty',monto=n215Money(0);
+        if(w.actual&&Number(w.pendiente||0)>0){estado='Pendiente';cls='pending';monto=n215Money(w.neto||w.pendiente||0);}
+        else if(Number(w.pagado||0)>0){estado='Pagada';cls='paid';monto=n215Money(w.pagado);}
+        var acciones=w.sinMovimientos?'—':'<div class="n215-hactions"><button data-n215-ver="'+w.inicio+'">Ver detalle</button><button data-n215-print="'+w.inicio+'">🖨 Imprimir</button></div>';
+        return '<div class="n215-hrow"><div><strong>Semana '+num+'</strong><small>'+n215Esc(w.inicio)+' a '+n215Esc(w.fin||'—')+'</small></div><div><small>'+(cls==='paid'?'Pagado registrado':(cls==='pending'?'Neto semana':'Importe'))+'</small><div class="n215-hamount">'+monto+'</div></div><div class="n215-hstate '+cls+'">'+estado+'</div><div>'+acciones+'</div></div>';
       }).join('');
     body.querySelectorAll('[data-n215-ver]').forEach(function(b){b.onclick=function(){bg.remove();renderGenerarNomina(new Date(this.dataset.n215Ver+'T12:00:00'));};});
     body.querySelectorAll('[data-n215-print]').forEach(function(b){b.onclick=function(){N215_AUTO_PRINT=true;bg.remove();renderGenerarNomina(new Date(this.dataset.n215Print+'T12:00:00'));};});
@@ -9651,12 +9687,12 @@ function renderGenerarNomina(fechaRef){
           '<div class="n74-row '+(pagado?'paid':'')+'">'+
             '<div class="n74-person"><strong>'+o.nombre+'</strong><div><span class="n74-badge '+(tipoTxt==='EVENTUAL'?'ev':'')+'">'+tipoTxt+'</span> '+warning+'</div></div>'+
             '<div class="n74-cell"><small>Días</small><b>'+diasPagados.toFixed(1)+'</b><span>'+inc.join(' · ')+'</span></div>'+
-            '<div class="n74-cell"><small>Jornal</small><b>$'+sueldoBase.toFixed(2)+'</b><span>$'+montoSueldo.toFixed(2)+'</span></div>'+
-            '<div class="n74-cell"><small>H.E.</small><b>'+horasExtra.toFixed(1)+' h</b><span>+$'+montoExtra.toFixed(2)+'</span></div>'+
-            '<div class="n74-cell"><small>Bonos</small><button type="button" class="n81-bonos-link" data-bonos-nom="'+idAccion+'" style="border:0;background:none;padding:0;color:var(--verde);font-weight:850;font-size:.76rem;cursor:pointer;text-decoration:'+(montoBonos>0?'underline':'none')+';">+$'+montoBonos.toFixed(2)+'</button></div>'+
-            '<div class="n74-cell"><small>Apoyos</small><b>+$'+montoApoyos.toFixed(2)+'</b></div>'+
-            '<div class="n74-cell"><small>Préstamos</small><b class="red">-$'+montoPrestamos.toFixed(2)+'</b></div>'+
-            '<div class="n74-net"><small>'+(pagado?'PAGADO':'NETO')+'</small><strong>$'+neto.toFixed(2)+'</strong><span>'+banco+'</span></div>'+
+            '<div class="n74-cell"><small>Jornal</small><b>'+n215Money(sueldoBase)+'</b><span>'+n215Money(montoSueldo)+'</span></div>'+
+            '<div class="n74-cell"><small>H.E.</small><b>'+horasExtra.toFixed(1)+' h</b><span>+'+n215Money(montoExtra)+'</span></div>'+
+            '<div class="n74-cell"><small>Bonos</small><button type="button" class="n81-bonos-link" data-bonos-nom="'+idAccion+'" style="border:0;background:none;padding:0;color:var(--verde);font-weight:850;font-size:.76rem;cursor:pointer;text-decoration:'+(montoBonos>0?'underline':'none')+';">+'+n215Money(montoBonos)+'</button></div>'+
+            '<div class="n74-cell"><small>Apoyos</small><b>+'+n215Money(montoApoyos)+'</b></div>'+
+            '<div class="n74-cell"><small>Préstamos</small><b class="red">-'+n215Money(montoPrestamos)+'</b></div>'+
+            '<div class="n74-net"><small>'+(pagado?'PAGADO':'NETO')+'</small><strong>'+n215Money(neto)+'</strong><span>'+banco+'</span></div>'+
             '<div class="n74-actions">'+
               (pagado?'<button class="n74-soft" data-despagar="'+idAccion+'">Pendiente</button>':'<button class="n74-pay" data-pagar="'+idAccion+'">Pagar</button>')+
               '<button class="n74-soft" data-recibo="'+idAccion+'">Recibo</button>'+
@@ -9676,21 +9712,21 @@ function renderGenerarNomina(fechaRef){
         '.n74-foot{display:flex;justify-content:flex-end;gap:18px;margin-top:9px;font-size:.7rem;font-weight:750;color:var(--verde)}'+
         '@media(max-width:1100px){.n74-kpis{grid-template-columns:repeat(3,1fr)}.n74-row{grid-template-columns:1.2fr repeat(3,.7fr) 1fr}.n74-row .n74-cell:nth-of-type(5),.n74-row .n74-cell:nth-of-type(6){display:none}.n74-actions{grid-column:1/-1;justify-content:flex-start}}'+
         '</style>'+
-        '<div><div class="n74-title">💰 Pago de Nómina <span style="font-size:.55rem;color:#8a968f;font-weight:700;">C221</span></div><div class="n74-sub">Preliminar semanal generado desde Expedientes, Asistencia, H.E., Bonos, Apoyos y Préstamos. Corrige el origen y vuelve a calcular antes de pagar.</div></div>'+
+        '<div><div class="n74-title">💰 Pago de Nómina <span style="font-size:.55rem;color:#8a968f;font-weight:700;">C222</span></div><div class="n74-sub">Preliminar semanal generado desde Expedientes, Asistencia, H.E., Bonos, Apoyos y Préstamos. Corrige el origen y vuelve a calcular antes de pagar.</div></div>'+
         '<div class="n74-nav"><button id="n74-ant">← Semana anterior</button><button id="n74-hoy">Semana actual</button>'+(esSemanaActual?'':'<button id="n74-sig">Semana siguiente →</button>')+'<span class="n74-week">Semana '+numSemana+' · '+semanaInicio+' a '+semanaFin+'</span></div>'+
         '<div class="n74-kpis">'+
-          '<div class="n74-kpi"><small>Sueldos</small><strong>$'+totalSueldos.toFixed(2)+'</strong></div>'+
-          '<div class="n74-kpi"><small>Horas extra</small><strong>+$'+totalExtra.toFixed(2)+'</strong></div>'+
-          '<div class="n74-kpi"><small>Bonos</small><strong>+$'+totalBonos.toFixed(2)+'</strong></div>'+
-        '<div class="n74-kpi"><small>Apoyos</small><strong>+$'+totalApoyos.toFixed(2)+'</strong></div>'+
-          '<div class="n74-kpi red"><small>Préstamos</small><strong>-$'+totalPrestamos.toFixed(2)+'</strong></div>'+
-          '<div class="n74-kpi gold"><small>Neto semana</small><strong>$'+totalNeto.toFixed(2)+'</strong></div>'+
-          '<div class="n74-kpi"><small>Pagado</small><strong>$'+totalPagado.toFixed(2)+'</strong></div>'+
+          '<div class="n74-kpi"><small>Sueldos</small><strong>'+n215Money(totalSueldos)+'</strong></div>'+
+          '<div class="n74-kpi"><small>Horas extra</small><strong>+'+n215Money(totalExtra)+'</strong></div>'+
+          '<div class="n74-kpi"><small>Bonos</small><strong>+'+n215Money(totalBonos)+'</strong></div>'+
+        '<div class="n74-kpi"><small>Apoyos</small><strong>+'+n215Money(totalApoyos)+'</strong></div>'+
+          '<div class="n74-kpi red"><small>Préstamos</small><strong>-'+n215Money(totalPrestamos)+'</strong></div>'+
+          '<div class="n74-kpi gold"><small>Neto semana</small><strong>'+n215Money(totalNeto)+'</strong></div>'+
+          '<div class="n74-kpi"><small>Pagado</small><strong>'+n215Money(totalPagado)+'</strong></div>'+
         '</div>'+
         '<div style="background:#fffaf0;border:1px solid #ead8b5;border-radius:10px;padding:8px 10px;margin-bottom:9px;font-size:.68rem;color:#745315;"><strong>Retardos:</strong> se muestran como información de asistencia y no generan descuento automático en Nómina.</div>'+
-        '<div class="n74-bulk"><span><strong>'+pendientes.length+'</strong> pagos pendientes · $'+totalPendiente.toFixed(2)+'</span><button id="n220-historial" type="button" class="n219-history">📚 Historial de nóminas</button><button id="n220-imprimir" type="button" class="n219-print">🖨 Imprimir nómina</button><select id="n74-cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="santander_pesos">Santander Pesos</option></select><button id="n74-pagar-todo" '+(!pendientes.length?'disabled style="opacity:.45"':'')+'>✓ Pagar nómina pendiente</button></div>'+
+        '<div class="n74-bulk"><span><strong>'+pendientes.length+'</strong> pagos pendientes · '+n215Money(totalPendiente)+'</span><button id="n220-historial" type="button" class="n219-history">📚 Historial de nóminas</button><button id="n220-imprimir" type="button" class="n219-print">🖨 Imprimir nómina</button><select id="n74-cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="santander_pesos">Santander Pesos</option></select><button id="n74-pagar-todo" '+(!pendientes.length?'disabled style="opacity:.45"':'')+'>✓ Pagar nómina pendiente</button></div>'+
         '<div class="n74-list">'+(filas.length?filas.join(''):'<div class="empty">Sin colaboradores con nómina en esta semana.</div>')+'</div>'+
-        '<div class="n74-foot"><span>Pendiente: $'+totalPendiente.toFixed(2)+'</span><span>Pagado: $'+totalPagado.toFixed(2)+'</span></div>';
+        '<div class="n74-foot"><span>Pendiente: '+n215Money(totalPendiente)+'</span><span>Pagado: '+n215Money(totalPagado)+'</span></div>';
 
       body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="no50VolverNomina()">← Volver a Caja</button>';
       var n220Imp=document.getElementById('n220-imprimir');
