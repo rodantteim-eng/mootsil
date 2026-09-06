@@ -8335,8 +8335,8 @@ function renderCajaMootsil(periodo,fechaBase){
       var esAp=ap98EsApoyo(g),am=esAp?(ap98Meta(g.concepto)||{}):{};
       externos.push({id:'db-g-'+g.id,fecha:g.fecha,hora:'—',tipo:'salida',cuenta:/efectivo/i.test(g.forma_pago||'')?'efectivo':'bancos',categoria:esAp?'Apoyo':'Compra / gasto',concepto:esAp?ap98Concepto(g):(g.concepto||'Gasto'),persona:esAp?(am.nombre||'Colaborador'):(g.proveedor?g.proveedor.nombre:'Sin proveedor'),monto:cajaMonto(g.monto),forma:g.forma_pago||'—',origen:esAp?'Apoyos':'Compra',estado:'Pagado',db:true});
     });
-    nom.forEach(function(p){externos.push({id:'db-n-'+p.id,fecha:p.semana_inicio,hora:'—',tipo:'salida',cuenta:'efectivo',categoria:'Personal',concepto:'Nómina personal fijo',persona:p.operario?p.operario.nombre:'Colaborador',monto:cajaMonto(p.monto_pagado),forma:'—',origen:'Nómina',estado:'Pagado',c219:true,db:true});});
-    extras.forEach(function(p){externos.push({id:'db-x-'+p.id,fecha:p.semana_inicio,hora:'—',tipo:'salida',cuenta:'efectivo',categoria:'Personal',concepto:'Horas extra',persona:p.operario?p.operario.nombre:'Colaborador',monto:cajaMonto(p.monto_pagado),forma:'—',origen:'Nómina',estado:'Pagado',db:true});});
+    nom.forEach(function(p){externos.push({id:'db-n-'+p.id,fecha:p.semana_inicio,hora:'—',tipo:'salida',cuenta:p.cuenta_pago||'efectivo',categoria:'Personal',concepto:'Nómina personal fijo',persona:p.operario?p.operario.nombre:'Colaborador',monto:cajaMonto(p.monto_pagado),forma:'—',origen:'Nómina',estado:'Pagado',c219:true,db:true});});
+    extras.forEach(function(p){externos.push({id:'db-x-'+p.id,fecha:p.semana_inicio,hora:'—',tipo:'salida',cuenta:p.cuenta_pago||'efectivo',categoria:'Personal',concepto:'Horas extra',persona:p.operario?p.operario.nombre:'Colaborador',monto:cajaMonto(p.monto_pagado),forma:'—',origen:'Nómina',estado:'Pagado',db:true});});
     eventuales.forEach(function(p){externos.push({id:'db-e-'+p.id,fecha:p.fecha,hora:'—',tipo:'salida',cuenta:'efectivo',categoria:'Personal',concepto:p.concepto||'Pago personal eventual',persona:p.operario?p.operario.nombre:'Eventual',monto:cajaMonto(p.monto),forma:'—',origen:'Eventuales',estado:'Pagado',db:true});});
     prestamos.forEach(function(p){externos.push({id:'db-p-'+p.id,fecha:p.fecha_inicio,hora:'—',tipo:'salida',cuenta:'efectivo',categoria:'Personal',concepto:'Préstamo a colaborador',persona:p.operario?p.operario.nombre:'Colaborador',monto:cajaMonto(p.monto_total),forma:'—',origen:'Préstamo',estado:'Registrado',db:true});});
     inversiones.forEach(function(i){externos.push({id:'db-i-'+i.id,fecha:i.fecha_inicio,hora:'—',tipo:'entrada',cuenta:'bancos',categoria:'Aportaciones',concepto:'Aportación de inversionista',persona:i.inversionista?i.inversionista.nombre:'Inversionista',monto:cajaMonto(i.monto_invertido),forma:'Transferencia',origen:'Inversionistas',estado:'Registrado',db:true});});
@@ -9667,7 +9667,7 @@ function renderGenerarNomina(fechaRef){
         '.n74-foot{display:flex;justify-content:flex-end;gap:18px;margin-top:9px;font-size:.7rem;font-weight:750;color:var(--verde)}'+
         '@media(max-width:1100px){.n74-kpis{grid-template-columns:repeat(3,1fr)}.n74-row{grid-template-columns:1.2fr repeat(3,.7fr) 1fr}.n74-row .n74-cell:nth-of-type(5),.n74-row .n74-cell:nth-of-type(6){display:none}.n74-actions{grid-column:1/-1;justify-content:flex-start}}'+
         '</style>'+
-        '<div><div class="n74-title">💰 Pago de Nómina <span style="font-size:.55rem;color:#8a968f;font-weight:700;">C219</span></div><div class="n74-sub">Preliminar semanal generado desde Expedientes, Asistencia, H.E., Bonos, Apoyos y Préstamos. Corrige el origen y vuelve a calcular antes de pagar.</div></div>'+
+        '<div><div class="n74-title">💰 Pago de Nómina <span style="font-size:.55rem;color:#8a968f;font-weight:700;">C220</span></div><div class="n74-sub">Preliminar semanal generado desde Expedientes, Asistencia, H.E., Bonos, Apoyos y Préstamos. Corrige el origen y vuelve a calcular antes de pagar.</div></div>'+
         '<div class="n74-nav"><button id="n74-ant">← Semana anterior</button><button id="n74-hoy">Semana actual</button>'+(esSemanaActual?'':'<button id="n74-sig">Semana siguiente →</button>')+'<span class="n74-week">Semana '+numSemana+' · '+semanaInicio+' a '+semanaFin+'</span></div>'+
         '<div class="n74-kpis">'+
           '<div class="n74-kpi"><small>Sueldos</small><strong>$'+totalSueldos.toFixed(2)+'</strong></div>'+
@@ -9679,18 +9679,18 @@ function renderGenerarNomina(fechaRef){
           '<div class="n74-kpi"><small>Pagado</small><strong>$'+totalPagado.toFixed(2)+'</strong></div>'+
         '</div>'+
         '<div style="background:#fffaf0;border:1px solid #ead8b5;border-radius:10px;padding:8px 10px;margin-bottom:9px;font-size:.68rem;color:#745315;"><strong>Retardos:</strong> se muestran como información de asistencia y no generan descuento automático en Nómina.</div>'+
-        '<div class="n74-bulk"><span><strong>'+pendientes.length+'</strong> pagos pendientes · $'+totalPendiente.toFixed(2)+'</span><button id="n219-historial" type="button" class="n219-history">📚 Historial nómina</button><button id="n219-imprimir" type="button" class="n219-print">🖨 Imprimir nómina</button><select id="n74-cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="santander_pesos">Santander Pesos</option></select><button id="n74-pagar-todo" '+(!pendientes.length?'disabled style="opacity:.45"':'')+'>✓ Pagar nómina pendiente</button></div>'+
+        '<div class="n74-bulk"><span><strong>'+pendientes.length+'</strong> pagos pendientes · $'+totalPendiente.toFixed(2)+'</span><button id="n220-historial" type="button" class="n219-history">📚 Historial de nóminas</button><button id="n220-imprimir" type="button" class="n219-print">🖨 Imprimir nómina</button><select id="n74-cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="santander_pesos">Santander Pesos</option></select><button id="n74-pagar-todo" '+(!pendientes.length?'disabled style="opacity:.45"':'')+'>✓ Pagar nómina pendiente</button></div>'+
         '<div class="n74-list">'+(filas.length?filas.join(''):'<div class="empty">Sin colaboradores con nómina en esta semana.</div>')+'</div>'+
         '<div class="n74-foot"><span>Pendiente: $'+totalPendiente.toFixed(2)+'</span><span>Pagado: $'+totalPagado.toFixed(2)+'</span></div>';
 
       body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="no50VolverNomina()">← Volver a Caja</button>';
-      var n219Imp=document.getElementById('n219-imprimir');
-      if(n219Imp)n219Imp.onclick=function(){
+      var n220Imp=document.getElementById('n220-imprimir');
+      if(n220Imp)n220Imp.onclick=function(){
         if(typeof n215ImprimirNominaActual==='function')n215ImprimirNominaActual();
         else alert('No se pudo abrir la impresión de nómina.');
       };
-      var n219Hist=document.getElementById('n219-historial');
-      if(n219Hist)n219Hist.onclick=function(){
+      var n220Hist=document.getElementById('n220-historial');
+      if(n220Hist)n220Hist.onclick=function(){
         if(typeof n215AbrirHistorialNomina==='function')n215AbrirHistorialNomina();
         else alert('No se pudo abrir el historial de nómina.');
       };
@@ -9714,13 +9714,14 @@ function renderGenerarNomina(fechaRef){
 
       function registrarEstados(acc){
         var opId=acc.operarioId;
+        var cuentaPago=((document.getElementById('n74-cuenta')||{}).value)||'efectivo';
         var existenteSueldo=estadoPorOp[opId];
-        var payloadSueldo={operario_id:opId,semana_inicio:semanaInicio,semana_fin:semanaFin,estado:'pagado',monto_pagado:acc.totalSueldo,pagado_por:usuario.id,pagado_en:new Date().toISOString()};
+        var payloadSueldo={operario_id:opId,semana_inicio:semanaInicio,semana_fin:semanaFin,estado:'pagado',monto_pagado:acc.totalSueldo,cuenta_pago:cuentaPago,pagado_por:usuario.id,pagado_en:new Date().toISOString()};
         var pasos=[existenteSueldo?from('pagos_semana_estado').eq('id',existenteSueldo.id).update(payloadSueldo):from('pagos_semana_estado').insert(payloadSueldo)];
 
         if(acc.horasExtra>0){
           var existenteExtra=estadoExtraPorOp[opId];
-          var payloadExtra={operario_id:opId,semana_inicio:semanaInicio,semana_fin:semanaFin,estado:'pagado',horas:acc.horasExtra,monto_pagado:acc.totalExtra,pagado_por:usuario.id,pagado_en:new Date().toISOString()};
+          var payloadExtra={operario_id:opId,semana_inicio:semanaInicio,semana_fin:semanaFin,estado:'pagado',horas:acc.horasExtra,monto_pagado:acc.totalExtra,cuenta_pago:cuentaPago,pagado_por:usuario.id,pagado_en:new Date().toISOString()};
           pasos.push(existenteExtra?from('pagos_extra_estado').eq('id',existenteExtra.id).update(payloadExtra):from('pagos_extra_estado').insert(payloadExtra));
         }
 
