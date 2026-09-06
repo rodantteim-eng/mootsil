@@ -1044,62 +1044,52 @@ body.c140-preinc .op-body-shell{padding-bottom:78px}
 </style>
 
 
-<style id="c227-asistencia-visual">
-/* C227 — capa visual; no altera lógica ni datos de C226 */
-.c226-shell{max-width:820px!important;margin:0 auto!important}
-.c226-title-row{
-  background:#fff!important;border:0!important;padding:4px 2px 8px!important;
-  align-items:center!important
-}
-.c226-title{font-size:1.45rem!important;font-weight:900!important;color:#143f2b!important}
-.c226-title:before{
-  content:"";display:inline-flex;width:38px;height:38px;border-radius:50%;
-  background:#dcefe0;margin-right:9px;vertical-align:middle
-}
-.c226-sub{margin-left:49px!important;margin-top:-8px!important;font-size:.76rem!important}
-.c226-date{background:#fff!important;border-radius:10px!important;padding:8px 10px!important;
-  box-shadow:0 2px 8px rgba(16,64,40,.08)!important}
-.c226-state{
-  min-height:116px!important;border-radius:16px!important;padding:17px 19px!important;
-  box-shadow:0 5px 16px rgba(8,54,32,.12)!important
-}
-.c226-state.active,.c226-state.done{
-  background:linear-gradient(135deg,#073f25 0%,#005b32 100%)!important;color:#fff!important;
-  border:0!important
-}
-.c226-state.done .c226-state-icon{background:#10a84c!important;color:#fff!important}
-.c226-state.neutral{background:linear-gradient(135deg,#073f25 0%,#005b32 100%)!important;color:#fff!important}
-.c226-state.neutral .c226-state-icon{background:#60756a!important;color:#fff!important}
-.c226-state.extra{background:linear-gradient(135deg,#073f25 0%,#005b32 100%)!important;color:#fff!important;border:0!important}
-.c226-state.extra .c226-state-icon{background:#ff9500!important;color:#fff!important}
-.c226-state h2{font-size:1.35rem!important}
-.c226-actions{margin-top:8px!important;margin-bottom:12px!important}
-.c226-action{
-  min-height:54px!important;border-radius:11px!important;font-size:1rem!important;
-  box-shadow:0 4px 10px rgba(8,54,32,.12)!important
-}
-.c226-action.primary{background:linear-gradient(90deg,#07532f,#006a3b)!important}
-.c226-action.extra{background:linear-gradient(90deg,#ff8a00,#ff9f0a)!important}
-.c226-action.danger{background:#ef2222!important}
-.c226-card{border-radius:14px!important;box-shadow:0 3px 12px rgba(20,50,35,.08)!important;padding:15px!important}
-.c226-card h3{text-transform:uppercase!important;font-size:.78rem!important;letter-spacing:.02em!important}
-.c226-summary{background:#e9eeeb!important}
-.c226-summary>div{padding:13px 8px!important}
-.c226-summary small{font-size:.67rem!important}
-.c226-summary b{font-size:1rem!important}
-.c226-extra-note{border-radius:11px!important;background:#fff1dc!important}
-.c226-link-card{
-  min-height:66px!important;border-radius:13px!important;box-shadow:0 2px 9px rgba(20,50,35,.06)!important
-}
-.c226-link-card b{font-size:.86rem!important}
-.c226-link-card small{font-size:.7rem!important}
-@media(max-width:650px){
-  .c226-shell{padding:0 10px!important}
-  .c226-date{font-size:.64rem!important;padding:7px!important}
-  .c226-title{font-size:1.3rem!important}
-  .c226-title:before{width:34px;height:34px}
-  .c226-sub{margin-left:43px!important}
-  .c226-state{min-height:108px!important}
+
+
+
+<style id="c228-asistencia-maestra">
+.c228-wrap{max-width:820px;margin:0 auto;padding:2px 2px 18px}
+.c228-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:2px 0 12px}
+.c228-heading-left{display:flex;align-items:center;gap:10px}
+.c228-icon{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#dcefe0;font-size:1.2rem}
+.c228-heading h2{margin:0;color:#173f2b;font-size:1.42rem}
+.c228-heading p{margin:2px 0 0;font-size:.75rem;color:#6e7d75}
+.c228-sync{border:1px solid #dde5e0;background:#fff;color:#17633e;border-radius:10px;padding:8px 10px;font-weight:800;cursor:pointer}
+.c228-state{display:flex;align-items:center;justify-content:space-between;gap:16px;border-radius:16px;padding:17px 18px;margin-bottom:10px;box-shadow:0 4px 14px rgba(9,55,34,.11)}
+.c228-state.off,.c228-state.on,.c228-state.done,.c228-state.extra{background:linear-gradient(135deg,#073f25,#005a32);color:#fff}
+.c228-state-main{display:flex;align-items:center;gap:13px;min-width:0}
+.c228-state-icon{width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#61766b;color:#fff;font-size:1.55rem;font-weight:900;flex:0 0 auto}
+.c228-state.on .c228-state-icon,.c228-state.done .c228-state-icon{background:#10a84c}.c228-state.extra .c228-state-icon{background:#ff9500}
+.c228-state small{font-size:.64rem;opacity:.8;font-weight:850}
+.c228-state h3{margin:2px 0 2px;font-size:1.35rem}.c228-state p{margin:0;font-size:.83rem;opacity:.92}
+.c228-state-side{border-left:1px solid rgba(255,255,255,.22);padding-left:16px;text-align:right;min-width:120px}
+.c228-state-side small{display:block}.c228-state-side b{display:block;font-size:1.35rem;color:#81ee87;margin-top:3px}
+.c228-main-action{width:100%;min-height:54px;border-radius:11px;font-size:1rem;font-weight:900;cursor:pointer;margin:0 0 10px}
+.c228-main-action.green{border:0;background:linear-gradient(90deg,#0a6b3c,#067242);color:#fff}
+.c228-main-action.outline-red{border:2px solid #ef3c3c;background:#fff;color:#d92727}
+.c228-main-action.orange{border:0;background:linear-gradient(90deg,#ff8a00,#ff9f0a);color:#fff}
+.c228-main-action.red{border:0;background:#ef2222;color:#fff}
+.c228-extra-strip{background:#fff1da;border:1px solid #f2cd8d;color:#9b6200;border-radius:10px;padding:9px 11px;margin:-2px 0 10px;font-size:.75rem}
+.c228-extra-strip.strong{font-weight:800}
+.c228-day-card,.c228-history{background:#fff;border:1px solid #e0e7e3;border-radius:14px;padding:14px;box-shadow:0 3px 10px rgba(18,55,36,.06);margin-bottom:12px}
+.c228-day-card h4,.c228-section-head h4{margin:0;color:#263a30;font-size:.76rem;letter-spacing:.02em}
+.c228-day-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #edf1ee;font-size:.8rem}
+.c228-day-row b{color:#173f2b}.c228-day-row b.pending{color:#e18000}.c228-day-row.total{font-weight:850}.c228-day-row.total b{color:#147041}
+.c228-history-btn{width:100%;margin-top:10px;border:0;background:#f2f7f3;border-radius:9px;padding:10px 12px;color:#173f2b;font-weight:800;text-align:left;display:flex;justify-content:space-between;cursor:pointer}
+.c228-section-head{display:flex;align-items:center;justify-content:space-between;margin:14px 0 8px}
+.c228-section-head button{border:0;background:transparent;color:#17633e;font-weight:800;cursor:pointer}
+.c228-special-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.c228-special-grid button{min-height:102px;border:1px solid #e4e9e6;background:#fff;border-radius:13px;padding:10px 6px;box-shadow:0 2px 8px rgba(18,55,36,.05);cursor:pointer}
+.c228-special-grid span{display:block;font-size:1.45rem;margin-bottom:6px}.c228-special-grid b{display:block;font-size:.69rem;color:#263c31}
+.c228-history-row{display:grid;grid-template-columns:30px 1fr auto;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid #eef1ef}
+.c228-history-row:last-child{border-bottom:0}.c228-history-row b{font-size:.77rem;color:#233b30}.c228-history-row strong{font-size:.76rem;color:#233b30}
+.c228-empty{text-align:center;color:#7d8983;font-size:.76rem;padding:10px}
+@media(max-width:600px){
+  .c228-wrap{padding:0 10px 16px}
+  .c228-heading h2{font-size:1.28rem}.c228-heading p{font-size:.68rem}.c228-sync{font-size:.7rem;padding:7px 8px}
+  .c228-state{padding:14px 13px}.c228-state-icon{width:50px;height:50px;font-size:1.3rem}.c228-state h3{font-size:1.15rem}.c228-state p{font-size:.74rem}
+  .c228-state-side{min-width:96px;padding-left:11px}.c228-state-side b{font-size:1.05rem}
+  .c228-special-grid{grid-template-columns:repeat(4,1fr);gap:6px}.c228-special-grid button{min-height:88px;padding:8px 4px}.c228-special-grid b{font-size:.61rem}
 }
 </style>
 
@@ -1220,7 +1210,7 @@ body.c140-preinc .op-body-shell{padding-bottom:78px}
   </div>
 </div>
 <script>
-/* MOOTSIL C227 · Asistencia visual aprobada + Colaborador simple: RLS + RPC administrativo */
+/* MOOTSIL C228 · Asistencia Maestra + Colaborador simple: RLS + RPC administrativo */
 var ca45OtrosInventario=false;
 
 var URL_SB = 'https://ypreafyqnckswvoaerbe.supabase.co';
@@ -13115,10 +13105,12 @@ function c226PrimerNombre(){
   return ((usuario&&usuario.nombre)||'').trim().split(/\s+/)[0]||'Colaborador';
 }
 
+
 function renderAsistenciaMenu(){
   var body=document.getElementById('op-body');
   var hoy=fechaHoyLocal();
-  body.innerHTML='<div class="c226-shell"><div class="loading">Cargando tu asistencia...</div></div>';
+
+  body.innerHTML='<div class="c228-wrap"><div class="loading">Cargando asistencia...</div></div>';
 
   Promise.all([
     from('asistencia_registros').select('*').eq('usuario_id',usuario.id).eq('fecha',hoy).order('registrado_en',{ascending:true}).get(),
@@ -13129,8 +13121,8 @@ function renderAsistenciaMenu(){
     window._extraHoyId=extra?extra.id:null;
 
     function reg(tipo,modalidad){
-      var arr=regs.filter(function(x){return x.tipo===tipo&&x.modalidad===modalidad;});
-      return arr.length?arr[arr.length-1]:null;
+      var a=regs.filter(function(x){return x.tipo===tipo&&x.modalidad===modalidad;});
+      return a.length?a[a.length-1]:null;
     }
 
     var ent=reg('entrada','labores');
@@ -13138,77 +13130,111 @@ function renderAsistenciaMenu(){
     var entEx=reg('entrada','extras');
     var salEx=reg('salida','extras');
 
-    var nombre=c226PrimerNombre();
     var normalDur=c226Duracion(ent&&ent.registrado_en,sal&&sal.registrado_en);
     var extraDur=c226Duracion(entEx&&entEx.registrado_en,salEx&&salEx.registrado_en);
+
+    var ahora=new Date();
+    var actualMin=0;
+    if(ent&&!sal) actualMin=Math.max(0,Math.round((ahora-new Date(ent.registrado_en))/60000));
+    var actualTxt=ent&&!sal?(Math.floor(actualMin/60)+':'+String(actualMin%60).padStart(2,'0')+' h'):'—';
+
     var totalMin=(normalDur?normalDur.min:0)+(extraDur?extraDur.min:0);
+    if(ent&&!sal) totalMin=actualMin;
+    if(entEx&&!salEx && sal){
+      totalMin=(normalDur?normalDur.min:0)+Math.max(0,Math.round((ahora-new Date(entEx.registrado_en))/60000));
+    }
     var totalTxt=totalMin?(Math.floor(totalMin/60)+' h '+String(totalMin%60).padStart(2,'0')+' min'):'—';
 
-    var estadoTitulo='Fuera de turno', estadoSub='Listo para registrar tu entrada', estadoClase='neutral';
-    var accion='', extraInfo='', retardoHtml='';
+    var stateTitle='Fuera de turno';
+    var stateSub='Listo para registrar tu entrada';
+    var stateClass='off';
+    var stateIcon='▶';
+    var rightStat='';
+    var mainAction='';
+    var extraBadge='';
 
     if(!ent){
-      estadoTitulo='Listo para comenzar';
-      estadoSub='Registra tu entrada al llegar al rancho';
-      accion=`<button class="c226-action primary" onclick="marcarAsistencia('entrada','labores')">↪ Registrar entrada</button>`;
+      mainAction=`<button class="c228-main-action green" onclick="marcarAsistencia('entrada','labores')">↪ Registrar entrada</button>`;
     } else if(ent && !sal){
-      estadoTitulo='Jornada en curso';
-      estadoSub='Entrada registrada '+c226FmtHora(ent.registrado_en);
-      estadoClase='active';
-      accion=`<button class="c226-action primary" onclick="marcarAsistencia('salida','labores')">↪ Registrar salida</button>`;
-      if(ent.retardo){
-        retardoHtml='<div class="c226-alert warn"><b>⚠ Con retardo</b><span>Tu entrada quedó registrada después del horario.</span></div>';
-      }
+      stateTitle='En curso';
+      stateSub='Entrada registrada';
+      stateClass='on';
+      stateIcon='▶';
+      rightStat='<div class="c228-state-side"><small>Jornada actual</small><b>'+actualTxt+'</b></div>';
+      mainAction=`<button class="c228-main-action outline-red" onclick="marcarAsistencia('salida','labores')">↪ Registrar salida</button>`;
       if(extra){
-        extraInfo='<div class="c226-extra-note">⏰ Hora extra autorizada: <b>'+numFmt(extra.horas_max)+' h</b>. Se habilitará al finalizar tu jornada normal.</div>';
+        extraBadge='<div class="c228-extra-strip">⏰ Hora extra autorizada: <b>'+numFmt(extra.horas_max)+' h</b></div>';
       }
     } else if(sal && extra && !entEx){
-      estadoTitulo='Jornada normal finalizada';
-      estadoSub='Tu hora extra está autorizada';
-      estadoClase='active';
-      accion=`<button class="c226-action extra" onclick="marcarAsistencia('entrada','extras')">⏰ Iniciar hora extra · ${numFmt(extra.horas_max)} h</button>`;
-      extraInfo='<div class="c226-extra-note strong">Autorizada por Encargado/Dueño · '+numFmt(extra.horas_max)+' h</div>';
+      stateTitle='Hora extra autorizada';
+      stateSub=numFmt(extra.horas_max)+' h asignadas';
+      stateClass='extra';
+      stateIcon='⏰';
+      mainAction=`<button class="c228-main-action orange" onclick="marcarAsistencia('entrada','extras')">▶ Iniciar hora extra</button>`;
+      extraBadge='<div class="c228-extra-strip strong">Autorizada por Encargado/Dueño · '+numFmt(extra.horas_max)+' h</div>';
     } else if(entEx && !salEx){
-      estadoTitulo='Hora extra en curso';
-      estadoSub='Inició '+c226FmtHora(entEx.registrado_en)+' · '+numFmt(extra&&extra.horas_max||0)+' h autorizadas';
-      estadoClase='extra';
-      accion=`<button class="c226-action danger" onclick="marcarAsistencia('salida','extras')">■ Terminar hora extra</button>`;
+      stateTitle='En hora extra';
+      stateSub='Tiempo transcurrido';
+      stateClass='extra';
+      stateIcon='▶';
+      var exMin=Math.max(0,Math.round((ahora-new Date(entEx.registrado_en))/60000));
+      var exTxt=Math.floor(exMin/60)+':'+String(exMin%60).padStart(2,'0')+' h';
+      var maxMin=Math.round(Number(extra&&extra.horas_max||0)*60);
+      var rem=Math.max(0,maxMin-exMin);
+      rightStat='<div class="c228-state-side"><small>Restante</small><b>'+Math.floor(rem/60)+':'+String(rem%60).padStart(2,'0')+' h</b></div>';
+      stateSub=exTxt;
+      mainAction=`<button class="c228-main-action red" onclick="marcarAsistencia('salida','extras')">■ Terminar hora extra</button>`;
     } else {
-      estadoTitulo='¡Jornada completada!';
-      estadoSub='Gracias por tu trabajo, '+nombre;
-      estadoClase='done';
-      accion='';
+      stateTitle=(extra?'Jornada y hora extra completadas':'Jornada completada');
+      stateSub='¡Excelente trabajo!';
+      stateClass='done';
+      stateIcon='✓';
     }
 
-    var estadoIcon=estadoClase==='done'?'✓':(estadoClase==='extra'?'⏰':(estadoClase==='active'?'▶':'◉'));
+    var salidaTxt=sal?c226FmtHora(sal.registrado_en):'Pendiente';
+    var horaExtraTxt=extra?(salEx?((extraDur?extraDur.text:'Registrada')):(entEx?'En curso':(sal?'Pendiente':numFmt(extra.horas_max)+' h autorizadas'))):'—';
 
-    var resumen='<div class="c226-summary">'+
-      '<div><small>Entrada</small><b>'+c226FmtHora(ent&&ent.registrado_en)+'</b></div>'+
-      '<div><small>Salida</small><b class="'+(!sal?'pending':'')+'">'+(sal?c226FmtHora(sal.registrado_en):'Pendiente')+'</b></div>'+
-      '<div><small>Tiempo trabajado</small><b>'+totalTxt+'</b></div>'+
+    var casos = '<div class="c228-special-grid">'+
+      '<button onclick="renderAsisPermisos()"><span>🕒</span><b>Salida anticipada</b></button>'+
+      '<button onclick="renderMisSolicitudes()"><span>❗</span><b>Jornada sin cerrar</b></button>'+
+      '<button onclick="renderSolicitudOtro()"><span>📶</span><b>Problemas de registro</b></button>'+
+      '<button onclick="renderMisSolicitudes()"><span>🛡️</span><b>Registros no válidos</b></button>'+
     '</div>';
 
-    var extraRows='';
-    if(extra){
-      extraRows='<div class="c226-extra-row"><span>Hora extra autorizada</span><b>'+numFmt(extra.horas_max)+' h</b></div>';
-      if(entEx) extraRows+='<div class="c226-extra-row"><span>Inicio H.E.</span><b>'+c226FmtHora(entEx.registrado_en)+'</b></div>';
-      if(salEx) extraRows+='<div class="c226-extra-row"><span>Fin H.E.</span><b>'+c226FmtHora(salEx.registrado_en)+'</b></div>';
-    }
-
-    var fechaBonita='';
-    try{fechaBonita=new Date(hoy+'T12:00:00').toLocaleDateString('es-MX',{weekday:'short',day:'numeric',month:'short',year:'numeric'});}
-    catch(e){fechaBonita=hoy;}
+    var histRows=[];
+    if(ent) histRows.push(['🟢','Entrada registrada',c226FmtHora(ent.registrado_en)]);
+    if(ent) histRows.push(['▶️','Inicio jornada normal',c226FmtHora(ent.registrado_en)]);
+    if(sal) histRows.push(['⭐','Fin jornada normal',c226FmtHora(sal.registrado_en)]);
+    if(entEx) histRows.push(['🟠','Inicio hora extra',c226FmtHora(entEx.registrado_en)]);
+    if(salEx) histRows.push(['🟥','Salida registrada',c226FmtHora(salEx.registrado_en)]);
+    var histHtml=histRows.length?histRows.map(function(x){
+      return '<div class="c228-history-row"><span>'+x[0]+'</span><div><b>'+x[1]+'</b></div><strong>'+x[2]+'</strong></div>';
+    }).join(''):'<div class="c228-empty">Aún no hay movimientos registrados hoy.</div>';
 
     body.innerHTML=
-      '<div class="c226-shell">'+
-        '<div class="c226-title-row"><div><div class="c226-title">🕐 Asistencia</div><div class="c226-sub">Control de jornada con validación automática</div></div><div class="c226-date">📅 '+fechaBonita+'</div></div>'+
-        '<div class="c226-state '+estadoClase+'"><div class="c226-state-icon">'+estadoIcon+'</div><div><small>ESTADO ACTUAL</small><h2>'+estadoTitulo+'</h2><p>'+estadoSub+'</p></div></div>'+
-        retardoHtml+
-        '<div class="c226-actions">'+accion+'</div>'+
-        '<div class="c226-card"><h3>Resumen del día</h3>'+resumen+extraRows+'<div class="c226-running">'+(sal?'Jornada registrada.':'Tu jornada sigue en curso.')+'</div></div>'+
-        extraInfo+
-        '<button class="c226-link-card" onclick="c226CasosEspeciales()"><span>⚠️</span><div><b>Casos especiales</b><small>Permisos o problemas con tu registro.</small></div><strong>›</strong></button>'+
-        '<button class="c226-link-card" onclick="renderAsisHistorial()"><span>📊</span><div><b>Historial de asistencia</b><small>Consulta horas, faltas, retardos y H.E.</small></div><strong>›</strong></button>'+
+      '<div class="c228-wrap">'+
+        '<div class="c228-heading">'+
+          '<div class="c228-heading-left"><div class="c228-icon">🗓️</div><div><h2>Asistencia</h2><p>Control de jornada con validación automática</p></div></div>'+
+          '<button class="c228-sync" onclick="renderAsistenciaMenu()">↻ Sincronizar</button>'+
+        '</div>'+
+        '<div class="c228-state '+stateClass+'">'+
+          '<div class="c228-state-main"><div class="c228-state-icon">'+stateIcon+'</div><div><small>ESTADO ACTUAL</small><h3>'+stateTitle+'</h3><p>'+stateSub+(ent&&!sal?' · '+c226FmtHora(ent.registrado_en):'')+'</p></div></div>'+
+          rightStat+
+        '</div>'+
+        mainAction+
+        extraBadge+
+        '<div class="c228-day-card">'+
+          '<h4>RESUMEN DEL DÍA</h4>'+
+          '<div class="c228-day-row"><span>Entrada</span><b>'+c226FmtHora(ent&&ent.registrado_en)+'</b></div>'+
+          '<div class="c228-day-row"><span>Salida</span><b class="'+(!sal?'pending':'')+'">'+salidaTxt+'</b></div>'+
+          '<div class="c228-day-row"><span>Hora extra</span><b>'+horaExtraTxt+'</b></div>'+
+          '<div class="c228-day-row total"><span>Total trabajado</span><b>'+totalTxt+'</b></div>'+
+          '<button class="c228-history-btn" onclick="renderAsisHistorial()">📅 Ver historial del día <span>›</span></button>'+
+        '</div>'+
+        '<div class="c228-section-head"><h4>CASOS ESPECIALES</h4><button onclick="c226CasosEspeciales()">Ver todos</button></div>'+
+        casos+
+        '<div class="c228-section-head"><h4>HISTORIAL DEL DÍA</h4><button onclick="renderAsisHistorial()">Calendario</button></div>'+
+        '<div class="c228-history">'+histHtml+'</div>'+
       '</div>';
   }).catch(function(e){
     body.innerHTML='<div class="empty">No se pudo cargar tu asistencia.<br><span class="hint">'+e.message+'</span></div>';
