@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C247';
+  window.MOOTSIL_BUILD='C248';
 </script>
 
 
@@ -1859,24 +1859,25 @@ function c231Icon(name, cls){
 }
 </style>
 
-<style id="c247-final-visual">
-:root{--mootsil-verde:#0b5a37;--mootsil-verde-oscuro:#073f2a;--mootsil-amarillo:#f5a000;--mootsil-morado:#3d0066}
-#screen-operario .op-bottom-nav{background:var(--mootsil-verde-oscuro)!important}
-#screen-operario .op-nav-item.active{color:var(--mootsil-amarillo)!important}
-#screen-operario .op-nav-item.active svg{stroke:var(--mootsil-amarillo)!important}
+<style id="c248-iconos-correctos">
+:root{--mv:#0b5a37;--mvo:#073f2a;--ma:#f5a000;--mm:#3d0066}
+#screen-operario .op-bottom-nav{background:var(--mvo)!important}
+#screen-operario .op-nav-item.active{color:var(--ma)!important}
+#screen-operario .op-nav-item.active svg{stroke:var(--ma)!important}
 .c239-quick button{background:#fff!important}
-.c239-quick button:nth-child(1) .qic{background:#e8f4ed!important;color:var(--mootsil-verde)!important}
-.c239-quick button:nth-child(2) .qic{background:#edf3ef!important;color:var(--mootsil-verde-oscuro)!important}
+.c239-quick button:nth-child(1) .qic{background:#e8f4ed!important;color:var(--mv)!important}
+.c239-quick button:nth-child(2) .qic{background:#edf3ef!important;color:var(--mvo)!important}
 .c239-quick button:nth-child(3) .qic{background:#fff3df!important;color:#a66b0b!important}
-.c239-quick button:nth-child(4) .qic{background:#f1e8f6!important;color:var(--mootsil-morado)!important}
+.c239-quick button:nth-child(4) .qic{background:#f1e8f6!important;color:var(--mm)!important}
 .c239-quick .qic svg{stroke:currentColor!important}
-.c239-next-icon.c247-riego{background:#e5f5fb!important;color:#1683ad!important}
-.c239-next-icon.c247-foliar{background:#e9f5e9!important;color:#21843d!important}
-.c239-next-icon.c247-via-riego{background:#e4f4f1!important;color:#147b70!important}
-.c239-next-icon.c247-drench{background:#fff0dc!important;color:#b66b17!important}
-.c239-next-icon.c247-poda{background:#e8f4ed!important;color:#176b42!important}
-.c239-next-icon.c247-cosecha{background:#f1e7f6!important;color:var(--mootsil-morado)!important}
-.c239-next-icon.c247-mantenimiento{background:#edf3ef!important;color:#34735a!important}
+.c239-next-icon.c248-riego{background:#e5f5fb!important;color:#1683ad!important}
+.c239-next-icon.c248-foliar{background:#e9f5e9!important;color:#21843d!important}
+.c239-next-icon.c248-via-riego{background:#e4f4f1!important;color:#147b70!important}
+.c239-next-icon.c248-drench{background:#fff0dc!important;color:#b66b17!important}
+.c239-next-icon.c248-poda{background:#e8f4ed!important;color:#176b42!important}
+.c239-next-icon.c248-cosecha{background:#f1e7f6!important;color:var(--mm)!important}
+.c239-next-icon.c248-mantenimiento{background:#edf3ef!important;color:#34735a!important}
+.c239-next-icon[class*="c248-"] svg{stroke:currentColor!important}
 </style>
 </head>
 <body>
@@ -13405,27 +13406,40 @@ function c239FormatDate(fecha){
   return d.toLocaleDateString('es-MX',{day:'numeric',month:'short'});
 }
 
-function c247IconoTarea(t){
-  var x=((t&&((t.nombre||'')+' '+(t.tipo||'')+' '+(t.actividad||'')+' '+(t.categoria||'')))||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  if(/cosecha|zarzamora|recoleccion/.test(x))return['cosecha','<circle cx="18" cy="19" r="5"/><circle cx="29" cy="18" r="5"/><circle cx="13" cy="29" r="5"/><circle cx="24" cy="28" r="5"/><circle cx="35" cy="28" r="5"/><circle cx="19" cy="38" r="5"/><circle cx="30" cy="38" r="5"/><path d="M24 11c1-5 5-8 10-8M25 11c-4-5-8-6-12-4"/>'];
-  if(/poda/.test(x))return['poda','<circle cx="14" cy="34" r="7"/><circle cx="34" cy="34" r="7"/><path d="m19 29 17-22M29 29 12 7M20 19h9"/>'];
+function c248IconoTarea(t){
+  var partes=[];
+  try{
+    partes.push(t&&t.tipo_labor&&t.tipo_labor.nombre||'');
+    partes.push(t&&t.subtipo&&t.subtipo.nombre||'');
+    partes.push(t&&t.formula&&t.formula.nombre||'');
+    partes.push(t&&t.formula&&t.formula.via||'');
+    partes.push(t&&t.bomba_usada||'');
+    partes.push(t&&t.activo_rancho&&t.activo_rancho.nombre||'');
+    partes.push(t&&t.descripcion||'');
+  }catch(e){}
+  var x=partes.join(' ').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  if(/cosecha|zarzamora|recoleccion|corte de fruta/.test(x))return['cosecha','<circle cx="18" cy="19" r="5"/><circle cx="29" cy="18" r="5"/><circle cx="13" cy="29" r="5"/><circle cx="24" cy="28" r="5"/><circle cx="35" cy="28" r="5"/><circle cx="19" cy="38" r="5"/><circle cx="30" cy="38" r="5"/><path d="M24 11c1-5 5-8 10-8M25 11c-4-5-8-6-12-4"/>'];
+  if(/poda|podar/.test(x))return['poda','<circle cx="14" cy="34" r="7"/><circle cx="34" cy="34" r="7"/><path d="m19 29 17-22M29 29 12 7M20 19h9"/>'];
   if(/drench/.test(x))return['drench','<rect x="14" y="12" width="20" height="28" rx="4"/><path d="M19 12V7h10v5M14 19H9l-3 10M34 19h5l3 10M19 21h10"/>'];
-  if(/via riego|via de riego|fertirriego|fertirrig/.test(x))return['via-riego','<path d="M8 17h31M15 17v-7h17v7M23 10V5M13 17v11h22V17M35 23h6v7"/><path d="M41 39s4-5 4-8a4 4 0 0 0-8 0c0 3 4 8 4 8z"/>'];
+  if(/via riego|via de riego|fertirriego|fertirrig|inyeccion/.test(x))return['via-riego','<path d="M8 17h31M15 17v-7h17v7M23 10V5M13 17v11h22V17M35 23h6v7"/><path d="M41 39s4-5 4-8a4 4 0 0 0-8 0c0 3 4 8 4 8z"/>'];
   if(/foliar/.test(x))return['foliar','<path d="M39 9C25 9 14 17 10 31c8 1 18-1 24-8 4-5 5-10 5-14z"/><path d="M10 39c5-11 12-18 23-23"/>'];
   if(/riego|hidratacion/.test(x))return['riego','<path d="M24 6S13 20 13 29a11 11 0 0 0 22 0C35 20 24 6 24 6z"/>'];
-  if(/mantenimiento|reparacion/.test(x))return['mantenimiento','<path d="M31 8a9 9 0 0 0-10 12L8 33l7 7 13-13A9 9 0 0 0 40 17l-7 7-9-9z"/>'];
+  if(t&&t.activo_rancho_id || /mantenimiento|reparacion|fumigadora|desbrozadora/.test(x))return['mantenimiento','<path d="M31 8a9 9 0 0 0-10 12L8 33l7 7 13-13A9 9 0 0 0 40 17l-7 7-9-9z"/>'];
   return null;
 }
 function construirFilaProximaTarea(t){
-  var c247ii=c247IconoTarea(t);
-
   var kind=c239TaskKind(t);
   var titulo=c239TaskTitle(t);
   var ubic=c239TaskPlace(t);
   var estado=t.estado==='en_proceso'?'En curso':(t.fecha_asignacion===fechaHoyLocal()?'Hoy':'Programada');
   if(t.prioridad==='alta'||t.prioritaria===true) estado='Prioritaria';
+  var ii=c248IconoTarea(t);
+  var icono=ii
+    ? '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'+ii[1]+'</svg>'
+    : c239TaskIcon(kind.key);
+  var clase=ii?' c248-'+ii[0]:'';
   return '<div class="c239-next">'+
-    '<div class="c239-next-icon">'+(c247ii?'<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'+c247ii[1]+'</svg>':c239TaskIcon(kind.key))+'</div>'+
+    '<div class="c239-next-icon'+clase+'">'+icono+'</div>'+
     '<div class="c239-next-main"><b>'+titulo+'</b><span>'+kind.label+(ubic?' · '+ubic:'')+'</span></div>'+
     '<div class="c239-next-side"><div class="c239-next-date">'+c239FormatDate(t.fecha_asignacion)+'</div><div class="c239-next-state">'+estado+'</div></div>'+
   '</div>';
@@ -16530,7 +16544,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C247
+C248
 </div>
 
 <style id="fi128-css">
