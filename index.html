@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C248';
+  window.MOOTSIL_BUILD='C249';
 </script>
 
 
@@ -1878,6 +1878,36 @@ function c231Icon(name, cls){
 .c239-next-icon.c248-cosecha{background:#f1e7f6!important;color:var(--mm)!important}
 .c239-next-icon.c248-mantenimiento{background:#edf3ef!important;color:#34735a!important}
 .c239-next-icon[class*="c248-"] svg{stroke:currentColor!important}
+</style>
+
+<style id="c249-iconos-color-visibles">
+/* C249 — iconos de Próximas tareas: color visible en el símbolo, no sólo en el fondo */
+.c239-next-icon{
+  width:34px!important;height:34px!important;border-radius:10px!important;
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  border:1px solid rgba(10,74,49,.08)!important;
+}
+.c239-next-icon svg{
+  width:23px!important;height:23px!important;
+  stroke:currentColor!important;
+  stroke-width:3.1!important;
+  opacity:1!important;
+  filter:none!important;
+}
+.c239-next-icon.c249-riego{background:#e5f5ff!important;color:#1595d3!important}
+.c239-next-icon.c249-foliar{background:#e9f7e9!important;color:#35a447!important}
+.c239-next-icon.c249-via-riego{background:#e3f7f4!important;color:#009688!important}
+.c239-next-icon.c249-drench{background:#fff1dc!important;color:#e48619!important}
+.c239-next-icon.c249-poda{background:#e9f4ed!important;color:#167044!important}
+.c239-next-icon.c249-cosecha{background:#f3e8f8!important;color:#6f238d!important}
+.c239-next-icon.c249-mantenimiento{background:#edf3f1!important;color:#397b68!important}
+
+/* Acciones rápidas: misma lógica de icono coloreado y fondo suave */
+.c239-quick button:nth-child(1) .qic{background:#e9f6ee!important;color:#16834f!important}
+.c239-quick button:nth-child(2) .qic{background:#edf4f1!important;color:#236b50!important}
+.c239-quick button:nth-child(3) .qic{background:#fff2dc!important;color:#c17a0c!important}
+.c239-quick button:nth-child(4) .qic{background:#f2e8f7!important;color:#6f238d!important}
+.c239-quick .qic svg{stroke:currentColor!important;stroke-width:2.9!important;opacity:1!important}
 </style>
 </head>
 <body>
@@ -13406,25 +13436,29 @@ function c239FormatDate(fecha){
   return d.toLocaleDateString('es-MX',{day:'numeric',month:'short'});
 }
 
-function c248IconoTarea(t){
-  var partes=[];
-  try{
-    partes.push(t&&t.tipo_labor&&t.tipo_labor.nombre||'');
-    partes.push(t&&t.subtipo&&t.subtipo.nombre||'');
-    partes.push(t&&t.formula&&t.formula.nombre||'');
-    partes.push(t&&t.formula&&t.formula.via||'');
-    partes.push(t&&t.bomba_usada||'');
-    partes.push(t&&t.activo_rancho&&t.activo_rancho.nombre||'');
-    partes.push(t&&t.descripcion||'');
-  }catch(e){}
-  var x=partes.join(' ').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  if(/cosecha|zarzamora|recoleccion|corte de fruta/.test(x))return['cosecha','<circle cx="18" cy="19" r="5"/><circle cx="29" cy="18" r="5"/><circle cx="13" cy="29" r="5"/><circle cx="24" cy="28" r="5"/><circle cx="35" cy="28" r="5"/><circle cx="19" cy="38" r="5"/><circle cx="30" cy="38" r="5"/><path d="M24 11c1-5 5-8 10-8M25 11c-4-5-8-6-12-4"/>'];
-  if(/poda|podar/.test(x))return['poda','<circle cx="14" cy="34" r="7"/><circle cx="34" cy="34" r="7"/><path d="m19 29 17-22M29 29 12 7M20 19h9"/>'];
-  if(/drench/.test(x))return['drench','<rect x="14" y="12" width="20" height="28" rx="4"/><path d="M19 12V7h10v5M14 19H9l-3 10M34 19h5l3 10M19 21h10"/>'];
-  if(/via riego|via de riego|fertirriego|fertirrig|inyeccion/.test(x))return['via-riego','<path d="M8 17h31M15 17v-7h17v7M23 10V5M13 17v11h22V17M35 23h6v7"/><path d="M41 39s4-5 4-8a4 4 0 0 0-8 0c0 3 4 8 4 8z"/>'];
-  if(/foliar/.test(x))return['foliar','<path d="M39 9C25 9 14 17 10 31c8 1 18-1 24-8 4-5 5-10 5-14z"/><path d="M10 39c5-11 12-18 23-23"/>'];
-  if(/riego|hidratacion/.test(x))return['riego','<path d="M24 6S13 20 13 29a11 11 0 0 0 22 0C35 20 24 6 24 6z"/>'];
-  if(t&&t.activo_rancho_id || /mantenimiento|reparacion|fumigadora|desbrozadora/.test(x))return['mantenimiento','<path d="M31 8a9 9 0 0 0-10 12L8 33l7 7 13-13A9 9 0 0 0 40 17l-7 7-9-9z"/>'];
+function c249IconoTarea(t){
+  var tipo=((t&&t.tipo_labor&&t.tipo_labor.nombre)||'');
+  var subtipo=((t&&t.subtipo&&t.subtipo.nombre)||'');
+  var formula=((t&&t.formula&&t.formula.nombre)||'');
+  var via=((t&&t.formula&&t.formula.via)||'');
+  var equipo=((t&&t.activo_rancho&&t.activo_rancho.nombre)||'');
+  var x=[tipo,subtipo,formula,via,(t&&t.bomba_usada)||'',equipo,(t&&t.descripcion)||''].join(' ').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  var esAplicacion=!!(t&&t.formula_id) || /aplica|foliar|drench/.test(tipo.toLowerCase());
+
+  if(/cosecha|zarzamora|recoleccion|corte de fruta/.test(x))
+    return['cosecha','<circle cx="18" cy="19" r="5"/><circle cx="29" cy="18" r="5"/><circle cx="13" cy="29" r="5"/><circle cx="24" cy="28" r="5"/><circle cx="35" cy="28" r="5"/><circle cx="19" cy="38" r="5"/><circle cx="30" cy="38" r="5"/><path d="M24 11c1-5 5-8 10-8M25 11c-4-5-8-6-12-4"/>'];
+  if(/poda|podar/.test(x))
+    return['poda','<circle cx="14" cy="34" r="7"/><circle cx="34" cy="34" r="7"/><path d="m19 29 17-22M29 29 12 7M20 19h9"/>'];
+  if(/drench/.test(x))
+    return['drench','<rect x="14" y="12" width="20" height="28" rx="4"/><path d="M19 12V7h10v5M14 19H9l-3 10M34 19h5l3 10M19 21h10"/>'];
+  if(/foliar/.test(x))
+    return['foliar','<path d="M39 9C25 9 14 17 10 31c8 1 18-1 24-8 4-5 5-10 5-14z"/><path d="M10 39c5-11 12-18 23-23"/>'];
+  if(esAplicacion && (/riego/.test(via.toLowerCase()) || /via riego|via de riego|fertirriego|fertirrig|inyeccion/.test(x)))
+    return['via-riego','<path d="M7 16h30M14 16V9h16v7M22 9V5M12 16v11h23V16M35 21h7v7"/><path d="M42 40s4-5 4-8a4 4 0 0 0-8 0c0 3 4 8 4 8z"/>'];
+  if(/riego|hidratacion/.test(x))
+    return['riego','<path d="M24 5S10 22 10 31a14 14 0 0 0 28 0C38 22 24 5 24 5z"/><path d="M17 32c1 5 4 7 8 8"/>'];
+  if((t&&t.activo_rancho_id) || /mantenimiento|reparacion|fumigadora|desbrozadora/.test(x))
+    return['mantenimiento','<path d="M31 8a9 9 0 0 0-10 12L8 33l7 7 13-13A9 9 0 0 0 40 17l-7 7-9-9z"/>'];
   return null;
 }
 function construirFilaProximaTarea(t){
@@ -13433,11 +13467,11 @@ function construirFilaProximaTarea(t){
   var ubic=c239TaskPlace(t);
   var estado=t.estado==='en_proceso'?'En curso':(t.fecha_asignacion===fechaHoyLocal()?'Hoy':'Programada');
   if(t.prioridad==='alta'||t.prioritaria===true) estado='Prioritaria';
-  var ii=c248IconoTarea(t);
+  var ii=c249IconoTarea(t);
   var icono=ii
     ? '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'+ii[1]+'</svg>'
     : c239TaskIcon(kind.key);
-  var clase=ii?' c248-'+ii[0]:'';
+  var clase=ii?' c249-'+ii[0]:'';
   return '<div class="c239-next">'+
     '<div class="c239-next-icon'+clase+'">'+icono+'</div>'+
     '<div class="c239-next-main"><b>'+titulo+'</b><span>'+kind.label+(ubic?' · '+ubic:'')+'</span></div>'+
@@ -16544,7 +16578,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C248
+C249
 </div>
 
 <style id="fi128-css">
