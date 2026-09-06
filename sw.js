@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mootsil-c244';
+const CACHE_NAME = 'mootsil-c245';
 const APP_SHELL = [
   './',
   './index.html',
