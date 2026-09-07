@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C250';
+  window.MOOTSIL_BUILD='C251';
 </script>
 
 
@@ -1936,6 +1936,35 @@ function c231Icon(name, cls){
 .c250-otra-box input[type=text]{width:100%;padding:.75rem .85rem;border:1.5px solid #ccd9d1;border-radius:10px;font-size:.95rem;background:#fbfdfc}
 .c250-otra-box .btn-primary{margin-top:.7rem}
 @media(max-width:900px){.c250-labor-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+
+<style id="c251-labores-profesional">
+.c251-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:.9rem}
+.c251-kicker{font-size:.68rem;font-weight:850;letter-spacing:.11em;color:#ef9700;text-transform:uppercase}
+.c251-title{font-size:1.45rem;line-height:1.05;margin:.15rem 0;color:#123f2d;font-weight:850}
+.c251-sub{font-size:.8rem;color:#6f7e76;margin:0}
+.c251-back{border:1px solid #d7e2dc;background:#fff;border-radius:10px;padding:.55rem .8rem;color:#0b5a37;font-weight:800;cursor:pointer}
+.c251-layout{display:grid;grid-template-columns:.9fr 1.1fr;gap:.9rem}
+.c251-panel{background:#fff;border:1px solid #dfe8e2;border-radius:16px;padding:1rem;box-shadow:0 2px 8px rgba(22,63,45,.04)}
+.c251-panel h3{font-size:.8rem;margin:0 0 .75rem;color:#174c37;text-transform:uppercase;letter-spacing:.055em}
+.c251-chosen{display:flex;align-items:center;gap:.65rem;padding:.75rem .8rem;background:#eef6f1;border:1px solid #d4e6db;border-radius:12px;margin-bottom:.9rem}
+.c251-chosen strong{font-size:1rem;color:#173f2e}
+.c251-chiprow{display:flex;flex-wrap:wrap;gap:.45rem}
+.c251-chiprow .op-chip{min-height:35px;padding:.45rem .7rem}
+.c251-field{margin-bottom:.78rem}
+.c251-field label{display:block;font-size:.67rem;font-weight:850;letter-spacing:.055em;text-transform:uppercase;color:#7b887f;margin-bottom:.28rem}
+.c251-field select,.c251-field input[type=date],.c251-field input[type=text],.c251-field input[type=number]{
+ width:100%;min-height:42px;border:1px solid #d2ddd6;border-radius:10px;background:#fbfcfb;padding:.62rem .72rem;font-size:.84rem
+}
+.c251-range{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap;margin:.45rem 0}
+.c251-range input{width:64px!important;min-height:34px!important;padding:.35rem!important}
+.c251-mini{border:1px solid #d5dfd9;background:#fff;border-radius:999px;padding:.4rem .68rem;font-size:.73rem;font-weight:750;cursor:pointer}
+.c251-mini.primary{background:#e8f4ed;border-color:#0b5a37;color:#0b5a37}
+.c251-hint{font-size:.72rem;color:#75837b;margin-top:.32rem}
+.c251-rule{background:#eef7f1;border:1px solid #cde3d4;border-radius:12px;padding:.72rem .8rem;color:#315d48;font-size:.76rem;line-height:1.35;margin:.75rem 0}
+.c251-actions{display:flex;justify-content:flex-end;gap:.5rem;margin-top:.85rem}
+.c251-assign{background:#0b5a37;color:#fff;border:0;border-radius:10px;min-height:43px;padding:.65rem 1rem;font-weight:850;cursor:pointer}
+@media(max-width:900px){.c251-layout{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -3826,11 +3855,45 @@ function renderFormAsignarPaso2(){
   var esTiempo=!!(lb&&lb.requiere_tiempo)&&!asignarLaborSubSel;
   var noTabla=!!(lb&&lb.requiere_tabla===false);
   var ocultaTablaUI=esTiempo||noTabla;
-  var avisoNoTabla=noTabla?'<div style="background:var(--gris-1);border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);padding:.6rem .85rem;margin-bottom:.75rem;font-size:.8rem;color:var(--gris-3);">ℹ️ Esta labor no está ligada a ninguna plantación ni tabla.</div>':'';
-  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">Paso 2 de 2 · Detalles<button type="button" onclick="renderFormAsignar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cambiar labor</button></div>'+(modoAsignacionLabor==='extra'?'<div style="background:var(--tierra-tenue);border:1.5px solid var(--tierra);border-radius:var(--radio-sm);padding:.6rem .85rem;margin-bottom:.75rem;font-size:.8rem;font-weight:700;color:var(--tierra);">⏰ Se asignará como Hora Extra (autoriza también su registro de asistencia)</div>':'')+avisoNoTabla+'<div class="form-card"><div class="labor-chosen">'+(ICONOS[lb.nombre]||'🔧')+' <strong>'+lb.nombre+'</strong></div><div class="form-group"><label>Operarios</label><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div></div><div class="form-group" id="fpl-wrap" style="display:'+(noTabla?'none':'')+'"><label>Plantación</label><select id="fpl"><option value="">Selecciona...</option>'+pO+'</select></div><div class="form-group" id="ftb-wrap" style="display:'+(ocultaTablaUI?'none':'')+'"><label>Tabla</label><select id="ftb"><option value="">Primero elige plantación</option></select></div><div class="form-group" id="fsg" style="display:none"><label>Detalle</label><select id="fsb"></select></div><div class="form-group" id="fcg" style="display:'+(lb.requiere_cantidad_insumo?'':'none')+'"><label>Cantidad esperada</label><input type="number" id="fca" placeholder="0" min="0"/></div><div class="form-group" id="frg" style="display:'+(esTiempo?'':'none')+'"><label>Duración de riego por tabla (minutos)</label><div id="frg-tablas"></div><p class="hint">Deja vacío la tabla que no quieras asignar hoy.</p></div><div class="form-group" id="fsurcos-wrap" style="display:'+(ocultaTablaUI?'none':'')+'"><label>Surcos a trabajar</label><div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;"><button type="button" onclick="selTodosF()" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">Tabla completa</button><button type="button" onclick="selNingunoF()" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.78rem;cursor:pointer;">Limpiar</button></div><div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;"><span style="font-size:.78rem;color:var(--gris-3)">Del surco</span><input type="number" id="f-ri" min="1" style="width:52px;padding:3px 6px;border:1.5px solid var(--gris-2);border-radius:6px;font-size:.85rem;" placeholder="1"><span style="font-size:.78rem;color:var(--gris-3)">al</span><input type="number" id="f-rf" min="1" style="width:52px;padding:3px 6px;border:1.5px solid var(--gris-2);border-radius:6px;font-size:.85rem;" placeholder="12"><button type="button" onclick="aplicarRangoF()" style="padding:4px 10px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.78rem;cursor:pointer;">Aplicar</button></div><div class="surcos-grid" id="fsc"></div><p class="hint">O toca surcos individuales</p></div><div class="form-group"><label>Duración</label><select id="fdu"><option value="dia">Solo hoy</option><option value="labor_completa">Labor completa</option></select></div><div class="form-group"><label>Fecha</label><input type="date" id="ffe" value="'+fechaHoyLocal()+'"/></div><div class="form-group"><label>Notas</label><input type="text" id="fno" placeholder="Opcional..."/></div><button class="btn-primary" onclick="guardarOrden()">'+(modoAsignacionLabor==='extra'?'Asignar como hora extra':'Asignar orden')+'</button></div>';
+  var visual=c250LaborVisual(lb&&lb.nombre||'Labor');
+  var modoExtra=modoAsignacionLabor==='extra';
+
+  body.innerHTML=
+    '<div class="c251-head"><div><div class="c251-kicker">LABORES · ASIGNACIÓN</div><h2 class="c251-title">Asignar labor</h2><p class="c251-sub">Define quién la realizará, dónde y cuándo inicia.</p></div>'+
+    '<button type="button" class="c251-back" onclick="renderFormAsignar()">← Cambiar labor</button></div>'+
+    (modoExtra?'<div style="background:#fff2df;border:1px solid #efc682;border-radius:12px;padding:.7rem .8rem;margin-bottom:.8rem;color:#8d5d13;font-size:.76rem;font-weight:750;">⏰ Esta labor se asignará como Hora Extra autorizada.</div>':'')+
+    '<div class="c251-layout">'+
+      '<div class="c251-panel">'+
+        '<h3>1 · Personal</h3>'+
+        '<div class="c251-chosen"><div class="c250-labor-ic"><svg viewBox="0 0 48 48">'+visual.svg+'</svg></div><div><div style="font-size:.7rem;color:#6e7d75;">Labor seleccionada</div><strong>'+visual.label+'</strong></div></div>'+
+        '<div class="c251-field"><label>Colaborador(es)</label><div class="c251-chiprow">'+opO+'</div><div class="c251-hint">Puedes asignar la misma labor a uno o varios colaboradores.</div></div>'+
+        '<div class="c251-field" id="fsg" style="display:none"><label>Variante de la labor</label><select id="fsb"></select></div>'+
+        '<div class="c251-field" id="fcg" style="display:'+(lb.requiere_cantidad_insumo?'':'none')+'"><label>Cantidad esperada</label><input type="number" id="fca" placeholder="0" min="0"/></div>'+
+      '</div>'+
+      '<div class="c251-panel">'+
+        '<h3>2 · Ubicación y fecha</h3>'+
+        (noTabla?'<div class="c251-rule">Esta labor es general y no necesita plantación ni tabla.</div>':'')+
+        '<div class="c251-field" id="fpl-wrap" style="display:'+(noTabla?'none':'')+'"><label>Plantación</label><select id="fpl"><option value="">Selecciona...</option>'+pO+'</select></div>'+
+        '<div class="c251-field" id="ftb-wrap" style="display:'+(ocultaTablaUI?'none':'')+'"><label>Tabla</label><select id="ftb"><option value="">Primero elige plantación</option></select></div>'+
+        '<div class="c251-field" id="frg" style="display:'+(esTiempo?'':'none')+'"><label>Minutos por tabla</label><div id="frg-tablas"></div><div class="c251-hint">Sólo aplica a actividades que trabajan por tiempo.</div></div>'+
+        '<div class="c251-field" id="fsurcos-wrap" style="display:'+(ocultaTablaUI?'none':'')+'"><label>Surcos a trabajar</label>'+
+          '<div class="c251-range"><button type="button" class="c251-mini primary" onclick="selTodosF()">Tabla completa</button><button type="button" class="c251-mini" onclick="selNingunoF()">Limpiar</button></div>'+
+          '<div class="c251-range"><span class="c251-hint">Del</span><input type="number" id="f-ri" min="1" placeholder="1"><span class="c251-hint">al</span><input type="number" id="f-rf" min="1" placeholder="12"><button type="button" class="c251-mini" onclick="aplicarRangoF()">Aplicar</button></div>'+
+          '<div class="surcos-grid" id="fsc"></div><div class="c251-hint">También puedes tocar surcos individuales.</div></div>'+
+        '<div class="c251-field"><label>Fecha de inicio</label><input type="date" id="ffe" value="'+fechaHoyLocal()+'"/></div>'+
+        '<div class="c251-field"><label>Indicaciones</label><input type="text" id="fno" placeholder="Opcional: instrucciones para el colaborador..."/></div>'+
+        '<div class="c251-rule"><b>La labor no vence al terminar el día.</b> Se cierra cuando el trabajo queda completo. Si faltan surcos o trabajo, permanece <b>Pendiente por terminar</b> para continuar después.</div>'+
+        '<div class="c251-actions"><button class="c251-assign" onclick="guardarOrden()">'+(modoExtra?'Asignar hora extra':'Asignar labor')+'</button></div>'+
+      '</div>'+
+    '</div>';
+
   formSurcos=[];
   var sbs=cats.subtiposLabor.filter(function(s){return s.tipo_labor_id===lb.id&&!s.requiere_tiempo;});
-  if(sbs.length){document.getElementById('fsb').innerHTML='<option value="">Selecciona...</option>'+sbs.map(function(s){return '<option value="'+s.id+'">'+s.nombre+'</option>';}).join('');document.getElementById('fsg').style.display='';if(asignarLaborSubSel){document.getElementById('fsb').value=asignarLaborSubSel.id;}}
+  if(sbs.length){
+    document.getElementById('fsb').innerHTML='<option value="">Selecciona...</option>'+sbs.map(function(s){return '<option value="'+s.id+'">'+s.nombre+'</option>';}).join('');
+    document.getElementById('fsg').style.display='';
+    if(asignarLaborSubSel) document.getElementById('fsb').value=asignarLaborSubSel.id;
+  }
   document.getElementById('fpl').addEventListener('change',function(){
     var ts=cats.tablas.filter(function(t){return t.plantacion_id===this.value;}.bind(this));
     document.getElementById('ftb').innerHTML='<option value="">Selecciona...</option>'+ts.map(function(t){return '<option value="'+t.id+'">'+t.nombre+'</option>';}).join('');
@@ -3839,7 +3902,6 @@ function renderFormAsignarPaso2(){
   });
   document.getElementById('ftb').addEventListener('change',renderSurcosForm);
 }
-
 function renderRiegoForm(){
   var cont=document.getElementById('frg-tablas');
   if(!cont) return;
@@ -4183,7 +4245,7 @@ function guardarOrden(){
   var lb=asignarLaborSel;
   var lbId=lb?lb.id:null;
   if(!opIds.length||!lbId){alert('Faltan datos obligatorios.');return;}
-  var dur=document.getElementById('fdu').value, fec=document.getElementById('ffe').value, not=document.getElementById('fno').value||null;
+  var dur='labor_completa', fec=document.getElementById('ffe').value, not=document.getElementById('fno').value||null;
 
   if(lb&&lb.requiere_tiempo){
     var filas=Array.from(document.querySelectorAll('.riego-min')).map(function(i){return {tabla:i.dataset.tabla,min:parseInt(i.value)||0};}).filter(function(r){return r.min>0;});
@@ -16635,7 +16697,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C250
+C251
 </div>
 
 <style id="fi128-css">
