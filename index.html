@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C285';
+  window.MOOTSIL_BUILD='C286';
 </script>
 
 
@@ -2397,6 +2397,41 @@ function c231Icon(name, cls){
   background:#fff!important;
   border:2px solid #0f6040!important;
   box-shadow:0 5px 14px rgba(15,96,64,.10)!important;
+}
+</style>
+
+<style id="c286-catalogo-final">
+#c260-nueva-root .c274-catgrid{
+  grid-template-columns:repeat(10,minmax(0,1fr))!important;
+  gap:5px!important;
+}
+#c260-nueva-root .c274-cat{
+  background:#fff!important;
+  min-height:58px!important;
+  padding:6px 5px!important;
+  gap:5px!important;
+}
+#c260-nueva-root .c274-cat .ico{
+  background:#fff!important;
+}
+#c260-nueva-root .c274-cat[data-cat="poda"] .ico{color:#d62f2f!important}
+#c260-nueva-root .c274-cat[data-cat="desbrozadora"] .ico{color:#d99400!important}
+#c260-nueva-root .c274-cat[data-cat="deshierbado"] .ico{color:#6ba82f!important}
+#c260-nueva-root .c274-cat[data-cat="limpieza"] .ico{color:#0c9b65!important}
+#c260-nueva-root .c274-cat[data-cat="trineado"] .ico{color:#73a92f!important}
+#c260-nueva-root .c274-cat[data-cat="tutoreo"] .ico{color:#7a2ca1!important}
+#c260-nueva-root .c274-cat[data-cat="trampas"] .ico{color:#c28a00!important}
+#c260-nueva-root .c274-cat[data-cat="infraestructura"] .ico{color:#087b4a!important}
+#c260-nueva-root .c274-cat[data-cat="chincharrear"] .ico{color:#a33a22!important}
+#c260-nueva-root .c274-cat[data-cat="otros"] .ico{color:#555!important}
+#c260-nueva-root .c274-cat .txt{
+  font-size:.56rem!important;
+  white-space:normal!important;
+  text-align:center!important;
+  line-height:1.05!important;
+}
+@media(max-width:1050px){
+  #c260-nueva-root .c274-catgrid{grid-template-columns:repeat(5,minmax(0,1fr))!important}
 }
 </style>
 </head>
@@ -4435,6 +4470,7 @@ function c250LaborVisual(nombre){
   if(/tutoreo/.test(n)) return {label:'Tutoreo',kind:'tutoreo',svg:'<path d="M12 41V8M36 41V8M12 16h24M12 28h24"/><path d="M22 39V19c0-5 4-8 8-8"/>'};
   if(/poda/.test(n)) return {label:'Poda',kind:'poda',svg:'<circle cx="14" cy="34" r="7"/><circle cx="34" cy="34" r="7"/><path d="m19 29 17-22M29 29 12 7M20 19h9"/>'};
   if(/trampa/.test(n)) return {label:'Trampas',kind:'trampas',svg:'<path d="M10 38h28M14 38V20h20v18M18 20v-6h12v6M20 27h8"/>'};
+  if(/chinchar/.test(n)) return {label:'Chincharrear',kind:'chincharrear',svg:'<ellipse cx="24" cy="25" rx="6" ry="9"/><circle cx="24" cy="13" r="4"/><path d="M18 22 10 17M18 27 9 27M18 32 11 38M30 22l8-5M30 27h9M30 32l7 6M21 9l-5-5M27 9l5-5"/>'};
   if(/plastico/.test(n)) return {label:'Plásticos',kind:'plasticos',svg:'<path d="M8 38c7-15 25-15 32 0M12 38V20M36 38V20M18 18h12"/>'};
   if(/malla/.test(n)) return {label:'Malla',kind:'malla',svg:'<rect x="8" y="10" width="32" height="28" rx="2"/><path d="m8 18 32 12M8 30l32-12M16 10v28M32 10v28"/>'};
   if(/arco/.test(n)) return {label:'Arcos',kind:'arcos',svg:'<path d="M9 39V25C9 13 15 7 24 7s15 6 15 18v14"/><path d="M15 39V25c0-7 3-11 9-11s9 4 9 11v14"/>'};
@@ -4587,6 +4623,7 @@ function c275Icon(k){
     tutoreo:'<svg viewBox="0 0 64 64"><path d="M13 9v47M51 9v47"/><path d="M13 18h38M13 28h38M13 38h38M13 48h38"/><path d="M9 56h8M47 56h8"/></svg>',
     trampas:'<svg viewBox="0 0 64 64"><path d="M20 17h24l-4 36H24zM25 17l3-7h8l3 7M24 30h16"/><path d="M17 54h30"/></svg>',
     infraestructura:'<svg viewBox="0 0 64 64"><path d="M8 52h48M12 52V35C12 19 22 10 32 10s20 9 20 25v17"/><path d="M20 52V34c0-10 5-17 12-17s12 7 12 17v18"/><path d="M12 34h40"/></svg>',
+    chincharrear:'<svg viewBox="0 0 64 64"><ellipse cx="32" cy="34" rx="8" ry="12"/><circle cx="32" cy="18" r="6"/><path d="M24 29 12 22M24 35H10M24 41 13 49M40 29l12-7M40 35h14M40 41l11 8M28 13l-7-8M36 13l7-8"/></svg>',
     otros:'<svg viewBox="0 0 64 64"><path d="M32 14v36M14 32h36"/></svg>'
   };
   return p[k]||p.otros;
@@ -4603,6 +4640,7 @@ var C274_CATALOGO_LABORES=[
     'Instalación · Plásticos','Instalación · Malla','Instalación · Arcos','Instalación · Tutores',
     'Reemplazo · Plásticos','Reemplazo · Malla','Reemplazo · Arcos','Reemplazo · Tutores'
   ]},
+  {k:'chincharrear',nombre:'Chincharrear',icono:c275Icon('chincharrear'),variantes:[]},
   {k:'otros',nombre:'Otros',icono:c275Icon('otros'),variantes:[]}
 ];
 var C274_CAT_SEL=null;
@@ -4618,6 +4656,7 @@ function c274BuscarTipo(cat){
     tutoreo:['tutoreo'],
     trampas:['trampas'],
     infraestructura:['infraestructura'],
+    chincharrear:['chincharrear'],
     otros:['otros','otra labor']
   };
   var aa=aliases[cat.k]||[cat.nombre.toLowerCase()];
@@ -4626,40 +4665,43 @@ function c274BuscarTipo(cat){
     return aa.indexOf(n)>-1;
   })||null;
 }
+var C286_TIPOS_FIJOS={
+  poda:'2f3c2f18-69de-44ab-8ccd-8a44f5461c40',
+  desbrozadora:'2fb335e0-8d20-4c7a-9ed2-92fccd77c6d6',
+  deshierbado:'533c75f4-9151-47cd-8df3-83a7bed1b770',
+  limpieza:'f95dc043-f158-41d3-ba20-5024f951e0ad',
+  trineado:'861f0916-27b3-4ba2-ab5e-ccdd8041bdc4',
+  tutoreo:'92324033-656f-453f-97d8-46489071ff97',
+  trampas:'0ffe1ed4-2571-4302-902d-be542f6086e6',
+  infraestructura:'17b7a132-3aab-4c65-82d3-bf558e598b66',
+  chincharrear:'c5455538-4a68-49ff-8d4c-95dc2069d676'
+};
 function c274AsegurarTipo(cat){
   var ex=c274BuscarTipo(cat);
   if(ex)return Promise.resolve(ex);
-  return from('tipos_labor').insert({
-    nombre:cat.nombre,
-    requiere_cantidad_insumo:false,
-    requiere_tiempo:false,
-    requiere_tabla:true,
-    activo:true,
-    orden:90
-  }).then(function(){
-    return from('tipos_labor').select('*').eq('nombre',cat.nombre).get();
-  }).then(function(rows){
-    var lb=rows&&rows[0]?rows[0]:null;
-    if(lb&&!cats.tiposLabor.some(function(x){return String(x.id)===String(lb.id);})){cats.tiposLabor.push(lb);}
-    return lb;
-  });
+
+  var fijo=C286_TIPOS_FIJOS[cat.k];
+  if(fijo){
+    return from('tipos_labor').select('*').eq('id',fijo).get().then(function(rows){
+      var lb=rows&&rows[0]?rows[0]:null;
+      if(!lb)throw new Error('La labor '+cat.nombre+' no existe en el catálogo real.');
+      if(!(cats.tiposLabor||[]).some(function(x){return String(x.id)===String(lb.id);})){
+        cats.tiposLabor.push(lb);
+      }
+      return lb;
+    });
+  }
+
+  // Sólo "Otros" puede crear una labor libre mediante su flujo específico.
+  return Promise.reject(new Error('Categoría no reconocida.'));
 }
 function c274AsegurarVariante(lb,nombre){
-  if(!nombre)return Promise.resolve(null);
   var ex=(cats.subtiposLabor||[]).find(function(x){
-    return String(x.tipo_labor_id)===String(lb.id)&&(x.nombre||'').trim().toLowerCase()===nombre.trim().toLowerCase();
+    return String(x.tipo_labor_id)===String(lb.id)&&(x.nombre||'').trim().toLowerCase()===(nombre||'').trim().toLowerCase();
   });
-  if(ex)return Promise.resolve(ex);
-  return from('subtipos_labor').insert({
-    tipo_labor_id:lb.id,nombre:nombre,requiere_tiempo:false,activo:true
-  }).then(function(){
-    return from('subtipos_labor').select('*').eq('tipo_labor_id',lb.id).eq('nombre',nombre).get();
-  }).then(function(rows){
-    var sub=rows&&rows[0]?rows[0]:null;
-    if(sub&&!cats.subtiposLabor.some(function(x){return String(x.id)===String(sub.id);})){cats.subtiposLabor.push(sub);}
-    return sub;
-  });
+  return Promise.resolve(ex||null);
 }
+
 function c274RenderVariantes(cat){return;}
 
 function c274ElegirCatalogo(k){
@@ -17606,7 +17648,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C285
+C286
 </div>
 
 <style id="fi128-css">
