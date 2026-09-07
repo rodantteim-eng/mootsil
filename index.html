@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C302';
+  window.MOOTSIL_BUILD='C303';
 </script>
 
 
@@ -6501,8 +6501,10 @@ function c296EditarFormulaAplicacion(){
   c296CerrarGestion();
   Promise.all([
     from('formulas_aplicacion').select('*,tabla:tablas(nombre,plantacion_id)').eq('id',id).get(),
-    from('formula_componentes').select('*,item:inventario_items!item_id(nombre,unidad,stock_actual)').eq('formula_id',id).get()
+    from('formula_componentes').select('*,item:inventario_items!item_id(nombre,unidad,stock_actual)').eq('formula_id',id).get(),
+    from('inventario_items').select('*').eq('activo',true).order('nombre').get()
   ]).then(function(r){
+    cats.inventario=r[2]||cats.inventario||[];
     var f=r[0]&&r[0][0], comps=(r[1]||[]).filter(function(c){return c.estado_faltante!=='sustituido';});
     if(!f){alert('No se encontró la aplicación.');return;}
     C297_EDIT_COMPONENTS=comps.map(function(c){
@@ -6744,12 +6746,37 @@ function c298GuardarPersonal(){
   Promise.all([Promise.all(ops),insertProm]).then(function(r){
     if(!primeraAsignacion)return null;
     var first=(r[1]&&r[1][0]&&r[1][0][0])?r[1][0][0].id:null;
-    return Promise.all(C298_ASSIGN_COMPONENTS.map(function(c){
-      var stock=c.item?Number(c.item.stock_actual||0):0,cant=Number(c.cantidad_base||0),nuevo=stock-cant;
-      return from('movimientos_inventario').insert({item_id:c.item_id,tipo:'salida',cantidad:cant,motivo:'Aplicación asignada: '+(f.nombre||''),referencia_orden_id:first,usuario_id:usuario.id,stock_anterior:stock,stock_posterior:nuevo}).then(function(){
-        return from('inventario_items').eq('id',c.item_id).update({stock_actual:nuevo});
-      });
-    }));
+    return from('inventario_items').select('*').eq('activo',true).order('nombre').get().then(function(inventarioVivo){
+      cats.inventario=inventarioVivo||[];
+      var porId={};
+      (inventarioVivo||[]).forEach(function(it){porId[String(it.id)]=it;});
+
+      return Promise.all(C298_ASSIGN_COMPONENTS.map(function(c){
+        var it=porId[String(c.item_id)]||null;
+        var stockRaw=it?Number(it.stock_actual||0):0;
+        var stock=Math.max(0,stockRaw);
+        var cant=Number(c.cantidad_base||0);
+        var salidaReal=Math.min(stock,cant);
+        var nuevo=Math.max(0,stock-salidaReal);
+
+        if(salidaReal<=0){
+          return Promise.resolve(null);
+        }
+
+        return from('movimientos_inventario').insert({
+          item_id:c.item_id,
+          tipo:'salida',
+          cantidad:salidaReal,
+          motivo:'Aplicación asignada: '+(f.nombre||'')+(salidaReal<cant?' · salida limitada al stock disponible':''),
+          referencia_orden_id:first,
+          usuario_id:usuario.id,
+          stock_anterior:stock,
+          stock_posterior:nuevo
+        }).then(function(){
+          return from('inventario_items').eq('id',c.item_id).update({stock_actual:nuevo});
+        });
+      }));
+    });
   }).then(function(){
     return from('inventario_items').select('*').eq('activo',true).order('nombre').get();
   }).then(function(rows){
@@ -7920,13 +7947,29 @@ function agregarFormulaComponenteRow(){
 
 function renderFormulaPasoNotas(){
   var body=c292FormulaBody();
-  body.innerHTML='<div class="loading">Cargando...</div>';
-  var traerPersistidos = formulaEditId ? from('formula_componentes').select('*').eq('formula_id',formulaEditId).get() : Promise.resolve([]);
-  traerPersistidos.then(function(persistidos){
-    pintarFormulaPasoNotas(persistidos||[]);
-  }).catch(function(){ pintarFormulaPasoNotas([]); });
-}
+  body.innerHTML='<div class="loading">Actualizando inventario...</div>';
 
+  var traerPersistidos = formulaEditId
+    ? from('formula_componentes').select('*').eq('formula_id',formulaEditId).get()
+    : Promise.resolve([]);
+
+  Promise.all([
+    traerPersistidos,
+    from('inventario_items').select('*').eq('activo',true).order('nombre').get()
+  ]).then(function(r){
+    var persistidos=r[0]||[];
+    var inventarioVivo=r[1]||[];
+    cats.inventario=inventarioVivo;
+    pintarFormulaPasoNotas(persistidos);
+  }).catch(function(e){
+    console.warn('No se pudo refrescar inventario antes del Paso 9:',e);
+    traerPersistidos.then(function(persistidos){
+      pintarFormulaPasoNotas(persistidos||[]);
+    }).catch(function(){
+      pintarFormulaPasoNotas([]);
+    });
+  });
+}
 function c299ToggleAutorizarCreacion(){
   C299_CREACION_FALTANTE_AUTORIZADO=!C299_CREACION_FALTANTE_AUTORIZADO;
   var b=document.getElementById('c299-auth-create');
@@ -7945,12 +7988,14 @@ function pintarFormulaPasoNotas(persistidos){
   var faltantes=[];
   var resumenComp=comps.map(function(c){
     var it=cats.inventario.find(function(x){return x.id===c.item_id;});
-    var stock=it?Number(it.stock_actual||0):0;
+    var stockRaw=it?Number(it.stock_actual||0):0;
+    var stock=Math.max(0,stockRaw);
     var requerido=Number(c.cantidad||0)*c292Count;
     var falta=Math.max(0,requerido-stock);
-    if(falta>0)faltantes.push({nombre:c.nombre,falta:falta,unidad:c.unidad,requerido:requerido,stock:stock});
+    if(falta>0)faltantes.push({nombre:c.nombre,falta:falta,unidad:c.unidad,requerido:requerido,stock:stock,stockRaw:stockRaw});
     var alerta=falta>0?' · <span style="color:var(--rojo);font-weight:700;">⚠️ faltan '+fmtAmigable(falta,c.unidad)+' en total</span>':'';
-    return c.nombre+' · '+fmtAmigable(c.cantidad,c.unidad)+' por tabla × '+c292Count+' = <strong>'+fmtAmigable(requerido,c.unidad)+'</strong> (hay '+fmtAmigable(stock,c.unidad)+')'+alerta;
+    var ajuste=stockRaw<0?' · <span style="color:var(--rojo);font-weight:700;">stock anterior negativo; requiere ajuste de inventario</span>':'';
+    return c.nombre+' · '+fmtAmigable(c.cantidad,c.unidad)+' por tabla × '+c292Count+' = <strong>'+fmtAmigable(requerido,c.unidad)+'</strong> (disponible '+fmtAmigable(stock,c.unidad)+')'+ajuste+alerta;
   }).join('<br>');
   var fechaTxt=window._formulaFechaExistente||'';
   var alertaHtml='';
@@ -8084,7 +8129,7 @@ function guardarFormula(){
   var multPre=tablaIdsPre.length||1;
   var hayFaltantePre=comps.some(function(c){
     var item=cats.inventario.find(function(x){return x.id===c.item_id;});
-    return Number(c.cantidad||0)*multPre>Number(item?item.stock_actual:0);
+    return Number(c.cantidad||0)*multPre>Math.max(0,Number(item?item.stock_actual:0));
   });
   if(hayFaltantePre&&!C299_CREACION_FALTANTE_AUTORIZADO&&!formulaEditandoCatalogo){
     alert('Hay inventario insuficiente. Edita productos/cantidades o autoriza aplicar con faltante antes de crear la aplicación.');
@@ -18628,7 +18673,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C302
+C303
 </div>
 
 <style id="fi128-css">
