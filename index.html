@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C266';
+  window.MOOTSIL_BUILD='C267';
 </script>
 
 
@@ -2146,6 +2146,10 @@ function c231Icon(name, cls){
 #c260-avance-body.c261-erandy-body .surco-btn.sel{background:#d9eee2!important;color:#14583a!important;border-color:#76b391!important}
 #c260-avance-body.c261-jade-body .surco-btn.sel{background:#ead7f1!important;color:#67217f!important;border-color:#b681c9!important}
 @media(max-width:620px){.c261-avance-ident{grid-template-columns:1fr}}
+</style>
+
+<style id="c267-save-status">
+.c267-confirm{margin:10px 16px 0;padding:8px 10px;border-radius:10px;background:#eef7f1;border:1px solid #cfe2d5;color:#315b47;font-size:.7rem}
 </style>
 </head>
 <body>
@@ -3631,7 +3635,9 @@ function c256DashboardLabores(ordenes){
     });
     return Object.keys(gm).map(function(k){return gm[k];});
   }
-  var laboresSemana=agruparLabores(lab);
+  var laboresSemana=agruparLabores(lab).filter(function(g){
+    return !g.length || !g.every(function(o){return o.estado==='cancelada';});
+  });
   var hoy=fechaHoyLocal();
 
   function grupoTerminado(g){return g.length&&g.every(function(o){return o.estado==='completada';});}
@@ -3678,7 +3684,7 @@ function c256DashboardLabores(ordenes){
   var ja=(cats.plantaciones||[]).find(function(p){return /jade/i.test(p.nombre||'');});
   return '<section class="c256-dashboard"><div class="c256-dash-head"><div><div class="c256-dash-title">Avance semanal de labores</div><div class="c256-dash-sub">'+rg.ini+' al '+rg.fin+' · control por plantación y tabla</div></div><button class="c257-print" type="button" onclick="window.print()">🖨 Imprimir reporte semanal</button></div>'+
     '<div class="c256-summary">'+
-    '<div class="c256-stat" onclick="c259SetFiltro(&quot;semana&quot;)" style="cursor:pointer"><b>'+total+'</b><span>Labores de la semana</span></div>'+
+    '<div class="c256-stat" onclick="c259SetFiltro(&quot;semana&quot;)" style="cursor:pointer"><b>'+total+'</b><span>Programadas en la semana</span></div>'+
     '<div class="c256-stat" onclick="c259SetFiltro(&quot;pendiente&quot;)" style="cursor:pointer"><b>'+pendientes+'</b><span>Pendientes</span></div>'+
     '<div class="c256-stat" onclick="c259SetFiltro(&quot;en_proceso&quot;)" style="cursor:pointer"><b>'+proceso+'</b><span>En proceso</span></div>'+
     '<div class="c256-stat" onclick="c259SetFiltro(&quot;completada&quot;)" style="cursor:pointer"><b>'+terminadas+'</b><span>Terminadas</span></div>'+
@@ -4712,18 +4718,42 @@ function guardarOrden(){
     surcosTablaCompleta=Array.from({length:totalSurcos},function(_,i){return i+1;});
   }
   var esExtra=modoAsignacionLabor==='extra';
-  Promise.all(opIds.map(function(oid){
-    return from('ordenes_trabajo').insert({asignado_por:usuario.id,operario_id:oid,tabla_id:tbId,tipo_labor_id:lbId,subtipo_labor_id:sub,surcos_asignados:noTablaGuardar?[]:surcosTablaCompleta,cantidad_insumo_esperada:cant,duracion:dur,fecha_asignacion:fec,notas_encargado:not,estado:'pendiente',es_hora_extra:esExtra});
-  })).then(function(){
-    var autorizarExtra = esExtra ? Promise.all(opIds.map(function(oid){
-      return from('horas_extra_asignadas').insert({operario_id:oid,asignado_por:usuario.id,fecha:fec,motivo:not,tipo_labor_id:lbId,estado:'aprobada',horas_max:horasExtraAutorizadas});
-    })) : Promise.resolve();
-    return autorizarExtra.then(function(){
-      return Promise.all(opIds.map(function(oid){
-        return from('notificaciones').insert({titulo:esExtra?'⏰ Hora extra asignada':'📋 Nueva tarea asignada',cuerpo:usuario.nombre+' asignó a '+(cats.equipoDeCampo.find(function(o){return o.id===oid;})||{}).nombre+': '+(lb?lb.nombre:'')+(tb?(' en '+tb.nombre):'')+(esExtra?' (hora extra)':''),icono:esExtra?'⏰':'📋',leida:false,para_rol:'operario',para_usuario:oid});
-      }));
-    });
-  }).then(function(){showToast((esExtra?'⏰ Hora extra asignada: ':'📋 Labor asignada: ')+(lb?lb.nombre:''));c260CerrarNueva();renderAsignarEstatus();}).catch(function(e){alert('Error al guardar la labor: '+e.message);});
+  var botonGuardar=document.querySelector('#c253-asignacion .c253-assign');
+  if(botonGuardar){botonGuardar.disabled=true;botonGuardar.textContent='Guardando...';}
+  var payloads=opIds.map(function(oid){
+    return {asignado_por:usuario.id,operario_id:oid,tabla_id:tbId,tipo_labor_id:lbId,subtipo_labor_id:sub,surcos_asignados:noTablaGuardar?[]:surcosTablaCompleta,cantidad_insumo_esperada:cant,duracion:dur,fecha_asignacion:fec,notas_encargado:not,estado:'pendiente',es_hora_extra:esExtra};
+  });
+  Promise.all(payloads.map(function(pl){return from('ordenes_trabajo').insert(pl);})).then(function(insertados){
+    // Verificación inmediata: la labor existe realmente antes de cerrar el modal.
+    return from('ordenes_trabajo')
+      .select('id,operario_id,tabla_id,tipo_labor_id,subtipo_labor_id,fecha_asignacion,estado')
+      .eq('tabla_id',tbId)
+      .eq('tipo_labor_id',lbId)
+      .eq('fecha_asignacion',fec)
+      .in('operario_id',opIds)
+      .get()
+      .then(function(rows){
+        var encontrados=(rows||[]).filter(function(r){return r.estado==='pendiente'||r.estado==='en_proceso';});
+        if(encontrados.length<opIds.length) throw new Error('La labor no quedó confirmada para todo el personal seleccionado.');
+        return encontrados;
+      });
+  }).then(function(){
+    // Secundarios: hora extra y notificaciones NO invalidan una labor ya guardada.
+    if(esExtra){
+      Promise.all(opIds.map(function(oid){
+        return from('horas_extra_asignadas').insert({operario_id:oid,asignado_por:usuario.id,fecha:fec,motivo:not,tipo_labor_id:lbId,estado:'aprobada',horas_max:horasExtraAutorizadas});
+      })).catch(function(e){console.warn('Hora extra secundaria:',e.message);});
+    }
+    Promise.all(opIds.map(function(oid){
+      return from('notificaciones').insert({titulo:esExtra?'⏰ Hora extra asignada':'📋 Nueva tarea asignada',cuerpo:usuario.nombre+' asignó a '+(cats.equipoDeCampo.find(function(o){return o.id===oid;})||{}).nombre+': '+(lb?lb.nombre:'')+(tb?(' en '+tb.nombre):'')+(esExtra?' (hora extra)':''),icono:esExtra?'⏰':'📋',leida:false,para_rol:'operario',para_usuario:oid});
+    })).catch(function(e){console.warn('Notificación secundaria:',e.message);});
+    showToast('📋 Labor guardada correctamente: '+(lb?lb.nombre:''));
+    c260CerrarNueva();
+    setTimeout(function(){renderAsignarEstatus();},150);
+  }).catch(function(e){
+    if(botonGuardar){botonGuardar.disabled=false;botonGuardar.textContent=esExtra?'Asignar hora extra':'Asignar labor';}
+    alert('No se pudo guardar la labor: '+e.message);
+  });
 }
 
 var C224_AVISOS_MODO='pendientes';
