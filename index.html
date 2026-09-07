@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C265';
+  window.MOOTSIL_BUILD='C266';
 </script>
 
 
@@ -3607,15 +3607,13 @@ function c256SemanaActual(){
   return {ini:iso(ini),fin:iso(fin)};
 }
 var C259_FILTRO_LAB='semana';
-function c259EsRetrasada(o){if(!o||o.estado==='completada'||o.estado==='cancelada')return false;var hoy=fechaHoyLocal(),rg=c256SemanaActual(),d=new Date(),dia=(d.getDay()+6)%7;return (o.fecha_asignacion&&o.fecha_asignacion<hoy)||(dia>=4&&o.fecha_asignacion>=rg.ini&&o.fecha_asignacion<=rg.fin&&o.estado==='pendiente');}
+function c259EsRetrasada(o){
+  if(!o||o.estado==='completada'||o.estado==='cancelada')return false;
+  return !!(o.fecha_asignacion&&o.fecha_asignacion<fechaHoyLocal()&&(o.estado==='pendiente'||o.estado==='en_proceso'));
+}
 function c259GrupoRetrasado(g){return g&&g.ordenes&&g.ordenes.some(c259EsRetrasada);}
 function c259SetFiltro(f){
   C259_FILTRO_LAB=f;
-  if(f==='semana') ASIGNAR_SUBTAB='semana';
-  else if(f==='pendiente') ASIGNAR_SUBTAB='pendientes';
-  else if(f==='en_proceso') ASIGNAR_SUBTAB='proceso';
-  else if(f==='completada') ASIGNAR_SUBTAB='terminadas';
-  else if(f==='retrasada') ASIGNAR_SUBTAB='semana';
   renderAsignarEstatus();
 }
 function c259CerrarModal(){var x=document.getElementById('c259-root');if(x)x.remove();}
@@ -3634,20 +3632,30 @@ function c256DashboardLabores(ordenes){
     return Object.keys(gm).map(function(k){return gm[k];});
   }
   var laboresSemana=agruparLabores(lab);
+  var hoy=fechaHoyLocal();
 
-  // El indicador "Labores de la semana" representa la carga operativa activa del tablero.
-  // Una labor pendiente programada para mañana no desaparece sólo por cruzar domingo/lunes.
+  function grupoTerminado(g){return g.length&&g.every(function(o){return o.estado==='completada';});}
+  function grupoCancelado(g){return g.length&&g.every(function(o){return o.estado==='cancelada';});}
+  function grupoEnProceso(g){return g.some(function(o){return o.estado==='en_proceso';});}
+  function grupoRetrasado(g){return g.some(c259EsRetrasada);}
+  function grupoFecha(g){return g.length?(g[0].fecha_asignacion||''):'';}
+
   var activasNoTiempo=(ordenes||[]).filter(function(o){return !ordenEsTiempo(o)&&o.estado!=='cancelada';});
   var laboresActivas=agruparLabores(activasNoTiempo);
-  var total=laboresActivas.length;
-  var terminadas=laboresSemana.filter(function(g){return g.length&&g.every(function(o){return o.estado==='completada';});}).length;
-  var proceso=laboresActivas.filter(function(g){return g.some(function(o){return o.estado==='en_proceso';});}).length;
+
+  var total=laboresSemana.length;
   var pendientes=laboresActivas.filter(function(g){
-    return !g.some(function(o){return o.estado==='en_proceso';}) &&
-           !g.every(function(o){return o.estado==='completada';});
+    return grupoFecha(g)===hoy && !grupoEnProceso(g) && !grupoTerminado(g) && !grupoCancelado(g);
+  }).length;
+  var proceso=laboresActivas.filter(function(g){
+    return grupoEnProceso(g) && !grupoRetrasado(g) && !grupoTerminado(g);
+  }).length;
+  var terminadas=laboresSemana.filter(grupoTerminado).length;
+  var retrasadas=laboresActivas.filter(function(g){
+    return grupoRetrasado(g) && !grupoTerminado(g) && !grupoCancelado(g);
   }).length;
   function tableStats(tid){
-    var os=activasNoTiempo.filter(function(o){return String(o.tabla_id||'')===String(tid);});
+    var os=lab.filter(function(o){return String(o.tabla_id||'')===String(tid);});
     var grupos=agruparLabores(os), sumaPct=0;
     grupos.forEach(function(g){
       var asignados=0,hechos=0;
@@ -3674,7 +3682,7 @@ function c256DashboardLabores(ordenes){
     '<div class="c256-stat" onclick="c259SetFiltro(&quot;pendiente&quot;)" style="cursor:pointer"><b>'+pendientes+'</b><span>Pendientes</span></div>'+
     '<div class="c256-stat" onclick="c259SetFiltro(&quot;en_proceso&quot;)" style="cursor:pointer"><b>'+proceso+'</b><span>En proceso</span></div>'+
     '<div class="c256-stat" onclick="c259SetFiltro(&quot;completada&quot;)" style="cursor:pointer"><b>'+terminadas+'</b><span>Terminadas</span></div>'+
-    '<div class="c256-stat" onclick="c259SetFiltro(&quot;retrasada&quot;)" style="cursor:pointer"><b>'+laboresActivas.filter(function(g){return g.some(c259EsRetrasada);}).length+'</b><span>Retrasadas</span></div></div>'+
+    '<div class="c256-stat" onclick="c259SetFiltro(&quot;retrasada&quot;)" style="cursor:pointer"><b>'+retrasadas+'</b><span>Retrasadas</span></div></div>'+
     '<div class="c256-plants">'+(er?plantBlock(er,'erandy'):'')+(ja?plantBlock(ja,'jade'):'')+'</div></section>';
 }
 function renderAsignarEstatus(){
@@ -3692,22 +3700,12 @@ function renderAsignarEstatus(){
     terminadas.forEach(function(o){o._ficha='completada';});
     var todas=activas.concat(terminadas);
     var rgFiltro=c256SemanaActual();
-    var filtradas=todas.filter(function(o){
-      if(ASIGNAR_SUBTAB==='semana') return o.fecha_asignacion>=rgFiltro.ini&&o.fecha_asignacion<=rgFiltro.fin;
-      if(ASIGNAR_SUBTAB==='pendientes') return o.estado==='pendiente';
-      if(ASIGNAR_SUBTAB==='proceso') return o.estado==='en_proceso';
-      if(ASIGNAR_SUBTAB==='terminadas') return o.estado==='completada';
-      return true;
-    });
     var html=headerAsignar()+c256DashboardLabores(todas)+barraSubtabsAsignar();
-    if(!filtradas.length){
-      var vacioTxt=ASIGNAR_SUBTAB==='semana'?'No hay labores registradas esta semana.':ASIGNAR_SUBTAB==='pendientes'?'No hay labores pendientes.':ASIGNAR_SUBTAB==='proceso'?'No hay labores en proceso.':'Aún no hay labores terminadas.';
-      html+='<div class="empty">'+vacioTxt+'</div>';
-      body.innerHTML=html;
-      return;
-    }
-    var riegoItems=filtradas.filter(function(o){return ordenEsTiempo(o);});
-    var otrosItems=filtradas.filter(function(o){return !ordenEsTiempo(o);});
+
+    // Primero agrupamos todas las órdenes; después filtramos la LABOR completa.
+    // Así Lalo + Filomeno + Eduardo siguen siendo una sola labor.
+    var riegoItems=[];
+    var otrosItems=todas.filter(function(o){return !ordenEsTiempo(o);});
     var gruposRiego={};
     var ordenGrupos=[];
     riegoItems.forEach(function(o){
@@ -3724,10 +3722,34 @@ function renderAsignarEstatus(){
       }
       gruposLabor[k].ordenes.push(o);
     });
-    var gruposKeysFiltrados=ordenGruposLabor.slice();
-    if(C259_FILTRO_LAB==='retrasada'){
-      gruposKeysFiltrados=gruposKeysFiltrados.filter(function(k){return c259GrupoRetrasado(gruposLabor[k]);});
+    var hoyFiltro=fechaHoyLocal();
+    function grupoFinalizado(g){return g.ordenes.length&&g.ordenes.every(function(o){return o.estado==='completada';});}
+    function grupoCanceladoVista(g){return g.ordenes.length&&g.ordenes.every(function(o){return o.estado==='cancelada';});}
+    function grupoProcesoVista(g){return g.ordenes.some(function(o){return o.estado==='en_proceso';});}
+    function grupoRetrasadoVista(g){return c259GrupoRetrasado(g);}
+    function grupoEnSemana(g){return g.fecha_asignacion>=rgFiltro.ini&&g.fecha_asignacion<=rgFiltro.fin;}
+
+    var gruposKeysFiltrados=ordenGruposLabor.filter(function(k){
+      var g=gruposLabor[k];
+      if(C259_FILTRO_LAB==='semana') return grupoEnSemana(g);
+      if(C259_FILTRO_LAB==='pendiente') return g.fecha_asignacion===hoyFiltro && !grupoProcesoVista(g) && !grupoFinalizado(g) && !grupoCanceladoVista(g);
+      if(C259_FILTRO_LAB==='en_proceso') return grupoProcesoVista(g) && !grupoRetrasadoVista(g) && !grupoFinalizado(g);
+      if(C259_FILTRO_LAB==='completada') return grupoEnSemana(g) && grupoFinalizado(g);
+      if(C259_FILTRO_LAB==='retrasada') return grupoRetrasadoVista(g) && !grupoFinalizado(g) && !grupoCanceladoVista(g);
+      return true;
+    });
+
+    if(!gruposKeysFiltrados.length){
+      var vacioTxt=C259_FILTRO_LAB==='semana'?'No hay labores programadas en esta semana.':
+        C259_FILTRO_LAB==='pendiente'?'No hay labores de hoy pendientes por iniciar.':
+        C259_FILTRO_LAB==='en_proceso'?'No hay labores actualmente en proceso.':
+        C259_FILTRO_LAB==='completada'?'No hay labores terminadas en esta semana.':
+        'No hay labores retrasadas.';
+      html+='<div class="empty">'+vacioTxt+'</div>';
+      body.innerHTML=html;
+      return;
     }
+
     var tarjetas=gruposKeysFiltrados.map(function(k){var g=gruposLabor[k];
       return {fecha:g.fecha_asignacion,html:tarjetaLaborAgrupada(g)};
     });
@@ -3831,7 +3853,7 @@ function tarjetaLaborAgrupada(grupo){
     '<div class="c258-badges"><span class="c258-plant '+pc+'">'+ubicacion+'</span><span class="c258-status '+estado+'">'+estadoTxt+'</span></div></div><div>'+menu+'</div></div>'+
     '<div class="c258-meta-grid"><div class="c258-meta"><b>Personal asignado</b>'+(nombres.join(', ')||'Sin asignar')+'</div><div class="c258-meta"><b>Jornada</b>'+jornada+'</div><div class="c258-meta"><b>Avance</b>'+pct+'%</div>'+
     (grupo.notas_encargado?'<div class="c258-meta"><b>Indicaciones</b>'+grupo.notas_encargado+'</div>':'')+'</div>'+
-    '<div class="c258-progress"><div class="c258-progress-top"><span>Avance de la labor</span><span>'+hechos+(total?'/'+total:'')+(total?' surcos':'')+'</span></div><div class="c258-progressbar"><i style="width:'+pct+'%"></i></div></div>'+
+    '<div class="c258-progress"><div class="c258-progress-top"><span>'+(retrasada?'Avance pendiente por terminar':'Avance de la labor')+'</span><span>'+hechos+(total?'/'+total:'')+(total?' surcos':'')+'</span></div><div class="c258-progressbar"><i style="width:'+pct+'%"></i></div></div>'+
     opciones+'</div>';
 }
 function c259AbrirEditar(grupo){c260AbrirEditarLabor(grupo);}
