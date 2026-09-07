@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C264';
+  window.MOOTSIL_BUILD='C265';
 </script>
 
 
@@ -2282,7 +2282,8 @@ function api(path, opts) {
       method: method,
       headers: Object.assign({'apikey':KEY_SB,'Authorization':'Bearer '+KEY_SB,'Content-Type':'application/json','Prefer':opts.prefer||''}, opts.headers||{}),
       body: opts.body ? JSON.stringify(opts.body) : undefined,
-      signal: ctrl?ctrl.signal:undefined
+      signal: ctrl?ctrl.signal:undefined,
+      cache: 'no-store'
     }).then(function(r) {
       if(timer) clearTimeout(timer);
       if(!r.ok){
@@ -3374,8 +3375,8 @@ function c260CerrarAvance(){
   C260_ADMIN_BODY='enc-body';ADMIN_COMPLETAR_ORDEN=null;C263_AVANCE_GRUPO_KEY=null;
 }
 function c260AbrirAvance(ordenId,grupoKey){
-  C263_AVANCE_GRUPO_KEY=grupoKey||null;
   c260CerrarAvance();
+  C263_AVANCE_GRUPO_KEY=grupoKey||null;
   var root=document.createElement('div');root.id='c260-avance-root';root.className='c260-overlay';
   root.innerHTML='<div class="c260-modal small"><div class="c260-modal-head"><div><h3>Registrar avance</h3><p>Captura el avance sin salir del tablero.</p></div><button class="c260-close" onclick="c260CerrarAvance()">×</button></div><div id="c260-avance-body" class="c260-modal-body"></div></div>';
   document.body.appendChild(root);C260_ADMIN_BODY='c260-avance-body';
@@ -3465,7 +3466,7 @@ function pintarAdminCompletar(){
   var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📝 Registrar avance<button type="button" id="ac-volver" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Volver</button></div>';
   html+='<div class="form-card"><div class="labor-chosen">'+(ICONOS[lb.nombre]||'🔧')+' <strong>'+titulo+'</strong></div>'+
     '<div class="c261-avance-ident"><div class="c261-avance-chip '+plantClass+'"><small>Plantación / Tabla</small>'+plantNombre+(o.tabla?' · '+o.tabla.nombre:'')+'</div><div class="c261-avance-chip c261-neutral"><small>Colaborador(es)</small>'+colaboradoresAvance+'</div></div>';
-  html+='<p class="hint" style="background:var(--gris-1);padding:.6rem .75rem;border-radius:var(--radio-sm);margin-bottom:.75rem;">ℹ️ Usa esto para registrar en el sistema el avance que el operario ya hizo en campo, mientras se acostumbra a marcarlo desde su celular. El avance quedará registrado a nombre de '+(opNombre||'el colaborador')+'.</p>';
+  html+='<p class="hint" style="background:var(--gris-1);padding:.6rem .75rem;border-radius:var(--radio-sm);margin-bottom:.75rem;">ℹ️ Usa esto para registrar en el sistema el avance que el operario ya hizo en campo, mientras se acostumbra a marcarlo desde su celular. El avance quedará registrado para '+colaboradoresAvance+' como una sola labor conjunta.</p>';
 
   if(esAplic){
     var tambosPlan=o.tambos_planeados||1;
@@ -3633,19 +3634,20 @@ function c256DashboardLabores(ordenes){
     return Object.keys(gm).map(function(k){return gm[k];});
   }
   var laboresSemana=agruparLabores(lab);
-  var total=laboresSemana.length;
-  var terminadas=laboresSemana.filter(function(g){return g.length&&g.every(function(o){return o.estado==='completada';});}).length;
 
-  // Pendientes / En proceso también se cuentan por labor grupal, no por colaborador.
+  // El indicador "Labores de la semana" representa la carga operativa activa del tablero.
+  // Una labor pendiente programada para mañana no desaparece sólo por cruzar domingo/lunes.
   var activasNoTiempo=(ordenes||[]).filter(function(o){return !ordenEsTiempo(o)&&o.estado!=='cancelada';});
   var laboresActivas=agruparLabores(activasNoTiempo);
+  var total=laboresActivas.length;
+  var terminadas=laboresSemana.filter(function(g){return g.length&&g.every(function(o){return o.estado==='completada';});}).length;
   var proceso=laboresActivas.filter(function(g){return g.some(function(o){return o.estado==='en_proceso';});}).length;
   var pendientes=laboresActivas.filter(function(g){
     return !g.some(function(o){return o.estado==='en_proceso';}) &&
            !g.every(function(o){return o.estado==='completada';});
   }).length;
   function tableStats(tid){
-    var os=lab.filter(function(o){return String(o.tabla_id||'')===String(tid);});
+    var os=activasNoTiempo.filter(function(o){return String(o.tabla_id||'')===String(tid);});
     var grupos=agruparLabores(os), sumaPct=0;
     grupos.forEach(function(g){
       var asignados=0,hechos=0;
@@ -3672,7 +3674,7 @@ function c256DashboardLabores(ordenes){
     '<div class="c256-stat" onclick="c259SetFiltro(&quot;pendiente&quot;)" style="cursor:pointer"><b>'+pendientes+'</b><span>Pendientes</span></div>'+
     '<div class="c256-stat" onclick="c259SetFiltro(&quot;en_proceso&quot;)" style="cursor:pointer"><b>'+proceso+'</b><span>En proceso</span></div>'+
     '<div class="c256-stat" onclick="c259SetFiltro(&quot;completada&quot;)" style="cursor:pointer"><b>'+terminadas+'</b><span>Terminadas</span></div>'+
-    '<div class="c256-stat" onclick="c259SetFiltro(&quot;retrasada&quot;)" style="cursor:pointer"><b>'+laboresSemana.filter(function(g){return g.some(c259EsRetrasada);}).length+'</b><span>Retrasadas</span></div></div>'+
+    '<div class="c256-stat" onclick="c259SetFiltro(&quot;retrasada&quot;)" style="cursor:pointer"><b>'+laboresActivas.filter(function(g){return g.some(c259EsRetrasada);}).length+'</b><span>Retrasadas</span></div></div>'+
     '<div class="c256-plants">'+(er?plantBlock(er,'erandy'):'')+(ja?plantBlock(ja,'jade'):'')+'</div></section>';
 }
 function renderAsignarEstatus(){
@@ -3897,7 +3899,11 @@ function c260AbrirEditarLabor(grupo){
     seleccion.filter(function(id){return actuales.indexOf(String(id))<0;}).forEach(function(id){
       jobs.push(from('ordenes_trabajo').insert({asignado_por:usuario.id,operario_id:id,tabla_id:tablaId,tipo_labor_id:tipoId,subtipo_labor_id:subId,surcos_asignados:surcos,cantidad_insumo_esperada:o.cantidad_insumo_esperada,duracion:o.duracion||'labor_completa',fecha_asignacion:fecha,notas_encargado:notas,estado:'pendiente',es_hora_extra:extra}));
     });
-    Promise.all(jobs).then(function(){showToast('Labor actualizada');c260CerrarEditar();renderAsignarEstatus();}).catch(function(e){alert('Error al editar la labor: '+e.message);});
+    Promise.all(jobs).then(function(){
+      showToast('Labor actualizada');
+      c260CerrarEditar();
+      setTimeout(function(){renderAsignarEstatus();},120);
+    }).catch(function(e){alert('Error al editar la labor: '+e.message);});
   };
 }
 
