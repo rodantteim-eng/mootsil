@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C280';
+  window.MOOTSIL_BUILD='C283';
 </script>
 
 
@@ -2348,6 +2348,41 @@ function c231Icon(name, cls){
 }
 @media(max-width:520px){
   #c260-nueva-root .c274-catgrid{grid-template-columns:1fr!important}
+}
+</style>
+
+<style id="c282-catalogo-una-linea">
+#c260-nueva-root .c274-catgrid{
+  display:grid!important;
+  grid-template-columns:repeat(9,minmax(0,1fr))!important;
+  gap:6px!important;
+}
+#c260-nueva-root .c274-cat{
+  min-height:54px!important;
+  padding:6px 7px!important;
+  gap:6px!important;
+  border-radius:10px!important;
+}
+#c260-nueva-root .c274-cat .ico{
+  width:28px!important;
+  height:28px!important;
+  min-width:28px!important;
+  border-radius:8px!important;
+}
+#c260-nueva-root .c274-cat .ico svg{
+  width:18px!important;
+  height:18px!important;
+}
+#c260-nueva-root .c274-cat .txt{
+  font-size:.61rem!important;
+  line-height:1.05!important;
+  white-space:nowrap!important;
+}
+#c260-nueva-root .c278-assignment{
+  margin-top:10px!important;
+}
+@media(max-width:900px){
+  #c260-nueva-root .c274-catgrid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
 }
 </style>
 </head>
@@ -4473,7 +4508,12 @@ function c253RenderAsignacion(){
     return '<div class="c253-plant '+cls+'"><div class="c253-plant-head"><span>PLANTACIÓN '+(p.nombre||'').toUpperCase()+'</span><span>'+ts.length+' tablas</span></div>'+
       '<div class="c253-tables">'+ts.map(function(t){return '<button type="button" class="c253-table" data-id="'+t.id+'" onclick="c253SeleccionarTabla(&quot;'+t.id+'&quot;)">'+t.nombre+'<br><span style="font-size:.6rem;font-weight:600;color:#7a877f;">Tabla completa</span></button>';}).join('')+'</div></div>';
   }).join('');
-  var subops=(cats.subtiposLabor||[]).filter(function(x){return x.tipo_labor_id===lb.id&&!x.requiere_tiempo;});
+  var subops=(cats.subtiposLabor||[]).filter(function(x){return String(x.tipo_labor_id)===String(lb.id)&&!x.requiere_tiempo;});
+  if(C274_CAT_SEL&&C274_CAT_SEL.variantes&&C274_CAT_SEL.variantes.length){
+    subops=C274_CAT_SEL.variantes.map(function(nombre){
+      return subops.find(function(x){return (x.nombre||'').trim().toLowerCase()===nombre.trim().toLowerCase();});
+    }).filter(Boolean);
+  }
   panel.innerHTML=
     '<div class="c253-selected"><div class="c250-labor-ic"><svg viewBox="0 0 48 48">'+v.svg+'</svg></div><div><div style="font-size:.64rem;color:#6d7c74;">Labor seleccionada</div><strong>'+v.label+'</strong></div></div>'+
     (subops.length?'<div class="c253-field"><label>Variante</label><select id="fsb"><option value="">Selecciona...</option>'+subops.map(function(x){return '<option value="'+x.id+'">'+x.nombre+'</option>';}).join('')+'</select></div>':'<select id="fsb" style="display:none"><option value=""></option></select>')+
@@ -4541,6 +4581,16 @@ var C274_CATALOGO_LABORES=[
   ]},
   {k:'otros',nombre:'Otros',icono:c275Icon('otros'),variantes:[]}
 ];
+var C283_TIPOS_LABOR_VERIFICADOS={
+  poda:'2f3c2f18-69de-44ab-8ccd-8a44f5461c40',
+  desbrozadora:'2fb335e0-8d20-4c7a-9ed2-92fccd77c6d6',
+  deshierbado:'533c75f4-9151-47cd-8df3-83a7bed1b770',
+  limpieza:'f95dc043-f158-41d3-ba20-5024f951e0ad',
+  trineado:'861f0916-27b3-4ba2-ab5e-ccdd8041bdc4',
+  tutoreo:'92324033-656f-453f-97d8-46489071ff97',
+  trampas:'0ffe1ed4-2571-4302-902d-be542f6086e6',
+  infraestructura:'17b7a132-3aab-4c65-82d3-bf558e598b66'
+};
 var C274_CAT_SEL=null;
 var C274_VAR_SEL=null;
 
@@ -4565,56 +4615,96 @@ function c274BuscarTipo(cat){
 function c274AsegurarTipo(cat){
   var ex=c274BuscarTipo(cat);
   if(ex)return Promise.resolve(ex);
-  return from('tipos_labor').insert({
-    nombre:cat.nombre,
-    requiere_cantidad_insumo:false,
-    requiere_tiempo:false,
-    requiere_tabla:true,
-    activo:true,
-    orden:90
-  }).then(function(){
-    return from('tipos_labor').select('*').eq('nombre',cat.nombre).get();
-  }).then(function(rows){
-    var lb=rows&&rows[0]?rows[0]:null;
-    if(lb&&!cats.tiposLabor.some(function(x){return String(x.id)===String(lb.id);})){cats.tiposLabor.push(lb);}
+
+  var idFijo=C283_TIPOS_LABOR_VERIFICADOS[cat.k];
+  if(idFijo){
+    // Estas categorías ya existen en la base real. Algunas están inactivas en el
+    // catálogo legado, por eso no siempre llegan en cats.tiposLabor.
+    return from('tipos_labor').select('*').eq('id',idFijo).get().then(function(rows){
+      var lb=rows&&rows[0]?rows[0]:{
+        id:idFijo,nombre:cat.nombre,requiere_cantidad_insumo:false,
+        requiere_tiempo:false,requiere_tabla:true,activo:false
+      };
+      if(!(cats.tiposLabor||[]).some(function(x){return String(x.id)===String(lb.id);})){
+        cats.tiposLabor.push(lb);
+      }
+      return lb;
+    });
+  }
+
+  // Sólo categorías libres/futuras pueden llegar aquí. Primero consultar por nombre;
+  // nunca insertar a ciegas para evitar violar tipos_labor_nombre_key.
+  return from('tipos_labor').select('*').eq('nombre',cat.nombre).get().then(function(rows){
+    if(rows&&rows[0])return rows[0];
+    return from('tipos_labor').insert({
+      nombre:cat.nombre,
+      requiere_cantidad_insumo:false,
+      requiere_tiempo:false,
+      requiere_tabla:true,
+      activo:true,
+      orden:90
+    }).then(function(ins){
+      return ins&&ins[0]?ins[0]:null;
+    });
+  }).then(function(lb){
+    if(lb&&!(cats.tiposLabor||[]).some(function(x){return String(x.id)===String(lb.id);})){
+      cats.tiposLabor.push(lb);
+    }
     return lb;
   });
 }
 function c274AsegurarVariante(lb,nombre){
   if(!nombre)return Promise.resolve(null);
-  var ex=(cats.subtiposLabor||[]).find(function(x){
-    return String(x.tipo_labor_id)===String(lb.id)&&(x.nombre||'').trim().toLowerCase()===nombre.trim().toLowerCase();
+
+  var local=(cats.subtiposLabor||[]).find(function(x){
+    return String(x.tipo_labor_id)===String(lb.id)&&
+      (x.nombre||'').trim().toLowerCase()===nombre.trim().toLowerCase();
   });
-  if(ex)return Promise.resolve(ex);
-  return from('subtipos_labor').insert({
-    tipo_labor_id:lb.id,nombre:nombre,requiere_tiempo:false,activo:true
-  }).then(function(){
-    return from('subtipos_labor').select('*').eq('tipo_labor_id',lb.id).eq('nombre',nombre).get();
-  }).then(function(rows){
-    var sub=rows&&rows[0]?rows[0]:null;
-    if(sub&&!cats.subtiposLabor.some(function(x){return String(x.id)===String(sub.id);})){cats.subtiposLabor.push(sub);}
+  if(local)return Promise.resolve(local);
+
+  function guardarLocal(sub){
+    if(sub&&!(cats.subtiposLabor||[]).some(function(x){return String(x.id)===String(sub.id);})){
+      cats.subtiposLabor.push(sub);
+    }
     return sub;
-  });
-}
-function c274RenderVariantes(cat){
-  var host=document.getElementById('c274-variants');
-  if(!host)return;
-  if(cat.k==='otros'){
-    host.innerHTML='<div class="c274-variants-title">Otra labor</div>'+
-      '<div class="c274-hint">Para una labor que todavía no esté en estas 9 categorías, usa el campo “Otra labor” que aparece abajo.</div>';
-    return;
   }
-  if(!cat.variantes||!cat.variantes.length){
-    host.innerHTML='<div class="c274-variants-title">'+cat.nombre+'</div><div class="c274-hint">Esta categoría no requiere variante. Puedes continuar con ubicación, personal y fecha.</div>';
-    return;
-  }
-  host.innerHTML='<div class="c274-variants-title">Variante de '+cat.nombre+'</div><div class="c274-hint">Selecciona la variante en la lista desplegable de la asignación.</div>';
+
+  // Consultar la tabla real antes de insertar. Evita duplicados si el subtipo
+  // existe pero no estaba en el catálogo cargado en memoria.
+  return from('subtipos_labor')
+    .select('*')
+    .eq('tipo_labor_id',lb.id)
+    .eq('nombre',nombre)
+    .get()
+    .then(function(rows){
+      if(rows&&rows[0])return guardarLocal(rows[0]);
+      return from('subtipos_labor').insert({
+        tipo_labor_id:lb.id,
+        nombre:nombre,
+        requiere_tiempo:false
+      }).then(function(ins){
+        return guardarLocal(ins&&ins[0]?ins[0]:null);
+      }).catch(function(err){
+        // Si otro intento lo creó al mismo tiempo, recuperar el registro existente.
+        if(err&&/duplicate key|unique constraint|23505/i.test(err.message||'')){
+          return from('subtipos_labor')
+            .select('*')
+            .eq('tipo_labor_id',lb.id)
+            .eq('nombre',nombre)
+            .get()
+            .then(function(r){return guardarLocal(r&&r[0]?r[0]:null);});
+        }
+        throw err;
+      });
+    });
 }
+function c274RenderVariantes(cat){return;}
+
 function c274ElegirCatalogo(k){
   var cat=C274_CATALOGO_LABORES.find(function(x){return x.k===k;});if(!cat)return;
   C274_CAT_SEL=cat;C274_VAR_SEL=null;
   document.querySelectorAll('.c274-cat').forEach(function(b){b.classList.toggle('sel',b.dataset.cat===k);});
-  c274RenderVariantes(cat);
+
   if(cat.k==='otros'){
     var box=document.getElementById('labor-otra-box');
     if(box){box.style.display='';var inp=document.getElementById('labor-otra-input');if(inp)inp.focus();}
@@ -4622,16 +4712,21 @@ function c274ElegirCatalogo(k){
     var p=document.getElementById('c253-asignacion');if(p)p.innerHTML='';
     return;
   }
+
+  var boxOtro=document.getElementById('labor-otra-box');
+  if(boxOtro)boxOtro.style.display='none';
+
   c274AsegurarTipo(cat).then(function(lb){
     if(!lb)throw new Error('No se pudo preparar la categoría.');
-    asignarLaborSel=lb;
-    // Si el usuario ya eligió una variante mientras cargaba la categoría,
-    // no reiniciar la selección ni borrar el flujo.
-    if(!C274_VAR_SEL){
-      asignarLaborSubSel=null;
-      c253RenderAsignacion();
-      c274RenderVariantes(cat);
+    asignarLaborSel=lb;asignarLaborSubSel=null;
+
+    // Dejar listas en el selector exactamente las variantes acordadas.
+    if(cat.variantes&&cat.variantes.length){
+      return Promise.all(cat.variantes.map(function(v){return c274AsegurarVariante(lb,v);})).then(function(){
+        c253RenderAsignacion();
+      });
     }
+    c253RenderAsignacion();
   }).catch(function(e){alert('Error al preparar la labor: '+e.message);});
 }
 function c274ElegirVariante(nombre){
@@ -4681,10 +4776,7 @@ function renderFormAsignar(){
     '<div class="c275-modal-body c278-flow">'+
       '<div class="c253-section">Catálogo de labores</div>'+
       '<div class="c274-catgrid">'+tiles+'</div>'+
-      '<div id="c274-variants" class="c274-variants">'+
-        '<div class="c274-variants-title">Selecciona una categoría</div>'+
-        '<div class="c274-hint">Después aparecerán aquí mismo ubicación, personal, jornada, fecha e indicaciones.</div>'+
-      '</div>'+
+
       '<div id="labor-otra-box" class="c253-other" style="display:none;">'+
         '<label style="display:block;font-size:.65rem;font-weight:850;color:#78867e;margin-bottom:.25rem;">NOMBRE DE LA LABOR</label>'+
         '<input type="text" id="labor-otra-input" placeholder="Ej. Reparar cerco, recoger plástico, limpiar bodega..." style="width:100%;min-height:39px;border:1px solid #d2ddd6;border-radius:10px;padding:.56rem .68rem;">'+
@@ -17585,7 +17677,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C260
+C283
 </div>
 
 <style id="fi128-css">
