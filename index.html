@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C295';
+  window.MOOTSIL_BUILD='C296';
 </script>
 
 
@@ -2545,7 +2545,9 @@ function c231Icon(name, cls){
 .c295-name-preview{margin-top:8px;border:1px solid #dce5df;background:#f7faf8;border-radius:9px;padding:8px 10px;font-size:.66rem;line-height:1.45;color:#52655b}
 .c295-name-preview b{color:#145c42}
 </style>
-</head>
+<style id="c296-aplicaciones-gestion">
+.c296-card-manage{border:1px solid #bfd4c8;background:#fff;color:#1b5f44;border-radius:9px;padding:7px 10px;font-size:.66rem;font-weight:850;cursor:pointer}.c296-manage-overlay{position:fixed;inset:0;background:rgba(9,35,25,.45);z-index:10020;display:flex;align-items:center;justify-content:center;padding:18px}.c296-manage{width:min(720px,94vw);max-height:90vh;overflow:auto;background:#fff;border-radius:17px;box-shadow:0 24px 70px rgba(0,0,0,.26)}.c296-head{display:flex;justify-content:space-between;padding:16px 18px 12px;border-bottom:1px solid #e5ece8}.c296-head h3{margin:0;color:#174d35}.c296-body{padding:15px 18px 18px}.c296-info{border:1px solid #dfe7e2;border-radius:11px;padding:11px;font-size:.7rem;line-height:1.6}.c296-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px}.c296-actions button{border-radius:9px;padding:9px 12px;font-size:.69rem;font-weight:850;cursor:pointer}.c296-primary{border:0;background:#0e5d3d;color:#fff}.c296-secondary{border:1px solid #d7e0da;background:#fff;color:#334f42}.c296-danger{border:1px solid #e6b7b2;background:#fff4f3;color:#a33e34}
+</style></head>
 <body>
 
 <div id="screen-login" class="screen active">
@@ -6138,15 +6140,7 @@ var BOMBA_LABELS={'inyeccion':'Bomba Inyección','motor':'Bomba Motor','manual':
 var formulaVia=null, formulaCategoria=null, formulaCategoriasCombinadas=[], formulaBombas=[], formulaCompRows=[], formulaCompSeq=0, formulaEditId=null, formulaVolverAResumen=false, formulaEsPlantilla=false, formulaModoCatalogoDirecto=false, formulaEditandoCatalogo=false;
 var formulaPlantacionId=null, formulaTablaId=null;
 
-function headerAplicaciones(pendientesValidar){
-  var badge=pendientesValidar?(' ('+pendientesValidar+')'):'';
-  return '<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4rem;">🧪 Aplicaciones'+
-    '<div style="display:flex;flex-wrap:wrap;gap:.6rem;">'+
-    '<button type="button" onclick="c291AbrirNuevaAplicacion()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:700;cursor:pointer;">➕ Nueva aplicación</button>'+
-    '<button type="button" onclick="renderCatalogoFormulas()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">📚 Catálogo</button>'+
-    '<button type="button" onclick="renderValidar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">✅ Validar'+badge+'</button>'+
-    '</div></div>';
-}
+function headerAplicaciones(pendientesValidar){return '<div class="seccion-titulo">🧪 Aplicaciones</div>'; }
 function headerLabores(){
   return '<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4rem;">📋 Solicitudes de Labor<button type="button" onclick="renderSolicitarLabor()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Nueva solicitud</button></div><p class="hint" style="margin-bottom:.75rem;">Aquí se ven las labores que un ingeniero sugiere para programar — no las que ya asignaste al equipo (esas están en el Tablero).</p>';
 }
@@ -6404,6 +6398,23 @@ function c291ContinuarNuevaAplicacion(){
   }
   renderFormulaPasoCategoria();
 }
+
+var C296_APP_MANAGE_ID=null;
+function c296CerrarGestion(){var x=document.getElementById('c296-manage-modal');if(x)x.remove();}
+function c296GestionarAplicacion(id){
+ C296_APP_MANAGE_ID=id;
+ Promise.all([from('formulas_aplicacion').select('*,tabla:tablas(nombre,plantacion_id)').eq('id',id).get(),from('ordenes_trabajo').select('id,estado,operario:usuarios!operario_id(nombre)').eq('formula_id',id).get()]).then(function(r){
+  var f=r[0]&&r[0][0],os=(r[1]||[]).filter(function(o){return o.estado!=='cancelada';});if(!f){alert('No se encontró la aplicación.');return;}
+  var pl=f.tabla?(cats.plantaciones||[]).find(function(p){return String(p.id)===String(f.tabla.plantacion_id);}):null;
+  var personal=os.map(function(o){return o.operario?o.operario.nombre:'';}).filter(Boolean).join(', ');
+  var root=document.createElement('div');root.id='c296-manage-modal';root.className='c296-manage-overlay';root.innerHTML='<div class="c296-manage"><div class="c296-head"><div><h3>Gestionar aplicación</h3><div style="font-size:.68rem;color:#6f7d75;margin-top:3px;">'+(f.nombre||'')+'</div></div><button class="c291-close" onclick="c296CerrarGestion()">×</button></div><div class="c296-body"><div class="c296-info"><b>Ubicación:</b> '+(pl?pl.nombre+' · ':'')+(f.tabla?f.tabla.nombre:'')+(f.via==='Riego'?' · Tabla completa':'')+'<br><b>Fecha:</b> '+(f.fecha_programada||'Sin fecha')+'<br><b>Personal:</b> '+(personal||'Sin asignar')+'</div><div class="c296-actions"><button class="c296-danger" onclick="c296CancelarAplicacion()">Cancelar aplicación</button><button class="c296-secondary" onclick="c296EditarFormulaAplicacion()">Editar aplicación</button><button class="c296-primary" onclick="c296AsignarPersonal()">'+(personal?'Modificar asignación / personal':'Asignar personal')+'</button></div></div></div>';
+  document.body.appendChild(root);root.addEventListener('click',function(e){if(e.target===root)c296CerrarGestion();});
+ }).catch(function(e){alert('Error al abrir gestión: '+e.message);});
+}
+function c296EditarFormulaAplicacion(){var id=C296_APP_MANAGE_ID;c296CerrarGestion();renderFormulaForm(id);}
+function c296AsignarPersonal(){var id=C296_APP_MANAGE_ID;c296CerrarGestion();cargarFormulaParaAsignar(id);}
+function c296CancelarAplicacion(){if(!confirm('¿Cancelar esta aplicación? El registro se conservará para trazabilidad.'))return;Promise.all([from('formulas_aplicacion').eq('id',C296_APP_MANAGE_ID).update({activo:false}),from('ordenes_trabajo').eq('formula_id',C296_APP_MANAGE_ID).update({estado:'cancelada'})]).then(function(){showToast('Aplicación cancelada');c296CerrarGestion();renderAplicacionesEstatus();}).catch(function(e){alert('Error al cancelar: '+e.message);});}
+
 function renderAplicacionesEstatus(){
   var body=document.getElementById('enc-body');
   body.innerHTML=headerAplicaciones()+'<div class="loading">Cargando aplicaciones...</div>';
@@ -6448,7 +6459,7 @@ function renderAplicacionesEstatus(){
 
     var html=headerAplicaciones(pendValidar)+
       '<section class="c291-appdash"><div class="c291-head"><div><div class="c291-title">Avance semanal de aplicaciones</div><div class="c291-sub">'+rg.ini+' al '+rg.fin+' · control por plantación y tabla</div></div>'+
-      '<div class="c291-actions"><button class="primary" onclick="c291AbrirNuevaAplicacion()">+ Nueva aplicación</button><button onclick="renderCatalogoFormulas()">Catálogo</button><button onclick="renderValidar()">Validar'+(pendValidar?' ('+pendValidar+')':'')+'</button></div></div>'+
+      '<div class="c291-actions"><button class="primary" onclick="c291AbrirNuevaAplicacion()">+ Nueva aplicación</button><button onclick="renderCatalogoFormulas()">Catálogo</button></div></div>'+
       '<div class="c291-weeknav"><button onclick="c291MoverSemana(-1)">← Semana anterior</button><button onclick="c291EstaSemana()">Esta semana</button><button onclick="c291MoverSemana(1)">Semana siguiente →</button></div>'+
       '<div class="c291-stats">'+stat('semana','week',counts.semana,'Programadas en la semana')+stat('pending','pending',counts.pending,'Pendientes')+stat('process','process',counts.process,'En proceso')+stat('done','done',counts.done,'Terminadas')+stat('late','late',counts.late,'Retrasadas')+'</div>'+
       '<div class="c291-plants">'+plantBlock('Erandy','erandy')+plantBlock('Jade','jade')+'</div></section>';
@@ -6463,9 +6474,9 @@ function renderAplicacionesEstatus(){
         var productos=comps.filter(function(c){return c.formula_id===f.id&&c.item;}).map(function(c){return c.item.nombre;});
         var est=f._estado==='done'?'Terminada':f._estado==='late'?'Retrasada':f._estado==='process'?'En proceso':f._estado==='pending'?'Pendiente':'Programada';
         var via=f.via==='Riego'?'Vía Riego':f.via;
-        return '<div class="c291-card '+f._estado+'" onclick="renderFormulaForm(&quot;'+f.id+'&quot;)" style="cursor:pointer"><div class="c291-card-top"><div><div class="c291-card-title">'+(VIA_ICONOS[f.via]||'🧪')+' '+via+' · '+(f.nombre||'Aplicación')+'</div>'+
-          '<div class="c291-meta">📍 '+(p?p.nombre+' · ':'')+(f.tabla?f.tabla.nombre:'')+(f.via==='Riego'?' · <b>Tabla completa</b>':'')+'<br>📅 '+(f.fecha_programada||'Sin fecha')+(productos.length?'<br>🧴 '+productos.join(', '):'')+'</div></div>'+
-          '<span class="c291-badge">'+est+'</span></div></div>';
+        return '<div class="c291-card '+f._estado+'"><div class="c291-card-top"><div><div class="c291-card-title">'+(VIA_ICONOS[f.via]||'🧪')+' '+via+' · '+(f.nombre||'Aplicación')+'</div>'+
+          '<div class="c291-meta">📍 '+(p?p.nombre+' · ':'')+(f.tabla?f.tabla.nombre:'')+(f.via==='Riego'?' · <b>Tabla completa</b>':'')+'<br>📅 '+(f.fecha_programada||'Sin fecha')+(productos.length?'<br>🧴 '+productos.join(', '):'')+(f._ordenes&&f._ordenes.length?'<br>👤 '+f._ordenes.map(function(o){return o.operario?o.operario.nombre:'';}).filter(Boolean).join(', '):'<br>👤 Sin asignar')+'</div></div>'+
+          '<div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;"><span class="c291-badge">'+est+'</span><button type="button" class="c296-card-manage" onclick="c296GestionarAplicacion(&quot;'+f.id+'&quot;)">Gestionar</button></div></div></div>';
       }).join('');
     }
     html+='</div>';
@@ -7568,7 +7579,7 @@ function pintarFormulaPasoNotas(persistidos){
   var c292Tabs=c292Ids.map(function(id){return (cats.tablas||[]).find(function(x){return String(x.id)===String(id);});}).filter(Boolean);
   var c292Ubic=(p?p.nombre:'')+' · '+c292Tabs.map(function(x){return x.nombre;}).join(', ');
   var filasUbicFecha=formulaEditandoCatalogo?'':('<div class="resumen-row" data-editar="ubicacion" style="cursor:pointer;"><span class="resumen-key">Ubicación ✏️</span><span class="resumen-val">📍 '+c292Ubic+'</span></div><div class="resumen-row" data-editar="fecha" style="cursor:pointer;"><span class="resumen-key">Fecha de aplicación ✏️</span><span class="resumen-val">'+fechaTxt+'</span></div>');
-  body.innerHTML='<div class="seccion-titulo">'+(formulaEditandoCatalogo?'Paso 6 de 6':'Paso 9 de 9')+' · Notas y confirmar</div>'+alertaHtml+(window._formulaCreadorExistente?'<p class="hint" style="margin-bottom:.75rem;">👤 Formulada por: <strong>'+window._formulaCreadorExistente+'</strong></p>':'')+'<div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row" data-editar="nombre" style="cursor:pointer;"><span class="resumen-key">Nombre ✏️</span><span class="resumen-val">'+window._formulaNombreExistente+'</span></div>'+filasUbicFecha+'<div class="resumen-row" data-editar="via" style="cursor:pointer;"><span class="resumen-key">Vía ✏️</span><span class="resumen-val">'+VIA_ICONOS[formulaVia]+' '+formulaVia+'</span></div><div class="resumen-row" data-editar="tipo" style="cursor:pointer;"><span class="resumen-key">Tipo ✏️</span><span class="resumen-val">'+CATEGORIA_ICONOS[formulaCategoria]+' '+formulaCategoria+(formulaCategoria==='Combinada'&&formulaCategoriasCombinadas.length?' ('+formulaCategoriasCombinadas.join(' + ')+')':'')+'</span></div><div class="resumen-row" data-editar="bomba" style="cursor:pointer;"><span class="resumen-key">Bomba ✏️</span><span class="resumen-val">'+bombasTxt+'</span></div><div class="resumen-row" data-editar="componentes" style="cursor:pointer;"><span class="resumen-key">Componentes ✏️</span></div><div style="font-size:.82rem;padding:.35rem 0;">'+resumenComp+'</div></div><p class="hint" style="margin-bottom:1rem;">Toca cualquier renglón de arriba para editarlo directo. ℹ️ Guardar esta fórmula <strong>no descuenta inventario todavía</strong> — solo es la receta planeada. El descuento real se hará cuando la asignes a un operario, en el módulo de Aplicaciones.</p><div class="form-group"><label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:.85rem;"><input type="checkbox" id="fm-plantilla" '+(formulaEsPlantilla?'checked':'')+' style="width:18px;height:18px;"> 📌 Es una fórmula que se repite mucho (guardar como plantilla frecuente en el Catálogo)</label></div><div class="form-group" id="fm-catcatalogo-box" style="display:'+((formulaEsPlantilla&&formulaCategoria==='Combinada')?'':'none')+';"><label>¿En qué categoría del catálogo la guardamos?</label><div style="display:flex;flex-wrap:wrap;gap:8px;" id="fm-catcatalogo-chips">'+['Nutrición','Plaga','Estimulación','Herbicida'].map(function(c){return '<button type="button" class="op-chip'+(window._formulaCategoriaCatalogo===c?' sel':'')+'" data-catcat="'+c+'" onclick="seleccionUnica(this)">'+CATEGORIA_ICONOS[c]+' '+c+'</button>';}).join('')+'</div><p class="hint">Como "Combinada" varía mucho, no aparece como categoría del catálogo — elige bajo cuál de las 4 se debe encontrar esta plantilla.</p></div><div class="form-group"><label>Notas / Observaciones (opcional)</label><input type="text" id="fm-notas-input" value="'+(window._formulaNotasExistente?window._formulaNotasExistente.replace(/"/g,'&quot;'):'')+'" placeholder="Instrucciones adicionales..."></div><button class="btn-primary" id="fm-guardar">'+(formulaEditId?'Guardar cambios':'Crear fórmula')+'</button></div>'+(formulaEditId?'<div class="form-card"><button type="button" id="fm-eliminar" style="width:100%;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.85rem;cursor:pointer;">🗑️ Eliminar fórmula</button></div>':'')+'<button class="btn-back" style="margin-top:1rem;" onclick="'+formulaVolverDestino()+'">← Volver a '+(formulaEditandoCatalogo?'Catálogo':'fórmulas')+'</button>';
+  body.innerHTML='<div class="seccion-titulo">'+(formulaEditandoCatalogo?'Paso 6 de 6':'Paso 9 de 9')+' · Notas y confirmar</div>'+alertaHtml+(window._formulaCreadorExistente?'<p class="hint" style="margin-bottom:.75rem;">👤 Formulada por: <strong>'+window._formulaCreadorExistente+'</strong></p>':'')+'<div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row" data-editar="nombre" style="cursor:pointer;"><span class="resumen-key">Nombre ✏️</span><span class="resumen-val">'+window._formulaNombreExistente+'</span></div>'+filasUbicFecha+'<div class="resumen-row" data-editar="via" style="cursor:pointer;"><span class="resumen-key">Vía ✏️</span><span class="resumen-val">'+VIA_ICONOS[formulaVia]+' '+formulaVia+'</span></div><div class="resumen-row" data-editar="tipo" style="cursor:pointer;"><span class="resumen-key">Tipo ✏️</span><span class="resumen-val">'+CATEGORIA_ICONOS[formulaCategoria]+' '+formulaCategoria+(formulaCategoria==='Combinada'&&formulaCategoriasCombinadas.length?' ('+formulaCategoriasCombinadas.join(' + ')+')':'')+'</span></div><div class="resumen-row" data-editar="bomba" style="cursor:pointer;"><span class="resumen-key">Bomba ✏️</span><span class="resumen-val">'+bombasTxt+'</span></div><div class="resumen-row" data-editar="componentes" style="cursor:pointer;"><span class="resumen-key">Componentes ✏️</span></div><div style="font-size:.82rem;padding:.35rem 0;">'+resumenComp+'</div></div><p class="hint" style="margin-bottom:1rem;">Toca cualquier renglón de arriba para editarlo directo. ℹ️ Guardar esta fórmula <strong>no descuenta inventario todavía</strong> — solo es la receta planeada. El descuento real se hará cuando la asignes a un operario, en el módulo de Aplicaciones.</p>'+(formulaEditandoCatalogo?'<div class="form-group"><label><input type="checkbox" id="fm-plantilla" '+(formulaEsPlantilla?'checked':'')+'> 📌 Guardar como fórmula frecuente del Catálogo</label></div>':'<input type="checkbox" id="fm-plantilla" style="display:none">')+'<div class="form-group" id="fm-catcatalogo-box" style="display:'+((formulaEsPlantilla&&formulaCategoria==='Combinada')?'':'none')+';"><label>¿En qué categoría del catálogo la guardamos?</label><div style="display:flex;flex-wrap:wrap;gap:8px;" id="fm-catcatalogo-chips">'+['Nutrición','Plaga','Estimulación','Herbicida'].map(function(c){return '<button type="button" class="op-chip'+(window._formulaCategoriaCatalogo===c?' sel':'')+'" data-catcat="'+c+'" onclick="seleccionUnica(this)">'+CATEGORIA_ICONOS[c]+' '+c+'</button>';}).join('')+'</div><p class="hint">Como "Combinada" varía mucho, no aparece como categoría del catálogo — elige bajo cuál de las 4 se debe encontrar esta plantilla.</p></div><div class="form-group"><label>Notas / Observaciones (opcional)</label><input type="text" id="fm-notas-input" value="'+(window._formulaNotasExistente?window._formulaNotasExistente.replace(/"/g,'&quot;'):'')+'" placeholder="Instrucciones adicionales..."></div><button class="btn-primary" id="fm-guardar">'+(formulaEditId?'Guardar cambios':'Crear fórmula')+'</button></div>'+(formulaEditId?'<div class="form-card"><button type="button" id="fm-eliminar" style="width:100%;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.85rem;cursor:pointer;">🗑️ Eliminar fórmula</button></div>':'')+'<button class="btn-back" style="margin-top:1rem;" onclick="'+formulaVolverDestino()+'">← Volver a '+(formulaEditandoCatalogo?'Catálogo':'fórmulas')+'</button>';
   document.getElementById('fm-guardar').addEventListener('click',guardarFormula);
   var plantillaCheckbox=document.getElementById('fm-plantilla');
   plantillaCheckbox.addEventListener('change',function(){
@@ -18159,7 +18170,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C295
+C296
 </div>
 
 <style id="fi128-css">
