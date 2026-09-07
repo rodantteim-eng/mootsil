@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C277';
+  window.MOOTSIL_BUILD='C278';
 </script>
 
 
@@ -2246,17 +2246,13 @@ function c231Icon(name, cls){
 @media(max-width:650px){.c275-modal-card .c274-catgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 
-<style id="c277-flujo-asignacion">
-.c277-step{width:min(940px,94vw);max-height:88vh;overflow:auto;background:#fff;border-radius:18px}
-.c277-stephead{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 18px 12px;border-bottom:1px solid #e3ebe6}
-.c277-stephead-left{display:flex;align-items:center;gap:10px}
-.c277-back{border:1px solid #cad8d0;background:#fff;border-radius:999px;padding:7px 10px;font-size:.7rem;font-weight:800;color:#24543e;cursor:pointer}
-.c277-stepbody{padding:15px 18px 18px}
-.c277-other{padding:16px;border:1px solid #d8e3dc;border-radius:13px;background:#fbfdfb}
-.c277-other label{display:block;font-size:.66rem;font-weight:900;color:#6c7d74;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em}
-.c277-other input[type=text]{width:100%;min-height:42px;border:1px solid #ccd8d1;border-radius:10px;padding:8px 10px}
-.c277-other-row{display:flex;gap:8px;align-items:center;margin-top:10px;font-size:.72rem;color:#496354}
-.c277-continue{margin-top:12px;border:0;background:#0d5b3c;color:#fff;border-radius:10px;padding:10px 16px;font-weight:900;cursor:pointer}
+<style id="c278-flujo-modal">
+.c275-modal-card{width:min(980px,95vw)!important;max-height:90vh!important;overflow:auto!important}
+.c278-flow{display:block}
+.c278-assignment{margin-top:14px;border-top:1px solid #e1e9e4;padding-top:14px}
+.c278-assignment:empty{display:none}
+.c278-assignment .c253-selected{margin-bottom:10px}
+.c278-assignment .c253-plant{margin-top:8px}
 </style>
 </head>
 <body>
@@ -4521,7 +4517,7 @@ function c274RenderVariantes(cat){
       return '<button type="button" class="c274-chip '+(C274_VAR_SEL===v?'sel':'')+'" data-var="'+v.replace(/"/g,'&quot;')+'">'+v+'</button>';
     }).join('')+'</div>';
   host.querySelectorAll('[data-var]').forEach(function(b){
-    b.onclick=function(){c277ElegirVariante(this.dataset.var);};
+    b.onclick=function(){c274ElegirVariante(this.dataset.var);};
   });
 }
 function c274ElegirCatalogo(k){
@@ -4533,7 +4529,7 @@ function c274ElegirCatalogo(k){
     var box=document.getElementById('labor-otra-box');
     if(box){box.style.display='';var inp=document.getElementById('labor-otra-input');if(inp)inp.focus();}
     asignarLaborSel=null;asignarLaborSubSel=null;
-    var p=document.getElementById('c253-asignacion');if(p)p.innerHTML='<div class="c253-empty"><b>Otra labor</b><br>Escribe el nombre de la labor para continuar.</div>';
+    var p=document.getElementById('c253-asignacion');if(p)p.innerHTML='';
     return;
   }
   c274AsegurarTipo(cat).then(function(lb){
@@ -4558,89 +4554,58 @@ function renderFormAsignar(){
   var body=document.getElementById('c260-nueva-body');
   if(!body)return;
   C274_CAT_SEL=null;C274_VAR_SEL=null;asignarLaborSel=null;asignarLaborSubSel=null;
+  c253Seleccionados=[];c253TablaId=null;c253TipoPersonal='base';modoAsignacionLabor='normal';horasExtraAutorizadas=2;
+
   var tiles=C274_CATALOGO_LABORES.map(function(cat){
     return '<button type="button" class="c274-cat" data-cat="'+cat.k+'" onclick="c275ElegirCatalogo(&quot;'+cat.k+'&quot;)">'+
       '<div class="ico">'+cat.icono+'</div><div class="txt">'+cat.nombre+'</div></button>';
   }).join('');
+
   body.innerHTML='<div class="c275-modal-card">'+
     '<div class="c275-modal-head"><div><div class="c275-modal-title">Nueva labor</div>'+
-    '<div class="c275-modal-sub">Selecciona la labor y, cuando corresponda, su variante.</div></div>'+
+    '<div class="c275-modal-sub">Selecciona la labor, su variante y completa la asignación.</div></div>'+
     '<button type="button" class="c275-modal-close" onclick="c260CerrarNueva()">×</button></div>'+
-    '<div class="c275-modal-body"><div class="c253-section">Catálogo de labores</div>'+
-    '<div class="c274-catgrid">'+tiles+'</div>'+
-    '<div id="c274-variants" class="c274-variants"><div class="c274-variants-title">Selecciona una categoría</div>'+
-    '<div class="c274-hint">Selecciona una categoría. Si tiene variantes, elige una y después continúa con ubicación, personal, jornada y fecha.</div></div></div></div>';
+    '<div class="c275-modal-body c278-flow">'+
+      '<div class="c253-section">Catálogo de labores</div>'+
+      '<div class="c274-catgrid">'+tiles+'</div>'+
+      '<div id="c274-variants" class="c274-variants">'+
+        '<div class="c274-variants-title">Selecciona una categoría</div>'+
+        '<div class="c274-hint">Después aparecerán aquí mismo ubicación, personal, jornada, fecha e indicaciones.</div>'+
+      '</div>'+
+      '<div id="labor-otra-box" class="c253-other" style="display:none;">'+
+        '<label style="display:block;font-size:.65rem;font-weight:850;color:#78867e;margin-bottom:.25rem;">NOMBRE DE LA LABOR</label>'+
+        '<input type="text" id="labor-otra-input" placeholder="Ej. Reparar cerco, recoger plástico, limpiar bodega..." style="width:100%;min-height:39px;border:1px solid #d2ddd6;border-radius:10px;padding:.56rem .68rem;">'+
+        '<label style="display:flex;align-items:center;gap:.4rem;margin-top:.45rem;font-size:.73rem;"><input type="checkbox" id="labor-otra-tabla" checked> Se realiza en una tabla</label>'+
+        '<label style="display:flex;align-items:center;gap:.4rem;margin-top:.38rem;font-size:.73rem;"><input type="checkbox" id="labor-otra-catalogo"> Guardar como labor frecuente</label>'+
+        '<button type="button" id="labor-otra-btn" class="c253-assign" style="margin-top:.5rem;">Usar esta labor</button>'+
+      '</div>'+
+      '<div id="c253-asignacion" class="c278-assignment"></div>'+
+    '</div></div>';
+
+  var otroBtn=document.getElementById('labor-otra-btn');
+  if(otroBtn)otroBtn.addEventListener('click',function(){
+    var nombre=(document.getElementById('labor-otra-input').value||'').trim();
+    if(!nombre){alert('Escribe el nombre de la labor.');return;}
+    var requiereTablaNueva=!!document.getElementById('labor-otra-tabla').checked;
+    var enCatalogoNueva=!!document.getElementById('labor-otra-catalogo').checked;
+    function usar(lb){
+      asignarLaborSel=lb;asignarLaborSubSel=null;
+      c253RenderAsignacion();
+      var box=document.getElementById('labor-otra-box');if(box)box.style.display='none';
+    }
+    var existente=(cats.tiposLabor||[]).find(function(l){return (l.nombre||'').toLowerCase()===nombre.toLowerCase();});
+    if(existente){usar(existente);return;}
+    from('tipos_labor').insert({nombre:nombre,requiere_cantidad_insumo:false,requiere_tiempo:false,requiere_tabla:requiereTablaNueva,activo:enCatalogoNueva,orden:100}).then(function(){
+      return from('tipos_labor').select('*').eq('nombre',nombre).get();
+    }).then(function(rows){
+      var lb=rows&&rows[0]?rows[0]:null;if(!lb)return;
+      if(enCatalogoNueva&&!cats.tiposLabor.some(function(x){return String(x.id)===String(lb.id);})){cats.tiposLabor.push(lb);}
+      usar(lb);
+    }).catch(function(e){alert('Error: '+e.message);});
+  });
 }
-function c277MostrarAsignacion(){
-  var body=document.getElementById('c260-nueva-body');if(!body||!asignarLaborSel)return;
-  body.innerHTML='<div class="c277-step">'+
-    '<div class="c277-stephead"><div class="c277-stephead-left">'+
-      '<button type="button" class="c277-back" onclick="renderFormAsignar()">← Catálogo</button>'+
-      '<div><div class="c275-modal-title">'+(asignarLaborSel.nombre||'Nueva labor')+'</div>'+
-      '<div class="c275-modal-sub">'+(C274_VAR_SEL?('Variante: '+C274_VAR_SEL):'Completa la asignación de la labor.')+'</div></div></div>'+
-      '<button type="button" class="c275-modal-close" onclick="c260CerrarNueva()">×</button></div>'+
-    '<div class="c277-stepbody"><div id="c253-asignacion"></div></div></div>';
-  c253RenderAsignacion();
-  if(asignarLaborSubSel){
-    var fsb=document.getElementById('fsb');
-    if(fsb)fsb.value=asignarLaborSubSel.id;
-  }
-}
-function c277ElegirVariante(nombre){
-  if(!C274_CAT_SEL)return;
-  C274_VAR_SEL=nombre;
-  c274AsegurarTipo(C274_CAT_SEL).then(function(lb){
-    if(!lb)throw new Error('No se pudo preparar la categoría.');
-    asignarLaborSel=lb;
-    return c274AsegurarVariante(lb,nombre);
-  }).then(function(sub){
-    asignarLaborSubSel=sub;
-    c277MostrarAsignacion();
-  }).catch(function(e){alert('Error al preparar la variante: '+e.message);});
-}
-function c277MostrarOtros(){
-  var body=document.getElementById('c260-nueva-body');if(!body)return;
-  body.innerHTML='<div class="c277-step">'+
-    '<div class="c277-stephead"><div class="c277-stephead-left"><button type="button" class="c277-back" onclick="renderFormAsignar()">← Catálogo</button>'+
-    '<div><div class="c275-modal-title">Otra labor</div><div class="c275-modal-sub">Escribe el nombre para continuar con la asignación.</div></div></div>'+
-    '<button type="button" class="c275-modal-close" onclick="c260CerrarNueva()">×</button></div>'+
-    '<div class="c277-stepbody"><div class="c277-other">'+
-      '<label>Nombre de la labor</label><input type="text" id="c277-otro-nombre" placeholder="Ej. Reparar cerco, recoger plástico...">'+
-      '<div class="c277-other-row"><input type="checkbox" id="c277-otro-tabla" checked><span>Se realiza en una tabla</span></div>'+
-      '<button type="button" class="c277-continue" onclick="c277ContinuarOtro()">Continuar a asignación</button>'+
-    '</div></div></div>';
-  setTimeout(function(){var i=document.getElementById('c277-otro-nombre');if(i)i.focus();},30);
-}
-function c277ContinuarOtro(){
-  var nombre=((document.getElementById('c277-otro-nombre')||{}).value||'').trim();
-  if(!nombre){alert('Escribe el nombre de la labor.');return;}
-  var requiereTabla=!!document.getElementById('c277-otro-tabla').checked;
-  var existente=(cats.tiposLabor||[]).find(function(l){return (l.nombre||'').trim().toLowerCase()===nombre.toLowerCase();});
-  var p=existente?Promise.resolve(existente):from('tipos_labor').insert({
-    nombre:nombre,requiere_cantidad_insumo:false,requiere_tiempo:false,requiere_tabla:requiereTabla,activo:true,orden:100
-  }).then(function(){return from('tipos_labor').select('*').eq('nombre',nombre).get();}).then(function(rows){return rows&&rows[0]?rows[0]:null;});
-  p.then(function(lb){
-    if(!lb)throw new Error('No se pudo crear la labor.');
-    if(!(cats.tiposLabor||[]).some(function(x){return String(x.id)===String(lb.id);})){cats.tiposLabor.push(lb);}
-    asignarLaborSel=lb;asignarLaborSubSel=null;C274_VAR_SEL=null;
-    c277MostrarAsignacion();
-  }).catch(function(e){alert('Error: '+e.message);});
-}
-function c275ElegirCatalogo(k){
-  var cat=C274_CATALOGO_LABORES.find(function(x){return x.k===k;});if(!cat)return;
-  C274_CAT_SEL=cat;C274_VAR_SEL=null;
-  document.querySelectorAll('.c274-cat').forEach(function(b){b.classList.toggle('sel',b.dataset.cat===k);});
-  if(cat.k==='otros'){c277MostrarOtros();return;}
-  if(cat.variantes&&cat.variantes.length){
-    c274RenderVariantes(cat);
-    return;
-  }
-  c274AsegurarTipo(cat).then(function(lb){
-    if(!lb)throw new Error('No se pudo preparar la categoría.');
-    asignarLaborSel=lb;asignarLaborSubSel=null;
-    c277MostrarAsignacion();
-  }).catch(function(e){alert('Error al preparar la labor: '+e.message);});
-}
+
+function c275ElegirCatalogo(k){c274ElegirCatalogo(k);}
 
 var C255_LAB_SEM_OFFSET=0;
 function c255SemanaRango(offset){
