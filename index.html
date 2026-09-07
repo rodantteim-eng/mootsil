@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C301';
+  window.MOOTSIL_BUILD='C302';
 </script>
 
 
@@ -6770,28 +6770,35 @@ function c301TerminarAplicacion(formulaId){
   if(!formulaId)return;
   if(!confirm('¿Confirmar aplicación como terminada manualmente?'))return;
 
-  Promise.all([
-    from('ordenes_trabajo').select('id,estado').eq('formula_id',formulaId).get(),
-    from('formulas_aplicacion').select('id,nombre').eq('id',formulaId).get()
-  ]).then(function(r){
-    var ordenes=(r[0]||[]).filter(function(o){return o.estado!=='cancelada'&&o.estado!=='completada';});
-    var ops=ordenes.map(function(o){
-      return from('ordenes_trabajo').eq('id',o.id).update({
-        estado:'completada',
-        cerrado_por:usuario.id,
-        cerrado_en:new Date().toISOString(),
-        cierre_manual:true
+  from('ordenes_trabajo')
+    .select('id,estado,notas_encargado')
+    .eq('formula_id',formulaId).get()
+    .then(function(rows){
+      var ordenes=(rows||[]).filter(function(o){
+        return o.estado!=='cancelada'&&o.estado!=='completada';
       });
+      if(!ordenes.length){
+        showToast('La aplicación ya está terminada o no tiene órdenes activas.');
+        return [];
+      }
+      var fechaHora=new Date().toLocaleString();
+      var quien=(usuario&&usuario.nombre)?usuario.nombre:'Administrador';
+      return Promise.all(ordenes.map(function(o){
+        var nota=(o.notas_encargado||'').trim();
+        var marca='Cierre manual: '+fechaHora+' · '+quien;
+        var notas=nota?(nota+'\n'+marca):marca;
+        return from('ordenes_trabajo').eq('id',o.id).update({
+          estado:'completada',
+          notas_encargado:notas
+        });
+      }));
+    }).then(function(){
+      showToast('✅ Aplicación terminada manualmente');
+      renderAplicacionesEstatus();
+    }).catch(function(e){
+      alert('Error al terminar la aplicación: '+e.message);
     });
-    return Promise.all(ops);
-  }).then(function(){
-    showToast('✅ Aplicación terminada manualmente');
-    renderAplicacionesEstatus();
-  }).catch(function(e){
-    alert('Error al terminar la aplicación: '+e.message);
-  });
 }
-
 function renderAplicacionesEstatus(){
   var body=document.getElementById('enc-body');
   body.innerHTML=headerAplicaciones()+'<div class="loading">Cargando aplicaciones...</div>';
@@ -18621,7 +18628,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C301
+C302
 </div>
 
 <style id="fi128-css">
