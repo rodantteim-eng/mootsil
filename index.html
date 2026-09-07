@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C275';
+  window.MOOTSIL_BUILD='C276';
 </script>
 
 
@@ -3691,7 +3691,7 @@ var horasExtraAutorizadas=2;
 var ASIGNAR_SUBTAB='semana';
 
 function headerAsignar(){
-  return '<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4rem;">🧰 Tablero de labores<div style="display:flex;flex-wrap:wrap;gap:.6rem;"><button type="button" onclick="renderFormAsignar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:700;cursor:pointer;">➕ Nueva labor</button></div></div>';
+  return '<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4rem;">🧰 Tablero de labores<div style="display:flex;flex-wrap:wrap;gap:.6rem;"><button type="button" onclick="c260AbrirNuevaLabor()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:700;cursor:pointer;">➕ Nueva labor</button></div></div>';
 }
 
 function barraSubtabsAsignar(){ return ''; }
@@ -4401,8 +4401,9 @@ function c260CerrarNueva(){var x=document.getElementById('c260-nueva-root');if(x
 function c260AbrirNuevaLabor(){
   c260CerrarNueva();
   var root=document.createElement('div');root.id='c260-nueva-root';root.className='c260-overlay';
-  root.innerHTML='<div class="c260-modal"><div class="c260-modal-head"><div><h3>Nueva labor</h3><p>Selecciona, asigna y guarda sin salir del Tablero de Labores.</p></div><button class="c260-close" onclick="c260CerrarNueva()">×</button></div><div id="c260-nueva-body" class="c260-modal-body"></div></div>';
+  root.innerHTML='<div class="c260-modal"><div id="c260-nueva-body" class="c260-modal-body" style="padding:0"></div></div>';
   document.body.appendChild(root);
+  root.addEventListener('click',function(e){if(e.target===root)c260CerrarNueva();});
   renderFormAsignar();
 }
 
@@ -4541,7 +4542,7 @@ function c274ElegirVariante(nombre){
   }).catch(function(e){alert('Error al preparar la variante: '+e.message);});
 }
 function renderFormAsignar(){
-  var body=document.getElementById('modal-body');
+  var body=document.getElementById('c260-nueva-body');
   if(!body)return;
   C274_CAT_SEL=null;C274_VAR_SEL=null;asignarLaborSel=null;asignarLaborSubSel=null;
   var tiles=C274_CATALOGO_LABORES.map(function(cat){
@@ -4551,7 +4552,7 @@ function renderFormAsignar(){
   body.innerHTML='<div class="c275-modal-card">'+
     '<div class="c275-modal-head"><div><div class="c275-modal-title">Nueva labor</div>'+
     '<div class="c275-modal-sub">Selecciona la labor y, cuando corresponda, su variante.</div></div>'+
-    '<button type="button" class="c275-modal-close" onclick="closeModal()">×</button></div>'+
+    '<button type="button" class="c275-modal-close" onclick="c260CerrarNueva()">×</button></div>'+
     '<div class="c275-modal-body"><div class="c253-section">Catálogo de labores</div>'+
     '<div class="c274-catgrid">'+tiles+'</div>'+
     '<div id="c274-variants" class="c274-variants"><div class="c274-variants-title">Selecciona una categoría</div>'+
