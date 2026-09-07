@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C259';
+  window.MOOTSIL_BUILD='C260';
 </script>
 
 
@@ -2115,7 +2115,24 @@ function c231Icon(name, cls){
 .c258-workcard.retrasada{border-left-color:#b84d3f;background:linear-gradient(90deg,#fff2ef 0,#fff 11%)}.c258-status.retrasada{background:#fbe4df;color:#9c3e33}
 .c259-bg{position:fixed;inset:0;background:rgba(12,31,23,.5);z-index:10020;display:flex;align-items:center;justify-content:center;padding:18px}.c259-modal{width:min(650px,96vw);max-height:88vh;overflow:auto;background:#fff;border-radius:16px;box-shadow:0 22px 60px rgba(0,0,0,.24)}.c259-head{display:flex;justify-content:space-between;padding:16px 18px;border-bottom:1px solid #e5ebe7}.c259-head b{color:#123f2d}.c259-body{padding:16px 18px}.c259-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.c259-field label{display:block;font-size:.64rem;font-weight:850;color:#748078;text-transform:uppercase;margin-bottom:4px}.c259-field input,.c259-field select{width:100%;min-height:40px;border:1px solid #d3ddd7;border-radius:9px;padding:7px 9px}.c259-persons{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:180px;overflow:auto;margin-top:8px}.c259-person{border:1px solid #dce4df;background:#fff;border-radius:9px;padding:8px;font-size:.7rem;text-align:left}.c259-person.sel{background:#e8f4ed;border-color:#0b5a37;color:#0b5a37;font-weight:850}.c259-foot{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid #e5ebe7}.c259-foot button{border:1px solid #d1ddd5;background:#fff;border-radius:9px;padding:9px 13px;font-weight:850}.c259-foot .save{background:#0b5a37;color:#fff}
 @media(max-width:900px){.c256-summary{grid-template-columns:repeat(2,1fr)!important}}@media(max-width:620px){.c259-grid,.c259-persons{grid-template-columns:1fr}}
-</style></head>
+</style>
+<style id="c260-modales-labores">
+.c260-overlay{position:fixed;inset:0;background:rgba(11,34,24,.52);z-index:10030;display:flex;align-items:center;justify-content:center;padding:16px}
+.c260-modal{width:min(1180px,97vw);max-height:92vh;overflow:auto;background:#f8faf8;border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.28)}
+.c260-modal.small{width:min(720px,96vw)}
+.c260-modal-head{position:sticky;top:0;z-index:4;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:14px 17px;background:#fff;border-bottom:1px solid #e2e9e5}
+.c260-modal-head h3{margin:0;color:#123f2d;font-size:1rem}.c260-modal-head p{margin:3px 0 0;color:#748078;font-size:.69rem}
+.c260-close{border:0;background:#edf3ef;color:#315444;border-radius:50%;width:34px;height:34px;font-size:1rem;cursor:pointer}
+.c260-modal-body{padding:15px}
+.c260-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.c260-field label{display:block;font-size:.64rem;font-weight:850;color:#748078;text-transform:uppercase;letter-spacing:.045em;margin-bottom:4px}
+.c260-field input,.c260-field select{width:100%;min-height:40px;border:1px solid #d3ddd7;border-radius:9px;padding:7px 9px;background:#fff}
+.c260-person-tabs{display:flex;gap:6px;margin:14px 0 7px}.c260-person-tabs button{border:1px solid #d7e1db;background:#fff;border-radius:999px;padding:6px 10px;font-size:.68rem;font-weight:800}.c260-person-tabs button.sel{background:#0b5a37;color:#fff;border-color:#0b5a37}
+.c260-person-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:180px;overflow:auto}.c260-person{border:1px solid #dce4df;background:#fff;border-radius:9px;padding:8px;font-size:.7rem;text-align:left}.c260-person.sel{background:#e8f4ed;border-color:#0b5a37;color:#0b5a37;font-weight:850}
+.c260-foot{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;background:#fff;border-top:1px solid #e3eae6}.c260-foot button{border:1px solid #d2ddd6;background:#fff;border-radius:9px;padding:9px 13px;font-weight:850}.c260-foot .save{background:#0b5a37;color:#fff;border-color:#0b5a37}
+@media(max-width:700px){.c260-edit-grid,.c260-person-grid{grid-template-columns:1fr}}
+</style>
+</head>
 <body>
 
 <div id="screen-login" class="screen active">
@@ -3059,7 +3076,7 @@ function renderSolicitudesLabor(){
       var estColor=s.estado==='pendiente'?'var(--tierra)':(s.estado==='programada'?'var(--verde-mid)':'var(--gris-3)');
       var estLbl=s.estado==='pendiente'?'⏳ Pendiente':(s.estado==='programada'?'🔶 Programada':'✅ Terminada');
       var acciones='';
-      if(s.estado==='pendiente') acciones='<div style="display:flex;gap:8px;margin-top:.6rem;flex-wrap:wrap;"><button class="btn-sm btn-completar" data-programar="'+s.id+'">✅ Marcar como programada</button><button class="btn-sm btn-iniciar" onclick="renderFormAsignar()">🧰 Ir a Labores</button><button class="btn-sm btn-cancelar" data-descartar="'+s.id+'">Descartar</button></div>';
+      if(s.estado==='pendiente') acciones='<div style="display:flex;gap:8px;margin-top:.6rem;flex-wrap:wrap;"><button class="btn-sm btn-completar" data-programar="'+s.id+'">✅ Marcar como programada</button><button class="btn-sm btn-iniciar" onclick="c260AbrirNuevaLabor()">🧰 Ir a Labores</button><button class="btn-sm btn-cancelar" data-descartar="'+s.id+'">Descartar</button></div>';
       else if(s.estado==='programada') acciones='<div style="display:flex;gap:8px;margin-top:.6rem;"><button class="btn-sm btn-completar" data-terminar="'+s.id+'">✅ Marcar como terminada</button></div>';
       return '<div class="orden-card" style="border-left-color:'+estColor+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.9rem">'+(ICONOS[s.tipo_labor?s.tipo_labor.nombre:'']||'🔧')+' '+(s.tipo_labor?s.tipo_labor.nombre:'')+'</strong><span style="font-size:.72rem;font-weight:700;color:'+estColor+';">'+estLbl+'</span></div><div class="orden-meta">📅 '+(s.fecha_sugerida?fechaLarga(s.fecha_sugerida):'Sin fecha sugerida')+'<br/>📍 '+(p?p.nombre:'')+' · '+(s.tabla?s.tabla.nombre:'')+'<br/>📝 '+s.descripcion+'<br/>👤 Sugerida por '+(s.creador?s.creador.nombre:'')+'</div>'+acciones+'</div>';
     }
@@ -3333,9 +3350,22 @@ var ADMIN_COMPLETAR_ORDEN=null, ADMIN_COMPLETAR_SURCOS=[], ADMIN_COMPLETAR_VOLVE
 var ADMIN_COMPLETAR_SURCO_TOCADO=null;
 var GESTION_HORAS_EXTRA_VOLVER=null;
 
+
+var C260_ADMIN_BODY='enc-body';
+function c260CerrarAvance(){
+  var x=document.getElementById('c260-avance-root');if(x)x.remove();
+  C260_ADMIN_BODY='enc-body';ADMIN_COMPLETAR_ORDEN=null;
+}
+function c260AbrirAvance(ordenId){
+  c260CerrarAvance();
+  var root=document.createElement('div');root.id='c260-avance-root';root.className='c260-overlay';
+  root.innerHTML='<div class="c260-modal small"><div class="c260-modal-head"><div><h3>Registrar avance</h3><p>Captura el avance sin salir del tablero.</p></div><button class="c260-close" onclick="c260CerrarAvance()">×</button></div><div id="c260-avance-body" class="c260-modal-body"></div></div>';
+  document.body.appendChild(root);C260_ADMIN_BODY='c260-avance-body';
+  renderAdminCompletar(ordenId,function(){c260CerrarAvance();renderAsignarEstatus();});
+}
 function renderAdminCompletar(ordenId,volverFn){
   ADMIN_COMPLETAR_VOLVER=volverFn||renderTablero;
-  var body=document.getElementById('enc-body');
+  var body=document.getElementById(C260_ADMIN_BODY||'enc-body');
   body.innerHTML='<div class="seccion-titulo">📝 Registrar avance</div><div class="loading">Cargando...</div>';
   from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_formula,requiere_cantidad_insumo,unidad_insumo),subtipo:subtipos_labor(nombre),activo_rancho:activos_rancho(nombre)').eq('id',ordenId).single().then(function(o){
     var esAplic=!!(o.tipo_labor&&o.tipo_labor.requiere_formula&&o.formula_id);
@@ -3386,7 +3416,7 @@ function acPintarGrid(){
 }
 
 function pintarAdminCompletar(){
-  var body=document.getElementById('enc-body');
+  var body=document.getElementById(C260_ADMIN_BODY||'enc-body');
   var o=ADMIN_COMPLETAR_ORDEN;
   if(!o){(ADMIN_COMPLETAR_VOLVER||renderTablero)();return;}
   var lb=o.tipo_labor||{};
@@ -3634,7 +3664,7 @@ return {fecha:g.fecha_asignacion,html:tarjetaLaborAgrupada(g)};});
     html+=tarjetas.map(function(x){return x.html;}).join('');
     body.innerHTML=html;
     var ordenesPorIdAsignar={}; todas.forEach(function(o){ordenesPorIdAsignar[o.id]=o;});
-    body.querySelectorAll('[data-regavance]').forEach(function(b){b.addEventListener('click',function(){renderAdminCompletar(this.dataset.regavance,renderAsignarEstatus);});});
+    body.querySelectorAll('[data-regavance]').forEach(function(b){b.addEventListener('click',function(){c260AbrirAvance(this.dataset.regavance);});});
     body.querySelectorAll('[data-corregirextra]').forEach(function(b){
       b.addEventListener('click',function(){
         var partes=this.dataset.corregirextra.split('|');
@@ -3709,7 +3739,7 @@ function tarjetaLaborAgrupada(grupo){
   var opciones='';
   if(gestionable){
     opciones='<div id="'+keySafe+'" class="c258-manage-menu">'+
-      '<button type="button" class="c259-editar" data-gkey="'+grupo.key+'">Editar asignación</button>'+
+      '<button type="button" class="c259-editar" data-gkey="'+grupo.key+'">Editar labor</button>'+
       '';
     grupo.ordenes.forEach(function(o){
       if(o.estado==='pendiente'||o.estado==='en_proceso') opciones+='<button type="button" data-regavance="'+o.id+'">Registrar avance</button>';
@@ -3725,16 +3755,75 @@ function tarjetaLaborAgrupada(grupo){
     '<div class="c258-progress"><div class="c258-progress-top"><span>Avance de la labor</span><span>'+hechos+(total?'/'+total:'')+(total?' surcos':'')+'</span></div><div class="c258-progressbar"><i style="width:'+pct+'%"></i></div></div>'+
     opciones+'</div>';
 }
-function c259AbrirEditar(grupo){
- if(!grupo)return;c259CerrarModal();var o=grupo.ordenes[0],sel=grupo.ordenes.map(function(x){return String(x.operario_id);}),personal=(cats.operarios||[]).concat(cats.eventuales||[]);
- var root=document.createElement('div');root.id='c259-root';root.className='c259-bg';
- root.innerHTML='<div class="c259-modal"><div class="c259-head"><div><b>Editar asignación</b><div style="font-size:.68rem;color:#738078;margin-top:3px">'+(grupo.tipoLaborNombre==='Guiro'?'Desbrozadora':grupo.tipoLaborNombre)+'</div></div><button onclick="c259CerrarModal()" style="border:0;background:#f1f5f2;border-radius:50%;width:32px;height:32px">×</button></div><div class="c259-body"><div class="c259-grid"><div class="c259-field"><label>Fecha de inicio</label><input id="c259-fecha" type="date" value="'+grupo.fecha_asignacion+'"></div><div class="c259-field"><label>Tipo de jornada</label><select id="c259-jornada"><option value="normal">Jornada regular</option><option value="extra" '+(o.es_hora_extra?'selected':'')+'>Hora extra</option></select></div><div class="c259-field" style="grid-column:1/-1"><label>Indicaciones</label><input id="c259-notas" value="'+(o.notas_encargado||'').replace(/"/g,'&quot;')+'"></div></div><div style="margin-top:14px;font-size:.7rem;font-weight:850;color:#496357">PERSONAL ASIGNADO</div><div style="font-size:.67rem;color:#738078">Aquí puedes agregar o quitar colaboradores activos.</div><div class="c259-persons">'+personal.map(function(p){return '<button type="button" class="c259-person '+(sel.indexOf(String(p.id))>-1?'sel':'')+'" data-pid="'+p.id+'">'+p.nombre+'</button>';}).join('')+'</div></div><div class="c259-foot"><button onclick="c259CerrarModal()">Cerrar</button><button id="c259-save" class="save">Guardar cambios</button></div></div>';
- document.body.appendChild(root);root.querySelectorAll('.c259-person').forEach(function(b){b.onclick=function(){this.classList.toggle('sel');};});
- root.querySelector('#c259-save').onclick=function(){var ids=Array.from(root.querySelectorAll('.c259-person.sel')).map(function(b){return b.dataset.pid;});if(!ids.length){alert('Selecciona al menos una persona.');return;}var fecha=root.querySelector('#c259-fecha').value,extra=root.querySelector('#c259-jornada').value==='extra',notas=root.querySelector('#c259-notas').value.trim(),actuales=grupo.ordenes.map(function(x){return String(x.operario_id);}),jobs=[];
- grupo.ordenes.forEach(function(x){if(ids.indexOf(String(x.operario_id))>-1)jobs.push(from('ordenes_trabajo').eq('id',x.id).update({fecha_asignacion:fecha,notas_encargado:notas,es_hora_extra:extra}));else if(x.estado==='pendiente')jobs.push(from('ordenes_trabajo').eq('id',x.id).update({estado:'cancelada'}));});
- ids.filter(function(id){return actuales.indexOf(String(id))<0;}).forEach(function(id){jobs.push(from('ordenes_trabajo').insert({asignado_por:usuario.id,operario_id:id,tabla_id:o.tabla_id,tipo_labor_id:o.tipo_labor_id,subtipo_labor_id:o.subtipo_labor_id,surcos_asignados:o.surcos_asignados||[],cantidad_insumo_esperada:o.cantidad_insumo_esperada,duracion:o.duracion,fecha_asignacion:fecha,notas_encargado:notas,estado:'pendiente',es_hora_extra:extra}));});
- Promise.all(jobs).then(function(){c259CerrarModal();renderAsignarEstatus();}).catch(function(e){alert('Error: '+e.message);});};
+function c259AbrirEditar(grupo){c260AbrirEditarLabor(grupo);}
+function c260CerrarEditar(){var x=document.getElementById('c260-editar-root');if(x)x.remove();}
+var C260_PERSONAL_TIPO='base';
+function c260AbrirEditarLabor(grupo){
+  if(!grupo)return;c260CerrarEditar();
+  var o=grupo.ordenes[0], seleccion=grupo.ordenes.map(function(x){return String(x.operario_id);});
+  var root=document.createElement('div');root.id='c260-editar-root';root.className='c260-overlay';
+  var tipos=(cats.tiposLabor||[]).filter(function(l){return !l.requiere_formula&&!l.es_cosecha&&!l.requiere_tiempo;});
+  var plantId=grupo.tabla?grupo.tabla.plantacion_id:null;
+  var plants=(cats.plantaciones||[]);
+  root.innerHTML='<div class="c260-modal small"><div class="c260-modal-head"><div><h3>Editar labor</h3><p>Modifica labor, ubicación, asignación, jornada, personal e indicaciones.</p></div><button class="c260-close" onclick="c260CerrarEditar()">×</button></div>'+
+    '<div class="c260-modal-body"><div class="c260-edit-grid">'+
+      '<div class="c260-field"><label>Labor</label><select id="c260-tipo">'+tipos.map(function(l){return '<option value="'+l.id+'" '+(String(l.id)===String(o.tipo_labor_id)?'selected':'')+'>'+c250LaborVisual(l.nombre).label+'</option>';}).join('')+'</select></div>'+
+      '<div class="c260-field"><label>Variante</label><select id="c260-sub"><option value="">Sin variante</option></select></div>'+
+      '<div class="c260-field"><label>Plantación</label><select id="c260-plant"><option value="">General / sin tabla</option>'+plants.map(function(p){return '<option value="'+p.id+'" '+(String(p.id)===String(plantId)?'selected':'')+'>'+p.nombre+'</option>';}).join('')+'</select></div>'+
+      '<div class="c260-field"><label>Tabla</label><select id="c260-tabla"></select></div>'+
+      '<div class="c260-field"><label>Fecha de inicio</label><input id="c260-fecha" type="date" value="'+grupo.fecha_asignacion+'"></div>'+
+      '<div class="c260-field"><label>Tipo de jornada</label><select id="c260-jornada"><option value="normal">Jornada regular</option><option value="extra" '+(o.es_hora_extra?'selected':'')+'>Hora extra</option></select></div>'+
+      '<div class="c260-field" style="grid-column:1/-1"><label>Indicaciones</label><input id="c260-notas" value="'+(o.notas_encargado||'').replace(/"/g,'&quot;')+'"></div></div>'+
+      '<div class="c260-person-tabs"><button type="button" id="c260-tab-base" class="sel">Base</button><button type="button" id="c260-tab-eventual">Eventuales</button></div>'+
+      '<div style="font-size:.67rem;color:#738078;margin-bottom:7px">Selecciona o quita colaboradores activos. Esto forma parte de Editar labor.</div><div id="c260-person-grid" class="c260-person-grid"></div></div>'+
+    '<div class="c260-foot"><button onclick="c260CerrarEditar()">Cerrar</button><button id="c260-save-edit" class="save">Guardar cambios</button></div></div>';
+  document.body.appendChild(root);
+
+  function renderSub(){
+    var tid=root.querySelector('#c260-tipo').value;
+    var subs=(cats.subtiposLabor||[]).filter(function(x){return String(x.tipo_labor_id)===String(tid)&&!x.requiere_tiempo;});
+    root.querySelector('#c260-sub').innerHTML='<option value="">Sin variante</option>'+subs.map(function(x){return '<option value="'+x.id+'">'+x.nombre+'</option>';}).join('');
+    if(String(tid)===String(o.tipo_labor_id)&&o.subtipo_labor_id)root.querySelector('#c260-sub').value=o.subtipo_labor_id;
+  }
+  function renderTablas(){
+    var pid=root.querySelector('#c260-plant').value;
+    var ts=(cats.tablas||[]).filter(function(t){return String(t.plantacion_id)===String(pid);});
+    root.querySelector('#c260-tabla').innerHTML='<option value="">General / sin tabla</option>'+ts.map(function(t){return '<option value="'+t.id+'" '+(String(t.id)===String(o.tabla_id)?'selected':'')+'>'+t.nombre+'</option>';}).join('');
+  }
+  function renderPersonas(){
+    var arr=C260_PERSONAL_TIPO==='eventual'?(cats.eventuales||[]):(cats.operarios||[]);
+    root.querySelector('#c260-person-grid').innerHTML=arr.map(function(p){return '<button type="button" class="c260-person '+(seleccion.indexOf(String(p.id))>-1?'sel':'')+'" data-pid="'+p.id+'">'+p.nombre+'</button>';}).join('');
+    root.querySelectorAll('.c260-person').forEach(function(b){b.onclick=function(){var id=String(this.dataset.pid),i=seleccion.indexOf(id);if(i>-1)seleccion.splice(i,1);else seleccion.push(id);renderPersonas();};});
+  }
+  renderSub();renderTablas();renderPersonas();
+  root.querySelector('#c260-tipo').onchange=renderSub;
+  root.querySelector('#c260-plant').onchange=function(){o.tabla_id=null;renderTablas();};
+  root.querySelector('#c260-tab-base').onclick=function(){C260_PERSONAL_TIPO='base';this.classList.add('sel');root.querySelector('#c260-tab-eventual').classList.remove('sel');renderPersonas();};
+  root.querySelector('#c260-tab-eventual').onclick=function(){C260_PERSONAL_TIPO='eventual';this.classList.add('sel');root.querySelector('#c260-tab-base').classList.remove('sel');renderPersonas();};
+
+  root.querySelector('#c260-save-edit').onclick=function(){
+    if(!seleccion.length){alert('Selecciona al menos una persona.');return;}
+    var tipoId=root.querySelector('#c260-tipo').value,subId=root.querySelector('#c260-sub').value||null,tablaId=root.querySelector('#c260-tabla').value||null;
+    var fecha=root.querySelector('#c260-fecha').value,extra=root.querySelector('#c260-jornada').value==='extra',notas=root.querySelector('#c260-notas').value.trim();
+    var tabla=tablaId?(cats.tablas||[]).find(function(t){return String(t.id)===String(tablaId);}):null;
+    var surcos=tabla?Array.from({length:parseInt(tabla.cantidad_surcos)||0},function(_,i){return i+1;}):[];
+    if(tablaId&&!surcos.length){alert('La tabla seleccionada no tiene surcos configurados.');return;}
+    var actuales=grupo.ordenes.map(function(x){return String(x.operario_id);}),jobs=[];
+    grupo.ordenes.forEach(function(x){
+      var esta=seleccion.indexOf(String(x.operario_id))>-1;
+      if(esta){
+        jobs.push(from('ordenes_trabajo').update({tipo_labor_id:tipoId,subtipo_labor_id:subId,tabla_id:tablaId,surcos_asignados:surcos,fecha_asignacion:fecha,notas_encargado:notas,es_hora_extra:extra}).eq('id',x.id).get());
+      }else if(x.estado==='pendiente'){
+        jobs.push(from('ordenes_trabajo').update({estado:'cancelada'}).eq('id',x.id).get());
+      }
+    });
+    seleccion.filter(function(id){return actuales.indexOf(String(id))<0;}).forEach(function(id){
+      jobs.push(from('ordenes_trabajo').insert({asignado_por:usuario.id,operario_id:id,tabla_id:tablaId,tipo_labor_id:tipoId,subtipo_labor_id:subId,surcos_asignados:surcos,cantidad_insumo_esperada:o.cantidad_insumo_esperada,duracion:o.duracion||'labor_completa',fecha_asignacion:fecha,notas_encargado:notas,estado:'pendiente',es_hora_extra:extra}));
+    });
+    Promise.all(jobs).then(function(){showToast('Labor actualizada');c260CerrarEditar();renderAsignarEstatus();}).catch(function(e){alert('Error al editar la labor: '+e.message);});
+  };
 }
+
 function cambiarEstadoAsignar(id,estado){
   from('ordenes_trabajo').eq('id',id).update({estado:estado}).then(function(){
     if(estado==='completada') from('notificaciones').insert({titulo:'✅ Labor completada',cuerpo:'Una orden fue marcada como completada.',icono:'✅',leida:false,para_rol:'encargado'}).then(function(){renderAsignarEstatus();});
@@ -4051,10 +4140,19 @@ function c253ElegirLabor(id){
   document.querySelectorAll('.c253-labor').forEach(function(x){x.classList.toggle('sel',x.dataset.id===id);});
   c253RenderAsignacion();
 }
+
+function c260CerrarNueva(){var x=document.getElementById('c260-nueva-root');if(x)x.remove();}
+function c260AbrirNuevaLabor(){
+  c260CerrarNueva();
+  var root=document.createElement('div');root.id='c260-nueva-root';root.className='c260-overlay';
+  root.innerHTML='<div class="c260-modal"><div class="c260-modal-head"><div><h3>Nueva labor</h3><p>Selecciona, asigna y guarda sin salir del Tablero de Labores.</p></div><button class="c260-close" onclick="c260CerrarNueva()">×</button></div><div id="c260-nueva-body" class="c260-modal-body"></div></div>';
+  document.body.appendChild(root);
+  renderFormAsignar();
+}
 function renderFormAsignar(){
   asignarLaborSel=null;asignarLaborSubSel=null;modoAsignacionLabor='normal';horasExtraAutorizadas=2;
   c253Seleccionados=[];c253TablaId=null;c253TipoPersonal='base';
-  var body=document.getElementById('enc-body');
+  var body=document.getElementById('c260-nueva-body')||document.getElementById('enc-body');
   var visibles=cats.tiposLabor.filter(function(l){
     if(l.es_cosecha||l.requiere_formula||l.nombre==='Mantenimiento de herramienta')return false;
     var nn=(l.nombre||'').toLowerCase();
@@ -4068,7 +4166,7 @@ function renderFormAsignar(){
     return '<button type="button" class="c253-labor" data-id="'+l.id+'" onclick="c253ElegirLabor(&quot;'+l.id+'&quot;)"><div class="c250-labor-ic"><svg viewBox="0 0 48 48">'+v.svg+'</svg></div><div class="c250-labor-name">'+v.label+'</div></button>';
   }).join('');
   body.innerHTML=
-    '<div class="c253-head"><div><div class="c253-kicker">LABORES</div><h2 class="c253-title">Nueva labor</h2><p class="c253-sub">Selecciona y asigna la labor desde una sola pantalla.</p></div><button type="button" onclick="renderAsignarEstatus()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:700;cursor:pointer;">← Labores</button></div>'+
+    '<div class="c253-head"><div><div class="c253-kicker">LABORES</div><h2 class="c253-title">Nueva labor</h2><p class="c253-sub">Selecciona y asigna la labor desde una sola pantalla.</p></div><button type="button" onclick="c260CerrarNueva()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:700;cursor:pointer;">Cerrar</button></div>'+
 
     '<div class="c253-shell"><div class="c253-left"><div class="c253-section">¿Qué trabajo se va a realizar?</div><div class="c253-grid">'+tiles+
       '<button type="button" class="c253-labor" id="labor-otra-tile"><div class="c250-labor-ic"><svg viewBox="0 0 48 48"><path d="M24 10v28M10 24h28"/></svg></div><div class="c250-labor-name">Otra labor</div></button></div>'+
@@ -4520,7 +4618,7 @@ function guardarOrden(){
         return from('notificaciones').insert({titulo:esExtra?'⏰ Hora extra asignada':'📋 Nueva tarea asignada',cuerpo:usuario.nombre+' asignó a '+(cats.equipoDeCampo.find(function(o){return o.id===oid;})||{}).nombre+': '+(lb?lb.nombre:'')+(tb?(' en '+tb.nombre):'')+(esExtra?' (hora extra)':''),icono:esExtra?'⏰':'📋',leida:false,para_rol:'operario',para_usuario:oid});
       }));
     });
-  }).then(function(){showToast((esExtra?'⏰ Hora extra asignada: ':'📋 Labor asignada: ')+(lb?lb.nombre:'')+'. Puedes asignar otra.');renderFormAsignar();}).catch(function(e){alert('Error: '+e.message);});
+  }).then(function(){showToast((esExtra?'⏰ Hora extra asignada: ':'📋 Labor asignada: ')+(lb?lb.nombre:''));c260CerrarNueva();renderAsignarEstatus();}).catch(function(e){alert('Error al guardar la labor: '+e.message);});
 }
 
 var C224_AVISOS_MODO='pendientes';
@@ -16933,7 +17031,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C259
+C260
 </div>
 
 <style id="fi128-css">
