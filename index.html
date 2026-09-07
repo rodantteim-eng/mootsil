@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C249';
+  window.MOOTSIL_BUILD='C250';
 </script>
 
 
@@ -1908,6 +1908,34 @@ function c231Icon(name, cls){
 .c239-quick button:nth-child(3) .qic{background:#fff2dc!important;color:#c17a0c!important}
 .c239-quick button:nth-child(4) .qic{background:#f2e8f7!important;color:#6f238d!important}
 .c239-quick .qic svg{stroke:currentColor!important;stroke-width:2.9!important;opacity:1!important}
+</style>
+
+<style id="c250-labores-paso1">
+.c250-labores-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:.85rem}
+.c250-labores-kicker{font-size:.7rem;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:#f5a000;margin-bottom:.2rem}
+.c250-labores-title{font-size:1.35rem;line-height:1.1;font-weight:800;color:#123f2d;margin:0}
+.c250-labores-sub{font-size:.82rem;color:#6e7d75;margin:.25rem 0 0}
+.c250-mode-row{display:flex;gap:.5rem;margin:.75rem 0 1rem}
+.c250-mode-row .op-chip{min-height:34px;padding:.45rem .8rem}
+.c250-labor-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.65rem}
+.c250-labor-card{border:1px solid #dde7e1;background:#fff;border-radius:14px;min-height:112px;padding:.85rem .75rem;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem;cursor:pointer;box-shadow:0 2px 8px rgba(20,60,40,.05);transition:.15s ease}
+.c250-labor-card:hover{transform:translateY(-1px);border-color:#b8d1c3;box-shadow:0 5px 14px rgba(20,60,40,.08)}
+.c250-labor-ic{width:48px;height:48px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:#eef6f1;color:#176843}
+.c250-labor-ic svg{width:29px;height:29px;stroke:currentColor;stroke-width:2.1;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.c250-labor-name{font-weight:750;font-size:.88rem;color:#17231d;text-align:center}
+.c250-labor-card[data-kind="limpieza"] .c250-labor-ic{background:#fff4df;color:#a86d18}
+.c250-labor-card[data-kind="poda"] .c250-labor-ic{background:#eaf5ed;color:#1b7248}
+.c250-labor-card[data-kind="desbrozadora"] .c250-labor-ic{background:#edf3f1;color:#3b7766}
+.c250-labor-card[data-kind="deshierbado"] .c250-labor-ic{background:#ebf7e9;color:#329746}
+.c250-labor-card[data-kind="tutoreo"] .c250-labor-ic{background:#f2eaf7;color:#6d2b86}
+.c250-labor-card[data-kind="trampas"] .c250-labor-ic{background:#fff0df;color:#b86719}
+.c250-labor-card[data-kind="otra"]{border:1.5px dashed #5c8b72;background:#f7fbf8}
+.c250-labor-card[data-kind="otra"] .c250-labor-ic{background:#e7f2eb;color:#0b5a37}
+.c250-otra-box{margin-top:.85rem;padding:1rem;border:1px solid #dbe6df;border-radius:14px;background:#fff}
+.c250-otra-box label{display:block;font-size:.72rem;font-weight:800;color:#50645a;margin-bottom:.35rem;text-transform:uppercase;letter-spacing:.04em}
+.c250-otra-box input[type=text]{width:100%;padding:.75rem .85rem;border:1.5px solid #ccd9d1;border-radius:10px;font-size:.95rem;background:#fbfdfc}
+.c250-otra-box .btn-primary{margin-top:.7rem}
+@media(max-width:900px){.c250-labor-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head>
 <body>
@@ -3658,16 +3686,45 @@ function renderEditarOrdenIndividual(ordenId){
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
+function c250LaborVisual(nombre){
+  var n=(nombre||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  if(n==='guiro'||/desbroz/.test(n)) return {label:'Desbrozadora',kind:'desbrozadora',svg:'<path d="M8 38 31 15M28 10l6 6M7 40l-3 3M11 34l7 7M32 15l6-6M36 9l5 5"/><path d="M5 43h10"/>'};
+  if(/deshierb/.test(n)) return {label:'Deshierbado',kind:'deshierbado',svg:'<path d="M24 41V22M24 28c-8 0-13-5-14-13 8 0 13 4 14 11M24 24c7 0 12-5 13-12-7 0-12 4-13 10"/><path d="M12 41h24"/>'};
+  if(/limpieza/.test(n)) return {label:'Limpieza',kind:'limpieza',svg:'<path d="M12 38 31 8M28 7l6 4-3 6-6-4zM7 38h16M9 33h12"/>'};
+  if(/trineado/.test(n)) return {label:'Trineado',kind:'trineado',svg:'<path d="M11 38 33 16M29 12l7 7M8 41l6-2-4-4z"/><path d="M25 20l5 5"/>'};
+  if(/tutoreo/.test(n)) return {label:'Tutoreo',kind:'tutoreo',svg:'<path d="M12 41V8M36 41V8M12 16h24M12 28h24"/><path d="M22 39V19c0-5 4-8 8-8"/>'};
+  if(/poda/.test(n)) return {label:'Poda',kind:'poda',svg:'<circle cx="14" cy="34" r="7"/><circle cx="34" cy="34" r="7"/><path d="m19 29 17-22M29 29 12 7M20 19h9"/>'};
+  if(/trampa/.test(n)) return {label:'Trampas',kind:'trampas',svg:'<path d="M10 38h28M14 38V20h20v18M18 20v-6h12v6M20 27h8"/>'};
+  if(/plastico/.test(n)) return {label:'Plásticos',kind:'plasticos',svg:'<path d="M8 38c7-15 25-15 32 0M12 38V20M36 38V20M18 18h12"/>'};
+  if(/malla/.test(n)) return {label:'Malla',kind:'malla',svg:'<rect x="8" y="10" width="32" height="28" rx="2"/><path d="m8 18 32 12M8 30l32-12M16 10v28M32 10v28"/>'};
+  if(/arco/.test(n)) return {label:'Arcos',kind:'arcos',svg:'<path d="M9 39V25C9 13 15 7 24 7s15 6 15 18v14"/><path d="M15 39V25c0-7 3-11 9-11s9 4 9 11v14"/>'};
+  return {label:nombre,kind:'labor',svg:'<path d="M13 36 35 14M30 9l9 9M9 40l6-1-5-5z"/>'};
+}
 function renderFormAsignar(){
   asignarLaborSel=null;
   asignarLaborSubSel=null;
   modoAsignacionLabor='normal';
   horasExtraAutorizadas=2;
   var body=document.getElementById('enc-body');
-  var tiles=cats.tiposLabor.filter(function(l){return !l.es_cosecha&&!l.requiere_formula&&l.nombre!=='Mantenimiento de herramienta';}).map(function(l){
-    return '<div class="labor-tile" data-id="'+l.id+'" data-nombre="'+l.nombre+'"><div class="labor-tile-ic">'+(ICONOS[l.nombre]||'🔧')+'</div><div class="labor-tile-lbl">'+l.nombre+'</div></div>';
+  var visibles=cats.tiposLabor.filter(function(l){
+    if(l.es_cosecha||l.requiere_formula||l.nombre==='Mantenimiento de herramienta') return false;
+    var nn=(l.nombre||'').toLowerCase();
+    if(nn==='riego'||nn==='sistema de riego') return false;
+    return true;
+  });
+  var orden=['Guiro','Desbrozadora','Deshierbado','Limpieza','Trineado','Tutoreo','Poda','Trampas','Plasticos','Plásticos','Malla','Arcos'];
+  visibles.sort(function(a,b){
+    var ia=orden.indexOf(a.nombre),ib=orden.indexOf(b.nombre);
+    ia=ia<0?999:ia; ib=ib<0?999:ib;
+    return ia-ib;
+  });
+  var tiles=visibles.map(function(l){
+    var v=c250LaborVisual(l.nombre);
+    return '<div class="labor-tile c250-labor-card" data-id="'+l.id+'" data-nombre="'+l.nombre+'" data-kind="'+v.kind+'">'+
+      '<div class="c250-labor-ic"><svg viewBox="0 0 48 48">'+v.svg+'</svg></div>'+
+      '<div class="c250-labor-name">'+v.label+'</div></div>';
   }).join('');
-  body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">🧰 Selecciona la labor<button type="button" onclick="renderAsignarEstatus()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Labores</button></div><div style="display:flex;gap:8px;margin-bottom:1rem;"><button type="button" class="op-chip sel" id="modo-normal" data-modo="normal">🕐 Normal</button><button type="button" class="op-chip" id="modo-extra" data-modo="extra">⏰ Hora Extra</button></div><div class="form-group" id="labor-horas-wrap" style="display:none;"><label>¿Cuántas horas autorizas?</label><input type="number" id="labor-horas-input" min="0" step="0.5" value="2"><p class="hint">Se le pagará por este número de horas, aunque tarde más en escanear su salida.</p></div><div class="labor-grid">'+tiles+'<div class="labor-tile labor-tile-otra" id="labor-otra-tile"><div class="labor-tile-ic">➕</div><div class="labor-tile-lbl">Otra</div></div></div><div id="labor-otra-box" style="display:none;margin-top:.75rem;" class="form-card"><label style="display:block;font-size:.75rem;font-weight:600;color:var(--gris-3);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">Nombre de la labor</label><input type="text" id="labor-otra-input" placeholder="Ej. Fertirriego" style="width:100%;padding:.65rem .75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;background:var(--gris-1);margin-bottom:.6rem;"><label style="display:flex;align-items:center;gap:.5rem;padding:.5rem 0;cursor:pointer;font-size:.85rem;"><input type="checkbox" id="labor-otra-tabla" checked style="width:20px;height:20px;flex-shrink:0;"><span>Esta labor se hace en una plantación/tabla específica</span></label><p class="hint" style="margin-bottom:.6rem;">Desmarca esta casilla para actividades generales que no están ligadas a ninguna tabla (ej. acarreo de material, mandados, etc.)</p><label style="display:flex;align-items:center;gap:.5rem;padding:.5rem 0;cursor:pointer;font-size:.85rem;"><input type="checkbox" id="labor-otra-catalogo" style="width:20px;height:20px;flex-shrink:0;"><span>📌 Agregar esta labor al catálogo (aparecerá como botón para la próxima vez)</span></label><p class="hint" style="margin-bottom:.6rem;">Si no la marcas, se usa solo por esta vez y seguirás capturando su nombre aquí cada vez que la necesites — útil para actividades muy específicas que no se repiten.</p><button class="btn-primary" id="labor-otra-btn">Usar esta labor</button></div>';
+    body.innerHTML='<div class="c250-labores-head"><div><div class="c250-labores-kicker">LABORES</div><h2 class="c250-labores-title">Nueva labor</h2><p class="c250-labores-sub">¿Qué trabajo se va a realizar?</p></div><button type="button" onclick="renderAsignarEstatus()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Labores</button></div><div class="c250-mode-row"><button type="button" class="op-chip sel" id="modo-normal" data-modo="normal">🕐 Normal</button><button type="button" class="op-chip" id="modo-extra" data-modo="extra">⏰ Hora Extra</button></div><div class="form-group" id="labor-horas-wrap" style="display:none;"><label>¿Cuántas horas autorizas?</label><input type="number" id="labor-horas-input" min="0" step="0.5" value="2"><p class="hint">Se le pagará por este número de horas, aunque tarde más en escanear su salida.</p></div><div class="labor-grid c250-labor-grid">'+tiles+'<div class="labor-tile c250-labor-card" data-kind="otra" id="labor-otra-tile"><div class="c250-labor-ic"><svg viewBox="0 0 48 48"><path d="M24 10v28M10 24h28"/></svg></div><div class="c250-labor-name">Otra labor</div></div></div><div id="labor-otra-box" style="display:none;" class="form-card c250-otra-box"><label style="display:block;font-size:.75rem;font-weight:600;color:var(--gris-3);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;">Nombre de la labor</label><input type="text" id="labor-otra-input" placeholder="Ej. Reparar cerco, recoger plástico, limpiar bodega..." style="width:100%;padding:.65rem .75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;background:var(--gris-1);margin-bottom:.6rem;"><label style="display:flex;align-items:center;gap:.5rem;padding:.5rem 0;cursor:pointer;font-size:.85rem;"><input type="checkbox" id="labor-otra-tabla" checked style="width:20px;height:20px;flex-shrink:0;"><span>Esta labor se hace en una plantación/tabla específica</span></label><p class="hint" style="margin-bottom:.6rem;">Desmarca esta casilla para actividades generales que no están ligadas a ninguna tabla (ej. acarreo de material, mandados, etc.)</p><label style="display:flex;align-items:center;gap:.5rem;padding:.5rem 0;cursor:pointer;font-size:.85rem;"><input type="checkbox" id="labor-otra-catalogo" style="width:20px;height:20px;flex-shrink:0;"><span>📌 Agregar esta labor al catálogo (aparecerá como botón para la próxima vez)</span></label><p class="hint" style="margin-bottom:.6rem;">Si no la marcas, se usa solo por esta vez y seguirás capturando su nombre aquí cada vez que la necesites — útil para actividades muy específicas que no se repiten.</p><button class="btn-primary" id="labor-otra-btn">Continuar</button></div>';
   document.getElementById('modo-normal').addEventListener('click',function(){modoAsignacionLabor='normal';this.classList.add('sel');document.getElementById('modo-extra').classList.remove('sel');document.getElementById('labor-horas-wrap').style.display='none';});
   document.getElementById('modo-extra').addEventListener('click',function(){modoAsignacionLabor='extra';this.classList.add('sel');document.getElementById('modo-normal').classList.remove('sel');document.getElementById('labor-horas-wrap').style.display='';});
   document.getElementById('labor-horas-input').addEventListener('input',function(){horasExtraAutorizadas=parseFloat(this.value)||2;});
@@ -16578,7 +16635,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C249
+C250
 </div>
 
 <style id="fi128-css">
