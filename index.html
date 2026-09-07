@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C268';
+  window.MOOTSIL_BUILD='C269';
 </script>
 
 
@@ -2150,6 +2150,11 @@ function c231Icon(name, cls){
 
 <style id="c267-save-status">
 .c267-confirm{margin:10px 16px 0;padding:8px 10px;border-radius:10px;background:#eef7f1;border:1px solid #cfe2d5;color:#315b47;font-size:.7rem}
+</style>
+
+<style id="c269-week-nav">
+.c269-weekbtn{border:1px solid #d5dfd9;background:#fff;color:#315747;border-radius:999px;padding:7px 10px;font-size:.68rem;font-weight:800;cursor:pointer}
+.c269-weekbtn.current{background:#edf5f0;border-color:#bdd2c5;color:#0d5b3c}
 </style>
 </head>
 <body>
@@ -3603,12 +3608,25 @@ function headerAsignar(){
 function barraSubtabsAsignar(){ return ''; }
 
 
-function c256SemanaActual(){
+var C269_SEMANA_OFFSET=0;
+function c269SemanaBase(offset){
   var d=new Date();d.setHours(12,0,0,0);
-  var dow=(d.getDay()+6)%7;d.setDate(d.getDate()-dow);
+  var dow=(d.getDay()+6)%7;d.setDate(d.getDate()-dow+((offset||0)*7));
   var ini=new Date(d),fin=new Date(d);fin.setDate(fin.getDate()+6);
   function iso(x){return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');}
   return {ini:iso(ini),fin:iso(fin)};
+}
+function c256SemanaActual(){return c269SemanaBase(C269_SEMANA_OFFSET);}
+function c269MoverSemana(delta){C269_SEMANA_OFFSET+=delta;C259_FILTRO_LAB='semana';renderAsignarEstatus();}
+function c269EstaSemana(){C269_SEMANA_OFFSET=0;C259_FILTRO_LAB='semana';renderAsignarEstatus();}
+function c269IrSemanaFecha(fecha){
+  if(!fecha)return;
+  var base=c269SemanaBase(0);
+  var iniBase=new Date(base.ini+'T12:00:00');
+  var objetivo=new Date(fecha+'T12:00:00');
+  var dow=(objetivo.getDay()+6)%7;objetivo.setDate(objetivo.getDate()-dow);
+  C269_SEMANA_OFFSET=Math.round((objetivo-iniBase)/(7*86400000));
+  C259_FILTRO_LAB='semana';
 }
 var C259_FILTRO_LAB='semana';
 function c268EsLaborTablero(o){
@@ -3697,7 +3715,7 @@ function c256DashboardLabores(ordenes){
   }
   var er=(cats.plantaciones||[]).find(function(p){return /erandy/i.test(p.nombre||'');});
   var ja=(cats.plantaciones||[]).find(function(p){return /jade/i.test(p.nombre||'');});
-  return '<section class="c256-dashboard"><div class="c256-dash-head"><div><div class="c256-dash-title">Avance semanal de labores</div><div class="c256-dash-sub">'+rg.ini+' al '+rg.fin+' · control por plantación y tabla</div></div><button class="c257-print" type="button" onclick="window.print()">🖨 Imprimir reporte semanal</button></div>'+
+  return '<section class="c256-dashboard"><div class="c256-dash-head"><div><div class="c256-dash-title">Avance semanal de labores</div><div class="c256-dash-sub">'+rg.ini+' al '+rg.fin+' · control por plantación y tabla</div></div><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><button type="button" class="c269-weekbtn" onclick="c269MoverSemana(-1)">← Semana anterior</button><button type="button" class="c269-weekbtn current" onclick="c269EstaSemana()">Esta semana</button><button type="button" class="c269-weekbtn" onclick="c269MoverSemana(1)">Semana siguiente →</button><button class="c257-print" type="button" onclick="window.print()">🖨 Imprimir reporte semanal</button></div></div>'+
     '<div class="c256-summary">'+
     '<div class="c256-stat" onclick="c259SetFiltro(&quot;semana&quot;)" style="cursor:pointer"><b>'+total+'</b><span>Programadas en la semana</span></div>'+
     '<div class="c256-stat" onclick="c259SetFiltro(&quot;pendiente&quot;)" style="cursor:pointer"><b>'+pendientes+'</b><span>Pendientes</span></div>'+
@@ -4770,6 +4788,7 @@ function guardarOrden(){
       return from('notificaciones').insert({titulo:esExtra?'⏰ Hora extra asignada':'📋 Nueva tarea asignada',cuerpo:usuario.nombre+' asignó a '+(cats.equipoDeCampo.find(function(o){return o.id===oid;})||{}).nombre+': '+(lb?lb.nombre:'')+(tb?(' en '+tb.nombre):'')+(esExtra?' (hora extra)':''),icono:esExtra?'⏰':'📋',leida:false,para_rol:'operario',para_usuario:oid});
     })).catch(function(e){console.warn('Notificación secundaria:',e.message);});
     showToast('📋 Labor guardada correctamente: '+(lb?lb.nombre:''));
+    c269IrSemanaFecha(fec);
     c260CerrarNueva();
     cargarCatalogos().catch(function(){return null;}).then(function(){
       setTimeout(function(){renderAsignarEstatus();},180);
