@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C292';
+  window.MOOTSIL_BUILD='C293';
 </script>
 
 
@@ -2503,6 +2503,26 @@ function c231Icon(name, cls){
 .c292-selected-summary{margin-top:8px;padding:8px 10px;background:#f5f8f6;border:1px solid #dfe7e2;border-radius:9px;font-size:.68rem;color:#4f6258}
 .c292-inv-note{margin-top:10px;padding:9px 11px;border:1px solid #dfe7e2;border-radius:9px;background:#fff;font-size:.68rem;color:#4f6258}
 .c292-inv-note strong{color:#165c43}
+</style>
+
+<style id="c293-formula-modo">
+.c293-formula-modos{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.c293-modo{border:1px solid #dce5df;background:#fff;border-radius:10px;padding:10px 12px;font-size:.72rem;font-weight:850;color:#315646;cursor:pointer}
+.c293-modo.sel{border:2px solid #0e5d3d;background:#f4faf6;color:#0e5d3d}
+#c293-cat-nueva-grid{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:7px!important}
+#c293-cat-nueva-grid .labor-tile{min-height:58px!important;padding:7px 6px!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;flex-direction:row!important}
+#c293-cat-nueva-grid .labor-tile-ic{font-size:1.1rem!important;margin:0!important}
+#c293-cat-nueva-grid .labor-tile-lbl{font-size:.64rem!important;white-space:nowrap!important}
+.c293-cat-list{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}
+.c293-cat-card{border:1px solid #dfe7e2;border-radius:10px;background:#fff;padding:9px 10px;cursor:pointer;text-align:left}
+.c293-cat-card:hover{border-color:#0e5d3d}
+.c293-cat-card b{font-size:.72rem;color:#244c3a;display:block}
+.c293-cat-card span{font-size:.61rem;color:#75827b;display:block;margin-top:2px;line-height:1.3}
+.c293-cat-empty{padding:12px;text-align:center;color:#78857f;font-size:.68rem;border:1px dashed #dce5df;border-radius:10px}
+@media(max-width:760px){
+  #c293-cat-nueva-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .c293-formula-modos,.c293-cat-list{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -6259,7 +6279,7 @@ function c291SetFiltro(f){C291_APP_FILTRO=f;renderAplicacionesEstatus();}
 
 function c291CerrarNuevaAplicacion(){var x=document.getElementById('c291-app-modal');if(x)x.remove();}
 function c291AbrirNuevaAplicacion(){
-  c291CerrarNuevaAplicacion();C291_APP_VIA=null;C291_APP_TABLA=null;C292_APP_TABLAS=[];C292_APP_PLANTACION=null;
+  c291CerrarNuevaAplicacion();C291_APP_VIA=null;C291_APP_TABLA=null;C292_APP_TABLAS=[];C292_APP_PLANTACION=null;C293_FORMULA_MODO='nueva';
   var root=document.createElement('div');root.id='c291-app-modal';root.className='c291-modal-overlay';
   root.innerHTML='<div class="c291-modal"><div class="c291-modal-head"><div><h3>Nueva aplicación</h3><p>Selecciona vía y tabla. Después continúa con fórmula, productos, dosis, equipo y fecha.</p></div><button class="c291-close" onclick="c291CerrarNuevaAplicacion()">×</button></div>'+
     '<div class="c291-modal-body"><div class="c291-label">Tipo de aplicación</div><div class="c291-vias">'+
@@ -6959,34 +6979,163 @@ function renderFormulaPasoVia(){
   });});
 }
 
+var C293_FORMULA_MODO='nueva';
+
 function renderFormulaPasoCategoria(){
   var body=c292FormulaBody();
-  if(!formulaCategoria&&window._formulaCategoriaCatalogoPreset) formulaCategoria=window._formulaCategoriaCatalogoPreset;
   var tipos=['Nutrición','Plaga','Estimulación','Herbicida','Combinada'];
-  var tiles=tipos.map(function(c){
-    return '<div class="labor-tile'+(formulaCategoria===c?' labor-tile-otra':'')+'" data-cat="'+c+'"><div class="labor-tile-ic">'+CATEGORIA_ICONOS[c]+'</div><div class="labor-tile-lbl">'+c+'</div></div>';
-  }).join('');
-  var combinadaBox='<div class="form-group" id="fc-combinada-box" style="display:'+(formulaCategoria==='Combinada'?'':'none')+';margin-top:1rem;"><label>¿Con cuáles se combina?</label><div style="display:flex;flex-wrap:wrap;gap:8px;" id="fc-combinada-chips">'+['Nutrición','Plaga','Estimulación','Herbicida'].map(function(c){
-    return '<button type="button" class="op-chip'+(formulaCategoriasCombinadas.indexOf(c)>-1?' sel':'')+'" data-comb="'+c+'" onclick="toggleChip(this)">'+CATEGORIA_ICONOS[c]+' '+c+'</button>';
-  }).join('')+'</div></div>';
   var pasoLbl=formulaEditandoCatalogo?'Paso 2 de 6':'Paso 4 de 9';
-  body.innerHTML='<div class="seccion-titulo">'+pasoLbl+' · Tipo de fórmula</div><div class="labor-grid" style="grid-template-columns:repeat(3,1fr);">'+tiles+'</div>'+combinadaBox+'<button class="btn-primary" id="fc-continuar" style="margin-top:1.25rem;">Continuar →</button><button class="btn-back" style="margin-top:.75rem;" onclick="renderFormulaPasoVia()">← Volver a vía</button>';
-  body.querySelectorAll('[data-cat]').forEach(function(el){el.addEventListener('click',function(){
-    formulaCategoria=this.dataset.cat;
-    body.querySelectorAll('[data-cat]').forEach(function(x){x.classList.remove('labor-tile-otra');});
-    this.classList.add('labor-tile-otra');
-    document.getElementById('fc-combinada-box').style.display=(formulaCategoria==='Combinada')?'':'none';
-  });});
+
+  body.innerHTML=
+    '<div class="seccion-titulo">'+pasoLbl+' · Fórmula</div>'+
+    '<div class="c293-formula-modos">'+
+      '<button type="button" class="c293-modo '+(C293_FORMULA_MODO==='nueva'?'sel':'')+'" id="c293-modo-nueva">➕ Crear fórmula nueva</button>'+
+      '<button type="button" class="c293-modo '+(C293_FORMULA_MODO==='catalogo'?'sel':'')+'" id="c293-modo-catalogo">📚 Usar fórmula del catálogo</button>'+
+    '</div>'+
+    '<div id="c293-formula-contenido"></div>'+
+    '<button class="btn-back" style="margin-top:.75rem;" onclick="renderFormulaPasoVia()">← Volver a vía</button>';
+
+  document.getElementById('c293-modo-nueva').onclick=function(){C293_FORMULA_MODO='nueva';renderFormulaPasoCategoria();};
+  document.getElementById('c293-modo-catalogo').onclick=function(){C293_FORMULA_MODO='catalogo';renderFormulaPasoCategoria();};
+
+  if(C293_FORMULA_MODO==='catalogo'){
+    c293RenderCatalogoModal();
+    return;
+  }
+
+  if(!formulaCategoria&&window._formulaCategoriaCatalogoPreset) formulaCategoria=window._formulaCategoriaCatalogoPreset;
+  var tiles=tipos.map(function(c){
+    return '<div class="labor-tile'+(formulaCategoria===c?' labor-tile-otra':'')+'" data-cat="'+c+'">'+
+      '<div class="labor-tile-ic">'+CATEGORIA_ICONOS[c]+'</div>'+
+      '<div class="labor-tile-lbl">'+c+'</div></div>';
+  }).join('');
+
+  var cont=document.getElementById('c293-formula-contenido');
+  cont.innerHTML=
+    '<div class="c291-label" style="margin-top:0">Tipo de fórmula</div>'+
+    '<div class="labor-grid" id="c293-cat-nueva-grid">'+tiles+'</div>'+
+    '<div class="form-group" id="fc-combinada-box" style="display:'+(formulaCategoria==='Combinada'?'':'none')+';margin-top:10px;">'+
+      '<label>¿Con cuáles se combina?</label>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;" id="fc-combinada-chips">'+
+        ['Nutrición','Plaga','Estimulación','Herbicida'].map(function(c){
+          return '<button type="button" class="op-chip'+(formulaCategoriasCombinadas.indexOf(c)>-1?' sel':'')+'" data-comb="'+c+'" onclick="toggleChip(this)">'+CATEGORIA_ICONOS[c]+' '+c+'</button>';
+        }).join('')+
+      '</div></div>'+
+    '<button class="btn-primary" id="fc-continuar" style="margin-top:10px;">Continuar →</button>';
+
+  cont.querySelectorAll('[data-cat]').forEach(function(el){
+    el.addEventListener('click',function(){
+      formulaCategoria=this.dataset.cat;
+      cont.querySelectorAll('[data-cat]').forEach(function(x){x.classList.remove('labor-tile-otra');});
+      this.classList.add('labor-tile-otra');
+      var box=document.getElementById('fc-combinada-box');
+      if(box)box.style.display=(formulaCategoria==='Combinada')?'':'none';
+    });
+  });
+
   document.getElementById('fc-continuar').addEventListener('click',function(){
     if(!formulaCategoria){alert('Selecciona el tipo de fórmula.');return;}
     if(formulaCategoria==='Combinada'){
       formulaCategoriasCombinadas=Array.from(document.querySelectorAll('#fc-combinada-chips .op-chip.sel')).map(function(c){return c.dataset.comb;});
       if(!formulaCategoriasCombinadas.length){alert('Selecciona con cuáles tipos se combina.');return;}
-    } else { formulaCategoriasCombinadas=[]; }
-    if(formulaVolverAResumen){formulaVolverAResumen=false;renderFormulaPasoNotas();}else renderFormulaPasoBombas();
+    }else{
+      formulaCategoriasCombinadas=[];
+    }
+    if(formulaVolverAResumen){formulaVolverAResumen=false;renderFormulaPasoNotas();}
+    else renderFormulaPasoBombas();
   });
 }
 
+function c293RenderCatalogoModal(){
+  var cont=document.getElementById('c293-formula-contenido');
+  if(!cont)return;
+  cont.innerHTML='<div class="loading">Cargando fórmulas del catálogo...</div>';
+
+  from('formulas_aplicacion')
+    .select('id,nombre,via,categoria,categoria_catalogo,categorias_combinadas,bombas_compatibles,duracion_o_surcos,volumen_base_litros,notas,es_plantilla,activo')
+    .eq('activo',true)
+    .eq('es_plantilla',true)
+    .eq('via',formulaVia)
+    .order('nombre')
+    .get()
+    .then(function(rows){
+      rows=rows||[];
+      if(!rows.length){
+        cont.innerHTML='<div class="c293-cat-empty">No hay fórmulas guardadas en el catálogo para '+formulaVia+'.<br>Puedes crear una fórmula nueva.</div>';
+        return;
+      }
+      cont.innerHTML=
+        '<div class="c291-label" style="margin-top:0">Fórmulas disponibles · '+formulaVia+'</div>'+
+        '<input id="c293-cat-buscar" type="text" placeholder="Buscar fórmula..." style="width:100%;padding:.55rem .65rem;border:1px solid #d9e2dc;border-radius:9px;font-size:.72rem;">'+
+        '<div id="c293-cat-list" class="c293-cat-list"></div>';
+
+      function pintar(filtro){
+        var list=document.getElementById('c293-cat-list');
+        var filtradas=filtro?rows.filter(function(f){return (f.nombre||'').toLowerCase().indexOf(filtro.toLowerCase())>-1;}):rows;
+        if(!filtradas.length){list.innerHTML='<div class="c293-cat-empty">Sin resultados.</div>';return;}
+        list.innerHTML=filtradas.map(function(f){
+          return '<button type="button" class="c293-cat-card" data-c293-formula="'+f.id+'">'+
+            '<b>'+(CATEGORIA_ICONOS[f.categoria]||'🧪')+' '+f.nombre+'</b>'+
+            '<span>'+f.categoria+' · '+f.via+'</span>'+
+          '</button>';
+        }).join('');
+        list.querySelectorAll('[data-c293-formula]').forEach(function(b){
+          b.onclick=function(){c293UsarFormulaCatalogo(this.dataset.c293Formula);};
+        });
+      }
+      pintar('');
+      document.getElementById('c293-cat-buscar').addEventListener('input',function(){pintar(this.value);});
+    })
+    .catch(function(e){cont.innerHTML='<div class="c293-cat-empty">Error al cargar catálogo: '+e.message+'</div>';});
+}
+
+function c293UsarFormulaCatalogo(formulaId){
+  var cont=document.getElementById('c293-formula-contenido');
+  if(cont)cont.innerHTML='<div class="loading">Cargando fórmula...</div>';
+
+  Promise.all([
+    from('formulas_aplicacion').select('*').eq('id',formulaId).get(),
+    from('formula_componentes').select('*,item:inventario_items!item_id(nombre,unidad)').eq('formula_id',formulaId).get()
+  ]).then(function(r){
+    var f=r[0]&&r[0][0], comps=r[1]||[];
+    if(!f){c293RenderCatalogoModal();return;}
+    if(f.via!==formulaVia){
+      alert('La fórmula seleccionada no corresponde a la vía '+formulaVia+'.');
+      c293RenderCatalogoModal();
+      return;
+    }
+
+    formulaCategoria=f.categoria;
+    formulaCategoriasCombinadas=(f.categorias_combinadas||[]).slice();
+    formulaBombas=(f.bombas_compatibles||[]).slice();
+    formulaEsPlantilla=false;
+    window._formulaDuracionSurcos=f.duracion_o_surcos||null;
+    window._formulaVolumenExistente=f.volumen_base_litros||200;
+    window._formulaNombreExistente=f.nombre||'';
+    window._formulaNotasExistente=f.notas||'';
+    window._formulaFechaExistente=fechaHoyLocal();
+
+    formulaCompSeq=0;
+    formulaCompRows=comps.filter(function(c){return c.estado_faltante!=='sustituido';}).map(function(c){
+      formulaCompSeq++;
+      var unidad=c.item?c.item.unidad:'';
+      var cantidad=c.cantidad_base;
+      var unidadEntrada=unidad;
+      if(unidad==='kg'&&cantidad<1)unidadEntrada='gr';
+      else if(unidad==='litros'&&cantidad<1)unidadEntrada='ml';
+      return {
+        row:formulaCompSeq,item_id:c.item_id,nombre:c.item?c.item.nombre:'',
+        unidad:unidad,unidadEntrada:unidadEntrada,cantidad:cantidad
+      };
+    });
+
+    showToast('📚 Fórmula cargada del catálogo: '+f.nombre);
+    renderFormulaPasoFecha();
+  }).catch(function(e){
+    alert('Error al cargar fórmula: '+e.message);
+    c293RenderCatalogoModal();
+  });
+}
 function renderFormulaPasoBombas(){
   var body=c292FormulaBody();
   var tiles=['inyeccion','motor','manual'].map(function(b){
@@ -17885,7 +18034,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C292
+C293
 </div>
 
 <style id="fi128-css">
