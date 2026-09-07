@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C258';
+  window.MOOTSIL_BUILD='C259';
 </script>
 
 
@@ -2110,7 +2110,12 @@ function c231Icon(name, cls){
 .c258-manage-menu button.danger{background:#fff3f1;border-color:#efc9c4;color:#a13f36}
 @media(max-width:760px){.c258-meta-grid{grid-template-columns:1fr 1fr}}
 </style>
-</head>
+<style id="c259">
+.c256-summary{grid-template-columns:repeat(5,1fr)!important}.c256-summary .c256-stat:nth-child(1){border-top:4px solid #2f7fb6!important}.c256-summary .c256-stat:nth-child(2){border-top:4px solid #e2a019!important}.c256-summary .c256-stat:nth-child(3){border-top:4px solid #258354!important;box-shadow:0 8px 18px rgba(37,131,84,.16)!important}.c256-summary .c256-stat:nth-child(4){border-top:4px solid #6d2789!important;box-shadow:0 8px 18px rgba(109,39,137,.16)!important}.c256-summary .c256-stat:nth-child(5){border-top:4px solid #b84d3f!important;box-shadow:0 8px 18px rgba(184,77,63,.18)!important}
+.c258-workcard.retrasada{border-left-color:#b84d3f;background:linear-gradient(90deg,#fff2ef 0,#fff 11%)}.c258-status.retrasada{background:#fbe4df;color:#9c3e33}
+.c259-bg{position:fixed;inset:0;background:rgba(12,31,23,.5);z-index:10020;display:flex;align-items:center;justify-content:center;padding:18px}.c259-modal{width:min(650px,96vw);max-height:88vh;overflow:auto;background:#fff;border-radius:16px;box-shadow:0 22px 60px rgba(0,0,0,.24)}.c259-head{display:flex;justify-content:space-between;padding:16px 18px;border-bottom:1px solid #e5ebe7}.c259-head b{color:#123f2d}.c259-body{padding:16px 18px}.c259-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.c259-field label{display:block;font-size:.64rem;font-weight:850;color:#748078;text-transform:uppercase;margin-bottom:4px}.c259-field input,.c259-field select{width:100%;min-height:40px;border:1px solid #d3ddd7;border-radius:9px;padding:7px 9px}.c259-persons{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:180px;overflow:auto;margin-top:8px}.c259-person{border:1px solid #dce4df;background:#fff;border-radius:9px;padding:8px;font-size:.7rem;text-align:left}.c259-person.sel{background:#e8f4ed;border-color:#0b5a37;color:#0b5a37;font-weight:850}.c259-foot{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid #e5ebe7}.c259-foot button{border:1px solid #d1ddd5;background:#fff;border-radius:9px;padding:9px 13px;font-weight:850}.c259-foot .save{background:#0b5a37;color:#fff}
+@media(max-width:900px){.c256-summary{grid-template-columns:repeat(2,1fr)!important}}@media(max-width:620px){.c259-grid,.c259-persons{grid-template-columns:1fr}}
+</style></head>
 <body>
 
 <div id="screen-login" class="screen active">
@@ -3530,6 +3535,11 @@ function c256SemanaActual(){
   function iso(x){return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');}
   return {ini:iso(ini),fin:iso(fin)};
 }
+var C259_FILTRO_LAB='semana';
+function c259EsRetrasada(o){if(!o||o.estado==='completada'||o.estado==='cancelada')return false;var hoy=fechaHoyLocal(),rg=c256SemanaActual(),d=new Date(),dia=(d.getDay()+6)%7;return (o.fecha_asignacion&&o.fecha_asignacion<hoy)||(dia>=4&&o.fecha_asignacion>=rg.ini&&o.fecha_asignacion<=rg.fin&&o.estado==='pendiente');}
+function c259GrupoRetrasado(g){return g&&g.ordenes&&g.ordenes.some(c259EsRetrasada);}
+function c259SetFiltro(f){C259_FILTRO_LAB=f;renderAsignarEstatus();}
+function c259CerrarModal(){var x=document.getElementById('c259-root');if(x)x.remove();}
 function c256DashboardLabores(ordenes){
   var rg=c256SemanaActual();
   var lab=(ordenes||[]).filter(function(o){
@@ -3558,7 +3568,12 @@ function c256DashboardLabores(ordenes){
   var er=(cats.plantaciones||[]).find(function(p){return /erandy/i.test(p.nombre||'');});
   var ja=(cats.plantaciones||[]).find(function(p){return /jade/i.test(p.nombre||'');});
   return '<section class="c256-dashboard"><div class="c256-dash-head"><div><div class="c256-dash-title">Avance semanal de labores</div><div class="c256-dash-sub">'+rg.ini+' al '+rg.fin+' · control por plantación y tabla</div></div><button class="c257-print" type="button" onclick="window.print()">🖨 Imprimir reporte semanal</button></div>'+
-    '<div class="c256-summary"><div class="c256-stat week '+(ASIGNAR_SUBTAB==='semana'?'sel':'')+'" onclick="ASIGNAR_SUBTAB=&quot;semana&quot;;renderAsignarEstatus()"><b>'+total+'</b><span>Labores de la semana</span></div><div class="c256-stat pending '+(ASIGNAR_SUBTAB==='pendientes'?'sel':'')+'" onclick="ASIGNAR_SUBTAB=&quot;pendientes&quot;;renderAsignarEstatus()"><b>'+pendientes+'</b><span>Pendientes</span></div><div class="c256-stat process '+(ASIGNAR_SUBTAB==='proceso'?'sel':'')+'" onclick="ASIGNAR_SUBTAB=&quot;proceso&quot;;renderAsignarEstatus()"><b>'+proceso+'</b><span>En proceso</span></div><div class="c256-stat done '+(ASIGNAR_SUBTAB==='terminadas'?'sel':'')+'" onclick="ASIGNAR_SUBTAB=&quot;terminadas&quot;;renderAsignarEstatus()"><b>'+terminadas+'</b><span>Terminadas</span></div></div>'+
+    '<div class="c256-summary">'+
+    '<div class="c256-stat" onclick="c259SetFiltro(&quot;semana&quot;)" style="cursor:pointer"><b>'+total+'</b><span>Labores de la semana</span></div>'+
+    '<div class="c256-stat" onclick="c259SetFiltro(&quot;pendiente&quot;)" style="cursor:pointer"><b>'+pendientes+'</b><span>Pendientes</span></div>'+
+    '<div class="c256-stat" onclick="c259SetFiltro(&quot;en_proceso&quot;)" style="cursor:pointer"><b>'+proceso+'</b><span>En proceso</span></div>'+
+    '<div class="c256-stat" onclick="c259SetFiltro(&quot;completada&quot;)" style="cursor:pointer"><b>'+terminadas+'</b><span>Terminadas</span></div>'+
+    '<div class="c256-stat" onclick="c259SetFiltro(&quot;retrasada&quot;)" style="cursor:pointer"><b>'+lab.filter(c259EsRetrasada).length+'</b><span>Retrasadas</span></div></div>'+
     '<div class="c256-plants">'+(er?plantBlock(er,'erandy'):'')+(ja?plantBlock(ja,'jade'):'')+'</div></section>';
 }
 function renderAsignarEstatus(){
@@ -3608,7 +3623,9 @@ function renderAsignarEstatus(){
       }
       gruposLabor[k].ordenes.push(o);
     });
-    var tarjetas=ordenGruposLabor.map(function(k){var g=gruposLabor[k];return {fecha:g.fecha_asignacion,html:tarjetaLaborAgrupada(g)};});
+    var tarjetas=ordenGruposLabor.map(function(k){var g=gruposLabor[k];
+    if(C259_FILTRO_LAB==='retrasada')tarjetas=tarjetas.filter(function(x){return c259GrupoRetrasado(x.grupo||x);});
+return {fecha:g.fecha_asignacion,html:tarjetaLaborAgrupada(g)};});
     ordenGrupos.forEach(function(k){
       var g=gruposRiego[k];
       tarjetas.push({fecha:g.fecha_asignacion,html:tarjetaRiegoAgrupada(g)});
@@ -3625,24 +3642,9 @@ function renderAsignarEstatus(){
       });
     });
     body.querySelectorAll('[data-can]').forEach(function(b){b.addEventListener('click',function(){cambiarEstadoAsignar(this.dataset.can,'cancelada');});});
-    body.querySelectorAll('.glab-gestionar').forEach(function(b){
-      b.addEventListener('click',function(){
-        var grp=gruposLabor[this.dataset.gkey];
-        if(!grp) return;
-        GESTION_LABOR_GRUPO={tablaId:grp.tablaId,tipoLaborId:grp.tipoLaborId,subtipoLaborId:grp.subtipoLaborId,fecha:grp.fecha_asignacion,notasEncargado:grp.notas_encargado,duracion:grp.duracion,tablaNombre:grp.tabla?grp.tabla.nombre:'',tipoLaborNombre:grp.tipoLaborNombre,subtipoNombre:grp.subtipoNombre,esHoraExtra:grp.esHoraExtra};
-        pintarGestionLabor();
-      });
-    });
+    body.querySelectorAll('.c259-editar').forEach(function(b){b.addEventListener('click',function(){c259AbrirEditar(gruposLabor[this.dataset.gkey]);});});
     body.querySelectorAll('[data-cancelgrupo]').forEach(function(b){b.addEventListener('click',function(){var g=gruposLabor[this.dataset.cancelgrupo];if(!g||!confirm('¿Cancelar esta labor para todo el personal asignado? El registro se conservará para trazabilidad.'))return;Promise.all(g.ordenes.map(function(o){return from('ordenes_trabajo').eq('id',o.id).update({estado:'cancelada'});})).then(renderAsignarEstatus).catch(function(e){alert('Error: '+e.message);});});});
 
-    body.querySelectorAll('.glab-agregar').forEach(function(b){
-      b.addEventListener('click',function(){
-        var grp=gruposLabor[this.dataset.gkey];
-        if(!grp) return;
-        GESTION_LABOR_GRUPO={tablaId:grp.tablaId,tipoLaborId:grp.tipoLaborId,subtipoLaborId:grp.subtipoLaborId,fecha:grp.fecha_asignacion,notasEncargado:grp.notas_encargado,duracion:grp.duracion,tablaNombre:grp.tabla?grp.tabla.nombre:'',tipoLaborNombre:grp.tipoLaborNombre,subtipoNombre:grp.subtipoNombre,esHoraExtra:grp.esHoraExtra};
-        renderGestionarLaborElegirOperario('agregar',null);
-      });
-    });
     body.querySelectorAll('[data-com]').forEach(function(b){b.addEventListener('click',function(){
       var o=ordenesPorIdAsignar[this.dataset.com];
       var progreso=o?progresoSurcosOrden(o):null;
@@ -3690,7 +3692,8 @@ function tarjetaLaborAgrupada(grupo){
   var estado=estados.every(function(x){return x==='completada';})?'completada':
              (estados.every(function(x){return x==='cancelada';})?'cancelada':
              (estados.some(function(x){return x==='en_proceso';})?'en_proceso':'pendiente'));
-  var estadoTxt=estado==='completada'?'Terminada':estado==='en_proceso'?'En proceso':estado==='cancelada'?'Cancelada':'Pendiente';
+  var retrasada=c259GrupoRetrasado(grupo),estadoVisual=retrasada?'retrasada':estado;
+  var estadoTxt=retrasada?'Retrasada':estado==='completada'?'Terminada':estado==='en_proceso'?'En proceso':estado==='cancelada'?'Cancelada':'Pendiente';
   var nombres=Array.from(new Set(grupo.ordenes.map(function(o){return o.operario?o.operario.nombre:'';}).filter(Boolean)));
   var total=0,hechos=0;
   grupo.ordenes.forEach(function(o){var pr=progresoSurcosOrden(o);total+=pr.totalAsignados.length;hechos+=pr.completados.length;});
@@ -3706,21 +3709,31 @@ function tarjetaLaborAgrupada(grupo){
   var opciones='';
   if(gestionable){
     opciones='<div id="'+keySafe+'" class="c258-manage-menu">'+
-      '<button type="button" class="glab-gestionar" data-gkey="'+grupo.key+'">Editar asignación</button>'+
-      '<button type="button" class="glab-agregar" data-gkey="'+grupo.key+'">+ Agregar personal</button>';
+      '<button type="button" class="c259-editar" data-gkey="'+grupo.key+'">Editar asignación</button>'+
+      '';
     grupo.ordenes.forEach(function(o){
       if(o.estado==='pendiente'||o.estado==='en_proceso') opciones+='<button type="button" data-regavance="'+o.id+'">Registrar avance</button>';
     });
     opciones+='<button type="button" class="danger" data-cancelgrupo="'+grupo.key+'">Cancelar labor</button></div>';
   }
 
-  return '<div class="c258-workcard '+estado+'">'+
+  return '<div class="c258-workcard '+estadoVisual+'">'+
     '<div class="c258-worktop"><div><div class="c258-worktitle">'+nombreLabor+'</div><div class="c258-worksub">'+fechaLarga(grupo.fecha_asignacion)+'</div>'+
     '<div class="c258-badges"><span class="c258-plant '+pc+'">'+ubicacion+'</span><span class="c258-status '+estado+'">'+estadoTxt+'</span></div></div><div>'+menu+'</div></div>'+
     '<div class="c258-meta-grid"><div class="c258-meta"><b>Personal asignado</b>'+(nombres.join(', ')||'Sin asignar')+'</div><div class="c258-meta"><b>Jornada</b>'+jornada+'</div><div class="c258-meta"><b>Avance</b>'+pct+'%</div>'+
     (grupo.notas_encargado?'<div class="c258-meta"><b>Indicaciones</b>'+grupo.notas_encargado+'</div>':'')+'</div>'+
     '<div class="c258-progress"><div class="c258-progress-top"><span>Avance de la labor</span><span>'+hechos+(total?'/'+total:'')+(total?' surcos':'')+'</span></div><div class="c258-progressbar"><i style="width:'+pct+'%"></i></div></div>'+
     opciones+'</div>';
+}
+function c259AbrirEditar(grupo){
+ if(!grupo)return;c259CerrarModal();var o=grupo.ordenes[0],sel=grupo.ordenes.map(function(x){return String(x.operario_id);}),personal=(cats.operarios||[]).concat(cats.eventuales||[]);
+ var root=document.createElement('div');root.id='c259-root';root.className='c259-bg';
+ root.innerHTML='<div class="c259-modal"><div class="c259-head"><div><b>Editar asignación</b><div style="font-size:.68rem;color:#738078;margin-top:3px">'+(grupo.tipoLaborNombre==='Guiro'?'Desbrozadora':grupo.tipoLaborNombre)+'</div></div><button onclick="c259CerrarModal()" style="border:0;background:#f1f5f2;border-radius:50%;width:32px;height:32px">×</button></div><div class="c259-body"><div class="c259-grid"><div class="c259-field"><label>Fecha de inicio</label><input id="c259-fecha" type="date" value="'+grupo.fecha_asignacion+'"></div><div class="c259-field"><label>Tipo de jornada</label><select id="c259-jornada"><option value="normal">Jornada regular</option><option value="extra" '+(o.es_hora_extra?'selected':'')+'>Hora extra</option></select></div><div class="c259-field" style="grid-column:1/-1"><label>Indicaciones</label><input id="c259-notas" value="'+(o.notas_encargado||'').replace(/"/g,'&quot;')+'"></div></div><div style="margin-top:14px;font-size:.7rem;font-weight:850;color:#496357">PERSONAL ASIGNADO</div><div style="font-size:.67rem;color:#738078">Aquí puedes agregar o quitar colaboradores activos.</div><div class="c259-persons">'+personal.map(function(p){return '<button type="button" class="c259-person '+(sel.indexOf(String(p.id))>-1?'sel':'')+'" data-pid="'+p.id+'">'+p.nombre+'</button>';}).join('')+'</div></div><div class="c259-foot"><button onclick="c259CerrarModal()">Cerrar</button><button id="c259-save" class="save">Guardar cambios</button></div></div>';
+ document.body.appendChild(root);root.querySelectorAll('.c259-person').forEach(function(b){b.onclick=function(){this.classList.toggle('sel');};});
+ root.querySelector('#c259-save').onclick=function(){var ids=Array.from(root.querySelectorAll('.c259-person.sel')).map(function(b){return b.dataset.pid;});if(!ids.length){alert('Selecciona al menos una persona.');return;}var fecha=root.querySelector('#c259-fecha').value,extra=root.querySelector('#c259-jornada').value==='extra',notas=root.querySelector('#c259-notas').value.trim(),actuales=grupo.ordenes.map(function(x){return String(x.operario_id);}),jobs=[];
+ grupo.ordenes.forEach(function(x){if(ids.indexOf(String(x.operario_id))>-1)jobs.push(from('ordenes_trabajo').eq('id',x.id).update({fecha_asignacion:fecha,notas_encargado:notas,es_hora_extra:extra}));else if(x.estado==='pendiente')jobs.push(from('ordenes_trabajo').eq('id',x.id).update({estado:'cancelada'}));});
+ ids.filter(function(id){return actuales.indexOf(String(id))<0;}).forEach(function(id){jobs.push(from('ordenes_trabajo').insert({asignado_por:usuario.id,operario_id:id,tabla_id:o.tabla_id,tipo_labor_id:o.tipo_labor_id,subtipo_labor_id:o.subtipo_labor_id,surcos_asignados:o.surcos_asignados||[],cantidad_insumo_esperada:o.cantidad_insumo_esperada,duracion:o.duracion,fecha_asignacion:fecha,notas_encargado:notas,estado:'pendiente',es_hora_extra:extra}));});
+ Promise.all(jobs).then(function(){c259CerrarModal();renderAsignarEstatus();}).catch(function(e){alert('Error: '+e.message);});};
 }
 function cambiarEstadoAsignar(id,estado){
   from('ordenes_trabajo').eq('id',id).update({estado:estado}).then(function(){
@@ -16920,7 +16933,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C258
+C259
 </div>
 
 <style id="fi128-css">
