@@ -2042,7 +2042,20 @@ function c231Icon(name, cls){
 .c256-dash-title{font-size:.84rem;font-weight:900;color:#0d513b;text-transform:uppercase;letter-spacing:.045em}
 .c256-dash-sub{font-size:.7rem;color:#718078;margin-top:2px}
 .c256-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:12px 16px}
-.c256-stat{border:1px solid #e0e7e3;border-radius:12px;padding:10px 12px;background:#fbfcfb}
+.c256-stat{border:1px solid #e0e7e3;border-radius:12px;padding:10px 12px;background:#fbfcfb;cursor:pointer;transition:.15s;box-shadow:0 5px 12px rgba(20,55,40,.08)}
+.c256-stat:hover{transform:translateY(-1px)}
+.c256-stat.week{box-shadow:0 6px 0 #2f80d0,0 9px 18px rgba(47,128,208,.16)}
+.c256-stat.pending{box-shadow:0 6px 0 #e5a21a,0 9px 18px rgba(229,162,26,.16)}
+.c256-stat.process{box-shadow:0 6px 0 #258653,0 9px 18px rgba(37,134,83,.16)}
+.c256-stat.done{box-shadow:0 6px 0 #74288f,0 9px 18px rgba(116,40,143,.16)}
+.c256-stat.sel{outline:2px solid #0d513b;outline-offset:2px}
+.c257-print{border:1px solid #cfdcd4;background:#fff;color:#0d513b;border-radius:999px;padding:8px 12px;font-weight:800;font-size:.7rem;cursor:pointer}
+.c257-workcard{background:#fff;border:1px solid #dde6e0;border-left:5px solid #e5a21a;border-radius:14px;margin:0 0 10px;padding:13px 15px;box-shadow:0 5px 14px rgba(20,55,40,.06)}
+.c257-workcard.process{border-left-color:#258653}.c257-workcard.done{border-left-color:#74288f}.c257-workcard.late{border-left-color:#cf3d31}
+.c257-worktop{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}.c257-worktitle{font-size:.92rem;font-weight:900;color:#173d2e}.c257-workloc{font-size:.72rem;color:#66766e;margin-top:3px}.c257-status{font-size:.67rem;font-weight:850;padding:4px 9px;border-radius:999px;background:#fff6dd;color:#9a6500}.c257-workcard.process .c257-status{background:#e9f5ee;color:#17623d}.c257-workcard.done .c257-status{background:#f2e9f6;color:#6d2789}
+.c257-workmeta{display:grid;grid-template-columns:repeat(3,minmax(140px,1fr));gap:8px;margin-top:10px}.c257-meta{background:#f7faf8;border-radius:9px;padding:7px 9px;font-size:.68rem;color:#65756d}.c257-meta b{display:block;color:#234638;font-size:.7rem;margin-bottom:2px}.c257-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;padding-top:9px;border-top:1px solid #edf1ee}.c257-actions button{border:1px solid #d5e0da;background:#fff;border-radius:8px;padding:6px 9px;font-size:.68rem;font-weight:800;color:#24503d;cursor:pointer}.c257-actions .danger{color:#b83a2d;border-color:#efc6c0;background:#fff6f4}
+@media(max-width:700px){.c257-workmeta{grid-template-columns:1fr 1fr}}
+@media print{header,.tabs,.bottom-nav,.c257-actions,.c257-print,.seccion-titulo button{display:none!important}.c256-dashboard{border:none}.c257-workcard{break-inside:avoid;box-shadow:none}body{background:#fff!important}}
 .c256-stat b{display:block;font-size:1.15rem;color:#123f2d}.c256-stat span{font-size:.66rem;color:#718078}
 .c256-plants{display:grid;grid-template-columns:1.15fr .85fr;gap:12px;padding:0 16px 16px}
 .c256-plant-card{border:1px solid #dfe7e2;border-radius:12px;overflow:hidden}
@@ -3464,18 +3477,13 @@ var RIEGO_ASIGNACION_DESDE_MODULO=false;
 var modoAsignacionLabor='normal';
 var horasExtraAutorizadas=2;
 
-var ASIGNAR_SUBTAB='hoy';
+var ASIGNAR_SUBTAB='semana';
 
 function headerAsignar(){
   return '<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4rem;">🧰 Tablero de labores<div style="display:flex;flex-wrap:wrap;gap:.6rem;"><button type="button" onclick="renderFormAsignar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:700;cursor:pointer;">➕ Nueva labor</button></div></div>';
 }
 
-function barraSubtabsAsignar(){
-  var tabs=[['programadas','🆕 Programadas'],['hoy','🟠 Pendientes / En curso'],['terminadas','✅ Terminadas']];
-  return '<div style="display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap;">'+tabs.map(function(t){
-    return '<button type="button" class="rep-view-btn'+(ASIGNAR_SUBTAB===t[0]?' active':'')+'" onclick="ASIGNAR_SUBTAB=\''+t[0]+'\';renderAsignarEstatus();">'+t[1]+'</button>';
-  }).join('')+'</div>';
-}
+function barraSubtabsAsignar(){ return ''; }
 
 
 function c256SemanaActual(){
@@ -3512,8 +3520,8 @@ function c256DashboardLabores(ordenes){
   }
   var er=(cats.plantaciones||[]).find(function(p){return /erandy/i.test(p.nombre||'');});
   var ja=(cats.plantaciones||[]).find(function(p){return /jade/i.test(p.nombre||'');});
-  return '<section class="c256-dashboard"><div class="c256-dash-head"><div><div class="c256-dash-title">Avance semanal de labores</div><div class="c256-dash-sub">'+rg.ini+' al '+rg.fin+' · control por plantación y tabla</div></div></div>'+
-    '<div class="c256-summary"><div class="c256-stat"><b>'+total+'</b><span>Labores de la semana</span></div><div class="c256-stat"><b>'+pendientes+'</b><span>Pendientes</span></div><div class="c256-stat"><b>'+proceso+'</b><span>En proceso</span></div><div class="c256-stat"><b>'+terminadas+'</b><span>Terminadas</span></div></div>'+
+  return '<section class="c256-dashboard"><div class="c256-dash-head"><div><div class="c256-dash-title">Avance semanal de labores</div><div class="c256-dash-sub">'+rg.ini+' al '+rg.fin+' · control por plantación y tabla</div></div><button class="c257-print" type="button" onclick="window.print()">🖨 Imprimir reporte semanal</button></div>'+
+    '<div class="c256-summary"><div class="c256-stat week '+(ASIGNAR_SUBTAB==='semana'?'sel':'')+'" onclick="ASIGNAR_SUBTAB=&quot;semana&quot;;renderAsignarEstatus()"><b>'+total+'</b><span>Labores de la semana</span></div><div class="c256-stat pending '+(ASIGNAR_SUBTAB==='pendientes'?'sel':'')+'" onclick="ASIGNAR_SUBTAB=&quot;pendientes&quot;;renderAsignarEstatus()"><b>'+pendientes+'</b><span>Pendientes</span></div><div class="c256-stat process '+(ASIGNAR_SUBTAB==='proceso'?'sel':'')+'" onclick="ASIGNAR_SUBTAB=&quot;proceso&quot;;renderAsignarEstatus()"><b>'+proceso+'</b><span>En proceso</span></div><div class="c256-stat done '+(ASIGNAR_SUBTAB==='terminadas'?'sel':'')+'" onclick="ASIGNAR_SUBTAB=&quot;terminadas&quot;;renderAsignarEstatus()"><b>'+terminadas+'</b><span>Terminadas</span></div></div>'+
     '<div class="c256-plants">'+(er?plantBlock(er,'erandy'):'')+(ja?plantBlock(ja,'jade'):'')+'</div></section>';
 }
 function renderAsignarEstatus(){
@@ -3525,15 +3533,22 @@ function renderAsignarEstatus(){
     from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_tiempo,requiere_formula,es_cosecha),subtipo:subtipos_labor(nombre,requiere_tiempo)').in('estado',['pendiente','en_proceso']).order('fecha_asignacion',{ascending:false}).get(),
     from('ordenes_trabajo').select('*,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo,requiere_formula,es_cosecha),subtipo:subtipos_labor(nombre,requiere_tiempo)').eq('estado','completada').gte('fecha_asignacion',hace30dias).order('fecha_asignacion',{ascending:false}).limit(150).get()
   ]).then(function(r){
-    var activas=(r[0]||[]).filter(function(o){return !o.activo_rancho_id&&o.tipo_labor&&!o.tipo_labor.requiere_formula&&!o.tipo_labor.es_cosecha;});
-    var terminadas=(r[1]||[]).filter(function(o){return !o.activo_rancho_id&&o.tipo_labor&&!o.tipo_labor.requiere_formula&&!o.tipo_labor.es_cosecha;});
-    activas.forEach(function(o){o._ficha=(o.fecha_asignacion&&o.fecha_asignacion<=hoy)?'hoy':'programadas';});
-    terminadas.forEach(function(o){o._ficha='terminadas';});
+    var activas=(r[0]||[]).filter(function(o){return !o.activo_rancho_id&&o.tipo_labor&&!o.tipo_labor.requiere_formula&&!o.tipo_labor.es_cosecha&&!/^riego$/i.test(o.tipo_labor.nombre||'');});
+    var terminadas=(r[1]||[]).filter(function(o){return !o.activo_rancho_id&&o.tipo_labor&&!o.tipo_labor.requiere_formula&&!o.tipo_labor.es_cosecha&&!/^riego$/i.test(o.tipo_labor.nombre||'');});
+    activas.forEach(function(o){o._ficha=o.estado;});
+    terminadas.forEach(function(o){o._ficha='completada';});
     var todas=activas.concat(terminadas);
-    var filtradas=todas.filter(function(o){return o._ficha===ASIGNAR_SUBTAB;});
+    var rgFiltro=c256SemanaActual();
+    var filtradas=todas.filter(function(o){
+      if(ASIGNAR_SUBTAB==='semana') return o.fecha_asignacion>=rgFiltro.ini&&o.fecha_asignacion<=rgFiltro.fin;
+      if(ASIGNAR_SUBTAB==='pendientes') return o.estado==='pendiente';
+      if(ASIGNAR_SUBTAB==='proceso') return o.estado==='en_proceso';
+      if(ASIGNAR_SUBTAB==='terminadas') return o.estado==='completada';
+      return true;
+    });
     var html=headerAsignar()+c256DashboardLabores(todas)+barraSubtabsAsignar();
     if(!filtradas.length){
-      var vacioTxt=ASIGNAR_SUBTAB==='programadas'?'No hay labores programadas a futuro.':ASIGNAR_SUBTAB==='hoy'?'Nada por realizar hoy. 🎉':'Aún no hay labores terminadas.';
+      var vacioTxt=ASIGNAR_SUBTAB==='semana'?'No hay labores registradas esta semana.':ASIGNAR_SUBTAB==='pendientes'?'No hay labores pendientes.':ASIGNAR_SUBTAB==='proceso'?'No hay labores en proceso.':'Aún no hay labores terminadas.';
       html+='<div class="empty">'+vacioTxt+'</div>';
       body.innerHTML=html;
       return;
@@ -3581,6 +3596,8 @@ function renderAsignarEstatus(){
         pintarGestionLabor();
       });
     });
+    body.querySelectorAll('[data-cancelgrupo]').forEach(function(b){b.addEventListener('click',function(){var g=gruposLabor[this.dataset.cancelgrupo];if(!g||!confirm('¿Cancelar esta labor para todo el personal asignado? El registro se conservará para trazabilidad.'))return;Promise.all(g.ordenes.map(function(o){return from('ordenes_trabajo').eq('id',o.id).update({estado:'cancelada'});})).then(renderAsignarEstatus).catch(function(e){alert('Error: '+e.message);});});});
+    body.querySelectorAll('[data-deletegrupo]').forEach(function(b){b.addEventListener('click',function(){var g=gruposLabor[this.dataset.deletegrupo];if(!g||!confirm('¿Eliminar definitivamente esta labor creada por error? Sólo se permite mientras todas las asignaciones estén pendientes.'))return;Promise.all(g.ordenes.map(function(o){return from('ordenes_trabajo').eq('id',o.id).delete();})).then(function(){showToast('🗑 Labor eliminada');renderAsignarEstatus();}).catch(function(e){alert('No se pudo eliminar: '+e.message);});});});
     body.querySelectorAll('.glab-agregar').forEach(function(b){
       b.addEventListener('click',function(){
         var grp=gruposLabor[this.dataset.gkey];
@@ -3630,26 +3647,21 @@ function tarjetaRiegoAgrupada(grupo){
 
 function tarjetaLaborAgrupada(grupo){
   var p=grupo.tabla?cats.plantaciones.find(function(x){return x.id===grupo.tabla.plantacion_id;}):null;
-  var ic=ICONOS[grupo.tipoLaborNombre]||'🔧';
-  var hoy=fechaHoyLocal();
-  var esTerminada=grupo._ficha==='terminadas';
-  var atrasada=!esTerminada&&grupo.fecha_asignacion<hoy;
-  var colorBorde=esTerminada?'var(--verde-mid)':(atrasada?'var(--rojo)':(grupo._ficha==='hoy'?'var(--rojo)':'var(--tierra)'));
-  var estadoBadges={pendiente:['🆕 Pendiente','var(--tierra)'],en_proceso:['🔶 En proceso','var(--tierra)'],completada:['✅ Completada','var(--verde-mid)'],cancelada:['✖️ Cancelada','var(--gris-3)']};
-  var nombresConEstado=grupo.ordenes.map(function(o){return o.operario?o.operario.nombre:'';}).join(', ');
-  var etiquetaTipo=grupo.ordenes.some(function(o){return o.es_hora_extra;})?' <span style="color:var(--tierra);font-size:.68rem;font-weight:700;background:var(--tierra-tenue);padding:2px 8px;border-radius:10px;">⏰ Hora Extra</span>':'';
-  var filasOperarios=grupo.ordenes.map(function(o){
-    var eb=estadoBadges[o.estado]||['',''];
-    var progreso=progresoSurcosOrden(o);
-    var avanceTxt=(o.estado==='en_proceso'&&progreso.totalAsignados.length>0)?(' · Avance '+progreso.completados.length+'/'+progreso.totalAsignados.length+' surcos'+(progreso.faltan.length?' (faltan '+progreso.faltan.join(', ')+')':'')):'';
-    var acciones='';
-    if(o.estado==='pendiente') acciones='<button class="btn-sm btn-cancelar" data-can="'+o.id+'">Cancelar</button>';
-    if(o.estado==='en_proceso') acciones='<button class="btn-sm btn-completar" data-com="'+o.id+'">Marcar completa</button> <button class="btn-sm btn-cancelar" data-can="'+o.id+'">Cancelar</button>';
-    if(o.estado==='pendiente'||o.estado==='en_proceso') acciones='<button type="button" class="btn-sm" style="background:var(--verde-tenue);border:1.5px solid var(--verde-mid);color:var(--verde);font-weight:700;" data-regavance="'+o.id+'">📝 Registrar avance</button> '+acciones;
-    if(o.es_hora_extra) acciones='<button type="button" class="btn-sm" style="background:var(--tierra-tenue);border:1.5px solid var(--tierra);color:var(--tierra);font-weight:700;" data-corregirextra="'+o.operario_id+'|'+grupo.fecha_asignacion+'|'+grupo.tipoLaborId+'">✏️ Corregir hora extra</button> '+acciones;
-    return '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:.4rem 0;border-top:1px solid var(--gris-1);flex-wrap:wrap;"><span style="font-size:.8rem;"><strong>'+(o.operario?o.operario.nombre:'')+'</strong><br/><span style="font-size:.7rem;font-weight:700;color:'+eb[1]+';">'+eb[0]+'</span>'+avanceTxt+'</span><span>'+acciones+'</span></div>';
-  }).join('');
-  return '<div class="orden-card" style="border-left-color:'+colorBorde+';'+(esTerminada?'opacity:.8;':'')+'"><strong style="font-size:.92rem">'+ic+' '+grupo.tipoLaborNombre+(grupo.subtipoNombre?' · '+grupo.subtipoNombre:'')+'</strong>'+etiquetaTipo+'<div style="font-size:.85rem;font-weight:700;color:'+(atrasada?'var(--rojo)':'var(--gris-3)')+';margin-top:.2rem;">📅 '+fechaLarga(grupo.fecha_asignacion)+(atrasada?' ⚠️':'')+'</div><div class="orden-meta">'+(grupo.tabla?('📍 '+(p?p.nombre:'')+' · '+grupo.tabla.nombre):'📋 Actividad general (sin tabla)')+(grupo.notas_encargado?'<br/>📝 '+grupo.notas_encargado:'')+'</div><div style="font-size:.7rem;color:var(--verde-mid);font-weight:700;margin-top:.4rem;">👷 Asignada a: '+nombresConEstado+(esTerminada?'':' <button type="button" class="glab-gestionar" data-gkey="'+grupo.key+'" style="border:none;background:none;color:var(--tierra);font-size:.7rem;font-weight:700;cursor:pointer;text-decoration:underline;padding:0;">✏️ gestionar</button>')+'</div>'+filasOperarios+(esTerminada?'':'<button type="button" class="btn-sm glab-agregar" data-gkey="'+grupo.key+'" style="margin-top:.5rem;background:var(--verde-tenue);border:1.5px solid var(--verde-mid);color:var(--verde);">+ Agregar otro operario</button>')+'</div>';
+  var ic=ICONOS[grupo.tipoLaborNombre]||'🔧', hoy=fechaHoyLocal();
+  var estados=grupo.ordenes.map(function(o){return o.estado;});
+  var estado=estados.every(function(x){return x==='completada';})?'completada':(estados.some(function(x){return x==='en_proceso';})?'en_proceso':'pendiente');
+  var atrasada=estado!=='completada'&&grupo.fecha_asignacion<hoy;
+  var cls=estado==='completada'?'done':estado==='en_proceso'?'process':atrasada?'late':'';
+  var lbl=estado==='completada'?'Terminada':estado==='en_proceso'?'En proceso':atrasada?'Pendiente vencida':'Pendiente';
+  var nombres=grupo.ordenes.map(function(o){return o.operario?o.operario.nombre:'';}).filter(Boolean).join(', ');
+  var avances=grupo.ordenes.map(function(o){var pr=progresoSurcosOrden(o);return pr.totalAsignados.length?pr.completados.length+'/'+pr.totalAsignados.length+' surcos':(o.estado==='completada'?'100%':'Sin avance');});
+  var avanceTxt=avances.join(' · ');
+  var jornada=grupo.ordenes.some(function(o){return o.es_hora_extra;})?'Hora extra':'Jornada regular';
+  var acciones='';
+  if(estado!=='completada') acciones='<button type="button" class="glab-gestionar" data-gkey="'+grupo.key+'">✏️ Editar / gestionar</button><button type="button" class="glab-agregar" data-gkey="'+grupo.key+'">＋ Personal</button>';
+  grupo.ordenes.forEach(function(o){if(o.estado==='pendiente'||o.estado==='en_proceso') acciones+='<button type="button" data-regavance="'+o.id+'">📝 Registrar avance</button>';});
+  if(estado!=='completada') acciones+='<button type="button" class="danger" data-cancelgrupo="'+grupo.key+'">Cancelar labor</button>'+(grupo.ordenes.every(function(o){return o.estado==='pendiente';})?'<button type="button" class="danger" data-deletegrupo="'+grupo.key+'">🗑 Eliminar</button>':'');
+  return '<div class="c257-workcard '+cls+'"><div class="c257-worktop"><div><div class="c257-worktitle">'+ic+' '+grupo.tipoLaborNombre+(grupo.subtipoNombre?' · '+grupo.subtipoNombre:'')+'</div><div class="c257-workloc">'+(grupo.tabla?((p?p.nombre:'')+' · '+grupo.tabla.nombre):'Actividad general')+'</div></div><span class="c257-status">'+lbl+'</span></div><div class="c257-workmeta"><div class="c257-meta"><b>Fecha</b>'+fechaLarga(grupo.fecha_asignacion)+'</div><div class="c257-meta"><b>Personal asignado</b>'+(nombres||'Sin asignar')+'</div><div class="c257-meta"><b>Avance</b>'+avanceTxt+'</div><div class="c257-meta"><b>Jornada</b>'+jornada+'</div>'+(grupo.notas_encargado?'<div class="c257-meta"><b>Indicaciones</b>'+grupo.notas_encargado+'</div>':'')+'</div>'+(acciones?'<div class="c257-actions">'+acciones+'</div>':'')+'</div>';
 }
 
 function cambiarEstadoAsignar(id,estado){
