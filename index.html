@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C263';
+  window.MOOTSIL_BUILD='C264';
 </script>
 
 
@@ -3447,6 +3447,11 @@ function pintarAdminCompletar(){
   var titulo=(o.activo_rancho_id?(o.activo_rancho?o.activo_rancho.nombre:'Herramienta/Equipo'):(lb.nombre||''))+(o.subtipo?' · '+o.subtipo.nombre:'');
   var ubic=o.activo_rancho_id?'🔧 Herramienta/Equipo':(o.tabla?('📍 '+o.tabla.nombre):'📋 Actividad general (sin tabla)');
   var opNombre=o.operario?o.operario.nombre:'';
+  var grupoAvance=(C263_AVANCE_GRUPO_KEY&&C263_GRUPOS_LABORES[C263_AVANCE_GRUPO_KEY])?C263_GRUPOS_LABORES[C263_AVANCE_GRUPO_KEY]:null;
+  var nombresAvance=grupoAvance&&grupoAvance.ordenes?
+    Array.from(new Set(grupoAvance.ordenes.map(function(x){return x.operario&&x.operario.nombre?x.operario.nombre:'';}).filter(Boolean))):
+    (opNombre?[opNombre]:[]);
+  var colaboradoresAvance=nombresAvance.join(', ')||opNombre||'—';
   var plant=o.tabla?(cats.plantaciones||[]).find(function(p){return String(p.id)===String(o.tabla.plantacion_id);}):null;
   var plantNombre=plant?plant.nombre:'Actividad general';
   var plantClass=/jade/i.test(plantNombre)?'c261-jade':(/erandy/i.test(plantNombre)?'c261-erandy':'c261-neutral');
@@ -3459,7 +3464,7 @@ function pintarAdminCompletar(){
 
   var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📝 Registrar avance<button type="button" id="ac-volver" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Volver</button></div>';
   html+='<div class="form-card"><div class="labor-chosen">'+(ICONOS[lb.nombre]||'🔧')+' <strong>'+titulo+'</strong></div>'+
-    '<div class="c261-avance-ident"><div class="c261-avance-chip '+plantClass+'"><small>Plantación / Tabla</small>'+plantNombre+(o.tabla?' · '+o.tabla.nombre:'')+'</div><div class="c261-avance-chip c261-neutral"><small>Colaborador</small>'+opNombre+'</div></div>';
+    '<div class="c261-avance-ident"><div class="c261-avance-chip '+plantClass+'"><small>Plantación / Tabla</small>'+plantNombre+(o.tabla?' · '+o.tabla.nombre:'')+'</div><div class="c261-avance-chip c261-neutral"><small>Colaborador(es)</small>'+colaboradoresAvance+'</div></div>';
   html+='<p class="hint" style="background:var(--gris-1);padding:.6rem .75rem;border-radius:var(--radio-sm);margin-bottom:.75rem;">ℹ️ Usa esto para registrar en el sistema el avance que el operario ya hizo en campo, mientras se acostumbra a marcarlo desde su celular. El avance quedará registrado a nombre de '+(opNombre||'el colaborador')+'.</p>';
 
   if(esAplic){
@@ -3553,7 +3558,7 @@ function guardarAdminCompletar(){
     });
     Promise.all(registros.map(function(rr){return from('registros_labor').insert(rr);})).then(function(){
       return Promise.all(miembros.map(function(x){
-        return from('ordenes_trabajo').update(updatePayload).eq('id',x.id).get();
+        return from('ordenes_trabajo').eq('id',x.id).update(updatePayload);
       }));
     }).then(function(){
       if(nuevoEstado==='completada'&&o.activo_rancho_id) from('activos_rancho').eq('id',o.activo_rancho_id).update({fecha_ultimo_mantenimiento:fechaHoyLocal()}).catch(function(){});
@@ -3562,7 +3567,7 @@ function guardarAdminCompletar(){
       return from('notificaciones').insert({titulo: nuevoEstado==='completada'?'✅ Labor completada (registrada por el encargado)':'🔶 Avance registrado por el encargado',cuerpo:((grupo&&grupo.ordenes)?Array.from(new Set(grupo.ordenes.map(function(x){return x.operario&&x.operario.nombre?x.operario.nombre:'';}).filter(Boolean))).join(', '):(o.operario?o.operario.nombre:''))+' '+verbo+' en '+(lb.nombre||'')+(o.tabla?(' · '+o.tabla.nombre):'')+(detalle?(' — '+detalle):''),icono: nuevoEstado==='completada'?'✅':'🔶',leida:false,para_rol:'encargado'});
     }).then(function(){
       showToast(nuevoEstado==='completada'?'✅ Labor marcada como completada':'✅ Avance guardado');
-      ADMIN_COMPLETAR_ORDEN=null; ADMIN_COMPLETAR_SURCOS=[];
+      ADMIN_COMPLETAR_ORDEN=null; ADMIN_COMPLETAR_SURCOS=[]; C263_AVANCE_GRUPO_KEY=null;
       (ADMIN_COMPLETAR_VOLVER||renderTablero)();
     }).catch(function(e){alert('Error: '+e.message);restaurarBoton();});
   }
