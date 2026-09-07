@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C270';
+  window.MOOTSIL_BUILD='C273';
 </script>
 
 
@@ -2160,6 +2160,53 @@ function c231Icon(name, cls){
 <style id="c270-coherencia-semanal">
 .c256-summary .c256-stat{cursor:pointer}
 .c256-summary .c256-stat.c270-active{outline:2px solid rgba(20,82,56,.22);transform:translateY(-1px)}
+</style>
+
+<style id="c271-colores-estado-labores">
+/* Las tarjetas usan exactamente la misma lectura cromática que los indicadores superiores. */
+.c258-workcard.pendiente{
+  border-left-color:#e2a019!important;
+  box-shadow:0 8px 18px rgba(226,160,25,.14)!important;
+  background:linear-gradient(90deg,rgba(226,160,25,.07) 0,#fff 10%)!important;
+}
+.c258-workcard.en_proceso{
+  border-left-color:#258354!important;
+  box-shadow:0 8px 18px rgba(37,131,84,.15)!important;
+  background:linear-gradient(90deg,rgba(37,131,84,.07) 0,#fff 10%)!important;
+}
+.c258-workcard.completada{
+  border-left-color:#6d2789!important;
+  box-shadow:0 8px 18px rgba(109,39,137,.16)!important;
+  background:linear-gradient(90deg,rgba(109,39,137,.075) 0,#fff 10%)!important;
+}
+.c258-workcard.retrasada{
+  border-left-color:#b84d3f!important;
+  box-shadow:0 8px 18px rgba(184,77,63,.17)!important;
+  background:linear-gradient(90deg,rgba(184,77,63,.075) 0,#fff 10%)!important;
+}
+
+/* Etiquetas de estado consistentes con los mismos colores. */
+.c258-status.pendiente{background:#fff1cf!important;color:#9a6700!important}
+.c258-status.en_proceso{background:#dff1e7!important;color:#1c6b45!important}
+.c258-status.completada{background:#efe1f5!important;color:#6d2789!important}
+.c258-status.retrasada{background:#f7dfda!important;color:#9c3e33!important}
+
+/* La barra de avance también sigue el estado visual de la labor. */
+.c258-workcard.pendiente .c258-progress i{background:#e2a019!important}
+.c258-workcard.en_proceso .c258-progress i{background:#258354!important}
+.c258-workcard.completada .c258-progress i{background:#6d2789!important}
+.c258-workcard.retrasada .c258-progress i{background:#b84d3f!important}
+</style>
+
+<style id="c273-programadas-azul">
+.c258-workcard.programada{
+  border-left-color:#2584b8!important;
+  box-shadow:0 8px 18px rgba(37,132,184,.15)!important;
+  background:linear-gradient(90deg,rgba(37,132,184,.07) 0,#fff 10%)!important;
+}
+.c258-status.programada{background:#dff0f8!important;color:#17688f!important}
+.c258-workcard.programada .c258-progress i,
+.c258-workcard.programada .c258-progressbar i{background:#2584b8!important}
 </style>
 </head>
 <body>
@@ -3901,12 +3948,22 @@ function tarjetaLaborAgrupada(grupo){
     opciones+='<button type="button" class="danger" data-cancelgrupo="'+grupo.key+'">Cancelar labor</button></div>';
   }
 
-  return '<div class="c258-workcard '+estadoVisual+'">'+
+  var colorEstado=estadoVisual==='programada'?'#2584b8':
+                  estadoVisual==='pendiente'?'#e2a019':
+                  estadoVisual==='en_proceso'?'#258354':
+                  estadoVisual==='completada'?'#6d2789':
+                  estadoVisual==='retrasada'?'#b84d3f':'#a8b0ab';
+  var sombraEstado=estadoVisual==='programada'?'rgba(37,132,184,.15)':
+                   estadoVisual==='pendiente'?'rgba(226,160,25,.14)':
+                   estadoVisual==='en_proceso'?'rgba(37,131,84,.15)':
+                   estadoVisual==='completada'?'rgba(109,39,137,.16)':
+                   estadoVisual==='retrasada'?'rgba(184,77,63,.17)':'rgba(168,176,171,.12)';
+  return '<div class="c258-workcard '+estadoVisual+'" style="border-left-color:'+colorEstado+'!important;box-shadow:0 8px 18px '+sombraEstado+'!important;">'+
     '<div class="c258-worktop"><div><div class="c258-worktitle">'+nombreLabor+'</div><div class="c258-worksub">'+fechaLarga(grupo.fecha_asignacion)+'</div>'+
     '<div class="c258-badges"><span class="c258-plant '+pc+'">'+ubicacion+'</span><span class="c258-status '+estado+'">'+estadoTxt+'</span></div></div><div>'+menu+'</div></div>'+
     '<div class="c258-meta-grid"><div class="c258-meta"><b>Personal asignado</b>'+(nombres.join(', ')||'Sin asignar')+'</div><div class="c258-meta"><b>Jornada</b>'+jornada+'</div><div class="c258-meta"><b>Avance</b>'+pct+'%</div>'+
     (grupo.notas_encargado?'<div class="c258-meta"><b>Indicaciones</b>'+grupo.notas_encargado+'</div>':'')+'</div>'+
-    '<div class="c258-progress"><div class="c258-progress-top"><span>'+(retrasada?'Avance pendiente por terminar':'Avance de la labor')+'</span><span>'+hechos+(total?'/'+total:'')+(total?' surcos':'')+'</span></div><div class="c258-progressbar"><i style="width:'+pct+'%"></i></div></div>'+
+    '<div class="c258-progress"><div class="c258-progress-top"><span>'+(retrasada?'Avance pendiente por terminar':'Avance de la labor')+'</span><span>'+hechos+(total?'/'+total:'')+(total?' surcos':'')+'</span></div><div class="c258-progressbar"><i style="width:'+pct+'%;background:'+colorEstado+'!important"></i></div></div>'+
     opciones+'</div>';
 }
 function c259AbrirEditar(grupo){c260AbrirEditarLabor(grupo);}
