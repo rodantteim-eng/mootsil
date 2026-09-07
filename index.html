@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C300';
+  window.MOOTSIL_BUILD='C301';
 </script>
 
 
@@ -2607,6 +2607,20 @@ function c231Icon(name, cls){
 .c300-catalog-check input{margin-top:2px}.c300-catalog-check b{color:#155b40}
 .c300-existing-auth{margin-top:8px;border:1px solid #e1c783;background:#fff9eb;color:#85600b;border-radius:8px;padding:8px 10px;font-size:.63rem;font-weight:800}
 .c300-product-line{display:inline-block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:900px;vertical-align:bottom}
+</style>
+
+<style id="c301-aplicaciones-final">
+.c301-authorized-note{
+  display:inline-flex;align-items:center;gap:4px;margin-top:5px;
+  padding:2px 7px;border-radius:999px;background:#f2f6f3;color:#5d7066;
+  font-size:.56rem;font-weight:800;border:1px solid #dfe7e2
+}
+.c301-card-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.c301-finish{
+  border:1px solid #b8d3c2;background:#f7fbf8;color:#176043;border-radius:9px;
+  padding:7px 10px;font-size:.66rem;font-weight:850;cursor:pointer
+}
+.c301-finish:hover{background:#eef7f1}
 </style>
 </head>
 <body>
@@ -6751,6 +6765,33 @@ function c298GuardarPersonal(){
 
 function c296CancelarAplicacion(){if(!confirm('¿Cancelar esta aplicación? El registro se conservará para trazabilidad.'))return;Promise.all([from('formulas_aplicacion').eq('id',C296_APP_MANAGE_ID).update({activo:false}),from('ordenes_trabajo').eq('formula_id',C296_APP_MANAGE_ID).update({estado:'cancelada'})]).then(function(){showToast('Aplicación cancelada');c296CerrarGestion();renderAplicacionesEstatus();}).catch(function(e){alert('Error al cancelar: '+e.message);});}
 
+
+function c301TerminarAplicacion(formulaId){
+  if(!formulaId)return;
+  if(!confirm('¿Confirmar aplicación como terminada manualmente?'))return;
+
+  Promise.all([
+    from('ordenes_trabajo').select('id,estado').eq('formula_id',formulaId).get(),
+    from('formulas_aplicacion').select('id,nombre').eq('id',formulaId).get()
+  ]).then(function(r){
+    var ordenes=(r[0]||[]).filter(function(o){return o.estado!=='cancelada'&&o.estado!=='completada';});
+    var ops=ordenes.map(function(o){
+      return from('ordenes_trabajo').eq('id',o.id).update({
+        estado:'completada',
+        cerrado_por:usuario.id,
+        cerrado_en:new Date().toISOString(),
+        cierre_manual:true
+      });
+    });
+    return Promise.all(ops);
+  }).then(function(){
+    showToast('✅ Aplicación terminada manualmente');
+    renderAplicacionesEstatus();
+  }).catch(function(e){
+    alert('Error al terminar la aplicación: '+e.message);
+  });
+}
+
 function renderAplicacionesEstatus(){
   var body=document.getElementById('enc-body');
   body.innerHTML=headerAplicaciones()+'<div class="loading">Cargando aplicaciones...</div>';
@@ -6808,15 +6849,22 @@ function renderAplicacionesEstatus(){
       html+=visibles.map(function(f){
         var p=f.tabla?(cats.plantaciones||[]).find(function(x){return String(x.id)===String(f.tabla.plantacion_id);}):null;
         var compsF=comps.filter(function(c){return c.formula_id===f.id;});
-        var productos=compsF.filter(function(c){return c.item;}).map(function(c){return c.item.nombre;});
+        var productos=compsF.map(function(c){
+          if(c.item&&c.item.nombre)return c.item.nombre;
+          var inv=(cats.inventario||[]).find(function(x){return String(x.id)===String(c.item_id);});
+          return inv?inv.nombre:'';
+        }).filter(Boolean);
         var prodVista=productos.slice(0,3);
         var prodTexto=prodVista.join(' · ')+(productos.length>3?' · +'+(productos.length-3)+' productos':'');
         var faltanteAutorizado=compsF.some(function(c){return c.estado_faltante==='autorizado'&&Number(c.faltante_detectado||0)>0;});
         var est=f._estado==='done'?'Terminada':f._estado==='late'?'Retrasada':f._estado==='process'?'En proceso':f._estado==='pending'?'Pendiente':'Programada';
         var via=f.via==='Riego'?'Vía Riego':f.via;
         return '<div class="c291-card '+f._estado+'"><div class="c291-card-top"><div><div class="c291-card-title">'+(VIA_ICONOS[f.via]||'🧪')+' '+via+' · '+(f.nombre||'Aplicación')+'</div>'+
-          '<div class="c291-meta">📍 '+(p?p.nombre+' · ':'')+(f.tabla?f.tabla.nombre:'')+(f.via==='Riego'?' · <b>Tabla completa</b>':'')+'<br>📅 '+(f.fecha_programada||'Sin fecha')+(productos.length?'<br><span class="c300-product-line">🧴 '+prodTexto+'</span>':'')+(f._ordenes&&f._ordenes.length?'<br>👤 '+f._ordenes.map(function(o){return o.operario?o.operario.nombre:'';}).filter(Boolean).join(', '):'<br>👤 Sin asignar')+(faltanteAutorizado?'<br><span class="c299-card-warning">⚠️ Inventario faltante autorizado</span>':'')+'</div></div>'+
-          '<div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;"><button type="button" class="c296-card-manage" onclick="c296GestionarAplicacion(&quot;'+f.id+'&quot;)">Gestionar</button></div></div></div>';
+          '<div class="c291-meta">📍 '+(p?p.nombre+' · ':'')+(f.tabla?f.tabla.nombre:'')+(f.via==='Riego'?' · <b>Tabla completa</b>':'')+'<br>📅 '+(f.fecha_programada||'Sin fecha')+(productos.length?'<br><span class="c300-product-line">🧴 '+prodTexto+'</span>':'')+(f._ordenes&&f._ordenes.length?'<br>👤 '+f._ordenes.map(function(o){return o.operario?o.operario.nombre:'';}).filter(Boolean).join(', '):'<br>👤 Sin asignar')+(faltanteAutorizado?'<br><span class="c301-authorized-note">✓ Faltante autorizado</span>':'')+'</div></div>'+
+          '<div class="c301-card-actions">'+
+            ((f._estado!=='done'&&f._estado!=='cancelled')?'<button type="button" class="c301-finish" onclick="c301TerminarAplicacion(&quot;'+f.id+'&quot;)">✓ Terminar</button>':'')+
+            '<button type="button" class="c296-card-manage" onclick="c296GestionarAplicacion(&quot;'+f.id+'&quot;)">Gestionar</button>'+
+          '</div></div></div>';
       }).join('');
     }
     html+='</div>';
@@ -18573,7 +18621,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C300
+C301
 </div>
 
 <style id="fi128-css">
