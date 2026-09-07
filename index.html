@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C279';
+  window.MOOTSIL_BUILD='C280';
 </script>
 
 
@@ -2289,11 +2289,11 @@ function c231Icon(name, cls){
   transition:.15s ease;
 }
 #c260-nueva-root .c274-cat .ico{
-  width:38px!important;height:38px!important;min-width:38px!important;
+  width:30px!important;height:30px!important;min-width:30px!important;
   border-radius:11px!important;
   display:flex!important;align-items:center!important;justify-content:center!important;
 }
-#c260-nueva-root .c274-cat .ico svg{width:25px!important;height:25px!important}
+#c260-nueva-root .c274-cat .ico svg{width:20px!important;height:20px!important}
 #c260-nueva-root .c274-cat .txt{
   font-size:.74rem!important;
   text-align:left!important;
@@ -4608,13 +4608,7 @@ function c274RenderVariantes(cat){
     host.innerHTML='<div class="c274-variants-title">'+cat.nombre+'</div><div class="c274-hint">Esta categoría no requiere variante. Puedes continuar con ubicación, personal y fecha.</div>';
     return;
   }
-  host.innerHTML='<div class="c274-variants-title">Variante de '+cat.nombre+'</div><div class="c274-chiprow">'+
-    cat.variantes.map(function(v){
-      return '<button type="button" class="c274-chip '+(C274_VAR_SEL===v?'sel':'')+'" data-var="'+v.replace(/"/g,'&quot;')+'">'+v+'</button>';
-    }).join('')+'</div>';
-  host.querySelectorAll('[data-var]').forEach(function(b){
-    b.onclick=function(){c274ElegirVariante(this.dataset.var);};
-  });
+  host.innerHTML='<div class="c274-variants-title">Variante de '+cat.nombre+'</div><div class="c274-hint">Selecciona la variante en la lista desplegable de la asignación.</div>';
 }
 function c274ElegirCatalogo(k){
   var cat=C274_CATALOGO_LABORES.find(function(x){return x.k===k;});if(!cat)return;
@@ -4630,21 +4624,44 @@ function c274ElegirCatalogo(k){
   }
   c274AsegurarTipo(cat).then(function(lb){
     if(!lb)throw new Error('No se pudo preparar la categoría.');
-    asignarLaborSel=lb;asignarLaborSubSel=null;
-    c253RenderAsignacion();
-    c274RenderVariantes(cat);
+    asignarLaborSel=lb;
+    // Si el usuario ya eligió una variante mientras cargaba la categoría,
+    // no reiniciar la selección ni borrar el flujo.
+    if(!C274_VAR_SEL){
+      asignarLaborSubSel=null;
+      c253RenderAsignacion();
+      c274RenderVariantes(cat);
+    }
   }).catch(function(e){alert('Error al preparar la labor: '+e.message);});
 }
 function c274ElegirVariante(nombre){
-  if(!C274_CAT_SEL||!asignarLaborSel)return;
+  if(!C274_CAT_SEL)return;
+
+  // Marcar visualmente la variante de inmediato, aunque todavía se esté
+  // resolviendo/creando la categoría en Supabase.
   C274_VAR_SEL=nombre;
-  c274AsegurarVariante(asignarLaborSel,nombre).then(function(sub){
+  c274RenderVariantes(C274_CAT_SEL);
+
+  var prepararLabor=asignarLaborSel
+    ? Promise.resolve(asignarLaborSel)
+    : c274AsegurarTipo(C274_CAT_SEL);
+
+  prepararLabor.then(function(lb){
+    if(!lb)throw new Error('No se pudo preparar la categoría.');
+    asignarLaborSel=lb;
+    return c274AsegurarVariante(lb,nombre);
+  }).then(function(sub){
+    if(!sub)throw new Error('No se pudo preparar la variante.');
     asignarLaborSubSel=sub;
     c253RenderAsignacion();
     var fsb=document.getElementById('fsb');
-    if(fsb&&sub)fsb.value=sub.id;
+    if(fsb)fsb.value=sub.id;
     c274RenderVariantes(C274_CAT_SEL);
-  }).catch(function(e){alert('Error al preparar la variante: '+e.message);});
+  }).catch(function(e){
+    C274_VAR_SEL=null;
+    c274RenderVariantes(C274_CAT_SEL);
+    alert('Error al preparar la variante: '+e.message);
+  });
 }
 function renderFormAsignar(){
   var body=document.getElementById('c260-nueva-body');
