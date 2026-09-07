@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C255';
+  window.MOOTSIL_BUILD='C256';
 </script>
 
 
@@ -2034,6 +2034,31 @@ function c231Icon(name, cls){
 .c255-state.pendiente{background:#fff1d7;color:#9a6200}.c255-state.en_proceso{background:#e3f2fa;color:#17658b}.c255-state.completada{background:#e4f3e9;color:#177044}.c255-state.cancelada{background:#f8e7e5;color:#a13d34}
 .c255-empty{padding:24px;text-align:center;color:#7a8781;font-size:.76rem}
 @media(max-width:760px){.c255-hrow{grid-template-columns:72px 1fr 92px}.c255-hperson{grid-column:2}.c255-hwhere{grid-column:2}.c255-state{grid-column:3;grid-row:1}}
+</style>
+
+<style id="c256-labores-tablero">
+.c256-dashboard{margin:0 0 14px;background:#fff;border:1px solid #dde6e0;border-radius:16px;overflow:hidden}
+.c256-dash-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #e7ece9;flex-wrap:wrap}
+.c256-dash-title{font-size:.84rem;font-weight:900;color:#0d513b;text-transform:uppercase;letter-spacing:.045em}
+.c256-dash-sub{font-size:.7rem;color:#718078;margin-top:2px}
+.c256-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:12px 16px}
+.c256-stat{border:1px solid #e0e7e3;border-radius:12px;padding:10px 12px;background:#fbfcfb}
+.c256-stat b{display:block;font-size:1.15rem;color:#123f2d}.c256-stat span{font-size:.66rem;color:#718078}
+.c256-plants{display:grid;grid-template-columns:1.15fr .85fr;gap:12px;padding:0 16px 16px}
+.c256-plant-card{border:1px solid #dfe7e2;border-radius:12px;overflow:hidden}
+.c256-plant-head{display:flex;justify-content:space-between;align-items:center;color:#fff;padding:8px 10px;font-weight:850;font-size:.75rem}
+.c256-plant-card.erandy .c256-plant-head{background:#165c43}.c256-plant-card.jade .c256-plant-head{background:#6d2789}
+.c256-table-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:10px}
+.c256-plant-card.jade .c256-table-grid{grid-template-columns:repeat(3,1fr)}
+.c256-tile{border:1px solid #e0e6e2;border-radius:9px;padding:8px;background:#fff}
+.c256-tile-title{font-size:.7rem;font-weight:850;color:#253b31}.c256-tile-meta{font-size:.61rem;color:#7b8781;margin-top:2px}
+.c256-bar{height:7px;border-radius:99px;background:#edf1ee;overflow:hidden;margin-top:7px}.c256-bar>i{display:block;height:100%;background:#2b8a5b}
+.c256-plant-card.jade .c256-bar>i{background:#7c3598}
+.c256-opmode{margin-top:.72rem}.c256-opmode label{display:block;font-size:.65rem;font-weight:850;letter-spacing:.055em;text-transform:uppercase;color:#78867e;margin-bottom:.26rem}
+.c256-opmode-row{display:flex;gap:.38rem;flex-wrap:wrap}.c256-opmode-row button{border:1px solid #d7e1db;background:#fff;border-radius:999px;padding:.42rem .7rem;font-size:.7rem;font-weight:800;cursor:pointer}
+.c256-opmode-row button.sel{background:#e8f4ed;border-color:#0b5a37;color:#0b5a37}
+.c256-extra-wrap{margin-top:.55rem}
+@media(max-width:900px){.c256-plants{grid-template-columns:1fr}.c256-summary{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
@@ -3442,16 +3467,55 @@ var horasExtraAutorizadas=2;
 var ASIGNAR_SUBTAB='hoy';
 
 function headerAsignar(){
-  return '<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4rem;">🧰 Labores<div style="display:flex;flex-wrap:wrap;gap:.6rem;"><button type="button" onclick="renderFormAsignar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">➕ Nueva labor</button></div></div>';
+  return '<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.4rem;">🧰 Tablero de labores<div style="display:flex;flex-wrap:wrap;gap:.6rem;"><button type="button" onclick="renderFormAsignar()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:700;cursor:pointer;">➕ Nueva labor</button></div></div>';
 }
 
 function barraSubtabsAsignar(){
-  var tabs=[['programadas','🆕 Programadas'],['hoy','🔥 Realizar Hoy'],['terminadas','✅ Terminadas']];
+  var tabs=[['programadas','🆕 Programadas'],['hoy','🟠 Pendientes / En curso'],['terminadas','✅ Terminadas']];
   return '<div style="display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap;">'+tabs.map(function(t){
     return '<button type="button" class="rep-view-btn'+(ASIGNAR_SUBTAB===t[0]?' active':'')+'" onclick="ASIGNAR_SUBTAB=\''+t[0]+'\';renderAsignarEstatus();">'+t[1]+'</button>';
   }).join('')+'</div>';
 }
 
+
+function c256SemanaActual(){
+  var d=new Date();d.setHours(12,0,0,0);
+  var dow=(d.getDay()+6)%7;d.setDate(d.getDate()-dow);
+  var ini=new Date(d),fin=new Date(d);fin.setDate(fin.getDate()+6);
+  function iso(x){return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');}
+  return {ini:iso(ini),fin:iso(fin)};
+}
+function c256DashboardLabores(ordenes){
+  var rg=c256SemanaActual();
+  var lab=(ordenes||[]).filter(function(o){
+    return o.fecha_asignacion>=rg.ini&&o.fecha_asignacion<=rg.fin&&!ordenEsTiempo(o);
+  });
+  var total=lab.length, terminadas=lab.filter(function(o){return o.estado==='completada';}).length;
+  var proceso=lab.filter(function(o){return o.estado==='en_proceso';}).length;
+  var pendientes=lab.filter(function(o){return o.estado==='pendiente';}).length;
+  function tableStats(tid){
+    var os=lab.filter(function(o){return String(o.tabla_id||'')===String(tid);});
+    var asignados=0,hechos=0;
+    os.forEach(function(o){
+      var p=progresoSurcosOrden(o);
+      asignados+=p.totalAsignados.length;
+      hechos+=p.completados.length;
+    });
+    var pct=asignados?Math.round((hechos/asignados)*100):(os.length&&os.every(function(o){return o.estado==='completada';})?100:0);
+    return {n:os.length,pct:pct};
+  }
+  function plantBlock(p,cls){
+    var ts=(cats.tablas||[]).filter(function(t){return String(t.plantacion_id)===String(p.id);});
+    return '<div class="c256-plant-card '+cls+'"><div class="c256-plant-head"><span>PLANTACIÓN '+(p.nombre||'').toUpperCase()+'</span><span>'+ts.length+' tablas</span></div><div class="c256-table-grid">'+
+      ts.map(function(t){var st=tableStats(t.id);return '<div class="c256-tile"><div class="c256-tile-title">'+t.nombre+'</div><div class="c256-tile-meta">'+st.n+' labor(es) · '+st.pct+'% avance</div><div class="c256-bar"><i style="width:'+st.pct+'%"></i></div></div>';}).join('')+
+      '</div></div>';
+  }
+  var er=(cats.plantaciones||[]).find(function(p){return /erandy/i.test(p.nombre||'');});
+  var ja=(cats.plantaciones||[]).find(function(p){return /jade/i.test(p.nombre||'');});
+  return '<section class="c256-dashboard"><div class="c256-dash-head"><div><div class="c256-dash-title">Avance semanal de labores</div><div class="c256-dash-sub">'+rg.ini+' al '+rg.fin+' · control por plantación y tabla</div></div></div>'+
+    '<div class="c256-summary"><div class="c256-stat"><b>'+total+'</b><span>Labores de la semana</span></div><div class="c256-stat"><b>'+pendientes+'</b><span>Pendientes</span></div><div class="c256-stat"><b>'+proceso+'</b><span>En proceso</span></div><div class="c256-stat"><b>'+terminadas+'</b><span>Terminadas</span></div></div>'+
+    '<div class="c256-plants">'+(er?plantBlock(er,'erandy'):'')+(ja?plantBlock(ja,'jade'):'')+'</div></section>';
+}
 function renderAsignarEstatus(){
   var body=document.getElementById('enc-body');
   body.innerHTML=headerAsignar()+barraSubtabsAsignar()+'<div class="loading">Cargando labores...</div>';
@@ -3467,7 +3531,7 @@ function renderAsignarEstatus(){
     terminadas.forEach(function(o){o._ficha='terminadas';});
     var todas=activas.concat(terminadas);
     var filtradas=todas.filter(function(o){return o._ficha===ASIGNAR_SUBTAB;});
-    var html=headerAsignar()+barraSubtabsAsignar();
+    var html=headerAsignar()+c256DashboardLabores(todas)+barraSubtabsAsignar();
     if(!filtradas.length){
       var vacioTxt=ASIGNAR_SUBTAB==='programadas'?'No hay labores programadas a futuro.':ASIGNAR_SUBTAB==='hoy'?'Nada por realizar hoy. 🎉':'Aún no hay labores terminadas.';
       html+='<div class="empty">'+vacioTxt+'</div>';
@@ -3854,6 +3918,16 @@ function c253Fecha(tipo){
   document.querySelectorAll('.c253-date-row button').forEach(function(b){b.classList.remove('sel');});
   var b=document.getElementById('c253-'+tipo);if(b)b.classList.add('sel');
 }
+
+function c256SetModalidad(tipo){
+  modoAsignacionLabor=tipo;
+  var reg=document.getElementById('c256-reg'),ext=document.getElementById('c256-extra'),wrap=document.getElementById('c256-extra-wrap');
+  if(reg)reg.classList.toggle('sel',tipo==='normal');
+  if(ext)ext.classList.toggle('sel',tipo==='extra');
+  if(wrap)wrap.style.display=tipo==='extra'?'':'none';
+  var btn=document.querySelector('#c253-asignacion .c253-assign');
+  if(btn)btn.textContent=tipo==='extra'?'Asignar hora extra':'Asignar labor';
+}
 function c253RenderAsignacion(){
   var panel=document.getElementById('c253-asignacion');
   if(!panel)return;
@@ -3878,9 +3952,10 @@ function c253RenderAsignacion(){
     '<div class="c253-section" style="margin-top:.72rem;">Ubicación</div>'+
     (noTabla?'<div class="c253-rule">Actividad general · no requiere plantación ni tabla.</div><input type="hidden" id="ftb" value="">':'<input type="hidden" id="ftb" value="">'+plants)+
     '<div class="c253-section" style="margin-top:.72rem;">Personal asignado</div><div id="c253-personal"></div>'+
-    '<div class="c253-section" style="margin-top:.72rem;">Inicio</div>'+
-    '<div class="c253-date-row"><button id="c253-hoy" type="button" class="sel" onclick="c253Fecha(&quot;hoy&quot;)">Hoy</button><button id="c253-manana" type="button" onclick="c253Fecha(&quot;manana&quot;)">Mañana</button></div>'+
-    '<div class="c253-field"><label>Elegir otra fecha</label><input type="date" id="ffe" value="'+fechaHoyLocal()+'"></div>'+
+    '<div class="c253-section" style="margin-top:.72rem;">Asignación</div>'+
+    '<div class="c256-opmode"><label>Tipo de jornada</label><div class="c256-opmode-row"><button id="c256-reg" type="button" class="'+(modoAsignacionLabor==='normal'?'sel':'')+'" onclick="c256SetModalidad(&quot;normal&quot;)">Jornada regular</button><button id="c256-extra" type="button" class="'+(modoAsignacionLabor==='extra'?'sel':'')+'" onclick="c256SetModalidad(&quot;extra&quot;)">Hora extra</button></div></div>'+
+    '<div id="c256-extra-wrap" class="c256-extra-wrap" style="display:'+(modoAsignacionLabor==='extra'?'':'none')+'"><div class="c253-field"><label>Horas autorizadas</label><input type="text" id="labor-horas-input" value="'+horasExtraAutorizadas+'" oninput="horasExtraAutorizadas=parseFloat(this.value)||2"></div></div>'+
+    '<div class="c253-field"><label>Fecha de inicio</label><input type="date" id="ffe" value="'+fechaHoyLocal()+'"></div>'+
     '<div class="c253-field"><label>Indicaciones</label><input type="text" id="fno" placeholder="Opcional: instrucciones para el colaborador..."></div>'+
     '<div class="c253-rule"><b>La tabla se asigna completa.</b> Mootsil registra automáticamente todos sus surcos. Si no se termina, conserva el avance y la labor queda <b>Pendiente por terminar</b> desde el siguiente surco.</div>'+
     '<button type="button" class="c253-assign" onclick="guardarOrden()">'+(modoAsignacionLabor==='extra'?'Asignar hora extra':'Asignar labor')+'</button>';
@@ -3911,24 +3986,15 @@ function renderFormAsignar(){
   }).join('');
   body.innerHTML=
     '<div class="c253-head"><div><div class="c253-kicker">LABORES</div><h2 class="c253-title">Nueva labor</h2><p class="c253-sub">Selecciona y asigna la labor desde una sola pantalla.</p></div><button type="button" onclick="renderAsignarEstatus()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:700;cursor:pointer;">← Labores</button></div>'+
-    '<div class="c253-mode"><button type="button" class="op-chip sel" id="modo-normal">🕐 Normal</button><button type="button" class="op-chip" id="modo-extra">⏰ Hora Extra</button></div>'+
-    '<div id="labor-horas-wrap" style="display:none;max-width:340px;margin-bottom:.75rem;"><label style="display:block;font-size:.65rem;font-weight:850;color:#78867e;margin-bottom:.25rem;">HORAS AUTORIZADAS</label><input type="number" id="labor-horas-input" min="0" step="0.5" value="2" style="width:100%;min-height:39px;border:1px solid #d2ddd6;border-radius:10px;padding:.56rem .68rem;"></div>'+
+
     '<div class="c253-shell"><div class="c253-left"><div class="c253-section">¿Qué trabajo se va a realizar?</div><div class="c253-grid">'+tiles+
       '<button type="button" class="c253-labor" id="labor-otra-tile"><div class="c250-labor-ic"><svg viewBox="0 0 48 48"><path d="M24 10v28M10 24h28"/></svg></div><div class="c250-labor-name">Otra labor</div></button></div>'+
       '<div id="labor-otra-box" class="c253-other" style="display:none;"><label style="display:block;font-size:.65rem;font-weight:850;color:#78867e;margin-bottom:.25rem;">NOMBRE DE LA LABOR</label><input type="text" id="labor-otra-input" placeholder="Ej. Reparar cerco, recoger plástico, limpiar bodega..." style="width:100%;min-height:39px;border:1px solid #d2ddd6;border-radius:10px;padding:.56rem .68rem;"><label style="display:flex;align-items:center;gap:.4rem;margin-top:.45rem;font-size:.73rem;"><input type="checkbox" id="labor-otra-tabla" checked> Se realiza en una tabla</label><label style="display:flex;align-items:center;gap:.4rem;margin-top:.38rem;font-size:.73rem;"><input type="checkbox" id="labor-otra-catalogo"> Guardar como labor frecuente</label><button type="button" id="labor-otra-btn" class="c253-assign" style="margin-top:.5rem;">Usar esta labor</button></div>'+
-    '</div><div class="c253-right"><div id="c253-asignacion"><div class="c253-empty"><b>Selecciona una labor</b><br>La asignación aparecerá aquí.</div></div></div></div><div id="c255-historial-labores"></div>';
+    '</div><div class="c253-right"><div id="c253-asignacion"><div class="c253-empty"><b>Selecciona una labor</b><br>La asignación aparecerá aquí.</div></div></div></div>';
 
-  document.getElementById('modo-normal').addEventListener('click',function(){
-    modoAsignacionLabor='normal';this.classList.add('sel');document.getElementById('modo-extra').classList.remove('sel');document.getElementById('labor-horas-wrap').style.display='none';if(asignarLaborSel)c253RenderAsignacion();
-  });
-  document.getElementById('modo-extra').addEventListener('click',function(){
-    modoAsignacionLabor='extra';this.classList.add('sel');document.getElementById('modo-normal').classList.remove('sel');document.getElementById('labor-horas-wrap').style.display='';if(asignarLaborSel)c253RenderAsignacion();
-  });
-  document.getElementById('labor-horas-input').addEventListener('input',function(){horasExtraAutorizadas=parseFloat(this.value)||2;});
   document.getElementById('labor-otra-tile').addEventListener('click',function(){
     var box=document.getElementById('labor-otra-box');box.style.display=box.style.display==='none'?'':'none';if(box.style.display!=='none')document.getElementById('labor-otra-input').focus();
   });
-  c255RenderHistorialLabores();
   document.getElementById('labor-otra-btn').addEventListener('click',function(){
     var nombre=(document.getElementById('labor-otra-input').value||'').trim();
     if(!nombre){alert('Escribe el nombre de la labor.');return;}
@@ -16784,7 +16850,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C255
+C256
 </div>
 
 <style id="fi128-css">
