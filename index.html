@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C274';
+  window.MOOTSIL_BUILD='C275';
 </script>
 
 
@@ -2229,6 +2229,21 @@ function c231Icon(name, cls){
 .c274-hint{font-size:.67rem;color:#718079;margin-top:7px;line-height:1.35}
 @media(max-width:850px){.c274-catgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.c274-catgrid{grid-template-columns:1fr}}
+</style>
+
+<style id="c275-modal-labores">
+.c275-modal-card{width:min(760px,94vw);max-height:88vh;overflow:auto;background:#fff;border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.28)}
+.c275-modal-head{display:flex;justify-content:space-between;align-items:flex-start;padding:18px 20px 13px;border-bottom:1px solid #e4ebe7}
+.c275-modal-title{font-size:1.2rem;font-weight:900;color:#174d35}
+.c275-modal-sub{font-size:.73rem;color:#6d7d75;margin-top:3px}
+.c275-modal-body{padding:16px 18px 19px}
+.c275-modal-close{border:0;background:#eef4f0;border-radius:50%;width:36px;height:36px;font-weight:900;color:#315846;cursor:pointer}
+.c275-modal-card .c274-catgrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.c275-modal-card .c274-cat{min-height:82px}
+.c275-modal-card .c274-cat .ico{width:34px;height:34px;color:#17623f}
+.c275-modal-card .c274-cat .ico svg{width:34px;height:34px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.c275-modal-card .c274-variants{margin-bottom:0}
+@media(max-width:650px){.c275-modal-card .c274-catgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head>
 <body>
@@ -4391,19 +4406,34 @@ function c260AbrirNuevaLabor(){
   renderFormAsignar();
 }
 
+
+function c275Icon(k){
+  var p={
+    poda:'<svg viewBox="0 0 64 64"><path d="M18 17l29 30M46 17L17 46"/><circle cx="17" cy="17" r="7"/><circle cx="17" cy="47" r="7"/><path d="M36 27l12-13M35 37l13 13"/></svg>',
+    desbrozadora:'<svg viewBox="0 0 64 64"><path d="M18 12l29 31M22 16l8-8M45 41l-8 9M38 50h17M49 43l7 7"/><path d="M12 54c9-4 18-4 27 0"/></svg>',
+    deshierbado:'<svg viewBox="0 0 64 64"><path d="M32 53V29M32 36c-12 0-18-7-18-17 12 0 18 7 18 17zM32 30c11 0 17-7 17-16-11 0-17 7-17 16zM17 54h30"/></svg>',
+    limpieza:'<svg viewBox="0 0 64 64"><path d="M45 8L26 42"/><path d="M14 43h25l7 11H9z"/><path d="M15 47v9M21 47v9M27 47v9M33 47v9M39 47v9"/></svg>',
+    trineado:'<svg viewBox="0 0 64 64"><path d="M10 13v42M54 13v42M10 22h44M10 34h44M10 46h44"/><path d="M32 54V29M32 38c-10 0-15-6-15-14 10 0 15 6 15 14zM32 32c9 0 14-6 14-13-9 0-14 6-14 13z"/></svg>',
+    tutoreo:'<svg viewBox="0 0 64 64"><path d="M13 9v47M51 9v47"/><path d="M13 18h38M13 28h38M13 38h38M13 48h38"/><path d="M9 56h8M47 56h8"/></svg>',
+    trampas:'<svg viewBox="0 0 64 64"><path d="M20 17h24l-4 36H24zM25 17l3-7h8l3 7M24 30h16"/><path d="M17 54h30"/></svg>',
+    infraestructura:'<svg viewBox="0 0 64 64"><path d="M8 52h48M12 52V35C12 19 22 10 32 10s20 9 20 25v17"/><path d="M20 52V34c0-10 5-17 12-17s12 7 12 17v18"/><path d="M12 34h40"/></svg>',
+    otros:'<svg viewBox="0 0 64 64"><path d="M32 14v36M14 32h36"/></svg>'
+  };
+  return p[k]||p.otros;
+}
 var C274_CATALOGO_LABORES=[
-  {k:'poda',nombre:'Poda',icono:'✂️',variantes:['Selectiva','Vegetativa','A piso']},
-  {k:'desbrozadora',nombre:'Desbrozadora',icono:'🌿',variantes:[]},
-  {k:'deshierbado',nombre:'Deshierbado',icono:'🌱',variantes:[]},
-  {k:'limpieza',nombre:'Limpieza',icono:'🧹',variantes:['Basura','Quema']},
-  {k:'trineado',nombre:'Trineado',icono:'🪴',variantes:[]},
-  {k:'tutoreo',nombre:'Tutoreo',icono:'🪢',variantes:['Instalación Tubos','Instalación Rafia','Instalación Alambre','Candados','Mantenimiento a Tubos']},
-  {k:'trampas',nombre:'Trampas',icono:'🪤',variantes:['Melaza','Vinagre','Plásticos']},
-  {k:'infraestructura',nombre:'Infraestructura',icono:'🏗️',variantes:[
+  {k:'poda',nombre:'Poda',icono:c275Icon('poda'),variantes:['Selectiva','Vegetativa','A piso']},
+  {k:'desbrozadora',nombre:'Desbrozadora',icono:c275Icon('desbrozadora'),variantes:[]},
+  {k:'deshierbado',nombre:'Deshierbado',icono:c275Icon('deshierbado'),variantes:[]},
+  {k:'limpieza',nombre:'Limpieza',icono:c275Icon('limpieza'),variantes:['Basura','Quema']},
+  {k:'trineado',nombre:'Trineado',icono:c275Icon('trineado'),variantes:[]},
+  {k:'tutoreo',nombre:'Tutoreo',icono:c275Icon('tutoreo'),variantes:['Instalación Tubos','Instalación Rafia','Instalación Alambre','Candados','Mantenimiento a Tubos']},
+  {k:'trampas',nombre:'Trampas',icono:c275Icon('trampas'),variantes:['Melaza','Vinagre','Plásticos']},
+  {k:'infraestructura',nombre:'Infraestructura',icono:c275Icon('infraestructura'),variantes:[
     'Instalación · Plásticos','Instalación · Malla','Instalación · Arcos','Instalación · Tutores',
     'Reemplazo · Plásticos','Reemplazo · Malla','Reemplazo · Arcos','Reemplazo · Tutores'
   ]},
-  {k:'otros',nombre:'Otros',icono:'➕',variantes:[]}
+  {k:'otros',nombre:'Otros',icono:c275Icon('otros'),variantes:[]}
 ];
 var C274_CAT_SEL=null;
 var C274_VAR_SEL=null;
@@ -4477,7 +4507,7 @@ function c274RenderVariantes(cat){
       return '<button type="button" class="c274-chip '+(C274_VAR_SEL===v?'sel':'')+'" data-var="'+v.replace(/"/g,'&quot;')+'">'+v+'</button>';
     }).join('')+'</div>';
   host.querySelectorAll('[data-var]').forEach(function(b){
-    b.onclick=function(){c274ElegirVariante(this.dataset.var);};
+    b.onclick=function(){C274_VAR_SEL=this.dataset.var;c274RenderVariantes(C274_CAT_SEL);};
   });
 }
 function c274ElegirCatalogo(k){
@@ -4511,36 +4541,27 @@ function c274ElegirVariante(nombre){
   }).catch(function(e){alert('Error al preparar la variante: '+e.message);});
 }
 function renderFormAsignar(){
-  asignarLaborSel=null;asignarLaborSubSel=null;modoAsignacionLabor='normal';horasExtraAutorizadas=2;
-  c253Seleccionados=[];c253TablaId=null;c253TipoPersonal='base';
-  var body=document.getElementById('c260-nueva-body')||document.getElementById('enc-body');
-  C274_CAT_SEL=null;C274_VAR_SEL=null;
+  var body=document.getElementById('modal-body');
+  if(!body)return;
+  C274_CAT_SEL=null;C274_VAR_SEL=null;asignarLaborSel=null;asignarLaborSubSel=null;
   var tiles=C274_CATALOGO_LABORES.map(function(cat){
-    return '<button type="button" class="c274-cat" data-cat="'+cat.k+'" onclick="c274ElegirCatalogo(&quot;'+cat.k+'&quot;)">'+
+    return '<button type="button" class="c274-cat" data-cat="'+cat.k+'" onclick="c275ElegirCatalogo(&quot;'+cat.k+'&quot;)">'+
       '<div class="ico">'+cat.icono+'</div><div class="txt">'+cat.nombre+'</div></button>';
   }).join('');
-  body.innerHTML=
-    '<div class="c253-head"><div><div class="c253-kicker">LABORES</div><h2 class="c253-title">Nueva labor</h2><p class="c253-sub">Selecciona y asigna la labor desde una sola pantalla.</p></div><button type="button" onclick="c260CerrarNueva()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:700;cursor:pointer;">Cerrar</button></div>'+
-
-    '<div class="c253-shell"><div class="c253-left"><div class="c253-section">Catálogo de labores</div><div class="c274-catgrid">'+tiles+'</div>'+
-      '<div id="c274-variants" class="c274-variants"><div class="c274-variants-title">Selecciona una categoría</div><div class="c274-hint">Comenzamos con 9 categorías operativas del Rancho Sagrado Corazón.</div></div>'+
-      '<div id="labor-otra-box" class="c253-other" style="display:none;"><label style="display:block;font-size:.65rem;font-weight:850;color:#78867e;margin-bottom:.25rem;">NOMBRE DE LA LABOR</label><input type="text" id="labor-otra-input" placeholder="Ej. Reparar cerco, recoger plástico, limpiar bodega..." style="width:100%;min-height:39px;border:1px solid #d2ddd6;border-radius:10px;padding:.56rem .68rem;"><label style="display:flex;align-items:center;gap:.4rem;margin-top:.45rem;font-size:.73rem;"><input type="checkbox" id="labor-otra-tabla" checked> Se realiza en una tabla</label><label style="display:flex;align-items:center;gap:.4rem;margin-top:.38rem;font-size:.73rem;"><input type="checkbox" id="labor-otra-catalogo"> Guardar como labor frecuente</label><button type="button" id="labor-otra-btn" class="c253-assign" style="margin-top:.5rem;">Usar esta labor</button></div>'+
-    '</div><div class="c253-right"><div id="c253-asignacion"><div class="c253-empty"><b>Selecciona una labor</b><br>La asignación aparecerá aquí.</div></div></div></div>';
-
-  document.getElementById('labor-otra-btn').addEventListener('click',function(){
-    var nombre=(document.getElementById('labor-otra-input').value||'').trim();
-    if(!nombre){alert('Escribe el nombre de la labor.');return;}
-    var requiereTablaNueva=!!document.getElementById('labor-otra-tabla').checked;
-    var enCatalogoNueva=!!document.getElementById('labor-otra-catalogo').checked;
-    function usar(lb){asignarLaborSel=lb;asignarLaborSubSel=null;c253RenderAsignacion();}
-    var existente=cats.tiposLabor.find(function(l){return (l.nombre||'').toLowerCase()===nombre.toLowerCase();});
-    if(existente){usar(existente);return;}
-    from('tipos_labor').insert({nombre:nombre,requiere_cantidad_insumo:false,requiere_tiempo:false,requiere_tabla:requiereTablaNueva,activo:enCatalogoNueva,orden:100}).then(function(){
-      return from('tipos_labor').select('*').eq('nombre',nombre).get();
-    }).then(function(rows){
-      var lb=rows&&rows[0]?rows[0]:null;if(!lb)return;if(enCatalogoNueva)cats.tiposLabor.push(lb);usar(lb);
-    }).catch(function(e){alert('Error: '+e.message);});
-  });
+  body.innerHTML='<div class="c275-modal-card">'+
+    '<div class="c275-modal-head"><div><div class="c275-modal-title">Nueva labor</div>'+
+    '<div class="c275-modal-sub">Selecciona la labor y, cuando corresponda, su variante.</div></div>'+
+    '<button type="button" class="c275-modal-close" onclick="closeModal()">×</button></div>'+
+    '<div class="c275-modal-body"><div class="c253-section">Catálogo de labores</div>'+
+    '<div class="c274-catgrid">'+tiles+'</div>'+
+    '<div id="c274-variants" class="c274-variants"><div class="c274-variants-title">Selecciona una categoría</div>'+
+    '<div class="c274-hint">La asignación se realizará después desde el tablero principal de Labores.</div></div></div></div>';
+}
+function c275ElegirCatalogo(k){
+  var cat=C274_CATALOGO_LABORES.find(function(x){return x.k===k;});if(!cat)return;
+  C274_CAT_SEL=cat;C274_VAR_SEL=null;
+  document.querySelectorAll('.c274-cat').forEach(function(b){b.classList.toggle('sel',b.dataset.cat===k);});
+  c274RenderVariantes(cat);
 }
 
 var C255_LAB_SEM_OFFSET=0;
