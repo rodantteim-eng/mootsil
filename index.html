@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C298';
+  window.MOOTSIL_BUILD='C299';
 </script>
 
 
@@ -2590,6 +2590,16 @@ function c231Icon(name, cls){
 .c298-disabled{padding:12px;border:1px dashed #d7e0da;border-radius:9px;font-size:.65rem;color:#74817a}
 .c298-assignment-note{border:1px solid #dce5df;background:#f7faf8;border-radius:9px;padding:8px 10px;font-size:.63rem;color:#586c61;margin-bottom:9px}
 @media(max-width:700px){.c298-prod-top,.c298-person-grid{grid-template-columns:1fr}}
+</style>
+
+<style id="c299-aplicaciones-reglas">
+.c299-shortage-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+.c299-shortage-actions button{border-radius:8px;padding:7px 10px;font-size:.64rem;font-weight:850;cursor:pointer}
+.c299-edit-products{border:1px solid #d8e2dc;background:#fff;color:#245943}
+.c299-authorize{border:1px solid #e0bf77;background:#fff9eb;color:#865f09}
+.c299-authorize.on{background:#eaf6ee;border-color:#82b394;color:#145c42}
+.c299-card-warning{display:inline-flex;align-items:center;gap:4px;margin-top:5px;padding:3px 7px;border-radius:999px;background:#fff4df;color:#8a6208;font-size:.57rem;font-weight:850}
+.c299-base-note{border:1px solid #dce5df;background:#f6faf7;border-radius:9px;padding:8px 10px;font-size:.64rem;color:#596c62;margin-bottom:9px}
 </style>
 </head>
 <body>
@@ -4713,7 +4723,7 @@ function c253RenderPersonal(){
   wrap.innerHTML=tabs+'<div class="c253-search"><input id="c253-buscar" type="text" placeholder="Buscar colaborador..." oninput="c253RenderPersonal()"></div><div class="c253-results">'+res+'</div><div class="c253-picked">'+c253Picks()+'</div>';
 }
 function c253Picks(){
-  var todos=(cats.operarios||[]).concat(cats.eventuales||[]);
+  var todos=(cats.operarios||[]);
   return c253Seleccionados.map(function(id){
     var o=todos.find(function(x){return x.id===id;});
     return o?'<span>'+o.nombre+' ×</span>':'';
@@ -6338,7 +6348,7 @@ function c291SetFiltro(f){C291_APP_FILTRO=f;renderAplicacionesEstatus();}
 
 function c291CerrarNuevaAplicacion(){var x=document.getElementById('c291-app-modal');if(x)x.remove();}
 function c291AbrirNuevaAplicacion(){
-  c291CerrarNuevaAplicacion();C291_APP_VIA=null;C291_APP_TABLA=null;C292_APP_TABLAS=[];C292_APP_PLANTACION=null;C293_FORMULA_MODO='nueva';
+  c291CerrarNuevaAplicacion();C291_APP_VIA=null;C291_APP_TABLA=null;C292_APP_TABLAS=[];C292_APP_PLANTACION=null;C293_FORMULA_MODO='nueva';C299_CREACION_FALTANTE_AUTORIZADO=false;
   var root=document.createElement('div');root.id='c291-app-modal';root.className='c291-modal-overlay';
   root.innerHTML='<div class="c291-modal"><div class="c291-modal-head"><div><h3>Nueva aplicación</h3><p>Selecciona vía y tabla. Después continúa con fórmula, productos, dosis, equipo y fecha.</p></div><button class="c291-close" onclick="c291CerrarNuevaAplicacion()">×</button></div>'+
     '<div class="c291-modal-body"><div class="c291-label">Tipo de aplicación</div><div class="c291-vias">'+
@@ -6443,6 +6453,7 @@ function c291ContinuarNuevaAplicacion(){
   renderFormulaPasoCategoria();
 }
 
+var C299_CREACION_FALTANTE_AUTORIZADO=false;
 var C298_PICKER_TARGET=null;
 var C298_PERSON_TIPO='base';
 var C298_PERSON_SEL=[];
@@ -6653,7 +6664,7 @@ function c296AsignarPersonal(){
   }).catch(function(e){alert('Error al cargar personal: '+e.message);});
 }
 function c298ListaPersonal(){
-  return C298_PERSON_TIPO==='eventual'?(cats.eventuales||[]):(cats.operarios||[]);
+  return (cats.operarios||[]).filter(function(o){return o.activo!==false&&o.estado!=='inactivo'&&o.estado!=='desactivado';});
 }
 function c298PintarAsignacion(){
   var f=C298_ASSIGN_FORMULA,tb=f.tabla||null;
@@ -6663,23 +6674,16 @@ function c298PintarAsignacion(){
   root.innerHTML='<div class="c297-edit"><div class="c298-accent '+(esJade?'jade':'')+'"></div>'+
     '<div class="c296-head"><div><h3>Asignar personal</h3><div style="font-size:.68rem;color:#6f7d75;margin-top:3px;">'+(f.nombre||'')+'</div></div><button class="c291-close" onclick="c296CerrarGestion()">×</button></div>'+
     '<div class="c296-body"><div class="c298-assignment-note"><b>Ubicación:</b> '+(pl?pl.nombre+' · ':'')+(tb?tb.nombre:'')+(f.via==='Riego'?' · Tabla completa':'')+'<br><b>Fecha:</b> '+(f.fecha_programada||'')+'. Selecciona uno o varios colaboradores; la aplicación sigue siendo una sola actividad conjunta.</div>'+
-    '<div class="c298-person-tabs"><button id="c298-tab-base" class="sel" onclick="c298SetTipoPersonal(&quot;base&quot;)">Base</button><button id="c298-tab-eventual" onclick="c298SetTipoPersonal(&quot;eventual&quot;)">Eventuales</button><button id="c298-tab-cuadrilla" onclick="c298SetTipoPersonal(&quot;cuadrilla&quot;)">Cuadrillas</button></div>'+
+    '<div class="c299-base-note"><b>Regla de seguridad:</b> las aplicaciones sólo pueden ser realizadas por personal Base. Eventuales y cuadrillas no son elegibles.</div>'+
     '<div id="c298-person-content"></div>'+
     '<div class="c296-actions"><button class="c296-secondary" onclick="c296GestionarAplicacion(&quot;'+f.id+'&quot;)">Volver a Gestionar</button><button class="c296-primary" onclick="c298GuardarPersonal()">Guardar asignación</button></div>'+
     '</div></div>';
   document.body.appendChild(root);root.addEventListener('click',function(e){if(e.target===root)c296CerrarGestion();});
   c298RenderPersonal();
 }
-function c298SetTipoPersonal(tipo){
-  C298_PERSON_TIPO=tipo;
-  ['base','eventual','cuadrilla'].forEach(function(t){var b=document.getElementById('c298-tab-'+t);if(b)b.classList.toggle('sel',t===tipo);});
-  c298RenderPersonal();
-}
+function c298SetTipoPersonal(tipo){C298_PERSON_TIPO='base';c298RenderPersonal();}
 function c298RenderPersonal(){
   var wrap=document.getElementById('c298-person-content');if(!wrap)return;
-  if(C298_PERSON_TIPO==='cuadrilla'){
-    wrap.innerHTML='<div class="c298-disabled"><b>Cuadrillas</b><br>El flujo queda preparado; el catálogo real de cuadrillas aún no está vinculado.</div><div class="c298-picked">'+c298PicksPersonal()+'</div>';return;
-  }
   var q=((document.getElementById('c298-person-search')||{}).value||'').toLowerCase();
   var lista=c298ListaPersonal().filter(function(o){return !q||(o.nombre||'').toLowerCase().indexOf(q)>-1;});
   wrap.innerHTML='<input id="c298-person-search" class="c298-search" placeholder="Buscar colaborador..." oninput="c298RenderPersonal()" value="'+q.replace(/"/g,'&quot;')+'">'+
@@ -6694,7 +6698,12 @@ function c298PicksPersonal(){
   return C298_PERSON_SEL.map(function(id){var o=todos.find(function(x){return String(x.id)===String(id);});return o?'<span>'+o.nombre+'</span>':'';}).join('');
 }
 function c298GuardarPersonal(){
-  if(!C298_PERSON_SEL.length){alert('Selecciona al menos un colaborador.');return;}
+  if(!C298_PERSON_SEL.length){alert('Selecciona al menos un colaborador de Base.');return;}
+  var baseIds=(cats.operarios||[]).map(function(o){return String(o.id);});
+  if(C298_PERSON_SEL.some(function(id){return baseIds.indexOf(String(id))===-1;})){
+    alert('Las aplicaciones sólo pueden asignarse a personal Base.');
+    return;
+  }
   var f=C298_ASSIGN_FORMULA,tb=f.tabla||null;
   var lbAplic=(cats.tiposLabor||[]).find(function(l){return l.requiere_formula;});
   if(!lbAplic){alert('No se encontró el tipo de labor para aplicaciones.');return;}
@@ -6742,7 +6751,7 @@ function renderAplicacionesEstatus(){
   Promise.all([
     from('formulas_aplicacion').select('*,tabla:tablas(nombre,plantacion_id),creador:usuarios!creado_por(nombre)').eq('activo',true).eq('es_plantilla',false).gte('fecha_programada',rg.ini).lte('fecha_programada',rg.fin).not('tabla_id','is','null').order('fecha_programada',{ascending:true}).get(),
     from('ordenes_trabajo').select('id,formula_id,estado,operario:usuarios!operario_id(nombre)').not('formula_id','is','null').get(),
-    from('formula_componentes').select('formula_id,item:inventario_items!item_id(nombre)').get(),
+    from('formula_componentes').select('formula_id,estado_faltante,faltante_detectado,item:inventario_items!item_id(nombre)').get(),
     from('ordenes_trabajo').select('id').eq('validado_ingeniero',false).not('formula_id','is','null').get()
   ]).then(function(r){
     var formulas=r[0]||[],ordenes=(r[1]||[]).filter(function(o){return o.estado!=='cancelada';}),comps=r[2]||[],pendValidar=(r[3]||[]).length;
@@ -6790,11 +6799,13 @@ function renderAplicacionesEstatus(){
     }else{
       html+=visibles.map(function(f){
         var p=f.tabla?(cats.plantaciones||[]).find(function(x){return String(x.id)===String(f.tabla.plantacion_id);}):null;
-        var productos=comps.filter(function(c){return c.formula_id===f.id&&c.item;}).map(function(c){return c.item.nombre;});
+        var compsF=comps.filter(function(c){return c.formula_id===f.id;});
+        var productos=compsF.filter(function(c){return c.item;}).map(function(c){return c.item.nombre;});
+        var faltanteAutorizado=compsF.some(function(c){return c.estado_faltante==='autorizado'&&Number(c.faltante_detectado||0)>0;});
         var est=f._estado==='done'?'Terminada':f._estado==='late'?'Retrasada':f._estado==='process'?'En proceso':f._estado==='pending'?'Pendiente':'Programada';
         var via=f.via==='Riego'?'Vía Riego':f.via;
         return '<div class="c291-card '+f._estado+'"><div class="c291-card-top"><div><div class="c291-card-title">'+(VIA_ICONOS[f.via]||'🧪')+' '+via+' · '+(f.nombre||'Aplicación')+'</div>'+
-          '<div class="c291-meta">📍 '+(p?p.nombre+' · ':'')+(f.tabla?f.tabla.nombre:'')+(f.via==='Riego'?' · <b>Tabla completa</b>':'')+'<br>📅 '+(f.fecha_programada||'Sin fecha')+(productos.length?'<br>🧴 '+productos.join(', '):'')+(f._ordenes&&f._ordenes.length?'<br>👤 '+f._ordenes.map(function(o){return o.operario?o.operario.nombre:'';}).filter(Boolean).join(', '):'<br>👤 Sin asignar')+'</div></div>'+
+          '<div class="c291-meta">📍 '+(p?p.nombre+' · ':'')+(f.tabla?f.tabla.nombre:'')+(f.via==='Riego'?' · <b>Tabla completa</b>':'')+'<br>📅 '+(f.fecha_programada||'Sin fecha')+(productos.length?'<br>🧴 '+productos.join(', '):'')+(f._ordenes&&f._ordenes.length?'<br>👤 '+f._ordenes.map(function(o){return o.operario?o.operario.nombre:'';}).filter(Boolean).join(', '):'<br>👤 Sin asignar')+(faltanteAutorizado?'<br><span class="c299-card-warning">⚠️ Inventario faltante autorizado</span>':'')+'</div></div>'+
           '<div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;"><button type="button" class="c296-card-manage" onclick="c296GestionarAplicacion(&quot;'+f.id+'&quot;)">Gestionar</button></div></div></div>';
       }).join('');
     }
@@ -7544,6 +7555,7 @@ function c293RenderCatalogoModal(){
     }).catch(function(e){cont.innerHTML='<div class="c293-cat-empty">Error al cargar catálogo: '+e.message+'</div>';});
 }
 function c293UsarFormulaCatalogo(formulaId){
+  C299_CREACION_FALTANTE_AUTORIZADO=false;
   var cont=document.getElementById('c293-formula-contenido');
   if(cont)cont.innerHTML='<div class="loading">Cargando fórmula...</div>';
 
@@ -7850,49 +7862,44 @@ function renderFormulaPasoNotas(){
   }).catch(function(){ pintarFormulaPasoNotas([]); });
 }
 
+function c299ToggleAutorizarCreacion(){
+  C299_CREACION_FALTANTE_AUTORIZADO=!C299_CREACION_FALTANTE_AUTORIZADO;
+  var b=document.getElementById('c299-auth-create');
+  if(b){
+    b.classList.toggle('on',C299_CREACION_FALTANTE_AUTORIZADO);
+    b.textContent=C299_CREACION_FALTANTE_AUTORIZADO?'✅ Aplicación autorizada con faltante':'⚠️ Autorizar aplicar con faltante';
+  }
+}
 function pintarFormulaPasoNotas(persistidos){
   var body=c292FormulaBody();
   var comps=formulaCompRows.filter(function(r){return r.item_id&&r.cantidad>0;});
   var bombasTxt=formulaBombas.map(function(b){return BOMBA_ICONOS[b]+' '+BOMBA_LABELS[b];}).join(', ');
   var p=cats.plantaciones.find(function(x){return x.id===formulaPlantacionId;});
   var t=cats.tablas.find(function(x){return x.id===formulaTablaId;});
+  var c292Count=(window._formulaTablaIdsC292&&window._formulaTablaIdsC292.length)?window._formulaTablaIdsC292.length:1;
   var faltantes=[];
   var resumenComp=comps.map(function(c){
-    if(c.estadoFaltante==='sustituido'){
-      var sustItem=cats.inventario.find(function(x){return x.id===c.sustituidoPorItemId;});
-      return '<span style="text-decoration:line-through;color:var(--gris-3);">'+c.nombre+' · '+fmtAmigable(c.cantidad,c.unidad)+'</span> <span style="color:var(--tierra);font-weight:700;">→ sustituido por '+(sustItem?sustItem.nombre:'?')+'</span>';
-    }
     var it=cats.inventario.find(function(x){return x.id===c.item_id;});
-    var stock=it?it.stock_actual:0;
-    var falta=c.cantidad-stock;
-    var alerta='';
-    var notaSustituto=c.sustitutoDeItemId?' <span style="color:var(--tierra);font-size:.75rem;">(sustituto)</span>':'';
-    if(falta>0){
-      faltantes.push({nombre:c.nombre,falta:falta,unidad:c.unidad});
-      var persistido=persistidos.find(function(pc){return pc.item_id===c.item_id&&pc.estado_faltante!=='sustituido';});
-      if(persistido&&persistido.estado_faltante==='autorizado'){
-        alerta=' · <span style="color:var(--tierra);font-weight:700;">✅ Autorizado</span>';
-      } else {
-        alerta=' · <span style="color:var(--rojo);font-weight:700;">⚠️ faltan '+fmtAmigable(falta,c.unidad)+'</span>';
-        if(persistido){
-          alerta+=' <button type="button" class="btn-sm btn-completar" data-autorizar-inline="'+persistido.id+'" style="margin-left:.4rem;padding:2px 8px;font-size:.68rem;">✅ Autorizar</button> <button type="button" class="btn-sm btn-iniciar" data-cambiar-inline="'+persistido.id+'" style="padding:2px 8px;font-size:.68rem;">🔄 Sustituir</button>';
-        } else {
-          alerta+=' <span class="hint" style="margin:0;">('+(formulaEditId?'guarda cambios':'crea la fórmula primero')+' para poder autorizar o sustituir)</span>';
-        }
-      }
-    }
-    return c.nombre+notaSustituto+' · '+fmtAmigable(c.cantidad,c.unidad)+' (hay '+fmtAmigable(stock,c.unidad)+')'+alerta;
+    var stock=it?Number(it.stock_actual||0):0;
+    var requerido=Number(c.cantidad||0)*c292Count;
+    var falta=Math.max(0,requerido-stock);
+    if(falta>0)faltantes.push({nombre:c.nombre,falta:falta,unidad:c.unidad,requerido:requerido,stock:stock});
+    var alerta=falta>0?' · <span style="color:var(--rojo);font-weight:700;">⚠️ faltan '+fmtAmigable(falta,c.unidad)+' en total</span>':'';
+    return c.nombre+' · '+fmtAmigable(c.cantidad,c.unidad)+' por tabla × '+c292Count+' = <strong>'+fmtAmigable(requerido,c.unidad)+'</strong> (hay '+fmtAmigable(stock,c.unidad)+')'+alerta;
   }).join('<br>');
   var fechaTxt=window._formulaFechaExistente||'';
   var alertaHtml='';
-  var c292Count=(window._formulaTablaIdsC292&&window._formulaTablaIdsC292.length)?window._formulaTablaIdsC292.length:1;
   if(c292Count>1&&comps.length){
     alertaHtml+='<div class="c292-inv-note"><strong>Inventario para '+c292Count+' tablas:</strong><br>'+
       comps.map(function(c){return c.nombre+' · '+fmtAmigable(c.cantidad,c.unidad)+' por tabla × '+c292Count+' = <strong>'+fmtAmigable(c.cantidad*c292Count,c.unidad)+'</strong>';}).join('<br>')+
       '<br><span style="color:#718078">Cada tabla se guarda como aplicación controlable independiente, ligada a la misma receta. El consumo real se descuenta por cada aplicación al asignarla/ejecutarla, evitando descontar dos veces.</span></div>';
   }
   if(faltantes.length){
-    alertaHtml='<div style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);border-radius:var(--radio-sm);padding:.75rem;margin-bottom:1rem;font-size:.82rem;"><strong style="color:var(--rojo);">⚠️ No alcanza el inventario para el '+fechaTxt+'</strong><br>Hay que pedir antes de esa fecha: '+faltantes.map(function(f){return f.nombre+' ('+numFmt(f.falta)+' '+f.unidad+')';}).join(', ')+'</div>';
+    alertaHtml='<div style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);border-radius:var(--radio-sm);padding:.75rem;margin-bottom:1rem;font-size:.82rem;">'+
+      '<strong style="color:var(--rojo);">⚠️ Inventario insuficiente para la aplicación</strong><br>'+
+      faltantes.map(function(f){return f.nombre+': requiere '+numFmt(f.requerido)+' '+f.unidad+', hay '+numFmt(f.stock)+'; faltan '+numFmt(f.falta)+' '+f.unidad;}).join('<br>')+
+      (!formulaEditandoCatalogo?'<div class="c299-shortage-actions"><button type="button" class="c299-edit-products" onclick="renderFormulaPasoComponentes()">Editar productos / cantidades</button><button type="button" id="c299-auth-create" class="c299-authorize '+(C299_CREACION_FALTANTE_AUTORIZADO?'on':'')+'" onclick="c299ToggleAutorizarCreacion()">'+(C299_CREACION_FALTANTE_AUTORIZADO?'✅ Aplicación autorizada con faltante':'⚠️ Autorizar aplicar con faltante')+'</button></div>':'')+
+      '</div>';
   }
   var c292Ids=(window._formulaTablaIdsC292&&window._formulaTablaIdsC292.length)?window._formulaTablaIdsC292:[formulaTablaId];
   var c292Tabs=c292Ids.map(function(id){return (cats.tablas||[]).find(function(x){return String(x.id)===String(id);});}).filter(Boolean);
@@ -7955,6 +7962,16 @@ function guardarFormula(){
     catCatalogo=catCatSel?catCatSel.dataset.catcat:null;
   }
   var comps=formulaCompRows.filter(function(r){return r.item_id&&r.cantidad>0;});
+  var tablaIdsPre=(window._formulaTablaIdsC292&&window._formulaTablaIdsC292.length&&!formulaEditId&&!formulaEditandoCatalogo)?window._formulaTablaIdsC292.slice():[formulaTablaId];
+  var multPre=tablaIdsPre.length||1;
+  var hayFaltantePre=comps.some(function(c){
+    var item=cats.inventario.find(function(x){return x.id===c.item_id;});
+    return Number(c.cantidad||0)*multPre>Number(item?item.stock_actual:0);
+  });
+  if(hayFaltantePre&&!C299_CREACION_FALTANTE_AUTORIZADO&&!formulaEditandoCatalogo){
+    alert('Hay inventario insuficiente. Edita productos/cantidades o autoriza aplicar con faltante antes de crear la aplicación.');
+    return;
+  }
   var btn=document.getElementById('fm-guardar'); btn.disabled=true; btn.textContent='Guardando...';
 
   var tablaIds=(window._formulaTablaIdsC292&&window._formulaTablaIdsC292.length&&!formulaEditId&&!formulaEditandoCatalogo)
@@ -7982,15 +7999,16 @@ function guardarFormula(){
     return Promise.all(comps.map(function(c){
       var item=cats.inventario.find(function(x){return x.id===c.item_id;});
       var disponible=item?item.stock_actual:0;
-      var faltante=Math.max(0,c.cantidad-disponible);
-      var yaResuelto=c.estadoFaltante==='autorizado'&&faltante>0;
+      var multTotal=(window._formulaTablaIdsC292&&window._formulaTablaIdsC292.length)?window._formulaTablaIdsC292.length:1;
+      var faltante=Math.max(0,(Number(c.cantidad||0)*multTotal)-Number(disponible||0));
+      var yaResuelto=(C299_CREACION_FALTANTE_AUTORIZADO||c.estadoFaltante==='autorizado')&&faltante>0;
       var estadoFaltante=yaResuelto?'autorizado':(faltante>0?'pendiente':'ninguno');
       return from('formula_componentes').insert({
         formula_id:fid,item_id:c.item_id,cantidad_base:c.cantidad,
         estado_faltante:estadoFaltante,faltante_detectado:faltante,
         sustituto_de_item_id:c.sustitutoDeItemId||null,
-        autorizado_por:yaResuelto?c.autorizadoPor:null,
-        autorizado_en:yaResuelto?c.autorizadoEn:null
+        autorizado_por:yaResuelto?(c.autorizadoPor||usuario.id):null,
+        autorizado_en:yaResuelto?(c.autorizadoEn||new Date().toISOString()):null
       });
     }));
   }
@@ -8029,6 +8047,7 @@ function guardarFormula(){
     return aviso.then(function(){
       showToast((hayFaltante?'⚠️ Guardada con faltante: ':'✅ Aplicación guardada: ')+nombreBase+(mult>1?' · '+mult+' tablas':''));
       window._formulaTablaIdsC292=null;
+      C299_CREACION_FALTANTE_AUTORIZADO=false;
       c291CerrarNuevaAplicacion();
       renderAplicacionesEstatus();
     });
@@ -18489,7 +18508,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C298
+C299
 </div>
 
 <style id="fi128-css">
