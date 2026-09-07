@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C256';
+  window.MOOTSIL_BUILD='C258';
 </script>
 
 
@@ -2072,6 +2072,43 @@ function c231Icon(name, cls){
 .c256-opmode-row button.sel{background:#e8f4ed;border-color:#0b5a37;color:#0b5a37}
 .c256-extra-wrap{margin-top:.55rem}
 @media(max-width:900px){.c256-plants{grid-template-columns:1fr}.c256-summary{grid-template-columns:repeat(2,1fr)}}
+</style>
+
+<style id="c258-labores-estados-gestion">
+.c256-summary .c256-stat:nth-child(1){border-top:4px solid #2f7fb6;box-shadow:0 8px 18px rgba(47,127,182,.15)}
+.c256-summary .c256-stat:nth-child(2){border-top:4px solid #e2a019;box-shadow:0 8px 18px rgba(226,160,25,.18)}
+.c256-summary .c256-stat:nth-child(3){border-top:4px solid #2b87b5;box-shadow:0 8px 18px rgba(43,135,181,.16)}
+.c256-summary .c256-stat:nth-child(4){border-top:4px solid #258354;box-shadow:0 8px 18px rgba(37,131,84,.16)}
+.c258-workcard{background:#fff;border:1px solid #dce5df;border-left:5px solid #b7c4bc;border-radius:14px;margin:10px 0;padding:13px 14px;box-shadow:0 3px 12px rgba(18,57,40,.05)}
+.c258-workcard.pendiente{border-left-color:#e2a019;background:linear-gradient(90deg,#fff9ed 0,#fff 11%)}
+.c258-workcard.en_proceso{border-left-color:#2b87b5;background:linear-gradient(90deg,#eef8fc 0,#fff 11%)}
+.c258-workcard.completada{border-left-color:#258354;background:linear-gradient(90deg,#eef8f2 0,#fff 11%)}
+.c258-workcard.cancelada{border-left-color:#a8b0ab;background:linear-gradient(90deg,#f4f6f5 0,#fff 11%)}
+.c258-worktop{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.c258-worktitle{font-size:.9rem;font-weight:900;color:#183f2e}
+.c258-worksub{font-size:.68rem;color:#738078;margin-top:3px}
+.c258-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+.c258-plant{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;font-size:.64rem;font-weight:850}
+.c258-plant.erandy{background:#e4f1e9;color:#155c43}
+.c258-plant.jade{background:#f0e4f5;color:#6d2789}
+.c258-status{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:.64rem;font-weight:850}
+.c258-status.pendiente{background:#fff0d5;color:#946000}
+.c258-status.en_proceso{background:#e3f3fa;color:#17688b}
+.c258-status.completada{background:#e3f3e9;color:#176f45}
+.c258-status.cancelada{background:#ecefed;color:#5d6661}
+.c258-meta-grid{display:grid;grid-template-columns:1.2fr 1fr .7fr;gap:8px 14px;margin-top:10px}
+.c258-meta{font-size:.69rem;color:#43554c}
+.c258-meta b{display:block;font-size:.61rem;color:#7b8780;text-transform:uppercase;letter-spacing:.045em;margin-bottom:2px}
+.c258-progress{margin-top:10px}
+.c258-progress-top{display:flex;justify-content:space-between;font-size:.65rem;color:#68766f}
+.c258-progressbar{height:7px;background:#edf1ee;border-radius:99px;overflow:hidden;margin-top:4px}
+.c258-progressbar i{display:block;height:100%;background:#2b8a5b}
+.c258-manage{border:1px solid #bfd0c5;background:#fff;color:#0b5a37;border-radius:9px;padding:7px 10px;font-size:.7rem;font-weight:850;cursor:pointer}
+.c258-manage-menu{display:none;gap:7px;flex-wrap:wrap;margin-top:10px;padding:8px;background:#f8faf9;border:1px solid #dce5df;border-radius:10px}
+.c258-manage-menu.show{display:flex}
+.c258-manage-menu button{border:1px solid #d5dfd9;background:#fff;border-radius:8px;padding:7px 9px;font-size:.68rem;font-weight:800;cursor:pointer}
+.c258-manage-menu button.danger{background:#fff3f1;border-color:#efc9c4;color:#a13f36}
+@media(max-width:760px){.c258-meta-grid{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
@@ -3597,7 +3634,7 @@ function renderAsignarEstatus(){
       });
     });
     body.querySelectorAll('[data-cancelgrupo]').forEach(function(b){b.addEventListener('click',function(){var g=gruposLabor[this.dataset.cancelgrupo];if(!g||!confirm('¿Cancelar esta labor para todo el personal asignado? El registro se conservará para trazabilidad.'))return;Promise.all(g.ordenes.map(function(o){return from('ordenes_trabajo').eq('id',o.id).update({estado:'cancelada'});})).then(renderAsignarEstatus).catch(function(e){alert('Error: '+e.message);});});});
-    body.querySelectorAll('[data-deletegrupo]').forEach(function(b){b.addEventListener('click',function(){var g=gruposLabor[this.dataset.deletegrupo];if(!g||!confirm('¿Eliminar definitivamente esta labor creada por error? Sólo se permite mientras todas las asignaciones estén pendientes.'))return;Promise.all(g.ordenes.map(function(o){return from('ordenes_trabajo').eq('id',o.id).delete();})).then(function(){showToast('🗑 Labor eliminada');renderAsignarEstatus();}).catch(function(e){alert('No se pudo eliminar: '+e.message);});});});
+
     body.querySelectorAll('.glab-agregar').forEach(function(b){
       b.addEventListener('click',function(){
         var grp=gruposLabor[this.dataset.gkey];
@@ -3646,24 +3683,45 @@ function tarjetaRiegoAgrupada(grupo){
 }
 
 function tarjetaLaborAgrupada(grupo){
-  var p=grupo.tabla?cats.plantaciones.find(function(x){return x.id===grupo.tabla.plantacion_id;}):null;
-  var ic=ICONOS[grupo.tipoLaborNombre]||'🔧', hoy=fechaHoyLocal();
+  var p=grupo.tabla?cats.plantaciones.find(function(x){return String(x.id)===String(grupo.tabla.plantacion_id);}):null;
+  var pn=p?(p.nombre||''):'General';
+  var pc=/jade/i.test(pn)?'jade':'erandy';
   var estados=grupo.ordenes.map(function(o){return o.estado;});
-  var estado=estados.every(function(x){return x==='completada';})?'completada':(estados.some(function(x){return x==='en_proceso';})?'en_proceso':'pendiente');
-  var atrasada=estado!=='completada'&&grupo.fecha_asignacion<hoy;
-  var cls=estado==='completada'?'done':estado==='en_proceso'?'process':atrasada?'late':'';
-  var lbl=estado==='completada'?'Terminada':estado==='en_proceso'?'En proceso':atrasada?'Pendiente vencida':'Pendiente';
-  var nombres=grupo.ordenes.map(function(o){return o.operario?o.operario.nombre:'';}).filter(Boolean).join(', ');
-  var avances=grupo.ordenes.map(function(o){var pr=progresoSurcosOrden(o);return pr.totalAsignados.length?pr.completados.length+'/'+pr.totalAsignados.length+' surcos':(o.estado==='completada'?'100%':'Sin avance');});
-  var avanceTxt=avances.join(' · ');
+  var estado=estados.every(function(x){return x==='completada';})?'completada':
+             (estados.every(function(x){return x==='cancelada';})?'cancelada':
+             (estados.some(function(x){return x==='en_proceso';})?'en_proceso':'pendiente'));
+  var estadoTxt=estado==='completada'?'Terminada':estado==='en_proceso'?'En proceso':estado==='cancelada'?'Cancelada':'Pendiente';
+  var nombres=Array.from(new Set(grupo.ordenes.map(function(o){return o.operario?o.operario.nombre:'';}).filter(Boolean)));
+  var total=0,hechos=0;
+  grupo.ordenes.forEach(function(o){var pr=progresoSurcosOrden(o);total+=pr.totalAsignados.length;hechos+=pr.completados.length;});
+  var pct=total?Math.round((hechos/total)*100):(estado==='completada'?100:0);
+  var nombreLabor=(grupo.tipoLaborNombre==='Guiro'?'Desbrozadora':grupo.tipoLaborNombre)+(grupo.subtipoNombre?' · '+grupo.subtipoNombre:'');
+  var ubicacion=grupo.tabla?(pn+' · '+grupo.tabla.nombre):'Actividad general';
   var jornada=grupo.ordenes.some(function(o){return o.es_hora_extra;})?'Hora extra':'Jornada regular';
-  var acciones='';
-  if(estado!=='completada') acciones='<button type="button" class="glab-gestionar" data-gkey="'+grupo.key+'">✏️ Editar / gestionar</button><button type="button" class="glab-agregar" data-gkey="'+grupo.key+'">＋ Personal</button>';
-  grupo.ordenes.forEach(function(o){if(o.estado==='pendiente'||o.estado==='en_proceso') acciones+='<button type="button" data-regavance="'+o.id+'">📝 Registrar avance</button>';});
-  if(estado!=='completada') acciones+='<button type="button" class="danger" data-cancelgrupo="'+grupo.key+'">Cancelar labor</button>'+(grupo.ordenes.every(function(o){return o.estado==='pendiente';})?'<button type="button" class="danger" data-deletegrupo="'+grupo.key+'">🗑 Eliminar</button>':'');
-  return '<div class="c257-workcard '+cls+'"><div class="c257-worktop"><div><div class="c257-worktitle">'+ic+' '+grupo.tipoLaborNombre+(grupo.subtipoNombre?' · '+grupo.subtipoNombre:'')+'</div><div class="c257-workloc">'+(grupo.tabla?((p?p.nombre:'')+' · '+grupo.tabla.nombre):'Actividad general')+'</div></div><span class="c257-status">'+lbl+'</span></div><div class="c257-workmeta"><div class="c257-meta"><b>Fecha</b>'+fechaLarga(grupo.fecha_asignacion)+'</div><div class="c257-meta"><b>Personal asignado</b>'+(nombres||'Sin asignar')+'</div><div class="c257-meta"><b>Avance</b>'+avanceTxt+'</div><div class="c257-meta"><b>Jornada</b>'+jornada+'</div>'+(grupo.notas_encargado?'<div class="c257-meta"><b>Indicaciones</b>'+grupo.notas_encargado+'</div>':'')+'</div>'+(acciones?'<div class="c257-actions">'+acciones+'</div>':'')+'</div>';
-}
+  var hash=0;for(var i=0;i<grupo.key.length;i++){hash=((hash<<5)-hash)+grupo.key.charCodeAt(i);hash|=0;}
+  var keySafe='m'+Math.abs(hash);
+  var gestionable=estado!=='completada'&&estado!=='cancelada';
 
+  var menu=gestionable?'<button type="button" class="c258-manage" onclick="document.getElementById(&quot;'+keySafe+'&quot;).classList.toggle(&quot;show&quot;)">Gestionar</button>':'';
+  var opciones='';
+  if(gestionable){
+    opciones='<div id="'+keySafe+'" class="c258-manage-menu">'+
+      '<button type="button" class="glab-gestionar" data-gkey="'+grupo.key+'">Editar asignación</button>'+
+      '<button type="button" class="glab-agregar" data-gkey="'+grupo.key+'">+ Agregar personal</button>';
+    grupo.ordenes.forEach(function(o){
+      if(o.estado==='pendiente'||o.estado==='en_proceso') opciones+='<button type="button" data-regavance="'+o.id+'">Registrar avance</button>';
+    });
+    opciones+='<button type="button" class="danger" data-cancelgrupo="'+grupo.key+'">Cancelar labor</button></div>';
+  }
+
+  return '<div class="c258-workcard '+estado+'">'+
+    '<div class="c258-worktop"><div><div class="c258-worktitle">'+nombreLabor+'</div><div class="c258-worksub">'+fechaLarga(grupo.fecha_asignacion)+'</div>'+
+    '<div class="c258-badges"><span class="c258-plant '+pc+'">'+ubicacion+'</span><span class="c258-status '+estado+'">'+estadoTxt+'</span></div></div><div>'+menu+'</div></div>'+
+    '<div class="c258-meta-grid"><div class="c258-meta"><b>Personal asignado</b>'+(nombres.join(', ')||'Sin asignar')+'</div><div class="c258-meta"><b>Jornada</b>'+jornada+'</div><div class="c258-meta"><b>Avance</b>'+pct+'%</div>'+
+    (grupo.notas_encargado?'<div class="c258-meta"><b>Indicaciones</b>'+grupo.notas_encargado+'</div>':'')+'</div>'+
+    '<div class="c258-progress"><div class="c258-progress-top"><span>Avance de la labor</span><span>'+hechos+(total?'/'+total:'')+(total?' surcos':'')+'</span></div><div class="c258-progressbar"><i style="width:'+pct+'%"></i></div></div>'+
+    opciones+'</div>';
+}
 function cambiarEstadoAsignar(id,estado){
   from('ordenes_trabajo').eq('id',id).update({estado:estado}).then(function(){
     if(estado==='completada') from('notificaciones').insert({titulo:'✅ Labor completada',cuerpo:'Una orden fue marcada como completada.',icono:'✅',leida:false,para_rol:'encargado'}).then(function(){renderAsignarEstatus();});
@@ -16862,7 +16920,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C256
+C258
 </div>
 
 <style id="fi128-css">
