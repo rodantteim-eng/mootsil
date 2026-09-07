@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C253';
+  window.MOOTSIL_BUILD='C255';
 </script>
 
 
@@ -2015,6 +2015,26 @@ function c231Icon(name, cls){
 @media(max-width:1050px){.c253-shell{grid-template-columns:1fr}.c253-right{position:static}}
 </style>
 
+
+<style id="c255-labores-historial-css">
+.c255-history{margin-top:18px;background:#fff;border:1px solid #dce5df;border-radius:16px;overflow:hidden}
+.c255-history-head{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:14px 16px;border-bottom:1px solid #e7ece9;flex-wrap:wrap}
+.c255-history-title{font-size:.82rem;font-weight:900;color:#0d513b;letter-spacing:.035em;text-transform:uppercase}
+.c255-history-sub{font-size:.7rem;color:#718078;margin-top:2px}
+.c255-weeknav{display:flex;align-items:center;gap:6px}
+.c255-weeknav button{border:1px solid #d8e0db;background:#fff;color:#174f3c;border-radius:999px;padding:7px 11px;font-size:.7rem;font-weight:800;cursor:pointer}
+.c255-weeknav .week{background:#0d513b;color:#fff;border-color:#0d513b}
+.c255-hrow{display:grid;grid-template-columns:88px minmax(180px,1.35fr) minmax(150px,1fr) minmax(130px,1fr) 105px;gap:10px;align-items:center;padding:11px 16px;border-bottom:1px solid #edf1ee;font-size:.74rem}
+.c255-hrow:last-child{border-bottom:none}
+.c255-hdate{font-weight:800;color:#344b41}.c255-hlabor{font-weight:850;color:#17251f}
+.c255-hmeta{font-size:.68rem;color:#77847e;margin-top:2px}.c255-hperson{color:#31483e}
+.c255-plant{display:inline-flex;padding:3px 7px;border-radius:999px;font-size:.65rem;font-weight:850}
+.c255-plant.erandy{background:#e7f2ec;color:#155c42}.c255-plant.jade{background:#f1e5f5;color:#702786}
+.c255-state{font-size:.65rem;font-weight:850;padding:4px 7px;border-radius:999px;text-align:center;background:#eef2ef;color:#53625b}
+.c255-state.pendiente{background:#fff1d7;color:#9a6200}.c255-state.en_proceso{background:#e3f2fa;color:#17658b}.c255-state.completada{background:#e4f3e9;color:#177044}.c255-state.cancelada{background:#f8e7e5;color:#a13d34}
+.c255-empty{padding:24px;text-align:center;color:#7a8781;font-size:.76rem}
+@media(max-width:760px){.c255-hrow{grid-template-columns:72px 1fr 92px}.c255-hperson{grid-column:2}.c255-hwhere{grid-column:2}.c255-state{grid-column:3;grid-row:1}}
+</style>
 </head>
 <body>
 
@@ -2693,10 +2713,10 @@ function cargarCatalogos(){
     from('tablas').select('*').order('nombre').get(),
     from('tipos_labor').select('*').eq('activo',true).order('orden').get(),
     from('subtipos_labor').select('*').get(),
-    from('usuarios').select('id,nombre,rol').eq('rol','operario').get(),
+    from('usuarios').select('id,nombre,rol,activo').eq('rol','operario').eq('activo',true).get(),
     from('inventario_items').select('*').eq('activo',true).order('nombre').get(),
     from('usuarios').select('id,nombre,rol').eq('rol','cosechador').get(),
-    from('usuarios').select('id,nombre,rol').eq('rol','labores_eventual').get(),
+    from('usuarios').select('id,nombre,rol,activo').eq('rol','labores_eventual').eq('activo',true).get(),
     from('proveedores').select('*').eq('activo',true).order('nombre').get()
   ]).then(function(r){
     cats.plantaciones=r[0]; cats.tablas=r[1]; cats.tiposLabor=r[2];
@@ -3862,7 +3882,7 @@ function c253RenderAsignacion(){
     '<div class="c253-date-row"><button id="c253-hoy" type="button" class="sel" onclick="c253Fecha(&quot;hoy&quot;)">Hoy</button><button id="c253-manana" type="button" onclick="c253Fecha(&quot;manana&quot;)">Mañana</button></div>'+
     '<div class="c253-field"><label>Elegir otra fecha</label><input type="date" id="ffe" value="'+fechaHoyLocal()+'"></div>'+
     '<div class="c253-field"><label>Indicaciones</label><input type="text" id="fno" placeholder="Opcional: instrucciones para el colaborador..."></div>'+
-    '<div class="c253-rule"><b>La tabla se asigna completa.</b> Si no se termina, Mootsil conserva el avance y la labor queda <b>Pendiente por terminar</b> desde el siguiente surco.</div>'+
+    '<div class="c253-rule"><b>La tabla se asigna completa.</b> Mootsil registra automáticamente todos sus surcos. Si no se termina, conserva el avance y la labor queda <b>Pendiente por terminar</b> desde el siguiente surco.</div>'+
     '<button type="button" class="c253-assign" onclick="guardarOrden()">'+(modoAsignacionLabor==='extra'?'Asignar hora extra':'Asignar labor')+'</button>';
   c253RenderPersonal();
 }
@@ -3896,7 +3916,7 @@ function renderFormAsignar(){
     '<div class="c253-shell"><div class="c253-left"><div class="c253-section">¿Qué trabajo se va a realizar?</div><div class="c253-grid">'+tiles+
       '<button type="button" class="c253-labor" id="labor-otra-tile"><div class="c250-labor-ic"><svg viewBox="0 0 48 48"><path d="M24 10v28M10 24h28"/></svg></div><div class="c250-labor-name">Otra labor</div></button></div>'+
       '<div id="labor-otra-box" class="c253-other" style="display:none;"><label style="display:block;font-size:.65rem;font-weight:850;color:#78867e;margin-bottom:.25rem;">NOMBRE DE LA LABOR</label><input type="text" id="labor-otra-input" placeholder="Ej. Reparar cerco, recoger plástico, limpiar bodega..." style="width:100%;min-height:39px;border:1px solid #d2ddd6;border-radius:10px;padding:.56rem .68rem;"><label style="display:flex;align-items:center;gap:.4rem;margin-top:.45rem;font-size:.73rem;"><input type="checkbox" id="labor-otra-tabla" checked> Se realiza en una tabla</label><label style="display:flex;align-items:center;gap:.4rem;margin-top:.38rem;font-size:.73rem;"><input type="checkbox" id="labor-otra-catalogo"> Guardar como labor frecuente</label><button type="button" id="labor-otra-btn" class="c253-assign" style="margin-top:.5rem;">Usar esta labor</button></div>'+
-    '</div><div class="c253-right"><div id="c253-asignacion"><div class="c253-empty"><b>Selecciona una labor</b><br>La asignación aparecerá aquí.</div></div></div></div>';
+    '</div><div class="c253-right"><div id="c253-asignacion"><div class="c253-empty"><b>Selecciona una labor</b><br>La asignación aparecerá aquí.</div></div></div></div><div id="c255-historial-labores"></div>';
 
   document.getElementById('modo-normal').addEventListener('click',function(){
     modoAsignacionLabor='normal';this.classList.add('sel');document.getElementById('modo-extra').classList.remove('sel');document.getElementById('labor-horas-wrap').style.display='none';if(asignarLaborSel)c253RenderAsignacion();
@@ -3908,6 +3928,7 @@ function renderFormAsignar(){
   document.getElementById('labor-otra-tile').addEventListener('click',function(){
     var box=document.getElementById('labor-otra-box');box.style.display=box.style.display==='none'?'':'none';if(box.style.display!=='none')document.getElementById('labor-otra-input').focus();
   });
+  c255RenderHistorialLabores();
   document.getElementById('labor-otra-btn').addEventListener('click',function(){
     var nombre=(document.getElementById('labor-otra-input').value||'').trim();
     if(!nombre){alert('Escribe el nombre de la labor.');return;}
@@ -3923,6 +3944,44 @@ function renderFormAsignar(){
     }).catch(function(e){alert('Error: '+e.message);});
   });
 }
+
+var C255_LAB_SEM_OFFSET=0;
+function c255SemanaRango(offset){
+  var d=new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate()+(offset||0)*7);
+  var dow=(d.getDay()+6)%7; d.setDate(d.getDate()-dow);
+  var ini=new Date(d), fin=new Date(d); fin.setDate(fin.getDate()+6);
+  function iso(x){return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');}
+  var onejan=new Date(d.getFullYear(),0,1), sem=Math.ceil((((d-onejan)/86400000)+onejan.getDay()+1)/7);
+  return {ini:iso(ini),fin:iso(fin),sem:sem};
+}
+function c255MoverSemana(delta){C255_LAB_SEM_OFFSET+=delta;c255RenderHistorialLabores();}
+function c255EstadoTxt(e){return e==='pendiente'?'Pendiente':e==='en_proceso'?'En proceso':e==='completada'?'Terminada':e==='cancelada'?'Cancelada':e;}
+function c255RenderHistorialLabores(){
+  var host=document.getElementById('c255-historial-labores'); if(!host)return;
+  var rg=c255SemanaRango(C255_LAB_SEM_OFFSET);
+  host.innerHTML='<section class="c255-history"><div class="c255-history-head"><div><div class="c255-history-title">Historial semanal de labores</div><div class="c255-history-sub">'+rg.ini+' al '+rg.fin+' · asignadas, en proceso, terminadas y canceladas</div></div><div class="c255-weeknav"><button type="button" onclick="c255MoverSemana(-1)">← Anterior</button><button type="button" class="week">Semana '+rg.sem+'</button><button type="button" onclick="c255MoverSemana(1)">Siguiente →</button></div></div><div class="c255-empty">Cargando historial...</div></section>';
+  from('ordenes_trabajo').select('id,fecha_asignacion,estado,operario_id,tabla_id,tipo_labor_id,subtipo_labor_id,notas_encargado,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo,requiere_formula,es_cosecha),subtipo:subtipos_labor(nombre)').gte('fecha_asignacion',rg.ini).lte('fecha_asignacion',rg.fin).order('fecha_asignacion',{ascending:false}).get().then(function(rows){
+    rows=(rows||[]).filter(function(o){return !o.activo_rancho_id&&o.tipo_labor&&!o.tipo_labor.requiere_formula&&!o.tipo_labor.es_cosecha&&!ordenEsTiempo(o);});
+    var grupos={}, keys=[];
+    rows.forEach(function(o){
+      var k=[o.fecha_asignacion,o.tabla_id||'',o.tipo_labor_id||'',o.subtipo_labor_id||'',o.estado].join('|');
+      if(!grupos[k]){grupos[k]={base:o,personas:[]};keys.push(k);}
+      if(o.operario&&o.operario.nombre)grupos[k].personas.push(o.operario.nombre);
+    });
+    var top='<section class="c255-history"><div class="c255-history-head"><div><div class="c255-history-title">Historial semanal de labores</div><div class="c255-history-sub">'+rg.ini+' al '+rg.fin+' · '+rows.length+' asignación(es)</div></div><div class="c255-weeknav"><button type="button" onclick="c255MoverSemana(-1)">← Anterior</button><button type="button" class="week">Semana '+rg.sem+'</button><button type="button" onclick="c255MoverSemana(1)">Siguiente →</button></div></div>';
+    if(!keys.length){host.innerHTML=top+'<div class="c255-empty">No hay labores registradas en esta semana.</div></section>';return;}
+    host.innerHTML=top+keys.map(function(k){
+      var g=grupos[k],o=g.base,p=(cats.plantaciones||[]).find(function(x){return o.tabla&&String(x.id)===String(o.tabla.plantacion_id);});
+      var pn=p?(p.nombre||''):'General', pc=/jade/i.test(pn)?'jade':'erandy';
+      var labor=(o.tipo_labor?o.tipo_labor.nombre:'Labor')+(o.subtipo&&o.subtipo.nombre?' · '+o.subtipo.nombre:'');
+      var fecha=o.fecha_asignacion||'—', dt=fecha.split('-'); if(dt.length===3)fecha=dt[2]+'/'+dt[1];
+      var where=o.tabla?(pn+' · '+o.tabla.nombre):'Actividad general';
+      var pers=Array.from(new Set(g.personas)).join(', ')||'—';
+      return '<div class="c255-hrow"><div class="c255-hdate">'+fecha+'</div><div><div class="c255-hlabor">'+labor+'</div><div class="c255-hmeta">'+(o.notas_encargado||'Sin indicaciones')+'</div></div><div class="c255-hwhere"><span class="c255-plant '+pc+'">'+where+'</span></div><div class="c255-hperson">'+pers+'</div><div class="c255-state '+o.estado+'">'+c255EstadoTxt(o.estado)+'</div></div>';
+    }).join('')+'</section>';
+  }).catch(function(e){host.innerHTML='<section class="c255-history"><div class="c255-history-head"><div class="c255-history-title">Historial semanal de labores</div></div><div class="c255-empty">No fue posible cargar el historial: '+e.message+'</div></section>';});
+}
+
 function renderFormAsignarPaso2(){c253RenderAsignacion();}
 function renderRiegoForm(){
   var cont=document.getElementById('frg-tablas');
@@ -4294,9 +4353,15 @@ function guardarOrden(){
   var sub=document.getElementById('fsb').value||null;
   var cant=parseFloat(document.getElementById('fca').value)||null;
   var tb=tbId?cats.tablas.find(function(t){return t.id===tbId;}):null;
+  var surcosTablaCompleta=[];
+  if(!noTablaGuardar&&tb){
+    var totalSurcos=parseInt(tb.cantidad_surcos)||0;
+    if(totalSurcos<1){alert('La tabla seleccionada no tiene configurado su número de surcos.');return;}
+    surcosTablaCompleta=Array.from({length:totalSurcos},function(_,i){return i+1;});
+  }
   var esExtra=modoAsignacionLabor==='extra';
   Promise.all(opIds.map(function(oid){
-    return from('ordenes_trabajo').insert({asignado_por:usuario.id,operario_id:oid,tabla_id:tbId,tipo_labor_id:lbId,subtipo_labor_id:sub,surcos_asignados:null,cantidad_insumo_esperada:cant,duracion:dur,fecha_asignacion:fec,notas_encargado:not,estado:'pendiente',es_hora_extra:esExtra});
+    return from('ordenes_trabajo').insert({asignado_por:usuario.id,operario_id:oid,tabla_id:tbId,tipo_labor_id:lbId,subtipo_labor_id:sub,surcos_asignados:noTablaGuardar?[]:surcosTablaCompleta,cantidad_insumo_esperada:cant,duracion:dur,fecha_asignacion:fec,notas_encargado:not,estado:'pendiente',es_hora_extra:esExtra});
   })).then(function(){
     var autorizarExtra = esExtra ? Promise.all(opIds.map(function(oid){
       return from('horas_extra_asignadas').insert({operario_id:oid,asignado_por:usuario.id,fecha:fec,motivo:not,tipo_labor_id:lbId,estado:'aprobada',horas_max:horasExtraAutorizadas});
@@ -16719,7 +16784,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C253
+C255
 </div>
 
 <style id="fi128-css">
