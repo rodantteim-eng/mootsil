@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C260';
+  window.MOOTSIL_BUILD='C261';
 </script>
 
 
@@ -2131,6 +2131,21 @@ function c231Icon(name, cls){
 .c260-person-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:180px;overflow:auto}.c260-person{border:1px solid #dce4df;background:#fff;border-radius:9px;padding:8px;font-size:.7rem;text-align:left}.c260-person.sel{background:#e8f4ed;border-color:#0b5a37;color:#0b5a37;font-weight:850}
 .c260-foot{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;background:#fff;border-top:1px solid #e3eae6}.c260-foot button{border:1px solid #d2ddd6;background:#fff;border-radius:9px;padding:9px 13px;font-weight:850}.c260-foot .save{background:#0b5a37;color:#fff;border-color:#0b5a37}
 @media(max-width:700px){.c260-edit-grid,.c260-person-grid{grid-template-columns:1fr}}
+</style>
+
+<style id="c261-avance-plantacion">
+.c261-avance-ident{display:grid;grid-template-columns:1.25fr .8fr;gap:8px;margin:0 0 12px}
+.c261-avance-chip{border-radius:10px;padding:10px 12px;font-weight:850;font-size:.78rem;border:1px solid transparent}
+.c261-avance-chip small{display:block;font-size:.59rem;letter-spacing:.06em;text-transform:uppercase;opacity:.72;margin-bottom:2px}
+.c261-erandy{background:#e7f2eb;color:#14583a;border-color:#a9ccb8}
+.c261-jade{background:#f2e8f7;color:#6e2889;border-color:#d4b4e2}
+.c261-neutral{background:#eef3f0;color:#355548;border-color:#d6e0da}
+#c260-avance-body.c261-erandy-body .surco-btn.actual{background:#176b47!important;color:#fff!important;border-color:#176b47!important}
+#c260-avance-body.c261-jade-body .surco-btn.actual{background:#762a91!important;color:#fff!important;border-color:#762a91!important}
+#c260-avance-body .surco-btn.sel{font-weight:850}
+#c260-avance-body.c261-erandy-body .surco-btn.sel{background:#d9eee2!important;color:#14583a!important;border-color:#76b391!important}
+#c260-avance-body.c261-jade-body .surco-btn.sel{background:#ead7f1!important;color:#67217f!important;border-color:#b681c9!important}
+@media(max-width:620px){.c261-avance-ident{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -3429,10 +3444,20 @@ function pintarAdminCompletar(){
   var titulo=(o.activo_rancho_id?(o.activo_rancho?o.activo_rancho.nombre:'Herramienta/Equipo'):(lb.nombre||''))+(o.subtipo?' · '+o.subtipo.nombre:'');
   var ubic=o.activo_rancho_id?'🔧 Herramienta/Equipo':(o.tabla?('📍 '+o.tabla.nombre):'📋 Actividad general (sin tabla)');
   var opNombre=o.operario?o.operario.nombre:'';
+  var plant=o.tabla?(cats.plantaciones||[]).find(function(p){return String(p.id)===String(o.tabla.plantacion_id);}):null;
+  var plantNombre=plant?plant.nombre:'Actividad general';
+  var plantClass=/jade/i.test(plantNombre)?'c261-jade':(/erandy/i.test(plantNombre)?'c261-erandy':'c261-neutral');
+  var modalBody=document.getElementById(C260_ADMIN_BODY||'enc-body');
+  if(modalBody&&C260_ADMIN_BODY==='c260-avance-body'){
+    modalBody.classList.remove('c261-erandy-body','c261-jade-body');
+    if(/jade/i.test(plantNombre))modalBody.classList.add('c261-jade-body');
+    else if(/erandy/i.test(plantNombre))modalBody.classList.add('c261-erandy-body');
+  }
 
   var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">📝 Registrar avance<button type="button" id="ac-volver" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Volver</button></div>';
-  html+='<div class="form-card"><div class="labor-chosen">'+(ICONOS[lb.nombre]||'🔧')+' <strong>'+titulo+'</strong></div><p class="hint" style="margin-bottom:.6rem;">👷 '+opNombre+' · '+ubic+'</p>';
-  html+='<p class="hint" style="background:var(--gris-1);padding:.6rem .75rem;border-radius:var(--radio-sm);margin-bottom:.75rem;">ℹ️ Usa esto para registrar en el sistema el avance que el operario ya hizo en campo, mientras se acostumbra a marcarlo desde su celular. Quedará a nombre de '+(opNombre||'el operario')+'.</p>';
+  html+='<div class="form-card"><div class="labor-chosen">'+(ICONOS[lb.nombre]||'🔧')+' <strong>'+titulo+'</strong></div>'+
+    '<div class="c261-avance-ident"><div class="c261-avance-chip '+plantClass+'"><small>Plantación / Tabla</small>'+plantNombre+(o.tabla?' · '+o.tabla.nombre:'')+'</div><div class="c261-avance-chip c261-neutral"><small>Colaborador</small>'+opNombre+'</div></div>';
+  html+='<p class="hint" style="background:var(--gris-1);padding:.6rem .75rem;border-radius:var(--radio-sm);margin-bottom:.75rem;">ℹ️ Usa esto para registrar en el sistema el avance que el operario ya hizo en campo, mientras se acostumbra a marcarlo desde su celular. El avance quedará registrado a nombre de '+(opNombre||'el colaborador')+'.</p>';
 
   if(esAplic){
     var tambosPlan=o.tambos_planeados||1;
@@ -3519,7 +3544,7 @@ function guardarAdminCompletar(){
 
   function finalizar(){
     from('registros_labor').insert(reg).then(function(){
-      return from('ordenes_trabajo').eq('id',o.id).update(updatePayload);
+      return from('ordenes_trabajo').update(updatePayload).eq('id',o.id).get();
     }).then(function(){
       if(nuevoEstado==='completada'&&o.activo_rancho_id) from('activos_rancho').eq('id',o.activo_rancho_id).update({fecha_ultimo_mantenimiento:fechaHoyLocal()}).catch(function(){});
       var verbo=nuevoEstado==='completada'?'se completó':'tuvo avance parcial';
@@ -3568,7 +3593,15 @@ function c256SemanaActual(){
 var C259_FILTRO_LAB='semana';
 function c259EsRetrasada(o){if(!o||o.estado==='completada'||o.estado==='cancelada')return false;var hoy=fechaHoyLocal(),rg=c256SemanaActual(),d=new Date(),dia=(d.getDay()+6)%7;return (o.fecha_asignacion&&o.fecha_asignacion<hoy)||(dia>=4&&o.fecha_asignacion>=rg.ini&&o.fecha_asignacion<=rg.fin&&o.estado==='pendiente');}
 function c259GrupoRetrasado(g){return g&&g.ordenes&&g.ordenes.some(c259EsRetrasada);}
-function c259SetFiltro(f){C259_FILTRO_LAB=f;renderAsignarEstatus();}
+function c259SetFiltro(f){
+  C259_FILTRO_LAB=f;
+  if(f==='semana') ASIGNAR_SUBTAB='semana';
+  else if(f==='pendiente') ASIGNAR_SUBTAB='pendientes';
+  else if(f==='en_proceso') ASIGNAR_SUBTAB='proceso';
+  else if(f==='completada') ASIGNAR_SUBTAB='terminadas';
+  else if(f==='retrasada') ASIGNAR_SUBTAB='semana';
+  renderAsignarEstatus();
+}
 function c259CerrarModal(){var x=document.getElementById('c259-root');if(x)x.remove();}
 function c256DashboardLabores(ordenes){
   var rg=c256SemanaActual();
@@ -3653,9 +3686,13 @@ function renderAsignarEstatus(){
       }
       gruposLabor[k].ordenes.push(o);
     });
-    var tarjetas=ordenGruposLabor.map(function(k){var g=gruposLabor[k];
-    if(C259_FILTRO_LAB==='retrasada')tarjetas=tarjetas.filter(function(x){return c259GrupoRetrasado(x.grupo||x);});
-return {fecha:g.fecha_asignacion,html:tarjetaLaborAgrupada(g)};});
+    var gruposKeysFiltrados=ordenGruposLabor.slice();
+    if(C259_FILTRO_LAB==='retrasada'){
+      gruposKeysFiltrados=gruposKeysFiltrados.filter(function(k){return c259GrupoRetrasado(gruposLabor[k]);});
+    }
+    var tarjetas=gruposKeysFiltrados.map(function(k){var g=gruposLabor[k];
+      return {fecha:g.fecha_asignacion,html:tarjetaLaborAgrupada(g)};
+    });
     ordenGrupos.forEach(function(k){
       var g=gruposRiego[k];
       tarjetas.push({fecha:g.fecha_asignacion,html:tarjetaRiegoAgrupada(g)});
