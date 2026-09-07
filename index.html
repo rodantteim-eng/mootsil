@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C261';
+  window.MOOTSIL_BUILD='C262';
 </script>
 
 
@@ -3609,8 +3609,11 @@ function c256DashboardLabores(ordenes){
     return o.fecha_asignacion>=rg.ini&&o.fecha_asignacion<=rg.fin&&!ordenEsTiempo(o);
   });
   var total=lab.length, terminadas=lab.filter(function(o){return o.estado==='completada';}).length;
-  var proceso=lab.filter(function(o){return o.estado==='en_proceso';}).length;
-  var pendientes=lab.filter(function(o){return o.estado==='pendiente';}).length;
+  // Pendientes y En proceso son indicadores operativos: deben contar todas las labores activas,
+  // aunque su fecha quede fuera de la semana visible. Labores de la semana sigue siendo semanal.
+  var activasNoTiempo=(ordenes||[]).filter(function(o){return !ordenEsTiempo(o)&&o.estado!=='cancelada';});
+  var proceso=activasNoTiempo.filter(function(o){return o.estado==='en_proceso';}).length;
+  var pendientes=activasNoTiempo.filter(function(o){return o.estado==='pendiente';}).length;
   function tableStats(tid){
     var os=lab.filter(function(o){return String(o.tabla_id||'')===String(tid);});
     var asignados=0,hechos=0;
@@ -3849,9 +3852,9 @@ function c260AbrirEditarLabor(grupo){
     grupo.ordenes.forEach(function(x){
       var esta=seleccion.indexOf(String(x.operario_id))>-1;
       if(esta){
-        jobs.push(from('ordenes_trabajo').update({tipo_labor_id:tipoId,subtipo_labor_id:subId,tabla_id:tablaId,surcos_asignados:surcos,fecha_asignacion:fecha,notas_encargado:notas,es_hora_extra:extra}).eq('id',x.id).get());
+        jobs.push(from('ordenes_trabajo').eq('id',x.id).update({tipo_labor_id:tipoId,subtipo_labor_id:subId,tabla_id:tablaId,surcos_asignados:surcos,fecha_asignacion:fecha,notas_encargado:notas,es_hora_extra:extra}));
       }else if(x.estado==='pendiente'){
-        jobs.push(from('ordenes_trabajo').update({estado:'cancelada'}).eq('id',x.id).get());
+        jobs.push(from('ordenes_trabajo').eq('id',x.id).update({estado:'cancelada'}));
       }
     });
     seleccion.filter(function(id){return actuales.indexOf(String(id))<0;}).forEach(function(id){
