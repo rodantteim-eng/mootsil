@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C269';
+  window.MOOTSIL_BUILD='C270';
 </script>
 
 
@@ -2155,6 +2155,11 @@ function c231Icon(name, cls){
 <style id="c269-week-nav">
 .c269-weekbtn{border:1px solid #d5dfd9;background:#fff;color:#315747;border-radius:999px;padding:7px 10px;font-size:.68rem;font-weight:800;cursor:pointer}
 .c269-weekbtn.current{background:#edf5f0;border-color:#bdd2c5;color:#0d5b3c}
+</style>
+
+<style id="c270-coherencia-semanal">
+.c256-summary .c256-stat{cursor:pointer}
+.c256-summary .c256-stat.c270-active{outline:2px solid rgba(20,82,56,.22);transform:translateY(-1px)}
 </style>
 </head>
 <body>
@@ -3679,19 +3684,20 @@ function c256DashboardLabores(ordenes){
   function grupoRetrasado(g){return g.some(c259EsRetrasada);}
   function grupoFecha(g){return g.length?(g[0].fecha_asignacion||''):'';}
 
-  var activasNoTiempo=(ordenes||[]).filter(function(o){return c268EsLaborTablero(o)&&o.estado!=='cancelada';});
-  var laboresActivas=agruparLabores(activasNoTiempo);
+  // Todos los indicadores pertenecen a la SEMANA VISIBLE.
+  // No mezclar una semana en el encabezado con estados de otra semana.
+  var laboresSemanaActivas=laboresSemana.filter(function(g){return !grupoCancelado(g);});
 
-  var total=laboresSemana.length;
-  var pendientes=laboresActivas.filter(function(g){
-    return grupoFecha(g)===hoy && !grupoEnProceso(g) && !grupoTerminado(g) && !grupoCancelado(g);
+  var total=laboresSemanaActivas.length;
+  var pendientes=laboresSemanaActivas.filter(function(g){
+    return grupoFecha(g)===hoy && !grupoEnProceso(g) && !grupoTerminado(g);
   }).length;
-  var proceso=laboresActivas.filter(function(g){
+  var proceso=laboresSemanaActivas.filter(function(g){
     return grupoEnProceso(g) && !grupoRetrasado(g) && !grupoTerminado(g);
   }).length;
   var terminadas=laboresSemana.filter(grupoTerminado).length;
-  var retrasadas=laboresActivas.filter(function(g){
-    return grupoRetrasado(g) && !grupoTerminado(g) && !grupoCancelado(g);
+  var retrasadas=laboresSemanaActivas.filter(function(g){
+    return grupoRetrasado(g) && !grupoTerminado(g);
   }).length;
   function tableStats(tid){
     var os=lab.filter(function(o){return String(o.tabla_id||'')===String(tid);});
@@ -3717,11 +3723,11 @@ function c256DashboardLabores(ordenes){
   var ja=(cats.plantaciones||[]).find(function(p){return /jade/i.test(p.nombre||'');});
   return '<section class="c256-dashboard"><div class="c256-dash-head"><div><div class="c256-dash-title">Avance semanal de labores</div><div class="c256-dash-sub">'+rg.ini+' al '+rg.fin+' · control por plantación y tabla</div></div><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><button type="button" class="c269-weekbtn" onclick="c269MoverSemana(-1)">← Semana anterior</button><button type="button" class="c269-weekbtn current" onclick="c269EstaSemana()">Esta semana</button><button type="button" class="c269-weekbtn" onclick="c269MoverSemana(1)">Semana siguiente →</button><button class="c257-print" type="button" onclick="window.print()">🖨 Imprimir reporte semanal</button></div></div>'+
     '<div class="c256-summary">'+
-    '<div class="c256-stat" onclick="c259SetFiltro(&quot;semana&quot;)" style="cursor:pointer"><b>'+total+'</b><span>Programadas en la semana</span></div>'+
-    '<div class="c256-stat" onclick="c259SetFiltro(&quot;pendiente&quot;)" style="cursor:pointer"><b>'+pendientes+'</b><span>Pendientes</span></div>'+
-    '<div class="c256-stat" onclick="c259SetFiltro(&quot;en_proceso&quot;)" style="cursor:pointer"><b>'+proceso+'</b><span>En proceso</span></div>'+
-    '<div class="c256-stat" onclick="c259SetFiltro(&quot;completada&quot;)" style="cursor:pointer"><b>'+terminadas+'</b><span>Terminadas</span></div>'+
-    '<div class="c256-stat" onclick="c259SetFiltro(&quot;retrasada&quot;)" style="cursor:pointer"><b>'+retrasadas+'</b><span>Retrasadas</span></div></div>'+
+    '<div class="c256-stat '+(C259_FILTRO_LAB==='semana'?'c270-active':'')+'" onclick="c259SetFiltro(&quot;semana&quot;)"><b>'+total+'</b><span>Programadas en la semana</span></div>'+
+    '<div class="c256-stat '+(C259_FILTRO_LAB==='pendiente'?'c270-active':'')+'" onclick="c259SetFiltro(&quot;pendiente&quot;)"><b>'+pendientes+'</b><span>Pendientes de hoy</span></div>'+
+    '<div class="c256-stat '+(C259_FILTRO_LAB==='en_proceso'?'c270-active':'')+'" onclick="c259SetFiltro(&quot;en_proceso&quot;)"><b>'+proceso+'</b><span>En proceso</span></div>'+
+    '<div class="c256-stat '+(C259_FILTRO_LAB==='completada'?'c270-active':'')+'" onclick="c259SetFiltro(&quot;completada&quot;)"><b>'+terminadas+'</b><span>Terminadas</span></div>'+
+    '<div class="c256-stat '+(C259_FILTRO_LAB==='retrasada'?'c270-active':'')+'" onclick="c259SetFiltro(&quot;retrasada&quot;)"><b>'+retrasadas+'</b><span>Retrasadas</span></div></div>'+
     '<div class="c256-plants">'+(er?plantBlock(er,'erandy'):'')+(ja?plantBlock(ja,'jade'):'')+'</div></section>';
 }
 function renderAsignarEstatus(){
@@ -3779,16 +3785,16 @@ function renderAsignarEstatus(){
     var gruposKeysFiltrados=ordenGruposLabor.filter(function(k){
       var g=gruposLabor[k];
       if(C259_FILTRO_LAB==='semana') return grupoEnSemana(g);
-      if(C259_FILTRO_LAB==='pendiente') return g.fecha_asignacion===hoyFiltro && !grupoProcesoVista(g) && !grupoFinalizado(g) && !grupoCanceladoVista(g);
-      if(C259_FILTRO_LAB==='en_proceso') return grupoProcesoVista(g) && !grupoRetrasadoVista(g) && !grupoFinalizado(g);
+      if(C259_FILTRO_LAB==='pendiente') return grupoEnSemana(g) && g.fecha_asignacion===hoyFiltro && !grupoProcesoVista(g) && !grupoFinalizado(g) && !grupoCanceladoVista(g);
+      if(C259_FILTRO_LAB==='en_proceso') return grupoEnSemana(g) && grupoProcesoVista(g) && !grupoRetrasadoVista(g) && !grupoFinalizado(g);
       if(C259_FILTRO_LAB==='completada') return grupoEnSemana(g) && grupoFinalizado(g);
-      if(C259_FILTRO_LAB==='retrasada') return grupoRetrasadoVista(g) && !grupoFinalizado(g) && !grupoCanceladoVista(g);
+      if(C259_FILTRO_LAB==='retrasada') return grupoEnSemana(g) && grupoRetrasadoVista(g) && !grupoFinalizado(g) && !grupoCanceladoVista(g);
       return true;
     });
 
     if(!gruposKeysFiltrados.length){
       var vacioTxt=C259_FILTRO_LAB==='semana'?'No hay labores programadas en esta semana.':
-        C259_FILTRO_LAB==='pendiente'?'No hay labores de hoy pendientes por iniciar.':
+        C259_FILTRO_LAB==='pendiente'?'No hay labores pendientes de hoy en esta semana.':
         C259_FILTRO_LAB==='en_proceso'?'No hay labores actualmente en proceso.':
         C259_FILTRO_LAB==='completada'?'No hay labores terminadas en esta semana.':
         'No hay labores retrasadas.';
