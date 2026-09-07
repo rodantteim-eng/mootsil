@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C283';
+  window.MOOTSIL_BUILD='C284';
 </script>
 
 
@@ -2351,7 +2351,7 @@ function c231Icon(name, cls){
 }
 </style>
 
-<style id="c282-catalogo-una-linea">
+<style id="c284-labores-cierre">
 #c260-nueva-root .c274-catgrid{
   display:grid!important;
   grid-template-columns:repeat(9,minmax(0,1fr))!important;
@@ -2378,8 +2378,8 @@ function c231Icon(name, cls){
   line-height:1.05!important;
   white-space:nowrap!important;
 }
-#c260-nueva-root .c278-assignment{
-  margin-top:10px!important;
+#c260-nueva-root .c274-variants{
+  display:none!important;
 }
 @media(max-width:900px){
   #c260-nueva-root .c274-catgrid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
@@ -4508,11 +4508,21 @@ function c253RenderAsignacion(){
     return '<div class="c253-plant '+cls+'"><div class="c253-plant-head"><span>PLANTACIÓN '+(p.nombre||'').toUpperCase()+'</span><span>'+ts.length+' tablas</span></div>'+
       '<div class="c253-tables">'+ts.map(function(t){return '<button type="button" class="c253-table" data-id="'+t.id+'" onclick="c253SeleccionarTabla(&quot;'+t.id+'&quot;)">'+t.nombre+'<br><span style="font-size:.6rem;font-weight:600;color:#7a877f;">Tabla completa</span></button>';}).join('')+'</div></div>';
   }).join('');
-  var subops=(cats.subtiposLabor||[]).filter(function(x){return String(x.tipo_labor_id)===String(lb.id)&&!x.requiere_tiempo;});
+  var subops=(cats.subtiposLabor||[]).filter(function(x){
+    return String(x.tipo_labor_id)===String(lb.id)&&!x.requiere_tiempo;
+  });
+
+  // Para las categorías fijas, el selector usa únicamente variantes ya existentes.
+  // No se crean subtipos desde el navegador.
   if(C274_CAT_SEL&&C274_CAT_SEL.variantes&&C274_CAT_SEL.variantes.length){
-    subops=C274_CAT_SEL.variantes.map(function(nombre){
-      return subops.find(function(x){return (x.nombre||'').trim().toLowerCase()===nombre.trim().toLowerCase();});
-    }).filter(Boolean);
+    var acordadas=C274_CAT_SEL.variantes.map(function(nombre){return nombre.trim().toLowerCase();});
+    subops=subops.filter(function(x){
+      return acordadas.indexOf((x.nombre||'').trim().toLowerCase())>-1;
+    });
+    subops.sort(function(a,b){
+      return acordadas.indexOf((a.nombre||'').trim().toLowerCase())-
+             acordadas.indexOf((b.nombre||'').trim().toLowerCase());
+    });
   }
   panel.innerHTML=
     '<div class="c253-selected"><div class="c250-labor-ic"><svg viewBox="0 0 48 48">'+v.svg+'</svg></div><div><div style="font-size:.64rem;color:#6d7c74;">Labor seleccionada</div><strong>'+v.label+'</strong></div></div>'+
@@ -4581,16 +4591,6 @@ var C274_CATALOGO_LABORES=[
   ]},
   {k:'otros',nombre:'Otros',icono:c275Icon('otros'),variantes:[]}
 ];
-var C283_TIPOS_LABOR_VERIFICADOS={
-  poda:'2f3c2f18-69de-44ab-8ccd-8a44f5461c40',
-  desbrozadora:'2fb335e0-8d20-4c7a-9ed2-92fccd77c6d6',
-  deshierbado:'533c75f4-9151-47cd-8df3-83a7bed1b770',
-  limpieza:'f95dc043-f158-41d3-ba20-5024f951e0ad',
-  trineado:'861f0916-27b3-4ba2-ab5e-ccdd8041bdc4',
-  tutoreo:'92324033-656f-453f-97d8-46489071ff97',
-  trampas:'0ffe1ed4-2571-4302-902d-be542f6086e6',
-  infraestructura:'17b7a132-3aab-4c65-82d3-bf558e598b66'
-};
 var C274_CAT_SEL=null;
 var C274_VAR_SEL=null;
 
@@ -4615,88 +4615,36 @@ function c274BuscarTipo(cat){
 function c274AsegurarTipo(cat){
   var ex=c274BuscarTipo(cat);
   if(ex)return Promise.resolve(ex);
-
-  var idFijo=C283_TIPOS_LABOR_VERIFICADOS[cat.k];
-  if(idFijo){
-    // Estas categorías ya existen en la base real. Algunas están inactivas en el
-    // catálogo legado, por eso no siempre llegan en cats.tiposLabor.
-    return from('tipos_labor').select('*').eq('id',idFijo).get().then(function(rows){
-      var lb=rows&&rows[0]?rows[0]:{
-        id:idFijo,nombre:cat.nombre,requiere_cantidad_insumo:false,
-        requiere_tiempo:false,requiere_tabla:true,activo:false
-      };
-      if(!(cats.tiposLabor||[]).some(function(x){return String(x.id)===String(lb.id);})){
-        cats.tiposLabor.push(lb);
-      }
-      return lb;
-    });
-  }
-
-  // Sólo categorías libres/futuras pueden llegar aquí. Primero consultar por nombre;
-  // nunca insertar a ciegas para evitar violar tipos_labor_nombre_key.
-  return from('tipos_labor').select('*').eq('nombre',cat.nombre).get().then(function(rows){
-    if(rows&&rows[0])return rows[0];
-    return from('tipos_labor').insert({
-      nombre:cat.nombre,
-      requiere_cantidad_insumo:false,
-      requiere_tiempo:false,
-      requiere_tabla:true,
-      activo:true,
-      orden:90
-    }).then(function(ins){
-      return ins&&ins[0]?ins[0]:null;
-    });
-  }).then(function(lb){
-    if(lb&&!(cats.tiposLabor||[]).some(function(x){return String(x.id)===String(lb.id);})){
-      cats.tiposLabor.push(lb);
-    }
+  return from('tipos_labor').insert({
+    nombre:cat.nombre,
+    requiere_cantidad_insumo:false,
+    requiere_tiempo:false,
+    requiere_tabla:true,
+    activo:true,
+    orden:90
+  }).then(function(){
+    return from('tipos_labor').select('*').eq('nombre',cat.nombre).get();
+  }).then(function(rows){
+    var lb=rows&&rows[0]?rows[0]:null;
+    if(lb&&!cats.tiposLabor.some(function(x){return String(x.id)===String(lb.id);})){cats.tiposLabor.push(lb);}
     return lb;
   });
 }
 function c274AsegurarVariante(lb,nombre){
   if(!nombre)return Promise.resolve(null);
-
-  var local=(cats.subtiposLabor||[]).find(function(x){
-    return String(x.tipo_labor_id)===String(lb.id)&&
-      (x.nombre||'').trim().toLowerCase()===nombre.trim().toLowerCase();
+  var ex=(cats.subtiposLabor||[]).find(function(x){
+    return String(x.tipo_labor_id)===String(lb.id)&&(x.nombre||'').trim().toLowerCase()===nombre.trim().toLowerCase();
   });
-  if(local)return Promise.resolve(local);
-
-  function guardarLocal(sub){
-    if(sub&&!(cats.subtiposLabor||[]).some(function(x){return String(x.id)===String(sub.id);})){
-      cats.subtiposLabor.push(sub);
-    }
+  if(ex)return Promise.resolve(ex);
+  return from('subtipos_labor').insert({
+    tipo_labor_id:lb.id,nombre:nombre,requiere_tiempo:false,activo:true
+  }).then(function(){
+    return from('subtipos_labor').select('*').eq('tipo_labor_id',lb.id).eq('nombre',nombre).get();
+  }).then(function(rows){
+    var sub=rows&&rows[0]?rows[0]:null;
+    if(sub&&!cats.subtiposLabor.some(function(x){return String(x.id)===String(sub.id);})){cats.subtiposLabor.push(sub);}
     return sub;
-  }
-
-  // Consultar la tabla real antes de insertar. Evita duplicados si el subtipo
-  // existe pero no estaba en el catálogo cargado en memoria.
-  return from('subtipos_labor')
-    .select('*')
-    .eq('tipo_labor_id',lb.id)
-    .eq('nombre',nombre)
-    .get()
-    .then(function(rows){
-      if(rows&&rows[0])return guardarLocal(rows[0]);
-      return from('subtipos_labor').insert({
-        tipo_labor_id:lb.id,
-        nombre:nombre,
-        requiere_tiempo:false
-      }).then(function(ins){
-        return guardarLocal(ins&&ins[0]?ins[0]:null);
-      }).catch(function(err){
-        // Si otro intento lo creó al mismo tiempo, recuperar el registro existente.
-        if(err&&/duplicate key|unique constraint|23505/i.test(err.message||'')){
-          return from('subtipos_labor')
-            .select('*')
-            .eq('tipo_labor_id',lb.id)
-            .eq('nombre',nombre)
-            .get()
-            .then(function(r){return guardarLocal(r&&r[0]?r[0]:null);});
-        }
-        throw err;
-      });
-    });
+  });
 }
 function c274RenderVariantes(cat){return;}
 
@@ -4718,46 +4666,13 @@ function c274ElegirCatalogo(k){
 
   c274AsegurarTipo(cat).then(function(lb){
     if(!lb)throw new Error('No se pudo preparar la categoría.');
-    asignarLaborSel=lb;asignarLaborSubSel=null;
-
-    // Dejar listas en el selector exactamente las variantes acordadas.
-    if(cat.variantes&&cat.variantes.length){
-      return Promise.all(cat.variantes.map(function(v){return c274AsegurarVariante(lb,v);})).then(function(){
-        c253RenderAsignacion();
-      });
-    }
+    asignarLaborSel=lb;
+    asignarLaborSubSel=null;
     c253RenderAsignacion();
   }).catch(function(e){alert('Error al preparar la labor: '+e.message);});
 }
-function c274ElegirVariante(nombre){
-  if(!C274_CAT_SEL)return;
+function c274ElegirVariante(nombre){return;}
 
-  // Marcar visualmente la variante de inmediato, aunque todavía se esté
-  // resolviendo/creando la categoría en Supabase.
-  C274_VAR_SEL=nombre;
-  c274RenderVariantes(C274_CAT_SEL);
-
-  var prepararLabor=asignarLaborSel
-    ? Promise.resolve(asignarLaborSel)
-    : c274AsegurarTipo(C274_CAT_SEL);
-
-  prepararLabor.then(function(lb){
-    if(!lb)throw new Error('No se pudo preparar la categoría.');
-    asignarLaborSel=lb;
-    return c274AsegurarVariante(lb,nombre);
-  }).then(function(sub){
-    if(!sub)throw new Error('No se pudo preparar la variante.');
-    asignarLaborSubSel=sub;
-    c253RenderAsignacion();
-    var fsb=document.getElementById('fsb');
-    if(fsb)fsb.value=sub.id;
-    c274RenderVariantes(C274_CAT_SEL);
-  }).catch(function(e){
-    C274_VAR_SEL=null;
-    c274RenderVariantes(C274_CAT_SEL);
-    alert('Error al preparar la variante: '+e.message);
-  });
-}
 function renderFormAsignar(){
   var body=document.getElementById('c260-nueva-body');
   if(!body)return;
@@ -17677,7 +17592,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C283
+C284
 </div>
 
 <style id="fi128-css">
