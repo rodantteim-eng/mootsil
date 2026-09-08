@@ -1638,7 +1638,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C318';
+  window.MOOTSIL_BUILD='C319';
 </script>
 
 
@@ -2736,6 +2736,35 @@ function c231Icon(name, cls){
 .c315-inv-head{background:#0d5036;color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center}.c315-inv-head strong{font-size:1.05rem;display:block}.c315-inv-head span{font-size:.66rem;opacity:.78}.c315-inv-head button{width:34px;height:34px;border:0;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;font-size:1.2rem;cursor:pointer}
 .c315-inv-body{padding:14px 16px 16px;overflow:auto}.c315-inv-body>.hint{margin-top:0}.c315-inv-form{padding:13px!important;margin:0!important}.c315-inv-form .form-group{margin-bottom:.72rem!important}.c315-inv-form .form-group label{font-size:.66rem!important}.c315-inv-form input,.c315-inv-form select{min-height:38px!important}.c315-inv-form .hint{font-size:.62rem!important;line-height:1.25}.c315-inv-form .btn-primary{min-height:42px}
 @media(min-width:700px){.c315-inv-form{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}.c315-inv-form>.form-group:nth-child(1),.c315-inv-form>.form-group:nth-child(2),.c315-inv-form>.form-group:nth-child(3),.c315-inv-form>.form-group:nth-child(4),.c315-inv-form>.btn-primary{grid-column:1/-1}.c315-inv-form>.btn-primary{margin-top:4px}}
+</style>
+
+<style id="c319-inventario-modal">
+#c317-inv-item-modal .c319-shell{width:min(820px,95vw);max-height:92vh;overflow:hidden;background:#f7f9f7;border-radius:22px;box-shadow:0 28px 80px rgba(0,0,0,.28);display:flex;flex-direction:column}
+#c317-inv-item-modal .c319-body{overflow:auto;padding:18px 20px 22px}
+#c317-inv-item-modal .c319-stats{display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:12px;margin-bottom:16px}
+#c317-inv-item-modal .c319-stat{background:#fff;border:1px solid #dde6e0;border-radius:15px;padding:14px}
+#c317-inv-item-modal .c319-stat .k{font-size:.64rem;color:#78847d;text-transform:uppercase;font-weight:800;letter-spacing:.04em}
+#c317-inv-item-modal .c319-stat .v{font-size:1.15rem;font-weight:850;margin-top:4px;color:#183f30}
+#c317-inv-item-modal .c319-mov{background:#fff;border:1px solid #dde6e0;border-radius:16px;padding:16px;margin-bottom:16px}
+#c317-inv-item-modal .c319-mov-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
+#c317-inv-item-modal .c319-title{font-size:1rem;font-weight:850;color:#173f30}
+#c317-inv-item-modal .c319-actions{display:flex;gap:8px}
+#c317-inv-item-modal .c319-action{border:1px solid #d4ded8;background:#fff;color:#315243;border-radius:10px;padding:7px 10px;font-size:.73rem;font-weight:750;cursor:pointer}
+#c317-inv-item-modal .c319-tabs{display:inline-flex;background:#eef3ef;border-radius:12px;padding:4px;gap:4px;margin-bottom:14px}
+#c317-inv-item-modal .c319-tab{border:0;background:transparent;color:#4b5e54;border-radius:9px;padding:8px 14px;font-size:.78rem;font-weight:800;cursor:pointer}
+#c317-inv-item-modal .c319-tab.sel{background:#0b6842;color:#fff;box-shadow:0 2px 5px rgba(11,104,66,.18)}
+#c317-inv-item-modal .c319-capture{display:grid;grid-template-columns:1fr 1.5fr auto;gap:10px;align-items:end}
+#c317-inv-item-modal .c319-field label{display:block;font-size:.67rem;font-weight:750;color:#66746c;margin-bottom:5px}
+#c317-inv-item-modal .c319-field input{width:100%;height:42px;border:1px solid #d8e1dc;border-radius:10px;padding:0 11px;font-size:.84rem;background:#fff}
+#c317-inv-item-modal .c319-register{height:42px;border:0;border-radius:10px;background:#0b6842;color:#fff;padding:0 20px;font-weight:850;cursor:pointer}
+#c317-inv-item-modal .c319-count{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:.72rem;color:#68766f;font-weight:700}
+#c317-inv-item-modal .c319-count .op-chip{padding:6px 10px;font-size:.72rem}
+#c317-inv-item-modal .c319-history{background:#fff;border:1px solid #dde6e0;border-radius:16px;padding:16px;min-height:135px}
+@media(max-width:700px){
+  #c317-inv-item-modal .c319-stats{grid-template-columns:1fr}
+  #c317-inv-item-modal .c319-capture{grid-template-columns:1fr}
+  #c317-inv-item-modal .c319-register{width:100%}
+}
 </style>
 </head>
 <body>
@@ -6139,12 +6168,12 @@ function renderInventarioItem(itemId){
   overlay.style.cssText='position:fixed;inset:0;background:rgba(8,35,25,.58);z-index:10060;display:flex;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(2px);';
   var foto=it.imagen_url?'<img src="'+it.imagen_url+'" style="width:82px;height:82px;object-fit:contain;background:#fff;border-radius:14px;border:1px solid #dfe7e2;padding:5px;">':'<div style="width:82px;height:82px;border-radius:14px;background:#eef5f0;display:flex;align-items:center;justify-content:center;font-size:32px;">📦</div>';
   var presentacion=tienePaquete?(it.unidad_compra+' de '+numFmt(it.factor_compra)+' '+it.unidad+' c/u'):'—';
-  overlay.innerHTML='<div style="width:min(760px,96vw);max-height:92vh;overflow:hidden;background:#f7f8f7;border-radius:20px;box-shadow:0 24px 70px rgba(0,0,0,.28);display:flex;flex-direction:column;">'
+  overlay.innerHTML='<div class="c319-shell">'
     +'<div style="background:linear-gradient(135deg,#075735,#0d6843);color:white;padding:18px 20px;display:flex;align-items:center;gap:15px;">'+foto+'<div style="min-width:0;flex:1;"><div style="font-size:.72rem;opacity:.8;text-transform:uppercase;letter-spacing:.08em;">Inventario · Rancho Sagrado Corazón</div><div style="font-size:1.25rem;font-weight:800;line-height:1.15;margin-top:3px;">'+it.nombre+'</div><div style="font-size:.78rem;opacity:.88;margin-top:5px;">'+((it.grupo||'insumos').replace(/^./,function(c){return c.toUpperCase();}))+(it.categoria?' · '+it.categoria:'')+'</div></div><button id="c317-inv-close" type="button" style="border:0;background:rgba(255,255,255,.14);color:#fff;width:38px;height:38px;border-radius:50%;font-size:20px;cursor:pointer;">×</button></div>'
-    +'<div style="overflow:auto;padding:16px 18px 20px;">'
-    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;"><div style="background:#fff;border:1px solid #e0e7e3;border-radius:13px;padding:12px;"><div style="font-size:.67rem;color:#78827c;text-transform:uppercase;font-weight:700;">Stock actual</div><div id="c317-stock" style="font-size:1.25rem;color:#075735;font-weight:800;margin-top:3px;">'+numFmt(it.stock_actual)+' '+it.unidad+'</div></div><div style="background:#fff;border:1px solid #e0e7e3;border-radius:13px;padding:12px;"><div style="font-size:.67rem;color:#78827c;text-transform:uppercase;font-weight:700;">Stock mínimo</div><div style="font-size:1rem;font-weight:750;margin-top:5px;">'+numFmt(it.stock_minimo)+' '+it.unidad+'</div></div><div style="background:#fff;border:1px solid #e0e7e3;border-radius:13px;padding:12px;"><div style="font-size:.67rem;color:#78827c;text-transform:uppercase;font-weight:700;">Presentación habitual</div><div style="font-size:.88rem;font-weight:700;margin-top:5px;">'+presentacion+'</div></div></div>'
-    +(puedeEditar?'<div style="background:#fff;border:1px solid #e0e7e3;border-radius:15px;padding:14px;margin-bottom:14px;"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;"><div style="font-weight:800;color:#123f2d;">Registrar movimiento</div><div style="display:flex;gap:6px;"><button id="inv-duplicar-btn" type="button" class="op-chip" style="padding:5px 10px;font-size:.72rem;">📋 Duplicar</button><button id="c317-inv-edit" type="button" class="op-chip" style="padding:5px 10px;font-size:.72rem;">✏️ Editar</button></div></div><div id="inv-mov-tipo-grp" style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;"><button type="button" class="op-chip sel" data-tipo="entrada" style="padding:6px 12px;font-size:.75rem;">✓ ➕ Entrada</button><button type="button" class="op-chip" data-tipo="salida" style="padding:6px 12px;font-size:.75rem;">➖ Salida</button><button type="button" class="op-chip" data-tipo="ajuste" style="padding:6px 12px;font-size:.75rem;">✏️ Ajuste</button></div>'+(tienePaquete?'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;"><span style="font-size:.75rem;font-weight:700;color:#65736b;">Contar:</span><button type="button" class="op-chip sel" id="inv-mov-modo-base">✓ Por '+it.unidad+'</button><button type="button" class="op-chip" id="inv-mov-modo-paq">Por '+it.unidad_compra+'</button><div id="inv-mov-tamano-wrap" style="display:none;flex:1;min-width:170px;"><input type="number" id="inv-mov-tamano" min="0" step="any" value="'+(it.factor_compra||'')+'" placeholder="Tamaño del paquete"></div></div>':'')+'<div style="display:grid;grid-template-columns:1fr 1.6fr auto;gap:8px;align-items:end;"><div><label id="inv-mov-cant-lbl" style="font-size:.7rem;font-weight:700;color:#65736b;">Cantidad ('+it.unidad+')</label><input type="number" id="inv-mov-cantidad" min="0" step="any" placeholder="0" style="margin-top:4px;"></div><div><label style="font-size:.7rem;font-weight:700;color:#65736b;">Nota (opcional)</label><input type="text" id="inv-mov-motivo" placeholder="Proveedor, factura o motivo" style="margin-top:4px;"></div><button class="btn-primary" id="inv-mov-guardar" style="margin:0;height:42px;padding:0 20px;">Registrar</button></div><div id="inv-mov-equiv" class="hint" style="display:none;margin-top:7px;font-weight:700;color:var(--verde-mid);"></div></div>':'<div style="background:#fff;border:1px solid #e0e7e3;border-radius:13px;padding:11px 13px;margin-bottom:14px;color:#68756e;font-size:.8rem;">👁️ Modo de solo consulta.</div>')
-    +'<div style="background:#fff;border:1px solid #e0e7e3;border-radius:15px;padding:14px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="font-weight:800;color:#123f2d;">Historial reciente</div><button id="c317-hist-toggle" type="button" style="display:none;border:0;background:none;color:#0b6842;font-weight:700;cursor:pointer;font-size:.76rem;">Ver historial completo</button></div><div id="inv-mov-historial"><div class="loading">Cargando movimientos...</div></div></div>'
+    +'<div class="c319-body">'
+    +'<div class="c319-stats"><div class="c319-stat"><div class="k">Stock actual</div><div id="c317-stock" class="v">'+numFmt(it.stock_actual)+' '+it.unidad+'</div></div><div class="c319-stat"><div class="k">Stock mínimo</div><div class="v">'+numFmt(it.stock_minimo)+' '+it.unidad+'</div></div><div class="c319-stat"><div class="k">Presentación habitual</div><div class="v" style="font-size:.95rem;">'+presentacion+'</div></div></div>'
+    +(puedeEditar?'<div class="c319-mov"><div class="c319-mov-head"><div class="c319-title">Registrar movimiento</div><div class="c319-actions"><button id="inv-duplicar-btn" type="button" class="c319-action">Duplicar</button><button id="c317-inv-edit" type="button" class="c319-action">Editar</button></div></div><div id="inv-mov-tipo-grp" class="c319-tabs"><button type="button" class="c319-tab sel" data-tipo="entrada">Entrada</button><button type="button" class="c319-tab" data-tipo="salida">Salida</button><button type="button" class="c319-tab" data-tipo="ajuste">Ajuste</button></div>'+(tienePaquete?'<div class="c319-count"><span>Contar:</span><button type="button" class="op-chip sel" id="inv-mov-modo-base">✓ Por '+it.unidad+'</button><button type="button" class="op-chip" id="inv-mov-modo-paq">Por '+it.unidad_compra+'</button><div id="inv-mov-tamano-wrap" style="display:none;flex:1;min-width:170px;"><input type="number" id="inv-mov-tamano" min="0" step="any" value="'+(it.factor_compra||'')+'" placeholder="Tamaño del paquete"></div></div>':'')+'<div class="c319-capture"><div class="c319-field"><label id="inv-mov-cant-lbl">Cantidad ('+it.unidad+')</label><input type="number" id="inv-mov-cantidad" min="0" step="any" placeholder="0"></div><div class="c319-field"><label>Nota (opcional)</label><input type="text" id="inv-mov-motivo" placeholder="Proveedor, factura o motivo"></div><button class="c319-register" id="inv-mov-guardar">Registrar</button></div><div id="inv-mov-equiv" class="hint" style="display:none;margin-top:7px;font-weight:700;color:var(--verde-mid);"></div></div>':'<div style="background:#fff;border:1px solid #e0e7e3;border-radius:13px;padding:11px 13px;margin-bottom:14px;color:#68756e;font-size:.8rem;">👁️ Modo de solo consulta.</div>')
+    +'<div class="c319-history"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div class="c319-title">Historial reciente</div><button id="c317-hist-toggle" type="button" style="display:none;border:0;background:none;color:#0b6842;font-weight:700;cursor:pointer;font-size:.76rem;">Ver historial completo</button></div><div id="inv-mov-historial"><div class="loading">Cargando movimientos...</div></div></div>'
     +'</div></div>';
   document.body.appendChild(overlay);
   function cerrar(){var m=document.getElementById('c317-inv-item-modal');if(m)m.remove();}
@@ -6154,7 +6183,7 @@ function renderInventarioItem(itemId){
     document.getElementById('c317-inv-edit').onclick=function(){cerrar();renderInventarioEditar(itemId);};
     document.getElementById('inv-duplicar-btn').onclick=function(){renderInventarioNuevo({origen:it.nombre,unidad:it.unidad,unidad_compra:it.unidad_compra,factor_compra:it.factor_compra,stock_minimo:it.stock_minimo,categoria:it.categoria,grupo:it.grupo});};
     var modoCaptura='base',tipoMov='entrada';
-    document.querySelectorAll('#c317-inv-item-modal #inv-mov-tipo-grp [data-tipo]').forEach(function(btn){btn.onclick=function(){tipoMov=this.dataset.tipo;document.querySelectorAll('#c317-inv-item-modal #inv-mov-tipo-grp [data-tipo]').forEach(function(b){b.classList.remove('sel');b.textContent=(b.dataset.tipo==='entrada'?'➕ Entrada':b.dataset.tipo==='salida'?'➖ Salida':'✏️ Ajuste');});this.classList.add('sel');this.textContent='✓ '+(tipoMov==='entrada'?'➕ Entrada':tipoMov==='salida'?'➖ Salida':'✏️ Ajuste');};});
+    document.querySelectorAll('#c317-inv-item-modal #inv-mov-tipo-grp [data-tipo]').forEach(function(btn){btn.onclick=function(){tipoMov=this.dataset.tipo;document.querySelectorAll('#c317-inv-item-modal #inv-mov-tipo-grp [data-tipo]').forEach(function(b){b.classList.remove('sel');b.textContent=(b.dataset.tipo==='entrada'?'Entrada':b.dataset.tipo==='salida'?'Salida':'Ajuste');});this.classList.add('sel');this.textContent=(tipoMov==='entrada'?'Entrada':tipoMov==='salida'?'Salida':'Ajuste');};});
     function tamanoPaqueteActual(){var el=document.getElementById('inv-mov-tamano');return (el&&parseFloat(el.value))||it.factor_compra;}
     function calc(){var e=document.getElementById('inv-mov-equiv'),c=parseFloat(document.getElementById('inv-mov-cantidad').value)||0;if(modoCaptura==='paquete'&&c>0){e.style.display='block';e.textContent='Equivale a '+numFmt(c*tamanoPaqueteActual())+' '+it.unidad;}else e.style.display='none';}
     if(tienePaquete){var b=document.getElementById('inv-mov-modo-base'),p=document.getElementById('inv-mov-modo-paq'),w=document.getElementById('inv-mov-tamano-wrap');b.onclick=function(){modoCaptura='base';b.classList.add('sel');b.textContent='✓ Por '+it.unidad;p.classList.remove('sel');p.textContent='Por '+it.unidad_compra;w.style.display='none';document.getElementById('inv-mov-cant-lbl').textContent='Cantidad ('+it.unidad+')';calc();};p.onclick=function(){modoCaptura='paquete';p.classList.add('sel');p.textContent='✓ Por '+it.unidad_compra;b.classList.remove('sel');b.textContent='Por '+it.unidad;w.style.display='block';document.getElementById('inv-mov-cant-lbl').textContent='Cantidad ('+it.unidad_compra+')';calc();};document.getElementById('inv-mov-tamano').oninput=calc;}
@@ -19024,7 +19053,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C318
+C319
 </div>
 
 <style id="fi128-css">
