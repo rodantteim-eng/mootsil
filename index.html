@@ -2787,7 +2787,11 @@ function c231Icon(name, cls){
 .c325-stock-flag{display:inline-flex;align-items:center;gap:4px;margin-left:7px;padding:2px 6px;border-radius:999px;font-size:.58rem;font-weight:850;vertical-align:middle}
 .c325-stock-flag.none{background:#fde8e5;color:#b52d22}
 .c325-stock-flag.low{background:#fff0cf;color:#9a6200}
-</style></head>
+</style><style id="c328-mis-tareas-labores">
+.c328-tasks-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:4px 0 16px}.c328-tasks-head h2{margin:0;color:#0b4c31;font-size:1.65rem}.c328-tasks-head p{margin:4px 0 0;color:#56655e;font-size:.86rem}.c328-calendar{border:0;background:transparent;color:#0b4c31;font-weight:850;font-size:.88rem;padding:8px;cursor:pointer}.c328-task-tabs{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid #dce3df;border-radius:13px;overflow:hidden;background:#fff;margin-bottom:14px}.c328-task-tabs button{border:0;border-right:1px solid #e3e8e5;background:#fff;padding:11px 5px;color:#172b23;font-weight:800;font-size:.78rem;cursor:pointer}.c328-task-tabs button:last-child{border-right:0}.c328-task-tabs button span{margin-right:5px;font-size:1rem}.c328-task-tabs button.active{background:#075b38;color:#fff}.c328-day-summary{display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid #e0e7e3;border-radius:14px;padding:12px 14px;margin-bottom:10px}.c328-day-summary b,.c328-day-summary span{display:block}.c328-day-summary b{color:#174d34}.c328-day-summary span{font-size:.76rem;color:#68756f;margin-top:2px}.c328-day-summary em{font-style:normal;background:#f1f6f3;padding:8px 10px;border-radius:9px;font-size:.72rem;color:#365747}.c328-task-card{display:grid;grid-template-columns:92px minmax(0,1fr) 118px;gap:12px;align-items:stretch;background:#fff;border:1px solid #e1e7e4;border-left:4px solid #1b754c;border-radius:14px;margin:9px 0;overflow:hidden;box-shadow:0 2px 8px rgba(15,62,42,.04)}.c328-task-card.overdue{border-left-color:#d97706}.c328-task-visual{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;background:#f1f7f3;padding:12px 7px;color:#176b45}.c328-task-visual svg{width:42px;height:42px}.c328-task-visual b{font-size:.68rem}.c328-task-info{padding:13px 0;min-width:0}.c328-task-info h3{margin:0 0 8px;color:#142b22;font-size:1rem}.c328-task-place,.c328-task-note{font-size:.8rem;color:#43534c;margin-top:5px}.c328-task-note{border-top:1px solid #edf0ee;padding-top:6px}.c328-extra{margin-top:7px;color:#d05d00;font-size:.7rem;font-weight:850}.c328-task-side{padding:11px 10px 11px 0;display:flex;flex-direction:column;align-items:stretch;justify-content:center;gap:8px;text-align:center}.c328-state{align-self:flex-end;background:#f0f5f2;border-radius:999px;padding:5px 9px;color:#24553e;font-size:.68rem;font-weight:850}.c328-task-side small{color:#67736d;font-size:.68rem}.c328-start{border:0;border-radius:9px;background:#08643d;color:#fff;padding:10px 6px;font-weight:900;font-size:.76rem;cursor:pointer}.c328-continue{background:#c26a00}
+@media(max-width:560px){.c328-tasks-head{align-items:center}.c328-tasks-head h2{font-size:1.45rem}.c328-calendar span{display:none}.c328-task-tabs button{font-size:.66rem;padding:10px 2px}.c328-task-tabs button span{display:block;margin:0 0 2px}.c328-day-summary{padding:10px}.c328-day-summary em{font-size:.62rem}.c328-task-card{grid-template-columns:70px minmax(0,1fr) 88px;gap:8px}.c328-task-visual{padding:9px 4px}.c328-task-visual svg{width:34px;height:34px}.c328-task-info{padding:10px 0}.c328-task-info h3{font-size:.88rem;line-height:1.15}.c328-task-place,.c328-task-note{font-size:.7rem}.c328-task-side{padding-right:7px}.c328-start{font-size:.67rem;padding:9px 3px}}
+</style>
+</head>
 <body>
 
 <div id="screen-login" class="screen active">
@@ -17412,61 +17416,37 @@ function cargarTareas(subtab){
 }
 
 function barraSubtabsTareas(){
-  var tabs=[['porhacer','Hoy'],['pendientes','En curso'],['terminadas','Terminadas']];
-  return '<div class="c225-task-tabs">'+tabs.map(function(t){
-    return '<button type="button" class="rep-view-btn'+(SUBTAB_TAREAS_ACTUAL===t[0]?' active':'')+'" data-subtab="'+t[0]+'" onclick="cargarTareas(\''+t[0]+'\')">'+t[1]+'</button>';
-  }).join('')+'</div>';
+  var tabs=[['programadas','Programadas'],['porhacer','Hoy'],['pendientes','Pendientes'],['terminadas','Terminadas']];
+  if(!['programadas','porhacer','pendientes','terminadas'].includes(SUBTAB_TAREAS_ACTUAL)) SUBTAB_TAREAS_ACTUAL='porhacer';
+  return '<div class="c328-tasks-head"><div><h2>Mis tareas</h2><p>Consulta y realiza tus actividades asignadas.</p></div><button type="button" class="c328-calendar" onclick="cargarTareas(\'programadas\')">▣ <span>Calendario</span></button></div>'+ 
+    '<div class="c328-task-tabs">'+tabs.map(function(t){
+      var ico=t[0]==='programadas'?'▦':(t[0]==='porhacer'?'▣':(t[0]==='pendientes'?'◷':'✓'));
+      return '<button type="button" class="'+(SUBTAB_TAREAS_ACTUAL===t[0]?'active':'')+'" onclick="cargarTareas(\''+t[0]+'\')"><span>'+ico+'</span>'+t[1]+'</button>';
+    }).join('')+'</div>';
 }
 
 function construirTarjetaTarea(t,hoy,horasExtraPorClave,componentesPorFormula,opts){
   horasExtraPorClave=horasExtraPorClave||{}; componentesPorFormula=componentesPorFormula||{};
-  var botones=(opts&&opts.sinBotones)?'':('<div class="c225-card-actions">'+(t.estado==='pendiente'?'<button class="btn-sm btn-iniciar" data-ver="'+t.id+'">Ver tarea</button>':'')+(t.estado==='en_proceso'?'<button class="btn-sm btn-completar" data-eje="'+t.id+'">Continuar</button>':'')+'</div>');
-  if(t.activo_rancho_id){
-    var an=t.activo_rancho?t.activo_rancho.nombre:'Herramienta';
-    var atrasadaM=t.fecha_asignacion<hoy;
-    return '<div class="tarea-card" style="'+(atrasadaM?'border-left-color:var(--rojo);':'border-left-color:var(--tierra);')+'"><div class="tarea-title">🔧 Mantenimiento — '+an+(atrasadaM?' <span style="color:var(--rojo);font-size:.72rem;font-weight:700;">⚠️ Desde '+t.fecha_asignacion+'</span>':'')+'</div><div class="tarea-meta">'+(t.notas_encargado||'Dale mantenimiento y confirma cuando termines.')+'</div>'+botones+'</div>';
-  }
-  if(!t.tabla_id){
-    var atrasadaG=t.fecha_asignacion<hoy;
-    var horasExtraG=t.es_hora_extra?horasExtraPorClave[t.fecha_asignacion+'|'+t.tipo_labor_id]:null;
-    var etiquetaTipoG=t.es_hora_extra?' <span style="color:var(--tierra);font-size:.7rem;font-weight:700;background:var(--tierra-tenue);padding:2px 8px;border-radius:10px;">⏰ Hora Extra'+(horasExtraG?(' · '+numFmt(horasExtraG.horas)+'h autorizadas'):'')+'</span>':' <span style="color:var(--verde-mid);font-size:.7rem;font-weight:700;background:var(--verde-tenue);padding:2px 8px;border-radius:10px;">🧑‍🌾 Labores</span>';
-    return '<div class="tarea-card" style="'+(atrasadaG?'border-left-color:var(--rojo);':(t.es_hora_extra?'border-left-color:var(--tierra);':''))+'"><div class="tarea-title">'+(ICONOS[t.tipo_labor.nombre]||'🔧')+' '+t.tipo_labor.nombre+(t.subtipo?' · '+t.subtipo.nombre:'')+etiquetaTipoG+(atrasadaG?' <span style="color:var(--rojo);font-size:.72rem;font-weight:700;">⚠️ Desde '+t.fecha_asignacion+'</span>':'')+'</div><div class="tarea-meta">📋 Actividad general (sin tabla)'+(t.notas_encargado?'<br/>📝 '+t.notas_encargado:'')+'</div>'+botones+'</div>';
-  }
-  var p=cats.plantaciones.find(function(x){return x.id===t.tabla.plantacion_id;});
-  var esAplic=!!(t.tipo_labor&&t.tipo_labor.requiere_formula&&t.formula_id);
-  var ic=esAplic?(VIA_ICONOS[t.formula?t.formula.via:'']||'🧪'):(ICONOS[t.tipo_labor.nombre]||'🔧');
-  var tituloLabor=esAplic?(t.formula?t.formula.nombre:t.tipo_labor.nombre):(t.tipo_labor.nombre+(t.subtipo?' · '+t.subtipo.nombre:''));
-  var esFiltrosT=!!(t.subtipo&&t.subtipo.nombre==='Limpieza Filtros');
-  var su=(t.surcos_asignados&&t.surcos_asignados.length)?t.surcos_asignados.join(', '):'Todos';
-  var surcosLineaTxt=esFiltrosT?'':('🔢 Surcos: '+su);
-  var atrasada=t.fecha_asignacion<hoy;
-  var horasExtra=t.es_hora_extra?horasExtraPorClave[t.fecha_asignacion+'|'+t.tipo_labor_id]:null;
-  var etiquetaTipo=t.es_hora_extra?' <span style="color:var(--tierra);font-size:.7rem;font-weight:700;background:var(--tierra-tenue);padding:2px 8px;border-radius:10px;">⏰ Hora Extra'+(horasExtra?(' · '+numFmt(horasExtra.horas)+'h autorizadas'):'')+'</span>':' <span style="color:var(--verde-mid);font-size:.7rem;font-weight:700;background:var(--verde-tenue);padding:2px 8px;border-radius:10px;">🧑‍🌾 Labores</span>';
-  var progresoTxt='', etiquetaEstado='';
-  if(t.estado==='en_proceso'){
-    var tieneAvance=t.surcos_completados&&t.surcos_completados.length>0;
-    var totalRef=(t.surcos_asignados&&t.surcos_asignados.length)?t.surcos_asignados.length:(t.tabla.cantidad_surcos||0);
-    if(tieneAvance){
-      progresoTxt='<br/>🔶 Avance: '+t.surcos_completados.length+'/'+totalRef+' surcos';
-      etiquetaEstado=' <span style="color:var(--tierra);font-size:.7rem;font-weight:700;background:var(--tierra-tenue);padding:2px 8px;border-radius:10px;">🔶 No concluida</span>';
-    } else {
-      etiquetaEstado=' <span style="color:var(--verde-mid);font-size:.7rem;font-weight:700;background:var(--verde-tenue);padding:2px 8px;border-radius:10px;">🆕 Iniciada, sin avance</span>';
-    }
-  }
-  var aplicInfoHtml='';
-  if(esAplic){
-    var compList=componentesPorFormula[t.formula_id]||[];
-    var factor=t.factor_escala||1;
-    var productosHtml=compList.length?compList.map(function(c){
-      return '<div style="display:flex;justify-content:space-between;font-size:.78rem;padding:.15rem 0;"><span>'+(c.item?c.item.nombre:'')+'</span><strong>'+fmtAmigable(c.cantidad_base*factor,c.item?c.item.unidad:'')+'</strong></div>';
-    }).join(''):'';
-    var unidadTarjeta=unidadPlanAplic(t);
-    var tambosTxt=(t.bomba_usada!=='inyeccion'&&t.tambos_planeados)?(' · '+(unidadTarjeta.esBombas?'🎒':'🛢️')+' '+(t.tambos_usados||0)+'/'+t.tambos_planeados+' '+unidadTarjeta.plural):'';
-    aplicInfoHtml='<div style="margin-top:.5rem;padding-top:.5rem;border-top:1px dashed var(--gris-2);font-size:.8rem;">'+(t.formula&&t.formula.categoria?'<span style="color:var(--gris-3);">'+(CATEGORIA_ICONOS[t.formula.categoria]||'')+' '+t.formula.categoria+'</span><br/>':'')+'⚙️ '+(BOMBA_ICONOS[t.bomba_usada]||'')+' '+(BOMBA_LABELS[t.bomba_usada]||t.bomba_usada||'')+' · 🧴 '+numFmt(t.volumen_aplicado_litros||0)+' L'+tambosTxt+(productosHtml?'<div style="margin-top:.35rem;"><strong style="font-size:.72rem;color:var(--gris-3);text-transform:uppercase;letter-spacing:.03em;">Productos a usar</strong>'+productosHtml+'</div>':'')+'</div>';
-  }
-  return '<div class="tarea-card" style="'+(atrasada?'border-left-color:var(--rojo);':(t.es_hora_extra?'border-left-color:var(--tierra);':''))+'"><div class="tarea-title">'+ic+' '+tituloLabor+etiquetaTipo+etiquetaEstado+(atrasada?' <span style="color:var(--rojo);font-size:.72rem;font-weight:700;">⚠️ Desde '+t.fecha_asignacion+'</span>':'')+'</div><div class="tarea-meta">📍 '+(p?p.nombre:'')+' · '+t.tabla.nombre+(surcosLineaTxt?('<br/>'+surcosLineaTxt):'')+progresoTxt+(t.notas_encargado?'<br/>📝 '+t.notas_encargado:'')+'</div>'+aplicInfoHtml+botones+'</div>';
+  var p=t.tabla?cats.plantaciones.find(function(x){return x.id===t.tabla.plantacion_id;}):null;
+  var kind=c239TaskKind(t), titulo=c239TaskTitle(t), lugar=c239TaskPlace(t);
+  var ii=c249IconoTarea(t), icono=ii?'<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'+ii[1]+'</svg>':c239TaskIcon(kind.key);
+  var clase=ii?' c249-'+ii[0]:'';
+  var esHoy=t.fecha_asignacion===hoy, atrasada=t.fecha_asignacion<hoy;
+  var estado=t.estado==='en_proceso'?'EN CURSO':(atrasada?'PENDIENTE':(esHoy?'HOY':'PROGRAMADA'));
+  var fecha=c239FormatDate(t.fecha_asignacion);
+  var accion=t.estado==='en_proceso'?'<button class="c328-start c328-continue" data-eje="'+t.id+'">▶ CONTINUAR</button>':'<button class="c328-start" data-ver="'+t.id+'">▶ INICIAR</button>';
+  if(opts&&opts.sinBotones) accion='';
+  var detalle='';
+  if(t.activo_rancho_id) detalle=(t.notas_encargado||'Mantenimiento asignado');
+  else if(t.tabla) detalle='📍 '+(p?p.nombre:'')+' · '+t.tabla.nombre;
+  else detalle='📋 Actividad general';
+  var extra=t.es_hora_extra?'<div class="c328-extra">⏰ HORA EXTRA ASIGNADA</div>':'';
+  return '<div class="c328-task-card'+(atrasada?' overdue':'')+'">'+
+    '<div class="c328-task-visual'+clase+'">'+icono+'<b>'+kind.label.toUpperCase()+'</b></div>'+ 
+    '<div class="c328-task-info"><h3>'+c225Esc(titulo)+'</h3><div class="c328-task-place">'+detalle+'</div>'+(t.notas_encargado?'<div class="c328-task-note">📝 '+c225Esc(t.notas_encargado)+'</div>':'')+extra+'</div>'+ 
+    '<div class="c328-task-side"><span class="c328-state">'+estado+'</span><small>📅 '+fecha+'</small>'+accion+'</div>'+ 
+  '</div>';
 }
-
 function marcarOrdenEnProceso(oid){
   if(navigator.onLine){
     from('ordenes_trabajo').eq('id',oid).update({estado:'en_proceso'}).catch(function(){
@@ -17493,13 +17473,17 @@ function pintarTareas(todas,hoyOrdenes,esCache,completadas,evidenciaPorOrden,com
     var hoy=fechaHoyLocal();
     riegoOrdenes=hoyOrdenes.filter(function(o){return o.tipo_labor&&ordenEsTiempo(o);});
     var tareasTodas=todas.filter(function(t){return !ordenEsTiempo(t);});
-    var porHacer=tareasTodas.filter(function(t){return t.estado==='pendiente';});
-    var enProceso=tareasTodas.filter(function(t){return t.estado==='en_proceso';});
+    var porHacer=tareasTodas.filter(function(t){return t.estado==='pendiente'&&t.fecha_asignacion===hoy;});
+    var programadas=tareasTodas.filter(function(t){return t.estado==='pendiente'&&t.fecha_asignacion>hoy;});
+    var enProceso=tareasTodas.filter(function(t){return t.estado==='en_proceso'||(t.estado==='pendiente'&&t.fecha_asignacion<hoy);});
     var completadasNormales=completadas.filter(function(o){return !ordenEsTiempo(o);});
     function tarjetaTarea(t){ return construirTarjetaTarea(t,hoy,horasExtraPorClave,componentesPorFormula); }
 
-    var html='';
-    if(SUBTAB_TAREAS_ACTUAL==='porhacer'){
+    var html='<div class="c328-day-summary"><div><b>'+((SUBTAB_TAREAS_ACTUAL==='porhacer')?'Hoy · '+new Date(hoy+'T12:00:00').toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'}):'Tus actividades')+'</b><span>'+((SUBTAB_TAREAS_ACTUAL==='porhacer')?(porHacer.length+' actividades asignadas'):'Organizadas por estado y fecha')+'</span></div><em>Jornada normal</em></div>';
+    if(SUBTAB_TAREAS_ACTUAL==='programadas'){
+      if(!programadas.length) html+='<div class="empty">No tienes tareas programadas para próximos días.</div>';
+      else html+=programadas.map(tarjetaTarea).join('');
+    } else if(SUBTAB_TAREAS_ACTUAL==='porhacer'){
       if(riegoOrdenes.length){
         var comp=riegoOrdenes.filter(function(o){return o.estado==='completada';}).length;
         if(comp<riegoOrdenes.length) html+='<div class="tarea-card" style="border-left-color:var(--tierra);cursor:pointer;" onclick="renderRiegoPlantaciones()"><div class="tarea-title">💧 Riego de hoy</div><div class="tarea-meta">'+comp+' de '+riegoOrdenes.length+' tablas regadas · toca para entrar</div></div>';
@@ -17511,10 +17495,10 @@ function pintarTareas(todas,hoyOrdenes,esCache,completadas,evidenciaPorOrden,com
         var comp2=riegoOrdenes.filter(function(o){return o.estado==='en_proceso';}).length;
         if(comp2>0) html+='<div class="tarea-card" style="border-left-color:var(--tierra);cursor:pointer;" onclick="renderRiegoPlantaciones()"><div class="tarea-title">💧 Riego en curso</div><div class="tarea-meta">Toca para continuar</div></div>';
       }
-      if(!enProceso.length&&!html) html='<div class="empty">No tienes tareas en proceso.</div>';
+      if(!enProceso.length) html+='<div class="empty">No tienes tareas pendientes.</div>';
       else html+=enProceso.map(tarjetaTarea).join('');
     } else if(SUBTAB_TAREAS_ACTUAL==='terminadas'){
-      if(!completadasNormales.length){html='<div class="empty">Aún no tienes labores terminadas.</div>';}
+      if(!completadasNormales.length){html+='<div class="empty">Aún no tienes labores terminadas.</div>';}
       else html=completadasNormales.map(function(t){
         var p=t.tabla?cats.plantaciones.find(function(x){return x.id===t.tabla.plantacion_id;}):null;
         var ic=ICONOS[t.tipo_labor.nombre]||'🔧';
