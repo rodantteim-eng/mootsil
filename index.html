@@ -6244,7 +6244,7 @@ function renderInventarioEditar(itemId){
           '<div class="form-group"><label>Fecha de caducidad (opcional)</label><input type="date" id="inv-e-caducidad" value="'+(it.fecha_caducidad||'')+'"></div>'+
         '</div>'+
         '<div class="form-group"><label>Presentación de compra (opcional)</label><div style="display:grid;grid-template-columns:1fr 110px;gap:8px;"><input type="text" id="inv-e-unidad-compra" placeholder="Ej. Saco, Bidón, Caja" value="'+(it.unidad_compra||'').replace(/"/g,'&quot;')+'"><input type="number" id="inv-e-factor-compra" min="0" placeholder="Ej. 25" value="'+(it.factor_compra||'')+'"></div></div>'+
-        '<div class="form-group"><label>Stock mínimo (para alerta)</label><div style="display:flex;gap:8px;align-items:center;"><input type="number" id="inv-e-min" min="0" value="'+it.stock_minimo+'" style="flex:1;"><span class="hint" id="inv-e-unidad-lbl" style="margin:0;min-width:40px;">'+it.unidad+'</span></div><div style="display:flex;gap:8px;align-items:center;margin-top:.4rem;"><span class="hint" style="margin:0;">o convertir desde</span><input type="number" id="inv-e-min-paq" min="0" placeholder="'+(it.factor_compra?numFmt(it.stock_minimo/it.factor_compra):'0')+'" style="width:70px;"><span class="hint" id="inv-e-min-paq-lbl" style="margin:0;">'+(it.unidad_compra?it.unidad_compra.toLowerCase():'paquetes')+'</span></div></div>'+
+        '<div class="form-group"><label>Stock mínimo (para alerta)</label><div style="display:flex;gap:8px;align-items:center;"><input type="number" id="inv-e-min" min="0" value="'+it.stock_minimo+'" style="flex:1;"><span class="hint" id="inv-e-unidad-lbl" style="margin:0;min-width:40px;">'+it.unidad+'</span></div></div>'+
         '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;"><button type="button" id="inv-e-cancelar" class="op-chip" style="padding:7px 12px;">Cancelar</button><button class="btn-primary" id="inv-e-guardar" style="width:auto;margin:0;padding:8px 16px;">Guardar cambios</button></div>'+
       '</div>'+
       '<div style="margin-top:10px;"><button type="button" id="inv-e-eliminar" style="width:100%;padding:.65rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.8rem;cursor:pointer;">🗑️ Eliminar componente</button></div>'+
@@ -6279,15 +6279,9 @@ function renderInventarioEditar(itemId){
     var u=document.getElementById('inv-e-unidad').value;
     var uc=(document.getElementById('inv-e-unidad-compra').value||'paquetes').trim();
     document.getElementById('inv-e-unidad-lbl').textContent=u;
-    document.getElementById('inv-e-min-paq-lbl').textContent=uc.toLowerCase();
   }
   document.getElementById('inv-e-unidad').addEventListener('change',refrescarEtiquetasE);
   document.getElementById('inv-e-unidad-compra').addEventListener('input',refrescarEtiquetasE);
-  document.getElementById('inv-e-min-paq').addEventListener('input',function(){
-    var f=parseFloat(document.getElementById('inv-e-factor-compra').value)||0;
-    if(f>0)document.getElementById('inv-e-min').value=numFmt((parseFloat(this.value)||0)*f);
-  });
-
   var fotoBtn=document.getElementById('c321-edit-photo');
   var fotoMenu=document.getElementById('c321-photo-menu');
   fotoBtn.addEventListener('click',function(e){e.stopPropagation();fotoMenu.style.display=fotoMenu.style.display==='block'?'none':'block';});
