@@ -1638,7 +1638,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C314';
+  window.MOOTSIL_BUILD='C318';
 </script>
 
 
@@ -6143,7 +6143,7 @@ function renderInventarioItem(itemId){
     +'<div style="background:linear-gradient(135deg,#075735,#0d6843);color:white;padding:18px 20px;display:flex;align-items:center;gap:15px;">'+foto+'<div style="min-width:0;flex:1;"><div style="font-size:.72rem;opacity:.8;text-transform:uppercase;letter-spacing:.08em;">Inventario · Rancho Sagrado Corazón</div><div style="font-size:1.25rem;font-weight:800;line-height:1.15;margin-top:3px;">'+it.nombre+'</div><div style="font-size:.78rem;opacity:.88;margin-top:5px;">'+((it.grupo||'insumos').replace(/^./,function(c){return c.toUpperCase();}))+(it.categoria?' · '+it.categoria:'')+'</div></div><button id="c317-inv-close" type="button" style="border:0;background:rgba(255,255,255,.14);color:#fff;width:38px;height:38px;border-radius:50%;font-size:20px;cursor:pointer;">×</button></div>'
     +'<div style="overflow:auto;padding:16px 18px 20px;">'
     +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;"><div style="background:#fff;border:1px solid #e0e7e3;border-radius:13px;padding:12px;"><div style="font-size:.67rem;color:#78827c;text-transform:uppercase;font-weight:700;">Stock actual</div><div id="c317-stock" style="font-size:1.25rem;color:#075735;font-weight:800;margin-top:3px;">'+numFmt(it.stock_actual)+' '+it.unidad+'</div></div><div style="background:#fff;border:1px solid #e0e7e3;border-radius:13px;padding:12px;"><div style="font-size:.67rem;color:#78827c;text-transform:uppercase;font-weight:700;">Stock mínimo</div><div style="font-size:1rem;font-weight:750;margin-top:5px;">'+numFmt(it.stock_minimo)+' '+it.unidad+'</div></div><div style="background:#fff;border:1px solid #e0e7e3;border-radius:13px;padding:12px;"><div style="font-size:.67rem;color:#78827c;text-transform:uppercase;font-weight:700;">Presentación habitual</div><div style="font-size:.88rem;font-weight:700;margin-top:5px;">'+presentacion+'</div></div></div>'
-    +(puedeEditar?'<div style="background:#fff;border:1px solid #e0e7e3;border-radius:15px;padding:14px;margin-bottom:14px;"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;"><div style="font-weight:800;color:#123f2d;">Registrar movimiento</div><div style="display:flex;gap:7px;"><button id="inv-duplicar-btn" type="button" class="op-chip">📋 Duplicar</button><button id="c317-inv-edit" type="button" class="op-chip">✏️ Editar</button></div></div><div id="inv-mov-tipo-grp" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;"><button type="button" class="op-chip sel" data-tipo="entrada">✓ ➕ Entrada</button><button type="button" class="op-chip" data-tipo="salida">➖ Salida</button><button type="button" class="op-chip" data-tipo="ajuste">✏️ Ajuste</button></div>'+(tienePaquete?'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;"><span style="font-size:.75rem;font-weight:700;color:#65736b;">Contar:</span><button type="button" class="op-chip sel" id="inv-mov-modo-base">✓ Por '+it.unidad+'</button><button type="button" class="op-chip" id="inv-mov-modo-paq">Por '+it.unidad_compra+'</button><div id="inv-mov-tamano-wrap" style="display:none;flex:1;min-width:170px;"><input type="number" id="inv-mov-tamano" min="0" step="any" value="'+(it.factor_compra||'')+'" placeholder="Tamaño del paquete"></div></div>':'')+'<div style="display:grid;grid-template-columns:1fr 1.6fr auto;gap:8px;align-items:end;"><div><label id="inv-mov-cant-lbl" style="font-size:.7rem;font-weight:700;color:#65736b;">Cantidad ('+it.unidad+')</label><input type="number" id="inv-mov-cantidad" min="0" step="any" placeholder="0" style="margin-top:4px;"></div><div><label style="font-size:.7rem;font-weight:700;color:#65736b;">Nota (opcional)</label><input type="text" id="inv-mov-motivo" placeholder="Proveedor, factura o motivo" style="margin-top:4px;"></div><button class="btn-primary" id="inv-mov-guardar" style="margin:0;height:42px;padding:0 20px;">Registrar</button></div><div id="inv-mov-equiv" class="hint" style="display:none;margin-top:7px;font-weight:700;color:var(--verde-mid);"></div></div>':'<div style="background:#fff;border:1px solid #e0e7e3;border-radius:13px;padding:11px 13px;margin-bottom:14px;color:#68756e;font-size:.8rem;">👁️ Modo de solo consulta.</div>')
+    +(puedeEditar?'<div style="background:#fff;border:1px solid #e0e7e3;border-radius:15px;padding:14px;margin-bottom:14px;"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;"><div style="font-weight:800;color:#123f2d;">Registrar movimiento</div><div style="display:flex;gap:6px;"><button id="inv-duplicar-btn" type="button" class="op-chip" style="padding:5px 10px;font-size:.72rem;">📋 Duplicar</button><button id="c317-inv-edit" type="button" class="op-chip" style="padding:5px 10px;font-size:.72rem;">✏️ Editar</button></div></div><div id="inv-mov-tipo-grp" style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;"><button type="button" class="op-chip sel" data-tipo="entrada" style="padding:6px 12px;font-size:.75rem;">✓ ➕ Entrada</button><button type="button" class="op-chip" data-tipo="salida" style="padding:6px 12px;font-size:.75rem;">➖ Salida</button><button type="button" class="op-chip" data-tipo="ajuste" style="padding:6px 12px;font-size:.75rem;">✏️ Ajuste</button></div>'+(tienePaquete?'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;"><span style="font-size:.75rem;font-weight:700;color:#65736b;">Contar:</span><button type="button" class="op-chip sel" id="inv-mov-modo-base">✓ Por '+it.unidad+'</button><button type="button" class="op-chip" id="inv-mov-modo-paq">Por '+it.unidad_compra+'</button><div id="inv-mov-tamano-wrap" style="display:none;flex:1;min-width:170px;"><input type="number" id="inv-mov-tamano" min="0" step="any" value="'+(it.factor_compra||'')+'" placeholder="Tamaño del paquete"></div></div>':'')+'<div style="display:grid;grid-template-columns:1fr 1.6fr auto;gap:8px;align-items:end;"><div><label id="inv-mov-cant-lbl" style="font-size:.7rem;font-weight:700;color:#65736b;">Cantidad ('+it.unidad+')</label><input type="number" id="inv-mov-cantidad" min="0" step="any" placeholder="0" style="margin-top:4px;"></div><div><label style="font-size:.7rem;font-weight:700;color:#65736b;">Nota (opcional)</label><input type="text" id="inv-mov-motivo" placeholder="Proveedor, factura o motivo" style="margin-top:4px;"></div><button class="btn-primary" id="inv-mov-guardar" style="margin:0;height:42px;padding:0 20px;">Registrar</button></div><div id="inv-mov-equiv" class="hint" style="display:none;margin-top:7px;font-weight:700;color:var(--verde-mid);"></div></div>':'<div style="background:#fff;border:1px solid #e0e7e3;border-radius:13px;padding:11px 13px;margin-bottom:14px;color:#68756e;font-size:.8rem;">👁️ Modo de solo consulta.</div>')
     +'<div style="background:#fff;border:1px solid #e0e7e3;border-radius:15px;padding:14px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="font-weight:800;color:#123f2d;">Historial reciente</div><button id="c317-hist-toggle" type="button" style="display:none;border:0;background:none;color:#0b6842;font-weight:700;cursor:pointer;font-size:.76rem;">Ver historial completo</button></div><div id="inv-mov-historial"><div class="loading">Cargando movimientos...</div></div></div>'
     +'</div></div>';
   document.body.appendChild(overlay);
@@ -6164,39 +6164,72 @@ function renderInventarioItem(itemId){
   from('movimientos_inventario').select('*,usuario:usuarios(nombre)').eq('item_id',itemId).order('creado_en',{ascending:false}).limit(15).get().then(function(movs){var cont=document.querySelector('#c317-inv-item-modal #inv-mov-historial');if(!cont)return;if(!movs||!movs.length){cont.innerHTML='<div class="empty">Sin movimientos registrados.</div>';return;}var abierto=false,toggle=document.getElementById('c317-hist-toggle');if(movs.length>6)toggle.style.display='block';function pintar(){var lista=abierto?movs:movs.slice(0,6);cont.innerHTML=lista.map(function(m,idx){var f=new Date(m.creado_en).toLocaleDateString('es-MX',{day:'2-digit',month:'short'}),signo=m.tipo==='entrada'?'+':m.tipo==='salida'?'−':'≈',ico=m.tipo==='entrada'?'➕':m.tipo==='salida'?'➖':'✏️',puedeBorrar=puedeEditar&&idx===0;return '<div style="padding:9px 2px;border-bottom:1px solid #edf0ee;display:grid;grid-template-columns:auto 1fr auto;gap:9px;align-items:center;font-size:.78rem;"><span>'+ico+'</span><div><div style="font-weight:700;">'+signo+' '+numFmt(m.cantidad)+' '+it.unidad+(m.motivo?' · <span style="font-weight:500;color:#56645c;">'+m.motivo+'</span>':'')+'</div><div style="font-size:.68rem;color:#8a938e;margin-top:2px;">'+(m.usuario?m.usuario.nombre+' · ':'')+f+'</div></div>'+(puedeBorrar?'<button type="button" class="inv-mov-borrar" data-mid="'+m.id+'" data-stockanterior="'+(m.stock_anterior==null?'':m.stock_anterior)+'" style="border:0;background:none;color:var(--rojo);cursor:pointer;font-size:1rem;">×</button>':'<span></span>')+'</div>';}).join('')+'<div class="hint" style="margin-top:8px;">Para corregir movimientos anteriores utiliza Ajuste.</div>';cont.querySelectorAll('.inv-mov-borrar').forEach(function(btn){btn.onclick=function(){if(!confirm('¿Eliminar este movimiento? El stock se corregirá automáticamente.'))return;var mid=this.dataset.mid,s=this.dataset.stockanterior,corregido=s!==''?parseFloat(s):null;if(corregido===null){alert('Este movimiento no tiene guardado el stock previo. Corrígelo con un Ajuste.');return;}from('movimientos_inventario').eq('id',mid).delete().then(function(){return from('inventario_items').eq('id',it.id).update({stock_actual:corregido});}).then(function(){it.stock_actual=corregido;showToast('🗑️ Movimiento eliminado, stock corregido');renderInventarioItem(itemId);}).catch(function(e){alert('Error: '+e.message);});};});}pintar();toggle.onclick=function(){abierto=!abierto;toggle.textContent=abierto?'Ver menos':'Ver historial completo';pintar();};}).catch(function(){});
 }
 function renderInventarioEditar(itemId){
-  var body=document.getElementById('enc-body');
   var it=cats.inventario.find(function(x){return x.id===itemId;});
   if(!it){renderInventario();return;}
+
+  var viejo=document.getElementById('c318-inv-edit-modal');if(viejo)viejo.remove();
+
   var grupoActivoE=it.grupo||'insumos';
   var cfgGrupoE=GRUPOS_INVENTARIO[grupoActivoE]||GRUPOS_INVENTARIO.insumos;
-  var catOptsE=cfgGrupoE.categorias?cfgGrupoE.categorias.map(function(c){return '<option value="'+c+'"'+(it.categoria===c?' selected':'')+'>'+c+'</option>';}).join(''):'';
-  if(cfgGrupoE.categorias&&it.categoria&&cfgGrupoE.categorias.indexOf(it.categoria)===-1) catOptsE='<option value="'+it.categoria.replace(/"/g,'&quot;')+'" selected>'+it.categoria+'</option>'+catOptsE;
-  var chipsGrupoE=ORDEN_GRUPOS_INVENTARIO.map(function(k){var sel=k===grupoActivoE;return '<button type="button" class="op-chip'+(sel?' sel':'')+'" data-grupo="'+k+'">'+(sel?'\u2713 ':'')+GRUPOS_INVENTARIO[k].lbl+'</button>';}).join('');
-  body.innerHTML='<div class="seccion-titulo">Editar '+it.nombre+'</div><div class="form-card"><div class="form-group"><label>Nombre</label><input type="text" id="inv-e-nombre" value="'+it.nombre.replace(/"/g,'&quot;')+'"></div><div class="form-group"><label>Grupo</label><div style="display:flex;gap:8px;flex-wrap:wrap;" id="inv-e-grupo-grp">'+chipsGrupoE+'</div></div><div class="form-group" id="inv-e-categoria-wrap" style="display:'+(cfgGrupoE.categorias?'':'none')+';"><label>Categoría</label><select id="inv-e-categoria">'+catOptsE+'</select></div><div class="form-group"><label>Foto del producto</label><div style="display:flex;gap:8px;"><button type="button" onclick="document.getElementById(\'inv-e-imagen-cam\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📷 Cámara</button><button type="button" onclick="document.getElementById(\'inv-e-imagen-gal\').click()" style="flex:1;padding:.75rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);background:var(--gris-1);cursor:pointer;">🖼️ Galería</button></div><div id="inv-e-imagen-status" style="margin-top:.5rem;">'+(it.imagen_url?'<img src="'+it.imagen_url+'" style="max-width:100px;max-height:100px;border-radius:8px;border:1px solid var(--gris-2);">':'')+'</div><input type="hidden" id="inv-e-imagen" value="'+(it.imagen_url||'').replace(/"/g,'&quot;')+'"><input type="file" id="inv-e-imagen-cam" accept="image/*" capture="environment" style="display:none"><input type="file" id="inv-e-imagen-gal" accept="image/*" style="display:none"></div><div class="form-group"><label>Unidad de uso</label><select id="inv-e-unidad"><option value="litros">Litros</option><option value="ml">Mililitros</option><option value="kg">Kilogramos</option><option value="gr">Gramos</option><option value="pza">Piezas</option></select></div><div class="form-group"><label>¿Se compra empacado? (opcional)</label><div style="display:flex;gap:8px;"><input type="text" id="inv-e-unidad-compra" placeholder="Ej. Saco, Bidón, Caja" value="'+(it.unidad_compra||'').replace(/"/g,'&quot;')+'" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><input type="number" id="inv-e-factor-compra" min="0" placeholder="Ej. 25" value="'+(it.factor_compra||'')+'" style="width:90px;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"></div><p class="hint">Nombre del paquete + cuánto trae cada uno.</p></div><div class="form-group"><label>Stock mínimo (para alerta)</label><div style="display:flex;gap:8px;align-items:center;"><input type="number" id="inv-e-min" min="0" value="'+it.stock_minimo+'" style="flex:1;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"><span class="hint" id="inv-e-unidad-lbl" style="margin:0;min-width:40px;">'+it.unidad+'</span></div><div style="display:flex;gap:8px;align-items:center;margin-top:.4rem;"><span class="hint" style="margin:0;">o convertir desde</span><input type="number" id="inv-e-min-paq" min="0" placeholder="'+(it.factor_compra?numFmt(it.stock_minimo/it.factor_compra):'0')+'" style="width:70px;padding:.4rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.8rem;"><span class="hint" id="inv-e-min-paq-lbl" style="margin:0;">'+(it.unidad_compra?it.unidad_compra.toLowerCase():'paquetes')+'</span></div></div><div class="form-group"><label>Fecha de caducidad (opcional)</label><input type="date" id="inv-e-caducidad" value="'+(it.fecha_caducidad||'')+'"></div><button class="btn-primary" id="inv-e-guardar">Guardar cambios</button></div><div class="form-card"><button type="button" id="inv-e-eliminar" style="width:100%;padding:.75rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.85rem;cursor:pointer;">🗑️ Eliminar componente</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderInventarioItem(\''+itemId+'\')">← Cancelar</button>';
+  var grupoOpts=ORDEN_GRUPOS_INVENTARIO.map(function(k){
+    return '<option value="'+k+'"'+(k===grupoActivoE?' selected':'')+'>'+GRUPOS_INVENTARIO[k].lbl.replace(/^[^A-Za-zÁÉÍÓÚÑáéíóúñ]+/,'')+'</option>';
+  }).join('');
+  var catOptsE=cfgGrupoE.categorias?cfgGrupoE.categorias.map(function(c){
+    return '<option value="'+c+'"'+(it.categoria===c?' selected':'')+'>'+c+'</option>';
+  }).join(''):'';
+  if(cfgGrupoE.categorias&&it.categoria&&cfgGrupoE.categorias.indexOf(it.categoria)===-1){
+    catOptsE='<option value="'+it.categoria.replace(/"/g,'&quot;')+'" selected>'+it.categoria+'</option>'+catOptsE;
+  }
+
+  var overlay=document.createElement('div');
+  overlay.id='c318-inv-edit-modal';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(8,35,25,.58);z-index:10080;display:flex;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(2px);';
+  overlay.innerHTML='<div style="width:min(720px,96vw);max-height:92vh;overflow:hidden;background:#f7f8f7;border-radius:20px;box-shadow:0 24px 70px rgba(0,0,0,.28);display:flex;flex-direction:column;">'+
+    '<div style="background:linear-gradient(135deg,#075735,#0d6843);color:#fff;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;"><div><div style="font-size:.72rem;opacity:.8;text-transform:uppercase;letter-spacing:.08em;">Editar componente</div><div style="font-size:1.08rem;font-weight:800;margin-top:2px;">'+it.nombre+'</div></div><button id="c318-edit-close" type="button" style="border:0;background:rgba(255,255,255,.14);color:#fff;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;">×</button></div>'+
+    '<div style="overflow:auto;padding:15px 18px 18px;">'+
+      '<div style="background:#fff;border:1px solid #e0e7e3;border-radius:15px;padding:14px;">'+
+        '<div class="form-group"><label>Nombre</label><input type="text" id="inv-e-nombre" value="'+it.nombre.replace(/"/g,'&quot;')+'"></div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
+          '<div class="form-group"><label>Grupo</label><select id="inv-e-grupo">'+grupoOpts+'</select></div>'+
+          '<div class="form-group" id="inv-e-categoria-wrap" style="display:'+(cfgGrupoE.categorias?'':'none')+';"><label>Subcategoría</label><select id="inv-e-categoria">'+catOptsE+'</select></div>'+
+        '</div>'+
+        '<div class="form-group"><label>Foto del producto</label><div style="display:flex;gap:8px;"><button type="button" onclick="document.getElementById(\'inv-e-imagen-cam\').click()" style="flex:1;padding:.55rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📷 Cámara</button><button type="button" onclick="document.getElementById(\'inv-e-imagen-gal\').click()" style="flex:1;padding:.55rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);background:var(--gris-1);cursor:pointer;">🖼️ Galería</button></div><div id="inv-e-imagen-status" style="margin-top:.5rem;">'+(it.imagen_url?'<img src="'+it.imagen_url+'" style="max-width:80px;max-height:80px;border-radius:8px;border:1px solid var(--gris-2);">':'')+'</div><input type="hidden" id="inv-e-imagen" value="'+(it.imagen_url||'').replace(/"/g,'&quot;')+'"><input type="file" id="inv-e-imagen-cam" accept="image/*" capture="environment" style="display:none"><input type="file" id="inv-e-imagen-gal" accept="image/*" style="display:none"></div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
+          '<div class="form-group"><label>Unidad de uso</label><select id="inv-e-unidad"><option value="litros">Litros</option><option value="ml">Mililitros</option><option value="kg">Kilogramos</option><option value="gr">Gramos</option><option value="pza">Piezas</option></select></div>'+
+          '<div class="form-group"><label>Fecha de caducidad (opcional)</label><input type="date" id="inv-e-caducidad" value="'+(it.fecha_caducidad||'')+'"></div>'+
+        '</div>'+
+        '<div class="form-group"><label>Presentación de compra (opcional)</label><div style="display:grid;grid-template-columns:1fr 110px;gap:8px;"><input type="text" id="inv-e-unidad-compra" placeholder="Ej. Saco, Bidón, Caja" value="'+(it.unidad_compra||'').replace(/"/g,'&quot;')+'"><input type="number" id="inv-e-factor-compra" min="0" placeholder="Ej. 25" value="'+(it.factor_compra||'')+'"></div></div>'+
+        '<div class="form-group"><label>Stock mínimo (para alerta)</label><div style="display:flex;gap:8px;align-items:center;"><input type="number" id="inv-e-min" min="0" value="'+it.stock_minimo+'" style="flex:1;"><span class="hint" id="inv-e-unidad-lbl" style="margin:0;min-width:40px;">'+it.unidad+'</span></div><div style="display:flex;gap:8px;align-items:center;margin-top:.4rem;"><span class="hint" style="margin:0;">o convertir desde</span><input type="number" id="inv-e-min-paq" min="0" placeholder="'+(it.factor_compra?numFmt(it.stock_minimo/it.factor_compra):'0')+'" style="width:70px;"><span class="hint" id="inv-e-min-paq-lbl" style="margin:0;">'+(it.unidad_compra?it.unidad_compra.toLowerCase():'paquetes')+'</span></div></div>'+
+        '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;"><button type="button" id="inv-e-cancelar" class="op-chip" style="padding:7px 12px;">Cancelar</button><button class="btn-primary" id="inv-e-guardar" style="width:auto;margin:0;padding:8px 16px;">Guardar cambios</button></div>'+
+      '</div>'+
+      '<div style="margin-top:10px;"><button type="button" id="inv-e-eliminar" style="width:100%;padding:.65rem;border-radius:var(--radio-sm);border:1.5px solid var(--rojo);background:var(--rojo-tenue);color:var(--rojo);font-weight:700;font-size:.8rem;cursor:pointer;">🗑️ Eliminar componente</button></div>'+
+    '</div>'+
+  '</div>';
+  document.body.appendChild(overlay);
+
+  function cerrarEdit(){var m=document.getElementById('c318-inv-edit-modal');if(m)m.remove();}
+  document.getElementById('c318-edit-close').onclick=cerrarEdit;
+  document.getElementById('inv-e-cancelar').onclick=cerrarEdit;
+  overlay.addEventListener('click',function(e){if(e.target===overlay)cerrarEdit();});
+
   document.getElementById('inv-e-unidad').value=it.unidad;
   var grupoSelE=grupoActivoE;
+
   function refrescarCategoriaWrapE(){
-    var cfg=GRUPOS_INVENTARIO[grupoSelE];
+    var cfg=GRUPOS_INVENTARIO[grupoSelE]||GRUPOS_INVENTARIO.insumos;
     var wrap=document.getElementById('inv-e-categoria-wrap');
-    if(cfg.categorias){
+    if(cfg.categorias&&cfg.categorias.length){
       wrap.style.display='';
       wrap.querySelector('select').innerHTML=cfg.categorias.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('');
-    } else {
+    }else{
       wrap.style.display='none';
     }
   }
-  document.querySelectorAll('#inv-e-grupo-grp [data-grupo]').forEach(function(btn){
-    btn.addEventListener('click',function(){
-      grupoSelE=this.dataset.grupo;
-      document.querySelectorAll('#inv-e-grupo-grp [data-grupo]').forEach(function(b){
-        b.classList.remove('sel');
-        b.textContent=GRUPOS_INVENTARIO[b.dataset.grupo].lbl;
-      });
-      this.classList.add('sel');
-      this.textContent='✓ '+GRUPOS_INVENTARIO[this.dataset.grupo].lbl;
-      refrescarCategoriaWrapE();
-    });
+  document.getElementById('inv-e-grupo').addEventListener('change',function(){
+    grupoSelE=this.value;
+    refrescarCategoriaWrapE();
   });
+
   function refrescarEtiquetasE(){
     var u=document.getElementById('inv-e-unidad').value;
     var uc=(document.getElementById('inv-e-unidad-compra').value||'paquetes').trim();
@@ -6207,23 +6240,25 @@ function renderInventarioEditar(itemId){
   document.getElementById('inv-e-unidad-compra').addEventListener('input',refrescarEtiquetasE);
   document.getElementById('inv-e-min-paq').addEventListener('input',function(){
     var f=parseFloat(document.getElementById('inv-e-factor-compra').value)||0;
-    if(f>0) document.getElementById('inv-e-min').value=numFmt((parseFloat(this.value)||0)*f);
+    if(f>0)document.getElementById('inv-e-min').value=numFmt((parseFloat(this.value)||0)*f);
   });
+
   function subirImagenProductoEdit(inputId){
     var f=document.getElementById(inputId).files&&document.getElementById(inputId).files[0];
-    if(!f) return;
+    if(!f)return;
     var status=document.getElementById('inv-e-imagen-status');
     status.innerHTML='<span class="hint">Subiendo foto...</span>';
     var nombre='producto_'+Date.now()+'_'+Math.round(Math.random()*9999)+'.jpg';
     fetch(URL_SB+'/storage/v1/object/evidencias/'+nombre,{method:'POST',headers:{'apikey':KEY_SB,'Authorization':'Bearer '+KEY_SB,'Content-Type':f.type||'image/jpeg','x-upsert':'true'},body:f}).then(function(r){
-      if(!r.ok) throw new Error('HTTP '+r.status);
+      if(!r.ok)throw new Error('HTTP '+r.status);
       var url=URL_SB+'/storage/v1/object/public/evidencias/'+nombre;
       document.getElementById('inv-e-imagen').value=url;
-      status.innerHTML='<img src="'+url+'" style="max-width:100px;max-height:100px;border-radius:8px;border:1px solid var(--gris-2);">';
+      status.innerHTML='<img src="'+url+'" style="max-width:80px;max-height:80px;border-radius:8px;border:1px solid var(--gris-2);">';
     }).catch(function(e){status.innerHTML='<span class="hint" style="color:var(--rojo);">No se pudo subir la foto: '+e.message+'</span>';});
   }
   document.getElementById('inv-e-imagen-cam').addEventListener('change',function(){subirImagenProductoEdit('inv-e-imagen-cam');});
   document.getElementById('inv-e-imagen-gal').addEventListener('change',function(){subirImagenProductoEdit('inv-e-imagen-gal');});
+
   document.getElementById('inv-e-guardar').addEventListener('click',function(){
     var nombre=(document.getElementById('inv-e-nombre').value||'').trim();
     if(!nombre){alert('Escribe el nombre del componente.');return;}
@@ -6233,15 +6268,18 @@ function renderInventarioEditar(itemId){
     var factorCompra=parseFloat(document.getElementById('inv-e-factor-compra').value)||null;
     var imagenUrl=(document.getElementById('inv-e-imagen').value||'').trim()||null;
     var caducidad=document.getElementById('inv-e-caducidad').value||null;
-    var categoria=GRUPOS_INVENTARIO[grupoSelE].categorias?document.getElementById('inv-e-categoria').value:GRUPO_NOMBRE_PLANO[grupoSelE];
+    var cfg=GRUPOS_INVENTARIO[grupoSelE]||GRUPOS_INVENTARIO.insumos;
+    var categoria=(cfg.categorias&&cfg.categorias.length)?document.getElementById('inv-e-categoria').value:GRUPO_NOMBRE_PLANO[grupoSelE];
     from('inventario_items').eq('id',itemId).update({nombre:nombre,categoria:categoria,grupo:grupoSelE,unidad:unidad,stock_minimo:min,unidad_compra:unidadCompra,factor_compra:factorCompra,imagen_url:imagenUrl,fecha_caducidad:caducidad}).then(function(){
       return from('inventario_items').select('*').eq('activo',true).order('nombre').get();
     }).then(function(rows){
       cats.inventario=rows||[];
+      cerrarEdit();
       showToast('✅ Componente actualizado');
       renderInventarioItem(itemId);
     }).catch(function(e){alert('Error: '+e.message);});
   });
+
   document.getElementById('inv-e-eliminar').addEventListener('click',function(){
     from('formula_componentes').select('formula_id,formula:formulas_aplicacion(nombre)').eq('item_id',itemId).get().then(function(usos){
       if(usos&&usos.length){
@@ -6249,11 +6287,12 @@ function renderInventarioEditar(itemId){
         alert('No se puede eliminar: este componente está usado en '+usos.length+' fórmula(s): '+nombres+'.\n\nQuita el componente de esas fórmulas primero, o simplemente déjalo en 0 de stock.');
         return;
       }
-      if(!confirm('¿Eliminar "'+it.nombre+'" del inventario? Esta acción no se puede deshacer.')) return;
+      if(!confirm('¿Eliminar "'+it.nombre+'" del inventario? Esta acción no se puede deshacer.'))return;
       from('inventario_items').eq('id',itemId).update({activo:false}).then(function(){
         return from('inventario_items').select('*').eq('activo',true).order('nombre').get();
       }).then(function(rows){
         cats.inventario=rows||[];
+        cerrarEdit();
         showToast('🗑️ Componente eliminado');
         renderInventario();
       }).catch(function(e){alert('Error: '+e.message);});
@@ -18985,7 +19024,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C314
+C318
 </div>
 
 <style id="fi128-css">
