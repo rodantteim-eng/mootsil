@@ -1638,7 +1638,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C321';
+  window.MOOTSIL_BUILD='C323';
 </script>
 
 
@@ -3059,7 +3059,7 @@ function em135Seguimiento(uid,nombre,telefono){
     '<div class="em69-field"><label>Cargar boleto (PDF, JPG o PNG)</label><input type="file" id="c136-boleto-file" accept="application/pdf,image/jpeg,image/png"><div class="hint" id="c136-boleto-actual">'+(x.pasaje_url?'Boleto cargado ✓':'Sin boleto cargado')+'</div></div>'+
     '<div class="em69-field"><label>Empresa / línea</label><input id="c136-linea" value="'+ex54Esc(x.pasaje_linea||'')+'"></div><div class="em69-field"><label>Origen</label><input id="c136-origen" value="'+ex54Esc(x.pasaje_origen||'')+'"></div><div class="em69-field"><label>Destino</label><input id="c136-destino" value="'+ex54Esc(x.pasaje_destino||'')+'"></div><div class="em69-field"><label>Fecha / hora salida</label><input type="datetime-local" id="c136-salida" value="'+ex54Esc((x.pasaje_salida||'').slice(0,16))+'"></div>'+
     '<div class="em69-field"><label>Costo total del boleto ($)</label><input type="number" min="0" step="0.01" id="c136-costo" value="'+ex54Esc(x.pasaje_costo_total||'')+'"></div><div class="em69-field"><label>Apoyo del Rancho</label><select id="c136-apoyo"><option value="100">100% Rancho</option><option value="50">50% Rancho / 50% trabajador</option><option value="0">Sin apoyo</option></select></div>'+
-    '<div class="em69-field"><label>Cuenta de salida</label><select id="c136-cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div><div class="em69-field"><label>A cargo del Rancho</label><input id="c136-rancho" readonly></div>'+
+    '<div class="em69-field"><label>Cuenta de salida</label><select id="c136-cuenta"><option value="efectivo">Efectivo</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div><div class="em69-field"><label>A cargo del Rancho</label><input id="c136-rancho" readonly></div>'+
     '<div class="em69-field full"><label>Detalle del pasaje</label><textarea id="c135-pasaje-detalle">'+ex54Esc(x.pasaje_detalle||'')+'</textarea></div><div class="em69-field full"><label>Instrucciones de viaje</label><textarea id="c135-viaje">'+ex54Esc(c140MetaViaje(x.instrucciones_viaje).texto||'')+'</textarea></div><div style="display:none" class="em69-field full" style="border-top:1px solid #e3e8e4;padding-top:12px"><label>Decisión de traslado al Rancho</label><select id="c140-traslado-tipo"><option value="pendiente">Por definir</option><option value="recogida">Recogida por personal del Rancho</option><option value="boleto">Segundo boleto</option></select></div><div style="display:none" class="em69-field full"><label>Instrucciones de recogida / traslado</label><textarea id="c140-recogida" placeholder="Quién pasa por ellos, vehículo, punto de encuentro, hora, teléfono..."></textarea></div><div style="display:none" class="em69-field"><label>Segundo boleto (PDF, JPG o PNG)</label><input type="file" id="c140-boleto2-file" accept="application/pdf,image/jpeg,image/png"></div><div style="display:none" class="em69-field"><label>Ruta segundo tramo</label><div style="display:flex;gap:6px"><input id="c140-origen2" placeholder="Origen"><input id="c140-destino2" placeholder="Destino"></div></div><div style="display:none" class="em69-field full"><label>Detalle segundo tramo</label><input id="c140-detalle2" placeholder="Línea, horario o referencia"></div></div></div><div class="em69-modal-f" style="flex:0 0 auto;position:sticky;bottom:0;background:#fff;border-top:1px solid #e3e8e4;z-index:5;display:flex;justify-content:flex-end;gap:8px"><button class="btn-sm" onclick="em69Close(this)">Cerrar</button><button class="btn-sm btn-completar" id="c135-seg-guardar">Guardar seguimiento</button><button class="btn-sm btn-completar" id="c135-incorporado">Marcar incorporado</button></div></div>';
     document.body.appendChild(bg);em69BindOverlayClose(bg);var c140vm=c140MetaViaje(x.instrucciones_viaje),c140m=c140vm.meta||{};document.getElementById('c140-traslado-tipo').value=c140m.tramo2_url?'boleto':(c140m.recogida?'recogida':'pendiente');document.getElementById('c140-recogida').value=c140m.recogida||'';document.getElementById('c140-origen2').value=c140m.tramo2_origen||'';document.getElementById('c140-destino2').value=c140m.tramo2_destino||'';document.getElementById('c140-detalle2').value=c140m.tramo2_detalle||'';document.getElementById('c135-pasaje-estado').value=x.pasaje_estado||'pendiente';
     var c141r=document.getElementById('c141-elegir-recogida'),c141b=document.getElementById('c141-elegir-boleto');
@@ -9306,7 +9306,7 @@ function ca25RegistrarPagoProveedor(compra){
       '<div style="font-size:.64rem;color:#6d7a73;margin:-3px 0 10px">Pagado acumulado a esta factura: <strong>$'+formatMonto(pagado)+'</strong></div>'+
       '<div class="ca21-form">'+
         '<div class="ca21-field"><label>Monto a aplicar a esta factura</label><input id="ca25-cp-monto" type="number" min=".01" max="'+saldo+'" step=".01" value="'+saldo+'"></div>'+
-        '<div class="ca21-field"><label>Cuenta de salida</label><select id="ca25-cp-cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div>'+
+        '<div class="ca21-field"><label>Cuenta de salida</label><select id="ca25-cp-cuenta"><option value="efectivo">Efectivo</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div>'+
         '<div class="ca21-field full"><div id="ca84-result" style="border:1px solid #dce6df;border-radius:9px;background:#f8fbf9;padding:9px 10px;font-size:.67rem;color:#40574d"><strong>Liquidación:</strong> este movimiento cubrirá el saldo completo de la factura.</div></div>'+
         '<div class="ca21-field full"><label>Referencia / observación</label><textarea id="ca25-cp-nota" placeholder="Ej. Transferencia, folio bancario o comentario"></textarea></div>'+
       '</div>'+
@@ -9566,7 +9566,7 @@ function ga152EditarGasto(id){
   '<div class="ca21-field"><label>Fecha del gasto</label><input id="ga152-fecha" type="date" value="'+m.fecha+'" max="'+fechaHoyLocal()+'"></div>'+
   '<div class="ca21-field"><label>Categoría</label><select id="ga152-cat">'+cats.map(function(c){return '<option '+(c===m.categoria?'selected':'')+'>'+c+'</option>';}).join('')+'</select></div>'+
   '<div class="ca21-field"><label>Monto</label><input id="ga152-monto" value="'+m.monto+'"></div>'+
-  '<div class="ca21-field"><label>Cuenta de pago</label><select id="ga152-cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div>'+
+  '<div class="ca21-field"><label>Cuenta de pago</label><select id="ga152-cuenta"><option value="efectivo">Efectivo</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div>'+
   '<div class="ca21-field"><label>Concepto</label><input id="ga152-concepto" value="'+String(m.concepto||'').replace(/"/g,'&quot;')+'"></div>'+
   '<div class="ca21-field full"><label>Beneficiario / Proveedor</label><input id="ga152-persona" value="'+String(m.persona||'').replace(/"/g,'&quot;')+'"></div>'+
   '<div class="ca21-field full"><label>Observaciones</label><textarea id="ga152-nota">'+(m.nota||'')+'</textarea></div></div></div><div class="ca21-dialog-actions"><button onclick="ca21CloseModal()">Cancelar</button><button class="save" id="ga152-save">Guardar cambios</button></div>');
@@ -9581,7 +9581,7 @@ function ga37Nuevo(){
   '<div class="ca21-field"><label>Tipo de gasto</label><div class="nc31-cat-tabs"><button type="button" class="nc31-cat-tab ga37-tipo" data-tipo="fijo">Fijo</button><button type="button" class="nc31-cat-tab ga37-tipo sel" data-tipo="variable">Variable</button></div><input type="hidden" id="ga37-tipo" value="variable"></div>'+
   '<div class="ca21-field"><label>Categoría</label><select id="ga37-cat">'+cats.map(function(c){return '<option>'+c+'</option>';}).join('')+'</select></div>'+
   '<div class="ca21-field"><label>Monto</label><input id="ga37-monto" type="number" min=".01" step=".01" placeholder="0.00"></div>'+
-  '<div class="ca21-field"><label>Cuenta de pago</label><select id="ga37-cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div>'+
+  '<div class="ca21-field"><label>Cuenta de pago</label><select id="ga37-cuenta"><option value="efectivo">Efectivo</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div>'+
   '<div class="ca21-field"><label>Concepto</label><input id="ga37-concepto" placeholder="Ej. Pago de energía eléctrica"></div>'+
   '<div class="ca21-field full"><label>Beneficiario / Proveedor</label><input id="ga37-persona" placeholder="Nombre o empresa"></div>'+
   '<div class="ca21-field full"><label>Comprobante (opcional)</label><input id="ga37-file" type="file" accept="image/*,.pdf"><p class="hint" id="ga37-file-name">Sin archivo</p></div>'+
@@ -9616,7 +9616,7 @@ function ga37Nuevo(){
 
 function ca30SeleccionarCuentaCompra(total,callback){
   ca21OpenModal('<div class="ca21-dialog-head"><div><h3>Confirmar pago de contado</h3><p>Total de la compra: $'+formatMonto(total)+'</p></div><button class="ca21-close" onclick="ca21CloseModal()">×</button></div>'+
-  '<div class="ca21-dialog-body"><div class="ca21-field"><label>¿De qué cuenta se pagó?</label><select id="ca30-cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div></div>'+
+  '<div class="ca21-dialog-body"><div class="ca21-field"><label>¿De qué cuenta se pagó?</label><select id="ca30-cuenta"><option value="efectivo">Efectivo</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div></div>'+
   '<div class="ca21-dialog-actions"><button onclick="ca21CloseModal()">Cancelar</button><button class="save" id="ca30-confirmar">Confirmar pago</button></div>');
   document.getElementById('ca30-confirmar').onclick=function(){
     var c=document.getElementById('ca30-cuenta').value;
@@ -9643,7 +9643,7 @@ function renderNuevaCompra(){
       '<div id="nc-prov-nuevo-wrap" style="display:none;background:#f7faf8;border:1px solid #dfe7e1;border-radius:10px;padding:10px;margin-top:9px"><div style="font-size:.68rem;font-weight:900;color:#17523c;margin-bottom:7px">Nuevo proveedor</div><div class="nc28-grid"><div class="form-group"><label>Nombre</label><input type="text" id="nc-prov-nombre"></div><div class="form-group"><label>Giro</label><input type="text" id="nc-prov-giro"></div><div class="form-group"><label>Teléfono</label><input type="text" id="nc-prov-tel"></div></div></div>'+
       '<div class="nc30-payline">'+
         '<div class="form-group nc30-venc" id="nc-vencimiento-wrap" style="display:none;margin:0"><label>Vencimiento</label><input type="date" id="nc-vencimiento"><p class="hint">Se registrará en Créditos de proveedores.</p></div>'+
-        '<div class="form-group" id="nc-cuenta-pago-wrap" style="margin:0;min-width:250px"><label>Cuenta de pago</label><select id="nc-cuenta-pago"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div>'+
+        '<div class="form-group" id="nc-cuenta-pago-wrap" style="margin:0;min-width:250px"><label>Cuenta de pago</label><select id="nc-cuenta-pago"><option value="efectivo">Efectivo</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div>'+
         '<label class="nc30-attach" for="nc-comprobante">📎 Adjuntar factura</label><input type="file" id="nc-comprobante" accept="image/*,.pdf"><span class="nc30-file-name" id="nc-comprobante-status">Sin archivo</span>'+
       '</div>'+
     '</div>'+
@@ -12048,7 +12048,7 @@ function em69AprobarPrestamo(x,volverFn){
       '<div class="em69-field"><label>Monto</label><input id="em69-loan-monto" type="number" min="1" step="1" value="'+monto+'"></div>'+
       '<div class="em69-field"><label>Pagos semanales</label><input id="em69-loan-pagos" type="number" min="1" step="1" value="1"></div>'+
       '<div class="em69-field"><label>Inicio descuento</label><input id="em69-loan-fecha" type="date" value="'+fechaHoyLocal()+'"></div>'+
-      '<div class="em69-field"><label>Cuenta de entrega</label><select id="em69-loan-cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="santander_pesos">Santander Pesos</option></select></div>'+
+      '<div class="em69-field"><label>Cuenta de entrega</label><select id="em69-loan-cuenta"><option value="efectivo">Efectivo</option><option value="banamex_pesos">Banamex Pesos</option><option value="santander_pesos">Santander Pesos</option></select></div>'+
       '<div class="em69-field full"><label>Concepto</label><input id="em69-loan-concepto" value="'+String(x.raw.mensaje||'Préstamo personal').replace(/"/g,'&quot;')+'"></div>'+
     '</div><div id="em69-msg"></div></div><div class="em69-modal-f"><button class="btn-sm" onclick="em69Close()">Cancelar</button><button class="btn-sm btn-completar" id="em69-loan-ok">Aprobar y entregar</button></div></div>';
     document.body.appendChild(bg);
@@ -12962,11 +12962,13 @@ function ca35CuentaSaldo(t,c){
   return t.banamex_pesos;
 }
 function ca21Totals(fechaHasta){
-  var d=ca21Load(),ap=d.aperturas[fechaHasta]||{},ms=d.movimientos.filter(function(m){return (m.fecha_caja||m.fecha)===fechaHasta;});
-  var ef=ca21Money(ap.efectivo);
-  var bp=ca21Money(ap.banamex_pesos!=null?ap.banamex_pesos:(ap.banamex!=null?ap.banamex:(ap.bancos||0)));
-  var bd=ca21Money(ap.banamex_dolares||0);
-  var sp=ca21Money(ap.santander_pesos!=null?ap.santander_pesos:(ap.santander||0));
+  var d=ca21Load();
+  var limite=fechaHasta||'9999-12-31';
+  var ms=(d.movimientos||[]).filter(function(m){
+    var f=m.fecha_caja||m.fecha||'';
+    return f && f<=limite;
+  });
+  var ef=0,bp=0,bd=0,sp=0;
   ms.forEach(function(m){
     ef+=ca21AccountDelta(m,'efectivo');
     bp+=ca21AccountDelta(m,'banamex_pesos');
@@ -12975,13 +12977,18 @@ function ca21Totals(fechaHasta){
   });
   return {
     efectivo:ca21Money(ef),
-    banamex_pesos:ca21Money(bp),banamex_dolares:ca21Money(bd),santander_pesos:ca21Money(sp),
-    banamex:ca21Money(bp),santander:ca21Money(sp),
+    banamex_pesos:ca21Money(bp),
+    banamex_dolares:ca21Money(bd),
+    santander_pesos:ca21Money(sp),
+    banamex:ca21Money(bp),
+    santander:ca21Money(sp),
     bancos:ca21Money(bp+sp),
     total:ca21Money(ef+bp+sp),
-    movs:ms,apertura:ap
+    movs:ms,
+    apertura:null
   };
 }
+
 function ca21OpenApertura(fecha){
   var dd=ca21DayData(fecha), ap=dd.apertura;
   var prevDate=new Date(fecha+'T12:00:00'); prevDate.setDate(prevDate.getDate()-1);
@@ -13026,7 +13033,7 @@ function ca21OpenMovimiento(tipo,fecha){
     '<div class="ca21-dialog-head"><div><h3>'+(esEntrada?'➕ Registrar entrada':'➖ Registrar gasto / pago')+'</h3><p>'+cajaFechaCorta(fecha)+'</p></div><button class="ca21-close" onclick="ca21CloseModal()">×</button></div>'+
     '<div class="ca21-dialog-body"><div class="ca21-form">'+
       '<div class="ca21-field"><label>Monto</label><input id="ca21-m-monto" type="number" min="0.01" step="0.01" placeholder="0.00"></div>'+
-      '<div class="ca21-field"><label>Cuenta</label><select id="ca21-m-cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div>'+
+      '<div class="ca21-field"><label>Cuenta</label><select id="ca21-m-cuenta"><option value="efectivo">Efectivo</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div>'+
       '<div class="ca21-field"><label>Categoría</label><select id="ca21-m-cat">'+
         (esEntrada
           ?'<option>Aportaciones</option><option>Venta de fruta</option><option>Reembolso</option><option>Recuperación</option><option>Otros ingresos</option>'
@@ -13051,7 +13058,7 @@ function ca21OpenMovimiento(tipo,fecha){
       concepto:concepto,
       persona:document.getElementById('ca21-m-persona').value.trim()||'—',
       nota:document.getElementById('ca21-m-nota').value.trim(),
-      monto:monto,origen:'Caja manual',estado:'Registrado',
+      monto:monto,origen:'Tesorería manual',estado:'Registrado',
       usuario:(usuario&&usuario.nombre)||'Usuario'
     });
     ca21Save(d);ca21CloseModal();renderCajaMootsil(CAJA_PERIODO,fecha);
@@ -13059,8 +13066,8 @@ function ca21OpenMovimiento(tipo,fecha){
 }
 function ca21OpenTransfer(fecha){
   ca21OpenModal('<div class="ca21-dialog-head"><div><h3>⇄ Transferir entre cuentas</h3><p>Efectivo · Banamex Pesos · Banamex Dólares · Santander Pesos.</p></div><button class="ca21-close" onclick="ca21CloseModal()">×</button></div>'+
-  '<div class="ca21-dialog-body"><div class="ca21-form"><div class="ca21-field"><label>Cuenta origen</label><select id="ca21-t-origen"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div>'+
-  '<div class="ca21-field"><label>Cuenta destino</label><select id="ca21-t-destino"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div>'+
+  '<div class="ca21-dialog-body"><div class="ca21-form"><div class="ca21-field"><label>Cuenta origen</label><select id="ca21-t-origen"><option value="efectivo">Efectivo</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div>'+
+  '<div class="ca21-field"><label>Cuenta destino</label><select id="ca21-t-destino"><option value="efectivo">Efectivo</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div>'+
   '<div class="ca21-field"><label>Monto</label><input id="ca21-t-monto" type="number" min="0.01" step="0.01" placeholder="0.00"></div><div class="ca21-field"><label>Concepto</label><input id="ca21-t-concepto" placeholder="Ej. Traspaso para pago de nómina"></div>'+
   '<div class="ca21-field full"><label>Referencia / observación</label><textarea id="ca21-t-nota"></textarea></div></div></div><div class="ca21-dialog-actions"><button onclick="ca21CloseModal()">Cancelar</button><button class="save" id="ca21-t-save">Registrar transferencia</button></div>');
   document.getElementById('ca21-t-save').addEventListener('click',function(){
@@ -13068,7 +13075,7 @@ function ca21OpenTransfer(fecha){
     if(o===de){alert('La cuenta de origen y destino deben ser diferentes.');return;} if(m<=0){alert('Captura un monto mayor a cero.');return;}
     if(ca35CuentaMoneda(o)!==ca35CuentaMoneda(de)){alert('La transferencia entre pesos y dólares requiere registrar una operación de cambio de moneda. Por ahora selecciona cuentas de la misma moneda.');return;}
     var tot=ca21Totals(fecha),disp=ca35CuentaSaldo(tot,o);if(m>disp){alert('El monto supera el saldo disponible en la cuenta de origen.');return;}
-    ca169AppendMovimiento({id:ca21Id(),fecha:fecha,fecha_caja:fecha,hora:ca21Now(),tipo:'transferencia',cuenta_origen:o,cuenta_destino:de,monto:m,categoria:'Transferencia',concepto:document.getElementById('ca21-t-concepto').value.trim()||'Transferencia entre cuentas',persona:'Entre cuentas',nota:document.getElementById('ca21-t-nota').value.trim(),origen:'Caja',estado:'Registrado',usuario:(usuario&&usuario.nombre)||'Usuario'});
+    ca169AppendMovimiento({id:ca21Id(),fecha:fecha,fecha_caja:fecha,hora:ca21Now(),tipo:'transferencia',cuenta_origen:o,cuenta_destino:de,monto:m,categoria:'Transferencia',concepto:document.getElementById('ca21-t-concepto').value.trim()||'Transferencia entre cuentas',persona:'Entre cuentas',nota:document.getElementById('ca21-t-nota').value.trim(),origen:'Tesorería',estado:'Registrado',usuario:(usuario&&usuario.nombre)||'Usuario'});
     ca21CloseModal();renderCajaMootsil(CAJA_PERIODO,fecha);
   });
 }
@@ -13117,14 +13124,14 @@ function ca23OpenNuevaCompra(){
  '<div class="ca21-field full"><label>Producto / artículo</label><input id="ca23-art" placeholder="Buscar/escribir artículo de Inventario"><small>Usa el mismo nombre si ya existe en Inventario.</small></div><div class="ca21-field"><label>Proveedor</label><input id="ca23-prov"></div>'+
  '<div class="ca21-field"><label>Cantidad</label><input id="ca23-cant" type="number" min=".01" step=".01" value="1"></div><div class="ca21-field"><label>Unidad</label><select id="ca23-unidad"><option>Pieza</option><option>kg</option><option>g</option><option>Litro</option><option>ml</option><option>Metro</option><option>Rollo</option><option>Paquete</option><option>Otro</option></select></div>'+
  '<div class="ca21-field"><label>Precio unitario</label><input id="ca23-pu" type="number" min="0" step=".01"></div><div class="ca21-field"><label>Total</label><input id="ca23-total" type="number" min="0" step=".01"></div>'+
- '<div class="ca21-field"><label>Estado</label><select id="ca23-estado"><option value="pagada">Pagada ahora</option><option value="pendiente">Pendiente / Crédito</option></select></div><div class="ca21-field"><label>Cuenta de pago</label><select id="ca23-cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div>'+
+ '<div class="ca21-field"><label>Estado</label><select id="ca23-estado"><option value="pagada">Pagada ahora</option><option value="pendiente">Pendiente / Crédito</option></select></div><div class="ca21-field"><label>Cuenta de pago</label><select id="ca23-cuenta"><option value="efectivo">Efectivo</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div>'+
  '<div class="ca21-field"><label>Folio / factura</label><input id="ca23-folio"></div><div class="ca21-field full"><label>Observaciones</label><textarea id="ca23-obs"></textarea></div></div></div><div class="ca21-dialog-actions"><button onclick="ca21CloseModal()">Cancelar</button><button class="save" id="ca23-save">Guardar compra</button></div>');
  var q=document.getElementById('ca23-cant'),p=document.getElementById('ca23-pu'),to=document.getElementById('ca23-total'),es=document.getElementById('ca23-estado'),cu=document.getElementById('ca23-cuenta');function calc(){if(q.value&&p.value)to.value=(ca21Money(q.value)*ca21Money(p.value)).toFixed(2)}q.oninput=calc;p.oninput=calc;es.onchange=function(){cu.disabled=es.value==='pendiente'};
  document.getElementById('ca23-save').onclick=function(){var art=document.getElementById('ca23-art').value.trim(),prov=document.getElementById('ca23-prov').value.trim(),m=ca21Money(to.value),estado=es.value,fecha=document.getElementById('ca23-fecha').value;if(!art||!prov||m<=0){alert('Captura producto, proveedor y total.');return}if(estado==='pagada'){var tt=ca21Totals(fecha),cc=cu.value,disp=cc==='efectivo'?tt.efectivo:cc==='banamex'?tt.banamex:tt.santander;if(m>disp){alert('Saldo insuficiente en la cuenta seleccionada.');return}}
  var c={id:ca21Id(),fecha:fecha,categoria:document.getElementById('ca23-cat').value,articulo:art,proveedor:prov,cantidad:ca21Money(q.value),unidad:document.getElementById('ca23-unidad').value,precio_unitario:ca21Money(p.value),total:m,estado:estado,cuenta:estado==='pagada'?cu.value:'',folio:document.getElementById('ca23-folio').value.trim(),observaciones:document.getElementById('ca23-obs').value.trim()};var a=ca23Load();a.push(c);ca23Save(a);
  if(estado==='pagada'){var d=ca21Load();d.movimientos.push({id:'mov-'+c.id,fecha:fecha,hora:ca21Now(),tipo:'salida',cuenta:c.cuenta,monto:m,categoria:'Compra · '+c.categoria,concepto:c.articulo,persona:c.proveedor,forma:c.cuenta,nota:c.folio?('Folio '+c.folio):'',origen:'Compras',estado:'Pagado',usuario:(usuario&&usuario.nombre)||'Usuario'});ca21Save(d)}ca21CloseModal();renderComprasCaja()}
 }
-function ca23Pagar(id){var a=ca23Load(),c=a.find(function(x){return x.id===id});if(!c||c.estado==='pagada')return;ca21OpenModal('<div class="ca21-dialog-head"><div><h3>Pagar compra</h3><p>'+c.articulo+' · $'+formatMonto(c.total)+'</p></div><button class="ca21-close" onclick="ca21CloseModal()">×</button></div><div class="ca21-dialog-body"><div class="ca21-field"><label>Cuenta</label><select id="ca23-pay"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div></div><div class="ca21-dialog-actions"><button onclick="ca21CloseModal()">Cancelar</button><button class="save" id="ca23-paygo">Confirmar pago</button></div>');document.getElementById('ca23-paygo').onclick=function(){var cc=document.getElementById('ca23-pay').value,t=ca21Totals(CAJA_FECHA_BASE),disp=cc==='efectivo'?t.efectivo:cc==='banamex'?t.banamex:t.santander;if(c.total>disp){alert('Saldo insuficiente.');return}c.estado='pagada';c.cuenta=cc;c.fecha_pago=CAJA_FECHA_BASE;ca23Save(a);var d=ca21Load();d.movimientos.push({id:'mov-'+c.id,fecha:CAJA_FECHA_BASE,hora:ca21Now(),tipo:'salida',cuenta:cc,monto:c.total,categoria:'Compra · '+c.categoria,concepto:c.articulo,persona:c.proveedor,forma:cc,origen:'Compras',estado:'Pagado',usuario:(usuario&&usuario.nombre)||'Usuario'});ca21Save(d);ca21CloseModal();renderComprasCaja()}}
+function ca23Pagar(id){var a=ca23Load(),c=a.find(function(x){return x.id===id});if(!c||c.estado==='pagada')return;ca21OpenModal('<div class="ca21-dialog-head"><div><h3>Pagar compra</h3><p>'+c.articulo+' · $'+formatMonto(c.total)+'</p></div><button class="ca21-close" onclick="ca21CloseModal()">×</button></div><div class="ca21-dialog-body"><div class="ca21-field"><label>Cuenta</label><select id="ca23-pay"><option value="efectivo">Efectivo</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div></div><div class="ca21-dialog-actions"><button onclick="ca21CloseModal()">Cancelar</button><button class="save" id="ca23-paygo">Confirmar pago</button></div>');document.getElementById('ca23-paygo').onclick=function(){var cc=document.getElementById('ca23-pay').value,t=ca21Totals(CAJA_FECHA_BASE),disp=cc==='efectivo'?t.efectivo:cc==='banamex'?t.banamex:t.santander;if(c.total>disp){alert('Saldo insuficiente.');return}c.estado='pagada';c.cuenta=cc;c.fecha_pago=CAJA_FECHA_BASE;ca23Save(a);var d=ca21Load();d.movimientos.push({id:'mov-'+c.id,fecha:CAJA_FECHA_BASE,hora:ca21Now(),tipo:'salida',cuenta:cc,monto:c.total,categoria:'Compra · '+c.categoria,concepto:c.articulo,persona:c.proveedor,forma:cc,origen:'Compras',estado:'Pagado',usuario:(usuario&&usuario.nombre)||'Usuario'});ca21Save(d);ca21CloseModal();renderComprasCaja()}}
 function renderComprasCaja(){var root=document.getElementById('enc-body');if(!root){console.error('Compras: no existe #enc-body');return;}var a=ca23Load().slice().sort(function(x,y){return(y.fecha||'').localeCompare(x.fecha||'')}),pag=a.filter(function(x){return x.estado==='pagada'}),pen=a.filter(function(x){return x.estado!=='pagada'});root.innerHTML='<div style="padding:18px 36px 35px"><div class="ca23-head"><div><div style="font-weight:900;color:#e37b00;font-size:.75rem">ADMINISTRACIÓN · CAJA</div><h2>Compras</h2><p>Compras del rancho vinculadas a Caja e Inventario.</p></div><div class="ca23-actions"><button class="ca23-btn" id="ca23-caja">← Caja</button><button class="ca23-btn primary" id="ca23-new">＋ Nueva compra</button></div></div><div class="ca23-summary"><div class="ca23-stat"><small>COMPRAS</small><strong>'+a.length+'</strong></div><div class="ca23-stat"><small>PAGADAS</small><strong>'+pag.length+'</strong></div><div class="ca23-stat"><small>PENDIENTES</small><strong>'+pen.length+'</strong></div><div class="ca23-stat"><small>TOTAL REGISTRADO</small><strong>$'+formatMonto(a.reduce(function(s,x){return s+ca21Money(x.total)},0))+'</strong></div></div><div class="ca23-table"><table><thead><tr><th>FECHA</th><th>CATEGORÍA</th><th>PRODUCTO / ARTÍCULO</th><th>PROVEEDOR</th><th>CANTIDAD</th><th>TOTAL</th><th>CUENTA</th><th>ESTADO</th><th>ACCIÓN</th></tr></thead><tbody>'+(a.length?a.map(function(x){return '<tr><td>'+x.fecha+'</td><td><span class="ca23-tag">'+x.categoria+'</span></td><td><b>'+x.articulo+'</b></td><td>'+x.proveedor+'</td><td>'+x.cantidad+' '+x.unidad+'</td><td><b>$'+formatMonto(x.total)+'</b></td><td>'+(x.cuenta||'—')+'</td><td>'+(x.estado==='pagada'?'Pagada':'Pendiente')+'</td><td>'+(x.estado==='pagada'?'—':'<button class="ca23-btn ca23-paybtn" data-id="'+x.id+'">Pagar</button>')+'</td></tr>'}).join(''):'<tr><td colspan="9" class="ca23-empty">No hay compras registradas todavía.</td></tr>')+'</tbody></table></div></div>';document.getElementById('ca23-new').onclick=ca23OpenNuevaCompra;document.getElementById('ca23-caja').onclick=function(){renderCajaMootsil('dia',CAJA_FECHA_BASE)};Array.from(document.querySelectorAll('.ca23-paybtn')).forEach(function(b){b.onclick=function(){ca23Pagar(b.dataset.id)}})}
 
 
@@ -13162,7 +13169,7 @@ function ca124OpenInversionistas(fecha){
       '<div class="ca21-field full"><label>Contrato activo</label><select id="ca124-contr"><option value="">Selecciona inversionista</option></select></div>'+
       '<div class="ca21-field"><label>Tipo de movimiento</label><select id="ca124-tipo"><option value="devolucion_capital">Abono / devolución a capital</option><option value="rendimiento">Abono a utilidad / ganancia</option></select></div>'+
       '<div class="ca21-field"><label>Monto</label><input id="ca124-monto" type="number" min=".01" step=".01" placeholder="0.00"></div>'+
-      '<div class="ca21-field"><label>Cuenta de salida</label><select id="ca124-cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div>'+
+      '<div class="ca21-field"><label>Cuenta de salida</label><select id="ca124-cuenta"><option value="efectivo">Efectivo</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div>'+
       '<div class="ca21-field"><label>Fecha</label><input id="ca124-fecha" type="date" value="'+ex54Esc(fecha||fechaHoyLocal())+'"></div>'+
       '<div class="ca21-field full"><label>Referencia / observación</label><textarea id="ca124-ref" placeholder="Transferencia, folio, acuerdo o comentario"></textarea></div>'+
     '</div>';
@@ -13190,217 +13197,126 @@ function ca124OpenInversionistas(fecha){
   }).catch(function(e){var b=document.querySelector('#ca21-modal .ca21-dialog-body');if(b)b.innerHTML='<div class="empty">Error: '+ex54Esc(e.message)+'</div>';});
 }
 
+
+function ca323MovimientoAfectaCuenta(m,cuenta){
+  return Math.abs(ca21AccountDelta(m,cuenta))>0.0001;
+}
+function ca323OpenCuentaHistorial(cuenta){
+  var d=ca21Load();
+  var ms=(d.movimientos||[]).filter(function(m){return ca323MovimientoAfectaCuenta(m,cuenta);}).sort(function(a,b){
+    return (String(b.fecha_caja||b.fecha||'')+String(b.hora||'')).localeCompare(String(a.fecha_caja||a.fecha||'')+String(a.hora||''));
+  });
+  var saldo=ca35CuentaSaldo(ca21Totals('9999-12-31'),cuenta);
+  var usd=ca35CuentaMoneda(cuenta)==='USD';
+  var rows=ms.length?ms.map(function(m){
+    var delta=ca21AccountDelta(m,cuenta);
+    var signo=delta>=0?'+':'−';
+    var clase=delta>=0?'ca17-money-in':'ca17-money-out';
+    var fecha=m.fecha_caja||m.fecha||'—';
+    var contracuenta=m.tipo==='transferencia'
+      ? (ca169NormCuenta(m.cuenta_origen)===ca169NormCuenta(cuenta)?' → '+ca35CuentaLabel(m.cuenta_destino):' ← '+ca35CuentaLabel(m.cuenta_origen))
+      : '';
+    return '<tr><td>'+cajaFechaCorta(fecha)+'</td><td>'+(m.hora||'—')+'</td><td><strong>'+(m.concepto||'Movimiento')+'</strong><div class="ca21-mini">'+(m.persona||'')+contracuenta+'</div></td><td>'+(m.categoria||'—')+'</td><td class="'+clase+'" style="text-align:right;font-weight:800">'+signo+(usd?'US$ ':'$')+formatMonto(Math.abs(delta))+'</td></tr>';
+  }).join(''):'<tr><td colspan="5" style="text-align:center;padding:22px;color:#77837c">Sin movimientos en esta cuenta.</td></tr>';
+  ca21OpenModal(
+    '<div class="ca21-dialog-head"><div><h3>'+ca35CuentaLabel(cuenta)+'</h3><p>Historial permanente de la cuenta</p></div><button class="ca21-close" onclick="ca21CloseModal()">×</button></div>'+
+    '<div class="ca21-dialog-body"><div style="background:#f4f8f5;border:1px solid #dce7e0;border-radius:12px;padding:12px 14px;margin-bottom:12px"><div style="font-size:.68rem;color:#6d7a72;font-weight:800;text-transform:uppercase">Saldo actual</div><div style="font-size:1.55rem;font-weight:900;color:#0b6842">'+(usd?'US$ ':'$')+formatMonto(saldo)+'</div></div>'+
+    '<div class="ca17-table-wrap"><table class="ca17-table"><thead><tr><th>Fecha</th><th>Hora</th><th>Movimiento</th><th>Categoría</th><th style="text-align:right">Importe</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>'+
+    '<div class="ca21-dialog-actions"><button onclick="ca21CloseModal()">Cerrar</button></div>'
+  );
+}
+
 function renderCajaMootsil(periodo,fechaBase){
   CAJA_PERIODO=periodo||CAJA_PERIODO||'dia';
   CAJA_FECHA_BASE=fechaBase||CAJA_FECHA_BASE||fechaHoyLocal();
   var body=document.getElementById('enc-body');
   var rg=cajaRango(CAJA_PERIODO,CAJA_FECHA_BASE);
 
-  Promise.all([
-    from('gastos').select('*,proveedor:proveedores(nombre),registrador:usuarios!registrado_por(nombre)').eq('estado_pago','pagado').gte('fecha',rg.inicio).lte('fecha',rg.fin).get(),
-    from('pagos_semana_estado').select('*,operario:usuarios!operario_id(nombre)').eq('estado','pagado').gte('semana_inicio',rg.inicio).lte('semana_inicio',rg.fin).get(),
-    from('pagos_extra_estado').select('*,operario:usuarios!operario_id(nombre)').eq('estado','pagado').gte('semana_inicio',rg.inicio).lte('semana_inicio',rg.fin).get(),
-    from('pagos_eventuales').select('*,operario:usuarios!operario_id(nombre)').gte('fecha',rg.inicio).lte('fecha',rg.fin).get(),
-    from('prestamos').select('*,operario:usuarios!operario_id(nombre)').gte('fecha_inicio',rg.inicio).lte('fecha_inicio',rg.fin).get(),
-    from('inversiones').select('*,inversionista:usuarios!inversionista_id(nombre)').gte('fecha_inicio',rg.inicio).lte('fecha_inicio',rg.fin).get(),
-    from('inversion_movimientos').select('*').gte('fecha',rg.inicio).lte('fecha',rg.fin).get(),
-    from('financiamientos').select('*').lte('fecha_inicio',CAJA_FECHA_BASE).get(),
-    from('financiamiento_movimientos').select('*').lte('fecha',CAJA_FECHA_BASE).get()
-  ]).then(function(r){
-    var externos=[],gastos=r[0]||[],nom=r[1]||[],extras=r[2]||[],eventuales=r[3]||[],prestamos=r[4]||[],inversiones=r[5]||[],invMovs=r[6]||[],financiamientosDb=r[7]||[],finMovsDb=r[8]||[];
-
-    gastos.forEach(function(g){
-      var esAp=ap98EsApoyo(g),am=esAp?(ap98Meta(g.concepto)||{}):{};
-      externos.push({id:'db-g-'+g.id,fecha:g.fecha,hora:'—',tipo:'salida',cuenta:/efectivo/i.test(g.forma_pago||'')?'efectivo':'bancos',categoria:esAp?'Apoyo':'Compra / gasto',concepto:esAp?ap98Concepto(g):(g.concepto||'Gasto'),persona:esAp?(am.nombre||'Colaborador'):(g.proveedor?g.proveedor.nombre:'Sin proveedor'),monto:cajaMonto(g.monto),forma:g.forma_pago||'—',origen:esAp?'Apoyos':'Compra',estado:'Pagado',db:true});
-    });
-    nom.forEach(function(p){externos.push({id:'db-n-'+p.id,fecha:p.semana_inicio,hora:'—',tipo:'salida',cuenta:p.cuenta_pago||'efectivo',categoria:'Personal',concepto:'Nómina personal fijo',persona:p.operario?p.operario.nombre:'Colaborador',monto:cajaMonto(p.monto_pagado),forma:'—',origen:'Nómina',estado:'Pagado',c219:true,db:true});});
-    extras.forEach(function(p){externos.push({id:'db-x-'+p.id,fecha:p.semana_inicio,hora:'—',tipo:'salida',cuenta:p.cuenta_pago||'efectivo',categoria:'Personal',concepto:'Horas extra',persona:p.operario?p.operario.nombre:'Colaborador',monto:cajaMonto(p.monto_pagado),forma:'—',origen:'Nómina',estado:'Pagado',db:true});});
-    eventuales.forEach(function(p){externos.push({id:'db-e-'+p.id,fecha:p.fecha,hora:'—',tipo:'salida',cuenta:'efectivo',categoria:'Personal',concepto:p.concepto||'Pago personal eventual',persona:p.operario?p.operario.nombre:'Eventual',monto:cajaMonto(p.monto),forma:'—',origen:'Eventuales',estado:'Pagado',db:true});});
-    prestamos.forEach(function(p){externos.push({id:'db-p-'+p.id,fecha:p.fecha_inicio,hora:'—',tipo:'salida',cuenta:'efectivo',categoria:'Personal',concepto:'Préstamo a colaborador',persona:p.operario?p.operario.nombre:'Colaborador',monto:cajaMonto(p.monto_total),forma:'—',origen:'Préstamo',estado:'Registrado',db:true});});
-    inversiones.forEach(function(i){externos.push({id:'db-i-'+i.id,fecha:i.fecha_inicio,hora:'—',tipo:'entrada',cuenta:'bancos',categoria:'Aportaciones',concepto:'Aportación de inversionista',persona:i.inversionista?i.inversionista.nombre:'Inversionista',monto:cajaMonto(i.monto_invertido),forma:'Transferencia',origen:'Inversionistas',estado:'Registrado',db:true});});
-    invMovs.forEach(function(m){if(m.tipo==='rendimiento'||m.tipo==='devolucion_capital')externos.push({id:'db-im-'+m.id,fecha:m.fecha,hora:'—',tipo:'salida',cuenta:'bancos',categoria:'Inversionistas',concepto:m.concepto||(m.tipo==='rendimiento'?'Rendimiento':'Devolución de capital'),persona:'Inversionista',monto:cajaMonto(m.monto),forma:'—',origen:'Inversionistas',estado:'Registrado',db:true});});
-
-    /* C168 · Historial acumulado: los financiamientos y sus pagos se muestran hasta la fecha seleccionada,
-       aunque sean anteriores al periodo visible, para explicar el saldo real de cada cuenta. */
-    /* C167 · Financiamientos impactan directamente la cuenta seleccionada desde Supabase.
-       Esta lógica vive en index.html, que es el código realmente ejecutado por Cloudflare. */
-    function ca167FinCuenta(c){
-      c=String(c||'').toLowerCase();
-      if(c==='banamex'||c==='bancos'||c==='banamex_pesos')return 'banamex_pesos';
-      if(c==='santander'||c==='santander_pesos')return 'santander_pesos';
-      if(c==='banamex_dolares')return 'banamex_dolares';
-      if(c==='efectivo')return 'efectivo';
-      return 'banamex_pesos';
-    }
-    var c173StorePre=ca21Load();
-    var c173PrevDatePre=(function(){var d=new Date(CAJA_FECHA_BASE+'T12:00:00');d.setDate(d.getDate()-1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
-    var c173PrevCutPre=c173StorePre.cortes[c173PrevDatePre]||null;
-    var c173HasContinuityPre=!!(c173StorePre.aperturas[CAJA_FECHA_BASE]||c173PrevCutPre);
-    var finById={};
-    financiamientosDb.forEach(function(f){
-      finById[String(f.id)]=f;
-      if(f.fecha_inicio&&f.fecha_inicio<=CAJA_FECHA_BASE&&(!c173HasContinuityPre||f.fecha_inicio>=CAJA_FECHA_BASE)){
-        var cuenta=ca167FinCuenta(f.cuenta_ingreso);
-        externos.push({id:'db-fin-'+f.id,fecha:f.fecha_inicio,hora:'—',tipo:'entrada',cuenta:cuenta,categoria:'Financiamientos',concepto:'Disposición de financiamiento',persona:f.institucion||'Financiamiento',monto:cajaMonto(f.monto_original),forma:ca35CuentaLabel(cuenta),origen:'Financiamientos',estado:'Registrado',db:true});
-      }
-    });
-    finMovsDb.forEach(function(m){
-      if(m.fecha&&m.fecha<=CAJA_FECHA_BASE&&(!c173HasContinuityPre||m.fecha>=CAJA_FECHA_BASE)){
-        var f=finById[String(m.financiamiento_id)],cuenta=ca167FinCuenta(m.cuenta);
-        var total=m.tipo==='mixto'?cajaMonto(Number(m.capital||0)+Number(m.interes||0)):cajaMonto(m.monto);
-        externos.push({id:'db-finp-'+m.id,fecha:m.fecha,hora:'—',tipo:'salida',cuenta:cuenta,categoria:'Financiamientos',concepto:m.tipo==='capital'?'Abono a capital':m.tipo==='interes'?'Pago de intereses':'Pago mixto capital + intereses',persona:f&&f.institucion?f.institucion:'Financiamiento',monto:total,forma:ca35CuentaLabel(cuenta),origen:'Financiamientos',estado:'Registrado',db:true});
-      }
-    });
-
-    var store=ca21Load();
-    /* Los reflejos FIS/FIP locales se excluyen para que la fuente financiera sea Supabase una sola vez. */
-    /* C171 · El historial debe mostrar todo movimiento que afecte el saldo de Caja.
-       Para movimientos pagados localmente, la fecha efectiva es fecha_caja; fecha conserva
-       la fecha documental del comprobante/factura y no debe ocultar el pago del historial. */
-    var locales=store.movimientos.filter(function(m){
-      var fechaEfectiva=m.fecha_caja||m.fecha;
-      return fechaEfectiva>=rg.inicio&&fechaEfectiva<=rg.fin&&!String(m.id||'').startsWith('FIS-')&&!String(m.id||'').startsWith('FIP-S-');
-    }).map(function(m){
-      var x=Object.assign({},m);
-      x.fecha_historial=m.fecha_caja||m.fecha;
-      return x;
-    });
-    var movimientos=externos.concat(locales).sort(function(a,b){
-      var fa=a.fecha_historial||a.fecha,fb=b.fecha_historial||b.fecha;
-      return (String(fb)+String(b.hora||'')).localeCompare(String(fa)+String(a.hora||''));
-    });
-
-    var apertura=store.aperturas[CAJA_FECHA_BASE]||null;
-    var corte=store.cortes[CAJA_FECHA_BASE]||null;
-    /* C173 · Si existe corte del día anterior, ese corte es la continuidad contable.
-       Todo financiamiento/gasto previo ya está absorbido en ese saldo y NO se vuelve a sumar. */
-    var c173PrevDate=(function(){var d=new Date(CAJA_FECHA_BASE+'T12:00:00');d.setDate(d.getDate()-1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
-    var c173PrevCut=store.cortes[c173PrevDate]||null;
-    var c173HasContinuity=!!(apertura||c173PrevCut);
-
-    // Daily test balances are based on local opening + local manual cash flows.
-    // Existing DB records are displayed as historical/consolidated movements but are not double-counted
-    // into the test opening/closing cash balance until migration rules are approved.
-    var localDay=store.movimientos.filter(function(m){return (m.fecha_caja||m.fecha)===CAJA_FECHA_BASE&&!String(m.id||'').startsWith('FIS-')&&!String(m.id||'').startsWith('FIP-S-');});
-    var saldoInicialEf=apertura?ca21Money(apertura.efectivo):(c173PrevCut?ca21Money(c173PrevCut.efectivo_contado||0):0);
-    var saldoInicialBp=apertura?ca21Money(apertura.banamex_pesos!=null?apertura.banamex_pesos:(apertura.banamex!=null?apertura.banamex:(apertura.bancos||0))):(c173PrevCut?ca21Money(c173PrevCut.banamex_pesos_cierre!=null?c173PrevCut.banamex_pesos_cierre:(c173PrevCut.banamex_cierre||0)):0);
-    var saldoInicialBd=apertura?ca21Money(apertura.banamex_dolares||0):(c173PrevCut?ca21Money(c173PrevCut.banamex_dolares_cierre||0):0);
-    var saldoInicialSp=apertura?ca21Money(apertura.santander_pesos!=null?apertura.santander_pesos:(apertura.santander||0)):(c173PrevCut?ca21Money(c173PrevCut.santander_pesos_cierre!=null?c173PrevCut.santander_pesos_cierre:(c173PrevCut.santander_cierre||0)):0);
-    var ef=saldoInicialEf,bp=saldoInicialBp,bd=saldoInicialBd,sp=saldoInicialSp;
-    localDay.forEach(function(m){
-      ef+=ca21AccountDelta(m,'efectivo');
-      bp+=ca21AccountDelta(m,'banamex_pesos');
-      bd+=ca21AccountDelta(m,'banamex_dolares');
-      sp+=ca21AccountDelta(m,'santander_pesos');
-    });
-    /* C167: saldo acumulado por cuenta = apertura + movimientos locales + financiamientos reales hasta la fecha. */
-    financiamientosDb.forEach(function(f){
-      /* Con continuidad, sólo una disposición NUEVA del día actual o posterior a la apertura afecta el saldo. */
-      if(c173HasContinuity && (!f.fecha_inicio || f.fecha_inicio<CAJA_FECHA_BASE))return;
-      if(f.fecha_inicio&&f.fecha_inicio>CAJA_FECHA_BASE)return;
-      var cuenta=ca167FinCuenta(f.cuenta_ingreso),monto=ca21Money(f.monto_original);
-      if(cuenta==='efectivo')ef+=monto;else if(cuenta==='banamex_dolares')bd+=monto;else if(cuenta==='santander_pesos')sp+=monto;else bp+=monto;
-    });
-    finMovsDb.forEach(function(m){
-      /* Los pagos anteriores al nuevo día ya están contenidos en el cierre previo. */
-      if(c173HasContinuity && (!m.fecha || m.fecha<CAJA_FECHA_BASE))return;
-      if(m.fecha&&m.fecha>CAJA_FECHA_BASE)return;
-      var cuenta=ca167FinCuenta(m.cuenta),monto=m.tipo==='mixto'?ca21Money(Number(m.capital||0)+Number(m.interes||0)):ca21Money(m.monto);
-      if(cuenta==='efectivo')ef-=monto;else if(cuenta==='banamex_dolares')bd-=monto;else if(cuenta==='santander_pesos')sp-=monto;else bp-=monto;
-    });
-    ef=ca21Money(ef);bp=ca21Money(bp);bd=ca21Money(bd);sp=ca21Money(sp);
-    window.C219_CAJA_SALDOS_VISIBLES={
-      fecha:CAJA_FECHA_BASE,
-      efectivo:ef,
-      banamex_pesos:bp,
-      banamex_dolares:bd,
-      santander_pesos:sp
-    };
-
-    var finDiaEntradas=financiamientosDb.filter(function(f){return f.fecha_inicio===CAJA_FECHA_BASE;}).map(function(f){return {cuenta:ca167FinCuenta(f.cuenta_ingreso),monto:ca21Money(f.monto_original)};});
-    var finDiaSalidas=finMovsDb.filter(function(m){return m.fecha===CAJA_FECHA_BASE;}).map(function(m){return {cuenta:ca167FinCuenta(m.cuenta),monto:m.tipo==='mixto'?ca21Money(Number(m.capital||0)+Number(m.interes||0)):ca21Money(m.monto)};});
-    var localEntradas=localDay.filter(function(m){return m.tipo==='entrada'&&ca35CuentaMoneda(m.cuenta)!=='USD';}).reduce(function(s,m){return s+ca21Money(m.monto);},0)+finDiaEntradas.filter(function(m){return ca35CuentaMoneda(m.cuenta)!=='USD';}).reduce(function(s,m){return s+m.monto;},0);
-    var localSalidas=localDay.filter(function(m){return m.tipo==='salida'&&ca35CuentaMoneda(m.cuenta)!=='USD';}).reduce(function(s,m){return s+ca21Money(m.monto);},0)+finDiaSalidas.filter(function(m){return ca35CuentaMoneda(m.cuenta)!=='USD';}).reduce(function(s,m){return s+m.monto;},0);
-    var localEntradasUsd=localDay.filter(function(m){return m.tipo==='entrada'&&ca35CuentaMoneda(m.cuenta)==='USD';}).reduce(function(s,m){return s+ca21Money(m.monto);},0)+finDiaEntradas.filter(function(m){return ca35CuentaMoneda(m.cuenta)==='USD';}).reduce(function(s,m){return s+m.monto;},0);
-    var localSalidasUsd=localDay.filter(function(m){return m.tipo==='salida'&&ca35CuentaMoneda(m.cuenta)==='USD';}).reduce(function(s,m){return s+ca21Money(m.monto);},0)+finDiaSalidas.filter(function(m){return ca35CuentaMoneda(m.cuenta)==='USD';}).reduce(function(s,m){return s+m.monto;},0);
-    var saldoInicial=ca21Money(saldoInicialEf+saldoInicialBp+saldoInicialSp);
-    var saldoInicialUsd=ca21Money(saldoInicialBd);
-    var saldoDisponible=ca21Money(ef+bp+sp);
-    var saldoDisponibleUsd=ca21Money(bd);
-
-    // C170: referencia por cuenta = saldo inicial, entradas, salidas y saldo actual.
-    function ca170EntradasCuenta(cuenta){
-      var target=ca169NormCuenta(cuenta);
-      return ca21Money(localDay.reduce(function(s,m){
-        if(m.tipo==='entrada'&&ca169NormCuenta(m.cuenta)===target)return s+ca21Money(m.monto);
-        if(m.tipo==='transferencia'&&ca169NormCuenta(m.cuenta_destino)===target)return s+ca21Money(m.monto);
-        return s;
-      },0));
-    }
-    function ca40SalidasCuenta(cuenta){
-      var target=ca169NormCuenta(cuenta);
-      return ca21Money(localDay.reduce(function(s,m){
-        if(m.tipo==='salida'&&ca169NormCuenta(m.cuenta)===target)return s+ca21Money(m.monto);
-        if(m.tipo==='transferencia'&&ca169NormCuenta(m.cuenta_origen)===target)return s+ca21Money(m.monto);
-        return s;
-      },0));
-    }
-    function ca167FinSalidasCuenta(cuenta){return ca21Money(finDiaSalidas.filter(function(m){return m.cuenta===cuenta;}).reduce(function(s,m){return s+m.monto;},0));}
-    function ca167FinEntradasCuenta(cuenta){return ca21Money(finDiaEntradas.filter(function(m){return m.cuenta===cuenta;}).reduce(function(s,m){return s+m.monto;},0));}
-    var entEf=ca21Money(ca170EntradasCuenta('efectivo')+ca167FinEntradasCuenta('efectivo'));
-    var entBp=ca21Money(ca170EntradasCuenta('banamex_pesos')+ca167FinEntradasCuenta('banamex_pesos'));
-    var entBd=ca21Money(ca170EntradasCuenta('banamex_dolares')+ca167FinEntradasCuenta('banamex_dolares'));
-    var entSp=ca21Money(ca170EntradasCuenta('santander_pesos')+ca167FinEntradasCuenta('santander_pesos'));
-    var salEf=ca21Money(ca40SalidasCuenta('efectivo')+ca167FinSalidasCuenta('efectivo'));
-    var salBp=ca21Money(ca40SalidasCuenta('banamex_pesos')+ca167FinSalidasCuenta('banamex_pesos'));
-    var salBd=ca21Money(ca40SalidasCuenta('banamex_dolares')+ca167FinSalidasCuenta('banamex_dolares'));
-    var salSp=ca21Money(ca40SalidasCuenta('santander_pesos')+ca167FinSalidasCuenta('santander_pesos'));
-
-    var semana='Semana '+riegoSemanaNumero(CAJA_FECHA_BASE);
-    var statusHtml=corte?'<span class="ca21-status-closed">● Caja cerrada</span>':(apertura?'<span class="ca21-status-open">● Caja abierta</span>':'<span class="ca21-status-open">● Pendiente apertura</span>');
-
-    var rows=movimientos.length?movimientos.map(function(m){
-      function ca22CuentaNombre(x){return ca35CuentaLabel(x);}
-      var forma=m.tipo==='transferencia'?(ca22CuentaNombre(m.cuenta_origen)+' → '+ca22CuentaNombre(m.cuenta_destino)):(m.forma||ca22CuentaNombre(m.cuenta));
-      var cat=m.categoria||'—';
-      var ent=(m.tipo==='entrada'||m.tipo==='transferencia')?'$'+formatMonto(m.monto):'—';
-      var sal=(m.tipo==='salida'||m.tipo==='transferencia')?'$'+formatMonto(m.monto):'—';
-      return '<tr><td>'+((m.fecha_historial||m.fecha)?cajaFechaCorta(m.fecha_historial||m.fecha):'—')+'</td><td>'+(m.hora||'—')+'</td><td>'+(m.tipo==='entrada'?'⬇️':m.tipo==='salida'?'⬆️':'⇄')+'</td><td><strong>'+m.concepto+'</strong><div class="ca21-mini">'+(m.nota||'')+'</div></td><td><span class="ca17-tag">'+cat+'</span></td><td>'+(m.persona||'—')+'</td><td>'+forma+'</td><td class="ca17-money-in">'+ent+'</td><td class="ca17-money-out">'+sal+'</td><td><span class="ca17-tag '+(m.db?'ca21-source-existing':'ca21-source-test')+'">'+(m.origen||'Caja')+'</span></td><td><span class="ca17-tag">'+(m.estado||'Registrado')+'</span></td><td>'+(m.db?'—':((m.origen==='Gasto operativo'?'<button class="ca21-action-btn" data-ca21-edit-gasto="'+m.id+'">Editar</button> ':'')+'<button class="ca21-action-btn" data-ca21-del="'+m.id+'">Eliminar</button>'))+'</td></tr>';
-    }).join(''):'<tr><td colspan="12" style="text-align:center;color:#77837c;padding:24px">No hay movimientos registrados hasta esta fecha.</td></tr>';
-
-    body.innerHTML='<div class="ca17-shell">'+
-      '<div class="ca17-top"><div class="ca17-left"><div class="ca17-icon">💵</div><div><div class="ad17-eyebrow">Administración · Caja</div><div class="ca17-title">Caja</div><div class="ca17-date"><span class="ca17-pill">📅 '+cajaFechaCorta(CAJA_FECHA_BASE)+'</span><span class="ca17-pill">'+statusHtml+'</span><button class="ca21-action-btn" id="ca21-open">'+(apertura?'Editar apertura':'Abrir caja')+'</button>'+(apertura&&!corte?'<button class="ca21-action-btn" id="ca21-close">Cerrar caja</button>':'')+'</div></div></div><div class="ca17-topright"><div class="ca17-week"><div>‹</div><div><strong>'+semana+'</strong><span>'+cajaFechaCorta(rg.inicio)+' – '+cajaFechaCorta(rg.fin)+'</span></div><div>›</div></div><div class="ca17-weather" data-rg-weather><div style="font-size:1.9rem">🌤️</div><div><div class="temp">—°C</div><div class="meta">Clima del rancho<br>Cargando...</div></div></div></div></div>'+
-      '<div class="ca17-section"><div class="ca17-section-title">Resumen de Caja · '+(CAJA_PERIODO==='dia'?'Hoy':CAJA_PERIODO)+'</div><div class="ca17-kpis">'+
-        '<div class="ca17-kpi initial"><div class="ball">▣</div><div><div class="lbl">Saldo inicial</div><div class="num">$'+formatMonto(saldoInicial)+'</div><div class="meta">MXN · '+(apertura?'Apertura '+apertura.hora:'Sin apertura')+'</div><div class="num" style="font-size:1.05rem;margin-top:3px">US$ '+formatMonto(saldoInicialUsd)+'</div><div class="meta">USD independiente</div></div></div>'+
-        '<div class="ca17-kpi in"><div class="ball">↓</div><div><div class="lbl">Entradas</div><div class="num">$'+formatMonto(localEntradas)+'</div><div class="meta">MXN</div><div class="num" style="font-size:1.05rem;margin-top:3px">US$ '+formatMonto(localEntradasUsd)+'</div><div class="meta">USD</div></div></div>'+
-        '<div class="ca17-kpi out"><div class="ball">↑</div><div><div class="lbl">Salidas</div><div class="num">$'+formatMonto(localSalidas)+'</div><div class="meta">MXN</div><div class="num" style="font-size:1.05rem;margin-top:3px">US$ '+formatMonto(localSalidasUsd)+'</div><div class="meta">USD</div></div></div>'+
-        '<div class="ca17-kpi net"><div class="ball">▰</div><div><div class="lbl">Saldo disponible</div><div class="num">$'+formatMonto(saldoDisponible)+'</div><div class="meta">MXN · Efectivo + bancos en pesos</div><div class="num" style="font-size:1.05rem;margin-top:3px">US$ '+formatMonto(saldoDisponibleUsd)+'</div><div class="meta">USD · Banamex Dólares</div></div></div></div>'+
-        '<div class="ca22-accounts" style="grid-template-columns:repeat(5,minmax(0,1fr))"><div class="ca22-account"><strong>💵 EFECTIVO EN CAJA</strong><div class="amt">$'+formatMonto(ef)+'</div><div class="ca40-account-meta">Inicial <strong>$'+formatMonto(saldoInicialEf)+'</strong> · Entradas <strong>$'+formatMonto(entEf)+'</strong> · Salidas <strong>$'+formatMonto(salEf)+'</strong></div></div><div class="ca22-account"><strong>🏦 BANAMEX PESOS</strong><div class="amt">$'+formatMonto(bp)+'</div><div class="ca40-account-meta">Inicial <strong>$'+formatMonto(saldoInicialBp)+'</strong> · Entradas <strong>$'+formatMonto(entBp)+'</strong> · Salidas <strong>$'+formatMonto(salBp)+'</strong></div></div><div class="ca22-account"><strong>🏦 BANAMEX DÓLARES</strong><div class="amt">US$ '+formatMonto(bd)+'</div><div class="ca40-account-meta">Inicial <strong>US$ '+formatMonto(saldoInicialBd)+'</strong> · Entradas <strong>US$ '+formatMonto(entBd)+'</strong> · Salidas <strong>US$ '+formatMonto(salBd)+'</strong></div></div><div class="ca22-account"><strong>🏦 SANTANDER PESOS</strong><div class="amt">$'+formatMonto(sp)+'</div><div class="ca40-account-meta">Inicial <strong>$'+formatMonto(saldoInicialSp)+'</strong> · Entradas <strong>$'+formatMonto(entSp)+'</strong> · Salidas <strong>$'+formatMonto(salSp)+'</strong></div></div><button class="ca22-transfer" id="ca21-transfer" '+(!apertura||corte?'disabled style="opacity:.45"':'')+'><span>⇄</span>Transferir entre cuentas<small>Entre cuentas de la misma moneda</small></button></div>'+
-        '<div class="ca22-ops" style="grid-template-columns:repeat(6,minmax(0,1fr))"><button class="ca22-op green" id="ca199-ingresar-efectivo" type="button">➕ Ingresar efectivo</button><button class="ca22-op orange" id="ca22-compras" type="button">🧾 Compras</button><button class="ca22-op red" id="ca22-gastos" type="button">💳 Gastos</button><button class="ca22-op nomina-gold" id="ca22-nomina" type="button">💰 Nómina</button><button class="ca22-op purple" id="ca22-inversionistas" type="button">💼 Inversionistas</button><button class="ca22-op finance-blue" id="ca25-financiamientos" type="button">🏦 Financiamientos</button></div>'+
-        '<div class="ca17-controls"><input id="ca21-fecha" type="date" value="'+CAJA_FECHA_BASE+'"><select id="ca21-tipo"><option value="todos">Todos los movimientos</option><option value="entrada">Entradas</option><option value="salida">Salidas</option><option value="transferencia">Transferencias</option></select><select><option>Todas las categorías</option></select><select><option>Todas las formas de pago</option><option>Efectivo</option><option>Transferencia</option></select><input placeholder="Buscar concepto, beneficiario, folio..."></div>'+
-        '<div class="ca17-table-wrap"><table class="ca17-table"><thead><tr><th>Fecha</th><th>Hora</th><th>Tipo</th><th>Concepto</th><th>Categoría</th><th>Beneficiario / Proveedor</th><th>Forma de pago</th><th>Entrada</th><th>Salida</th><th>Origen</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
-        '<div class="ca17-foot"><div>ⓘ <strong>Caja compartida:</strong> apertura, movimientos y financiamientos se integran por cuenta. Supabase es la fuente compartida.</div><div>'+(corte?'Corte: '+corte.hora+' · Diferencia $'+formatMonto(corte.diferencia):'Caja sin corte')+'</div></div></div>'+
-      '<div style="display:flex;justify-content:flex-end"><button class="ca17-back" onclick="renderAdministracionMenu()">← Administración</button></div></div>';
-
-    cargarClimaRiego();
-
-    var bFecha=document.getElementById('ca21-fecha');if(bFecha)bFecha.addEventListener('change',function(){if(typeof window.ca176RenderHistoryOnly==='function')window.ca176RenderHistoryOnly(this.value);});
-    var bOpen=document.getElementById('ca21-open');if(bOpen)bOpen.addEventListener('click',function(){ca21OpenApertura(CAJA_FECHA_BASE);});
-    var bIngEf=document.getElementById('ca199-ingresar-efectivo');if(bIngEf)bIngEf.addEventListener('click',function(){ca21OpenMovimiento('entrada',CAJA_FECHA_BASE||fechaHoyLocal());setTimeout(function(){var c=document.getElementById('ca21-m-cuenta');if(c)c.value='efectivo';},0);});
-    var bCompras=document.getElementById('ca22-compras'); if(bCompras)bCompras.addEventListener('click',renderNuevaCompraDesdeCaja);
-    var bGastos=document.getElementById('ca22-gastos'); if(bGastos)bGastos.addEventListener('click',ga37Nuevo);
-    var bNomina=document.getElementById('ca22-nomina'); if(bNomina)bNomina.addEventListener('click',no50AbrirNominaDesdeCaja);
-    var bInv=document.getElementById('ca22-inversionistas'); if(bInv)bInv.addEventListener('click',function(){ca124OpenInversionistas(CAJA_FECHA_BASE||fechaHoyLocal());});
-    var bFin=document.getElementById('ca25-financiamientos'); if(bFin)bFin.addEventListener('click',renderFinanciamientosCaja);
-    if(apertura&&!corte){
-      var bt=document.getElementById('ca21-transfer');if(bt)bt.addEventListener('click',function(){ca21OpenTransfer(CAJA_FECHA_BASE);});
-      var bc=document.getElementById('ca21-close');if(bc)bc.addEventListener('click',function(){ca21OpenCorte(CAJA_FECHA_BASE);});
-    }
-    body.querySelectorAll('[data-ca21-edit-gasto]').forEach(function(b){b.addEventListener('click',function(){ga152EditarGasto(this.dataset.ca21EditGasto);});});
-    body.querySelectorAll('[data-ca21-del]').forEach(function(b){b.addEventListener('click',function(){ca21DeleteMovimiento(this.dataset.ca21Del,CAJA_FECHA_BASE);});});
-  }).catch(function(e){
-    body.innerHTML='<div class="ca17-shell"><div class="ca17-top"><div><div class="ad17-eyebrow">Administración · Caja</div><div class="ca17-title">Caja</div><div class="ad17-sub">No se pudo cargar la información de Caja.</div></div><button class="ca17-back" onclick="renderAdministracionMenu()">← Administración</button></div><div class="ca17-section"><strong>Error:</strong> '+e.message+'</div></div>';
+  var store=ca21Load();
+  var todos=(store.movimientos||[]).slice().sort(function(a,b){
+    return (String(b.fecha_caja||b.fecha||'')+String(b.hora||'')).localeCompare(String(a.fecha_caja||a.fecha||'')+String(a.hora||''));
   });
+  var movimientos=todos.filter(function(m){
+    var f=m.fecha_caja||m.fecha||'';
+    return f>=rg.inicio&&f<=rg.fin;
+  });
+
+  var totals=ca21Totals('9999-12-31');
+  var ef=totals.efectivo,bp=totals.banamex_pesos,bd=totals.banamex_dolares,sp=totals.santander_pesos;
+  var totalMxn=ca21Money(ef+bp+sp);
+
+  function periodoCuenta(cuenta){
+    var arr=movimientos.filter(function(m){return ca323MovimientoAfectaCuenta(m,cuenta);});
+    var ent=0,sal=0;
+    arr.forEach(function(m){
+      var d=ca21AccountDelta(m,cuenta);
+      if(d>=0)ent+=d;else sal+=Math.abs(d);
+    });
+    return {entradas:ca21Money(ent),salidas:ca21Money(sal)};
+  }
+  var pef=periodoCuenta('efectivo'),pbp=periodoCuenta('banamex_pesos'),pbd=periodoCuenta('banamex_dolares'),psp=periodoCuenta('santander_pesos');
+
+  var entradasMxn=0,salidasMxn=0,entradasUsd=0,salidasUsd=0;
+  movimientos.forEach(function(m){
+    ['efectivo','banamex_pesos','santander_pesos'].forEach(function(c){var d=ca21AccountDelta(m,c);if(d>0)entradasMxn+=d;else salidasMxn+=Math.abs(d);});
+    var du=ca21AccountDelta(m,'banamex_dolares');if(du>0)entradasUsd+=du;else salidasUsd+=Math.abs(du);
+  });
+
+  var semana='Semana '+numeroSemana(new Date(CAJA_FECHA_BASE+'T12:00:00'));
+  var rows=movimientos.length?movimientos.map(function(m){
+    var forma=m.tipo==='transferencia'
+      ? ca35CuentaLabel(m.cuenta_origen)+' → '+ca35CuentaLabel(m.cuenta_destino)
+      : ca35CuentaLabel(m.cuenta);
+    var ent=m.tipo==='entrada'?'$'+formatMonto(m.monto):(m.tipo==='transferencia'?'⇄':'—');
+    var sal=m.tipo==='salida'?'$'+formatMonto(m.monto):(m.tipo==='transferencia'?'⇄':'—');
+    return '<tr><td>'+cajaFechaCorta(m.fecha_caja||m.fecha)+'</td><td>'+(m.hora||'—')+'</td><td>'+(m.tipo==='entrada'?'⬇️':m.tipo==='salida'?'⬆️':'⇄')+'</td><td><strong>'+(m.concepto||'Movimiento')+'</strong><div class="ca21-mini">'+(m.nota||'')+'</div></td><td><span class="ca17-tag">'+(m.categoria||'—')+'</span></td><td>'+(m.persona||'—')+'</td><td>'+forma+'</td><td class="ca17-money-in">'+ent+'</td><td class="ca17-money-out">'+sal+'</td><td><span class="ca17-tag">'+(m.origen||'Tesorería')+'</span></td><td><span class="ca17-tag">'+(m.estado||'Registrado')+'</span></td><td><button class="ca21-action-btn" data-ca21-del="'+m.id+'">Eliminar</button></td></tr>';
+  }).join(''):'<tr><td colspan="12" style="text-align:center;color:#77837c;padding:24px">No hay movimientos en el periodo seleccionado.</td></tr>';
+
+  body.innerHTML='<div class="ca17-shell">'+
+    '<div class="ca17-top"><div class="ca17-left"><div class="ca17-icon">🏦</div><div><div class="ad17-eyebrow">Administración · Tesorería</div><div class="ca17-title">Bancos y Efectivo</div><div class="ca17-date"><span class="ca17-pill">Actualizado al '+cajaFechaCorta(CAJA_FECHA_BASE)+'</span><span class="ca17-pill">● Saldos permanentes</span></div></div></div><div class="ca17-topright"><div class="ca17-week"><div>‹</div><div><strong>'+semana+'</strong><span>'+cajaFechaCorta(rg.inicio)+' – '+cajaFechaCorta(rg.fin)+'</span></div><div>›</div></div><div class="ca17-weather" data-rg-weather><div style="font-size:1.9rem">🌤️</div><div><div class="temp">—°C</div><div class="meta">Clima del rancho<br>Cargando...</div></div></div></div></div>'+
+    '<div class="ca17-section"><div class="ca17-section-title">Resumen de Tesorería</div>'+
+      '<div class="ca17-kpis">'+
+        '<div class="ca17-kpi net"><div class="ball">▰</div><div><div class="lbl">Disponible MXN</div><div class="num">$'+formatMonto(totalMxn)+'</div><div class="meta">Efectivo + bancos en pesos</div></div></div>'+
+        '<div class="ca17-kpi in"><div class="ball">↓</div><div><div class="lbl">Entradas del periodo</div><div class="num">$'+formatMonto(entradasMxn)+'</div><div class="meta">Movimientos en pesos</div></div></div>'+
+        '<div class="ca17-kpi out"><div class="ball">↑</div><div><div class="lbl">Salidas del periodo</div><div class="num">$'+formatMonto(salidasMxn)+'</div><div class="meta">Movimientos en pesos</div></div></div>'+
+        '<div class="ca17-kpi initial"><div class="ball">$</div><div><div class="lbl">Banamex Dólares</div><div class="num">US$ '+formatMonto(bd)+'</div><div class="meta">Entradas periodo US$ '+formatMonto(entradasUsd)+' · Salidas US$ '+formatMonto(salidasUsd)+'</div></div></div>'+
+      '</div>'+
+      '<div class="ca22-accounts" style="grid-template-columns:repeat(5,minmax(0,1fr))">'+
+        '<button class="ca22-account" data-ca323-account="efectivo" style="cursor:pointer;text-align:left"><strong>💵 EFECTIVO</strong><div class="amt">$'+formatMonto(ef)+'</div><div class="ca40-account-meta">Periodo: +$'+formatMonto(pef.entradas)+' · −$'+formatMonto(pef.salidas)+'</div><div class="ca21-mini">Ver historial →</div></button>'+
+        '<button class="ca22-account" data-ca323-account="banamex_pesos" style="cursor:pointer;text-align:left"><strong>🏦 BANAMEX PESOS</strong><div class="amt">$'+formatMonto(bp)+'</div><div class="ca40-account-meta">Periodo: +$'+formatMonto(pbp.entradas)+' · −$'+formatMonto(pbp.salidas)+'</div><div class="ca21-mini">Ver historial →</div></button>'+
+        '<button class="ca22-account" data-ca323-account="banamex_dolares" style="cursor:pointer;text-align:left"><strong>🏦 BANAMEX DÓLARES</strong><div class="amt">US$ '+formatMonto(bd)+'</div><div class="ca40-account-meta">Periodo: +US$ '+formatMonto(pbd.entradas)+' · −US$ '+formatMonto(pbd.salidas)+'</div><div class="ca21-mini">Ver historial →</div></button>'+
+        '<button class="ca22-account" data-ca323-account="santander_pesos" style="cursor:pointer;text-align:left"><strong>🏦 SANTANDER PESOS</strong><div class="amt">$'+formatMonto(sp)+'</div><div class="ca40-account-meta">Periodo: +$'+formatMonto(psp.entradas)+' · −$'+formatMonto(psp.salidas)+'</div><div class="ca21-mini">Ver historial →</div></button>'+
+        '<button class="ca22-transfer" id="ca21-transfer"><span>⇄</span>Transferir entre cuentas<small>Resta origen y suma destino</small></button>'+
+      '</div>'+
+      '<div class="ca22-ops" style="grid-template-columns:repeat(6,minmax(0,1fr))">'+
+        '<button class="ca22-op green" id="ca323-ingreso" type="button">➕ Registrar ingreso</button>'+
+        '<button class="ca22-op orange" id="ca22-compras" type="button">🧾 Compras</button>'+
+        '<button class="ca22-op red" id="ca22-gastos" type="button">💳 Gastos</button>'+
+        '<button class="ca22-op nomina-gold" id="ca22-nomina" type="button">💰 Nómina</button>'+
+        '<button class="ca22-op purple" id="ca22-inversionistas" type="button">💼 Inversionistas</button>'+
+        '<button class="ca22-op finance-blue" id="ca25-financiamientos" type="button">🏦 Financiamientos</button>'+
+      '</div>'+
+      '<div class="ca17-controls"><input id="ca21-fecha" type="date" value="'+CAJA_FECHA_BASE+'"><select id="ca21-tipo"><option value="todos">Todos los movimientos</option><option value="entrada">Entradas</option><option value="salida">Salidas</option><option value="transferencia">Transferencias</option></select><select><option>Todas las categorías</option></select><select><option>Todas las cuentas</option><option>Efectivo</option><option>Banamex Pesos</option><option>Banamex Dólares</option><option>Santander Pesos</option></select><input placeholder="Buscar concepto, beneficiario, folio..."></div>'+
+      '<div class="ca17-table-wrap"><table class="ca17-table"><thead><tr><th>Fecha</th><th>Hora</th><th>Tipo</th><th>Concepto</th><th>Categoría</th><th>Beneficiario / Proveedor</th><th>Cuenta</th><th>Entrada</th><th>Salida</th><th>Origen</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+      '<div class="ca17-foot"><div>ⓘ <strong>Tesorería permanente:</strong> los saldos se calculan con todos los movimientos guardados en Supabase. Cambiar la fecha sólo filtra el historial; no reinicia las cuentas.</div><div>Sin apertura ni cierre diario</div></div>'+
+    '</div>'+
+    '<div style="display:flex;justify-content:flex-end"><button class="ca17-back" onclick="renderAdministracionMenu()">← Administración</button></div></div>';
+
+  cargarClimaRiego();
+
+  var bFecha=document.getElementById('ca21-fecha');
+  if(bFecha)bFecha.addEventListener('change',function(){renderCajaMootsil(CAJA_PERIODO,this.value);});
+  var bIngreso=document.getElementById('ca323-ingreso');
+  if(bIngreso)bIngreso.addEventListener('click',function(){ca21OpenMovimiento('entrada',CAJA_FECHA_BASE||fechaHoyLocal());});
+  var bt=document.getElementById('ca21-transfer');
+  if(bt)bt.addEventListener('click',function(){ca21OpenTransfer(CAJA_FECHA_BASE||fechaHoyLocal());});
+  var bCompras=document.getElementById('ca22-compras');if(bCompras)bCompras.addEventListener('click',renderNuevaCompraDesdeCaja);
+  var bGastos=document.getElementById('ca22-gastos');if(bGastos)bGastos.addEventListener('click',ga37Nuevo);
+  var bNomina=document.getElementById('ca22-nomina');if(bNomina)bNomina.addEventListener('click',no50AbrirNominaDesdeCaja);
+  var bInv=document.getElementById('ca22-inversionistas');if(bInv)bInv.addEventListener('click',function(){ca124OpenInversionistas(CAJA_FECHA_BASE||fechaHoyLocal());});
+  var bFin=document.getElementById('ca25-financiamientos');if(bFin)bFin.addEventListener('click',renderFinanciamientosCaja);
+  body.querySelectorAll('[data-ca323-account]').forEach(function(b){b.addEventListener('click',function(){ca323OpenCuentaHistorial(this.dataset.ca323Account);});});
+  body.querySelectorAll('[data-ca21-del]').forEach(function(b){b.addEventListener('click',function(){ca21DeleteMovimiento(this.dataset.ca21Del,CAJA_FECHA_BASE);});});
 }
 
 function renderEmpleadosMenu(){
@@ -13521,7 +13437,7 @@ function sol59AprobarPrestamo(data){
       bg.innerHTML='<div class="sol59-modal"><div class="sol59-modal-h"><strong>Préstamo · '+data.nombre+'</strong><button class="em59-back" onclick="sol59Close()">✕</button></div><div class="sol59-modal-b"><div class="hint">Este colaborador ya tiene un préstamo activo. No puede aprobarse otro hasta liquidarlo.</div></div><div class="sol59-modal-f"><button class="btn-sm" onclick="sol59Close()">Cerrar</button></div></div>';
       document.body.appendChild(bg);return;
     }
-    bg.innerHTML='<div class="sol59-modal"><div class="sol59-modal-h"><strong>Préstamo · '+data.nombre+'</strong><button class="em59-back" onclick="sol59Close()">✕</button></div><div class="sol59-modal-b"><div class="sol59-grid"><div class="sol59-field"><label>Monto solicitado</label><input id="sol59-monto" type="number" value="'+data.monto+'"></div><div class="sol59-field"><label>Número de pagos semanales</label><input id="sol59-pagos" type="number" min="1" placeholder="Ej. 3"></div><div class="sol59-field"><label>Inicio del descuento</label><input id="sol59-inicio" type="date" value="'+fechaHoyLocal()+'"></div><div class="sol59-field"><label>Cuenta de entrega</label><select id="sol59-cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div><div class="sol59-field full"><label>Concepto</label><input id="sol59-concepto" value="'+String(data.motivo||'').replace(/"/g,'&quot;')+'"></div></div></div><div class="sol59-modal-f"><button class="btn-sm" onclick="sol59Close()">Cancelar</button><button class="btn-sm btn-completar" id="sol59-aprobar-prestamo">Aprobar y entregar</button></div></div>';
+    bg.innerHTML='<div class="sol59-modal"><div class="sol59-modal-h"><strong>Préstamo · '+data.nombre+'</strong><button class="em59-back" onclick="sol59Close()">✕</button></div><div class="sol59-modal-b"><div class="sol59-grid"><div class="sol59-field"><label>Monto solicitado</label><input id="sol59-monto" type="number" value="'+data.monto+'"></div><div class="sol59-field"><label>Número de pagos semanales</label><input id="sol59-pagos" type="number" min="1" placeholder="Ej. 3"></div><div class="sol59-field"><label>Inicio del descuento</label><input id="sol59-inicio" type="date" value="'+fechaHoyLocal()+'"></div><div class="sol59-field"><label>Cuenta de entrega</label><select id="sol59-cuenta"><option value="efectivo">Efectivo</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></div><div class="sol59-field full"><label>Concepto</label><input id="sol59-concepto" value="'+String(data.motivo||'').replace(/"/g,'&quot;')+'"></div></div></div><div class="sol59-modal-f"><button class="btn-sm" onclick="sol59Close()">Cancelar</button><button class="btn-sm btn-completar" id="sol59-aprobar-prestamo">Aprobar y entregar</button></div></div>';
     document.body.appendChild(bg);
     document.getElementById('sol59-aprobar-prestamo').onclick=function(){
       var pagos=parseInt(document.getElementById('sol59-pagos').value||'0',10);
@@ -14709,7 +14625,7 @@ function renderGenerarNomina(fechaRef){
           '<div class="n74-kpi"><small>Pagado</small><strong>'+n215Money(totalPagado)+'</strong></div>'+
         '</div>'+
         '<div style="background:#fffaf0;border:1px solid #ead8b5;border-radius:10px;padding:8px 10px;margin-bottom:9px;font-size:.68rem;color:#745315;"><strong>Retardos:</strong> se muestran como información de asistencia y no generan descuento automático en Nómina.</div>'+
-        '<div class="n74-bulk"><span><strong>'+pendientes.length+'</strong> pagos pendientes · '+n215Money(totalPendiente)+'</span><button id="n220-historial" type="button" class="n219-history">📚 Historial de nóminas</button><button id="n220-imprimir" type="button" class="n219-print">🖨 Imprimir nómina</button><select id="n74-cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="santander_pesos">Santander Pesos</option></select><button id="n74-pagar-todo" '+(!pendientes.length?'disabled style="opacity:.45"':'')+'>✓ Pagar nómina pendiente</button></div>'+
+        '<div class="n74-bulk"><span><strong>'+pendientes.length+'</strong> pagos pendientes · '+n215Money(totalPendiente)+'</span><button id="n220-historial" type="button" class="n219-history">📚 Historial de nóminas</button><button id="n220-imprimir" type="button" class="n219-print">🖨 Imprimir nómina</button><select id="n74-cuenta"><option value="efectivo">Efectivo</option><option value="banamex_pesos">Banamex Pesos</option><option value="santander_pesos">Santander Pesos</option></select><button id="n74-pagar-todo" '+(!pendientes.length?'disabled style="opacity:.45"':'')+'>✓ Pagar nómina pendiente</button></div>'+
         '<div class="n74-list">'+(filas.length?filas.join(''):'<div class="empty">Sin colaboradores con nómina en esta semana.</div>')+'</div>'+
         '<div class="n74-foot"><span>Pendiente: '+n215Money(totalPendiente)+'</span><span>Pagado: '+n215Money(totalPagado)+'</span></div>';
 
@@ -19072,7 +18988,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C321
+C323
 </div>
 
 <style id="fi128-css">
@@ -19226,7 +19142,7 @@ C321
    <div><label>Periodicidad<select name="periodicidad"><option>Mensual</option><option>Quincenal</option><option>Trimestral</option><option>Semestral</option><option>Anual</option><option>Otro</option></select></label></div>
    <div><label>Pago programado ($)<input name="pago_programado" data-money inputmode="decimal" placeholder="$0.00"></label></div>
    <div><label>Próxima fecha de pago<input name="proximo_pago" type="date"></label></div>
-   <div><label>Cuenta de ingreso<select name="cuenta_ingreso"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></label></div>
+   <div><label>Cuenta de ingreso<select name="cuenta_ingreso"><option value="efectivo">Efectivo</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></label></div>
    <div><label>Contrato / folio<input name="folio" placeholder="Número de crédito o contrato"></label></div>
    <div><label>Vencimiento<input name="vencimiento" type="date"></label></div>
    <div class="fi128-span2"><label>Observaciones<textarea name="observaciones" rows="2" placeholder="Garantía, destino del crédito, condiciones especiales..."></textarea></label></div>
@@ -19292,7 +19208,7 @@ C321
    <div><label>Periodicidad<select name="periodicidad"><option>Mensual</option><option>Quincenal</option><option>Trimestral</option><option>Semestral</option><option>Anual</option><option>Otro</option></select></label></div>
    <div><label>Pago programado ($)<input name="pago_programado" data-money inputmode="decimal" value="${f.pago_programado?money(f.pago_programado):''}"></label></div>
    <div><label>Próxima fecha de pago<input name="proximo_pago" type="date" value="${f.proximo_pago||''}"></label></div>
-   <div><label>Cuenta de ingreso<select name="cuenta_ingreso"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></label></div>
+   <div><label>Cuenta de ingreso<select name="cuenta_ingreso"><option value="efectivo">Efectivo</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></label></div>
    <div><label>Contrato / folio<input name="folio" value="${esc(f.folio||'')}"></label></div>
    <div><label>Vencimiento<input name="vencimiento" type="date" value="${f.vencimiento||''}"></label></div>
    <div><label>Estado<select name="estado"><option value="activo">Activo</option><option value="cerrado">Cerrado</option></select></label></div>
@@ -19343,7 +19259,7 @@ C321
    <div id="fi157-one"><label>Monto ($)<input name="monto" data-money inputmode="decimal" value="${m.tipo==='mixto'?'':money(m.monto)}"></label></div>
    <div id="fi157-cap"><label>Capital ($)<input name="capital" data-money inputmode="decimal" value="${m.capital?money(m.capital):''}"></label></div>
    <div id="fi157-int"><label>Intereses ($)<input name="interes" data-money inputmode="decimal" value="${m.interes?money(m.interes):''}"></label></div>
-   <div><label>Cuenta de salida<select name="cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></label></div>
+   <div><label>Cuenta de salida<select name="cuenta"><option value="efectivo">Efectivo</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></label></div>
    <div class="fi128-span2"><label>Referencia / observación<input name="referencia" value="${esc(m.referencia||'')}"></label></div>
   </div><div class="fi128-actions"><button type="button" class="fi128-btn" data-fi-close>Cancelar</button><button class="fi128-btn primary">Guardar cambios</button></div></form>`);
   let form=d.querySelector('#fi157-editpay'),typ=form.querySelector('#fi157-tipo');typ.value=m.tipo||'capital';form.querySelector('[name=cuenta]').value=m.cuenta||'efectivo';bindMoney(d);
@@ -19359,7 +19275,7 @@ C321
    <div id="fi128-one"><label>Monto ($)<input name="monto" type="number" min=".01" step=".01" required></label></div>
    <div id="fi128-cap" style="display:none"><label>Capital ($)<input name="capital" type="number" min="0" step=".01"></label></div>
    <div id="fi128-int" style="display:none"><label>Intereses ($)<input name="interes" type="number" min="0" step=".01"></label></div>
-   <div><label>Cuenta de salida<select name="cuenta"><option value="efectivo">Efectivo en Caja</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></label></div>
+   <div><label>Cuenta de salida<select name="cuenta"><option value="efectivo">Efectivo</option><option value="banamex_pesos">Banamex Pesos</option><option value="banamex_dolares">Banamex Dólares</option><option value="santander_pesos">Santander Pesos</option></select></label></div>
    <div class="fi128-span2"><label>Referencia / observación<input name="referencia" placeholder="Transferencia, folio o comentario"></label></div>
   </div><div class="fi128-actions"><button type="button" class="fi128-btn" data-fi-close>Cancelar</button><button class="fi128-btn primary">Registrar pago</button></div></form>`);
   let typ=d.querySelector('#fi128-tipo');typ.onchange=()=>{let mix=typ.value==='mixto';d.querySelector('#fi128-one').style.display=mix?'none':'';d.querySelector('#fi128-cap').style.display=mix?'':'none';d.querySelector('#fi128-int').style.display=mix?'':'none';d.querySelector('[name=monto]').required=!mix};
