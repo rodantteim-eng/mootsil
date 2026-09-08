@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C311';
+  window.MOOTSIL_BUILD='C312';
 </script>
 
 
@@ -2629,20 +2629,36 @@ function c231Icon(name, cls){
 .c309-plant-pill.jade{background:#f2e7f7;color:#7a2c91}
 </style>
 
-<style id="c310-detalle-aplicacion">
+<style id="c312-detalle-aplicacion">
 .c310-card-click{cursor:pointer}
 .c310-card-click:hover{box-shadow:0 4px 16px rgba(18,74,52,.08)}
-.c310-detail{width:min(700px,92vw);max-height:82vh;overflow:auto;background:#fff;border-radius:16px;box-shadow:0 24px 70px rgba(0,0,0,.26)}
-.c310-detail-body{padding:14px 18px 18px}
-.c310-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-.c310-detail-box{border:1px solid #e0e7e3;border-radius:10px;padding:10px;background:#fbfdfc}
-.c310-detail-box b{color:#214f3b}
-.c310-components{margin-top:10px;border:1px solid #e0e7e3;border-radius:10px;overflow:hidden}
-.c310-comp{display:grid;grid-template-columns:1fr auto auto;gap:10px;padding:8px 10px;border-bottom:1px solid #edf1ee;font-size:.67rem;align-items:center}
-.c310-comp:last-child{border-bottom:0}
-.c310-comp-name{font-weight:800;color:#224d3b}
-.c310-comp-qty{font-weight:800}
-.c310-comp-stock{font-size:.59rem;color:#6d7a73}
+.c312-detail{width:min(620px,92vw);max-height:84vh;overflow:auto;background:#fff;border-radius:20px;box-shadow:0 24px 70px rgba(0,0,0,.28);overflow:hidden}
+.c312-head{background:linear-gradient(135deg,#0e5a3c,#0a3f2c);color:#fff;padding:18px 20px 16px;position:relative}
+.c312-kicker{font-size:.7rem;opacity:.82;margin-bottom:3px}
+.c312-title{font-size:1.45rem;font-weight:900;line-height:1.1}
+.c312-subtitle{font-size:.9rem;opacity:.9;margin-top:3px}
+.c312-close{position:absolute;right:14px;top:14px;width:34px;height:34px;border-radius:50%;border:0;background:rgba(255,255,255,.16);color:#fff;font-size:1.25rem;cursor:pointer}
+.c312-body{padding:16px}
+.c312-summary{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.c312-chip{border:1px solid #e0e7e3;border-radius:13px;padding:11px 12px;background:#fbfdfc}
+.c312-label{font-size:.62rem;color:#748078;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+.c312-value{margin-top:2px;font-size:.93rem;font-weight:850;color:#163f2f}
+.c312-value.alert{color:#c43a31}
+.c312-plant{display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;font-size:.62rem;font-weight:900;margin-right:6px}
+.c312-plant.jade{background:#f0e3f6;color:#7a2c91}
+.c312-plant.erandy{background:#e5f3ea;color:#176b4a}
+.c312-components{margin-top:14px;border:1px solid #e0e7e3;border-radius:14px;overflow:hidden}
+.c312-components-head{display:flex;justify-content:space-between;align-items:center;padding:11px 12px;background:#f5f8f6;font-weight:900;color:#173f30}
+.c312-comp{display:grid;grid-template-columns:1fr auto;gap:10px;padding:10px 12px;border-top:1px solid #edf1ee;align-items:center}
+.c312-comp:first-of-type{border-top:0}
+.c312-comp-name{font-size:.72rem;font-weight:800;color:#214d3a}
+.c312-comp-qty{font-size:.72rem;font-weight:900;color:#102c22;white-space:nowrap}
+.c312-footer{padding:0 16px 16px}
+.c312-close-wide{width:100%;border:1px solid #cfdcd5;background:#fff;color:#1f5c43;border-radius:12px;padding:11px 14px;font-weight:850;cursor:pointer}
+@media (max-width:640px){
+  .c312-detail{width:min(94vw,520px)}
+  .c312-summary{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -6603,34 +6619,52 @@ function c310DetalleAplicacion(id){
     var os=(r[2]||[]).filter(function(o){return o.estado!=='cancelada';});
     var p=f.tabla?(cats.plantaciones||[]).find(function(x){return String(x.id)===String(f.tabla.plantacion_id);}):null;
     var personal=os.map(function(o){return o.operario?o.operario.nombre:'';}).filter(Boolean).join(', ')||'Sin asignar';
+    var pNombre=(p&&p.nombre)||'';
+    var pLow=pNombre.toLowerCase();
+    var pPill=pLow.indexOf('jade')>-1?'<span class="c312-plant jade">JADE</span>':(pLow.indexOf('erandy')>-1?'<span class="c312-plant erandy">ERANDY</span>':'');
+    var tituloBase=(window.c295NombreBaseCatalogo?c295NombreBaseCatalogo(f.nombre||''):(f.nombre||'Aplicación'));
+    var subtitulo='';
+    var blocks=String(f.nombre||'').match(/\[[^\]]+\]/g)||[];
+    if(blocks.length>1){
+      var first=blocks[0].replace(/^\[|\]$/g,'').trim();
+      var second=blocks[1].replace(/^\[|\]$/g,'').trim();
+      tituloBase=first||tituloBase;
+      if(second&&!/^Semana/i.test(second)&&second.toLowerCase()!==String(f.categoria||'').toLowerCase())subtitulo=second;
+    }
 
     var root=document.createElement('div');
     root.id='c310-detail-modal';
     root.className='c296-manage-overlay';
-    root.innerHTML='<div class="c310-detail">'+
-      '<div class="c296-head"><div><h3>Detalle de aplicación</h3><div style="font-size:.68rem;color:#6f7d75;margin-top:3px;">'+(f.nombre||'Aplicación')+'</div></div><button class="c291-close" onclick="document.getElementById(&quot;c310-detail-modal&quot;).remove()">×</button></div>'+
-      '<div class="c310-detail-body">'+
-        '<div class="c310-detail-grid">'+
-          '<div class="c310-detail-box"><b>Ubicación</b><br>'+((p&&p.nombre)?p.nombre+' · ':'')+((f.tabla&&f.tabla.nombre)||'')+(f.via==='Riego'?' · Tabla completa':'')+'</div>'+
-          '<div class="c310-detail-box"><b>Fecha</b><br>'+(f.fecha_programada||'Sin fecha')+'</div>'+
-          '<div class="c310-detail-box"><b>Vía / tipo</b><br>'+(f.via||'')+' · '+(f.categoria||'')+'</div>'+
-          '<div class="c310-detail-box"><b>Personal</b><br>'+personal+'</div>'+
+    root.innerHTML='<div class="c312-detail">'+
+      '<div class="c312-head">'+
+        '<div class="c312-kicker">'+(f.via==='Riego'?'Vía Riego':(f.via||'Aplicación'))+'</div>'+
+        '<div class="c312-title">'+tituloBase+'</div>'+
+        (subtitulo?'<div class="c312-subtitle">'+subtitulo+'</div>':'')+
+        '<button class="c312-close" onclick="document.getElementById(&quot;c310-detail-modal&quot;).remove()">×</button>'+
+      '</div>'+
+      '<div class="c312-body">'+
+        '<div class="c312-summary">'+
+          '<div class="c312-chip"><div class="c312-label">Ubicación</div><div class="c312-value">'+pPill+((f.tabla&&f.tabla.nombre)||'')+'</div></div>'+
+          '<div class="c312-chip"><div class="c312-label">Fecha</div><div class="c312-value">'+(f.fecha_programada||'Sin fecha')+'</div></div>'+
+          '<div class="c312-chip"><div class="c312-label">Personal asignado</div><div class="c312-value '+(personal==='Sin asignar'?'alert':'')+'">'+personal+'</div></div>'+
+          '<div class="c312-chip"><div class="c312-label">Tipo</div><div class="c312-value">'+(f.categoria||'')+'</div></div>'+
         '</div>'+
-        '<div class="c310-components">'+
+        '<div class="c312-components">'+
+          '<div class="c312-components-head"><span>Componentes de la fórmula</span><span>'+comps.length+' componente'+(comps.length===1?'':'s')+'</span></div>'+
           (comps.length?comps.map(function(c){
             var nombre=(c.item&&c.item.nombre)||'Producto';
             var unidad=(c.unidad||(c.item&&c.item.unidad)||'');
             var cant=Number(c.cantidad_base||0);
-            var stock=Number((c.item&&c.item.stock_actual)||0);
-            return '<div class="c310-comp"><div><div class="c310-comp-name">'+nombre+'</div><div class="c310-comp-stock">Disponible: '+c310FmtNum(stock,3)+' '+unidad+'</div></div><div class="c310-comp-qty">'+c310FmtNum(cant,3)+'</div><div>'+unidad+'</div></div>';
-          }).join(''):'<div class="c310-comp"><div>Sin componentes registrados.</div></div>')+
+            return '<div class="c312-comp"><div class="c312-comp-name">'+nombre+'</div><div class="c312-comp-qty">'+c310FmtNum(cant,3)+' '+unidad+'</div></div>';
+          }).join(''):'<div class="c312-comp"><div class="c312-comp-name">Sin componentes registrados.</div></div>')+
         '</div>'+
-      '</div></div>';
+      '</div>'+
+      '<div class="c312-footer"><button class="c312-close-wide" onclick="document.getElementById(&quot;c310-detail-modal&quot;).remove()">Cerrar</button></div>'+
+    '</div>';
     document.body.appendChild(root);
     root.addEventListener('click',function(e){if(e.target===root)root.remove();});
   }).catch(function(e){alert('Error al abrir detalle: '+e.message);});
 }
-
 function c298RenderProductos(){
   var wrap=document.getElementById('c298-product-list');if(!wrap)return;
   var rows=C297_EDIT_COMPONENTS.filter(function(c){return !c._remove;});
@@ -18909,7 +18943,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C311
+C312
 </div>
 
 <style id="fi128-css">
