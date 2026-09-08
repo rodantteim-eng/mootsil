@@ -1638,7 +1638,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C323';
+  window.MOOTSIL_BUILD='C325';
 </script>
 
 
@@ -2777,7 +2777,17 @@ function c231Icon(name, cls){
 #c318-inv-edit-modal .c321-photo-menu button{width:100%;border:0;background:#fff;text-align:left;padding:8px 9px;border-radius:8px;font-size:.75rem;font-weight:750;color:#254d3c;cursor:pointer}
 #c318-inv-edit-modal .c321-photo-menu button:hover{background:#f1f6f3}
 </style>
-</head>
+<style id="c325-tesoreria-y-faltantes">
+.ad17-card[data-admin="tesoreria"]{cursor:pointer!important}
+.ad17-card[data-admin="tesoreria"]:hover{transform:translateY(-1px)!important;box-shadow:0 8px 22px rgba(20,70,45,.09)!important}
+.c325-tes-open{width:100%;margin:10px 0 8px;border:0;border-radius:9px;background:#176447;color:#fff;padding:9px 12px;font-size:.72rem;font-weight:850;cursor:pointer}
+.c325-tes-open:hover{background:#0f563b}
+.c314-comp.c325-stock-missing{background:#fff7f5}
+.c314-comp.c325-stock-low{background:#fffaf0}
+.c325-stock-flag{display:inline-flex;align-items:center;gap:4px;margin-left:7px;padding:2px 6px;border-radius:999px;font-size:.58rem;font-weight:850;vertical-align:middle}
+.c325-stock-flag.none{background:#fde8e5;color:#b52d22}
+.c325-stock-flag.low{background:#fff0cf;color:#9a6200}
+</style></head>
 <body>
 
 <div id="screen-login" class="screen active">
@@ -6774,7 +6784,12 @@ function c310DetalleAplicacion(id){
             var nombre=(c.item&&c.item.nombre)||'Producto';
             var unidad=(c.unidad||(c.item&&c.item.unidad)||'');
             var cant=Number(c.cantidad_base||0);
-            return '<div class="c314-comp"><div class="c314-comp-name"><span class="c314-comp-icon">'+compIcon(nombre)+'</span><span>'+nombre+'</span></div><div class="c314-comp-qty">'+c310FmtNum(cant,3)+' '+unidad+'</div></div>';
+            var stock=Number((c.item&&c.item.stock_actual)||0);
+            var noHay=stock<=0;
+            var insuficiente=!noHay&&stock+0.000001<cant;
+            var flag=noHay?'<span class="c325-stock-flag none">⚠ Sin existencia</span>':(insuficiente?'<span class="c325-stock-flag low">⚠ Insuficiente</span>':'');
+            var rowClass=noHay?' c325-stock-missing':(insuficiente?' c325-stock-low':'');
+            return '<div class="c314-comp'+rowClass+'"><div class="c314-comp-name"><span class="c314-comp-icon">'+(noHay?'⚠️':compIcon(nombre))+'</span><span>'+nombre+flag+'</span></div><div class="c314-comp-qty">'+c310FmtNum(cant,3)+' '+unidad+'</div></div>';
           }).join(''):'<div class="c314-comp"><div class="c314-comp-name">Sin componentes registrados.</div><div></div></div>')+
         '</div>'+
       '</div>'+
@@ -12700,25 +12715,32 @@ function no89AbrirModal(titulo,tamano){
 }
 
 function abrirTesoreriaC324(){
+  var body=document.getElementById('enc-body');
+  if(body)body.innerHTML='<div class="loading">Cargando Tesorería...</div>';
   try{
-    renderCajaMootsil('dia',fechaHoyLocal());
+    var r=renderCajaMootsil('dia',fechaHoyLocal());
+    if(r&&typeof r.then==='function')r.catch(function(e){console.error('C325 acceso Tesorería',e);if(body)body.innerHTML='<div class="loading">No se pudo abrir Tesorería: '+(e&&e.message?e.message:e)+'</div>';});
+    return r;
   }catch(e){
-    console.error('C324 acceso Tesorería',e);
-    alert('No se pudo abrir Tesorería. Detalle: '+(e&&e.message?e.message:e));
+    console.error('C325 acceso Tesorería',e);
+    if(body)body.innerHTML='<div class="loading">No se pudo abrir Tesorería: '+(e&&e.message?e.message:e)+'</div>';
   }
 }
 
 function renderAdministracionMenu(){
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="ad17-shell"><div class="ad17-head"><div><div class="ad17-eyebrow">Administración</div><div class="ad17-title">Control del Rancho</div><div class="ad17-sub">Finanzas, personal, compras y operación administrativa de Mootsil.</div></div></div><div class="ad17-grid">'+
-    '<div class="ad17-card primary em60-card" data-admin="tesoreria"><div class="ic">🏦</div><h3>Tesorería</h3><p>Bancos, efectivo, ingresos, pagos, transferencias e historial permanente.</p><div class="em60-actions"><button type="button" data-cajago="ingresar">➕ Ingresar efectivo</button><button type="button" data-cajago="compras">🧾 Compras</button><button type="button" data-cajago="gastos">💳 Gastos</button><button type="button" data-cajago="nomina">💰 Nómina</button></div></div>'+
+    '<div class="ad17-card primary em60-card" data-admin="tesoreria"><div class="ic">🏦</div><h3>Tesorería</h3><p>Bancos, efectivo, ingresos, pagos, transferencias e historial permanente.</p><button type="button" class="c325-tes-open" data-tes-open="1">Abrir Tesorería</button><div class="em60-actions"><button type="button" data-cajago="ingresar">➕ Ingresar efectivo</button><button type="button" data-cajago="compras">🧾 Compras</button><button type="button" data-cajago="gastos">💳 Gastos</button><button type="button" data-cajago="nomina">💰 Nómina</button></div></div>'+
     '<div class="ad17-card blue em60-card" data-admin="empleados"><div class="ic">👥</div><h3>Empleados</h3><p>Asistencia, solicitudes, contratación y expedientes del personal.</p><div class="em60-actions"><button type="button" data-empgo="asistencia">📋 Asistencia</button><button type="button" data-empgo="solicitudes">📨 Solicitudes</button><button type="button" data-empgo="postulantes">🧑‍🌾 Postulantes</button><button type="button" data-empgo="expedientes">👤 Expedientes</button></div></div>'+
     '<div class="ad17-card gold em60-card" data-admin="compensaciones"><div class="ic">💰</div><h3>Nómina y Compensaciones</h3><p>Bonos por objetivos y apoyos económicos al personal.</p><div class="em60-actions"><button type="button" data-compgo="bonos">🎯 Bonos</button><button type="button" data-compgo="apoyos">⛽ Apoyos</button></div></div>'+
     '<div class="ad17-card orange em60-card" data-admin="gastos"><div class="ic">🧾</div><h3>Compras y Proveedores</h3><p>Compras, proveedores, cuentas por pagar, órdenes e historial.</p><div class="em60-actions"><button type="button" data-comprago="nuevo">🧾 Nueva compra</button><button type="button" data-comprago="historial">📜 Historial de compras</button><button type="button" data-comprago="proveedores">🏢 Proveedores</button><button type="button" data-comprago="cuentas">📆 Cuentas por pagar</button><button type="button" data-comprago="orden">🛒 Órdenes de compra</button></div></div>'+
     '<div class="ad17-card purple em60-card" data-admin="inversionistas"><div class="ic">💼</div><h3>Inversionistas y Dueños</h3><p>Perfiles patrimoniales, aportaciones, contratos, movimientos y devoluciones.</p><div class="em60-actions"><button type="button" data-invgo="inversionista">💼 Inversionistas</button><button type="button" data-invgo="dueño">👑 Dueños</button></div></div>'+
     '<div class="ad17-card em60-card c224-admin-tools"><div class="ic">⚙️</div><h3>Configuración y registros</h3><p>Opciones de uso poco frecuente e históricos que no deben saturar la operación diaria.</p><div class="em60-actions"><button type="button" data-c224go="avisos">🔔 Historial de avisos</button><button type="button" data-c224go="alarmas">🚨 Reportes de campo</button><button type="button" data-c224go="config">⚙️ Configuración</button></div></div>'+
   '</div></div>';
-  body.querySelector('[data-admin="tesoreria"]').addEventListener('click',function(e){if(e.target&&e.target.closest&&e.target.closest('.em60-actions'))return;abrirTesoreriaC324();});
+  var c325TesCard=body.querySelector('[data-admin="tesoreria"]');
+  var c325TesOpen=body.querySelector('[data-tes-open="1"]');
+  if(c325TesOpen)c325TesOpen.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();abrirTesoreriaC324();});
+  if(c325TesCard)c325TesCard.addEventListener('click',function(e){if(e.target&&e.target.closest&&e.target.closest('.em60-actions'))return;if(e.target&&e.target.closest&&e.target.closest('[data-tes-open]'))return;abrirTesoreriaC324();});
   body.querySelector('[data-cajago="ingresar"]').addEventListener('click',function(e){e.stopPropagation();Promise.resolve().then(function(){abrirTesoreriaC324();}).then(function(){setTimeout(function(){if(typeof ca21OpenMovimiento==='function')ca21OpenMovimiento('entrada',CAJA_FECHA_BASE||fechaHoyLocal());var c=document.getElementById('ca21-m-cuenta');if(c)c.value='efectivo';},50);});});
   body.querySelector('[data-cajago="compras"]').addEventListener('click',function(e){e.stopPropagation();Promise.resolve().then(function(){abrirTesoreriaC324();}).then(function(){setTimeout(function(){if(typeof renderNuevaCompraDesdeCaja==='function')renderNuevaCompraDesdeCaja();},50);});});
   body.querySelector('[data-cajago="gastos"]').addEventListener('click',function(e){e.stopPropagation();Promise.resolve().then(function(){abrirTesoreriaC324();}).then(function(){setTimeout(function(){if(typeof ga37Nuevo==='function')ga37Nuevo();},50);});});
@@ -18997,7 +19019,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C323
+C325
 </div>
 
 <style id="fi128-css">
