@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C306';
+  window.MOOTSIL_BUILD='C307';
 </script>
 
 
@@ -6485,6 +6485,19 @@ var C297_EDIT_COMPONENTS=[];
 var C297_EDIT_AUTH=false;
 var C296_APP_MANAGE_ID=null;
 function c296CerrarGestion(){var x=document.getElementById('c296-manage-modal');if(x)x.remove();}
+
+function c307AsignarPersonalDirecto(id){
+  C296_APP_MANAGE_ID=id;
+  c296GestionarAplicacion(id);
+  setTimeout(function(){
+    var modal=document.getElementById('c296-manage-modal');
+    if(!modal)return;
+    var btns=Array.from(modal.querySelectorAll('button'));
+    var btn=btns.find(function(b){return /Modificar asignación\s*\/\s*personal/i.test(b.textContent||'');});
+    if(btn)btn.click();
+  },120);
+}
+
 function c296GestionarAplicacion(id){
  C296_APP_MANAGE_ID=id;
  Promise.all([from('formulas_aplicacion').select('*,tabla:tablas(nombre,plantacion_id)').eq('id',id).get(),from('ordenes_trabajo').select('id,estado,operario:usuarios!operario_id(nombre)').eq('formula_id',id).get()]).then(function(r){
@@ -6919,6 +6932,20 @@ function c301TerminarAplicacion(formulaId){
       alert('Error al terminar la aplicación: '+e.message);
     });
 }
+
+function c307TieneFaltanteActual(formulaId, comps){
+  var cs=(comps||[]).filter(function(c){return String(c.formula_id)===String(formulaId)&&c.estado_faltante!=='sustituido';});
+  if(!cs.length)return false;
+  return cs.some(function(c){
+    var it=(cats.inventario||[]).find(function(x){
+      return c.item_id && String(x.id)===String(c.item_id);
+    });
+    var stock=Math.max(0,Number(it?it.stock_actual:0));
+    var req=Number(c.cantidad_base||c.cantidad||0);
+    return req>stock+0.0000001;
+  });
+}
+
 function renderAplicacionesEstatus(){
   var body=document.getElementById('enc-body');
   body.innerHTML=headerAplicaciones()+'<div class="loading">Cargando aplicaciones...</div>';
@@ -6927,10 +6954,13 @@ function renderAplicacionesEstatus(){
   Promise.all([
     from('formulas_aplicacion').select('*,tabla:tablas(nombre,plantacion_id),creador:usuarios!creado_por(nombre)').eq('activo',true).eq('es_plantilla',false).gte('fecha_programada',rg.ini).lte('fecha_programada',rg.fin).not('tabla_id','is','null').order('fecha_programada',{ascending:true}).get(),
     from('ordenes_trabajo').select('id,formula_id,estado,operario:usuarios!operario_id(nombre)').not('formula_id','is','null').get(),
-    from('formula_componentes').select('formula_id,estado_faltante,faltante_detectado,item:inventario_items!item_id(nombre)').get(),
+    from('formula_componentes').select('formula_id,item_id,cantidad_base,cantidad,estado_faltante,faltante_detectado,item:inventario_items!item_id(nombre)').get(),
+    from('inventario_items').select('*').eq('activo',true).order('nombre').get(),
     from('ordenes_trabajo').select('id').eq('validado_ingeniero',false).not('formula_id','is','null').get()
   ]).then(function(r){
-    var formulas=r[0]||[],ordenes=(r[1]||[]).filter(function(o){return o.estado!=='cancelada';}),comps=r[2]||[],pendValidar=(r[3]||[]).length;
+    var formulas=r[0]||[],ordenes=(r[1]||[]).filter(function(o){return o.estado!=='cancelada';}),comps=r[2]||[];
+    cats.inventario=r[3]||cats.inventario||[];
+    var pendValidar=(r[4]||[]).length;
     var porFormula={};ordenes.forEach(function(o){if(!porFormula[o.formula_id])porFormula[o.formula_id]=[];porFormula[o.formula_id].push(o);});
 
     formulas.forEach(function(f){
@@ -6989,6 +7019,7 @@ function renderAplicacionesEstatus(){
         return '<div class="c291-card '+f._estado+'"><div class="c291-card-top"><div><div class="c291-card-title">'+(VIA_ICONOS[f.via]||'🧪')+' '+via+' · '+(f.nombre||'Aplicación')+'</div>'+
           '<div class="c291-meta">📍 '+(p?p.nombre+' · ':'')+(f.tabla?f.tabla.nombre:'')+(f.via==='Riego'?' · <b>Tabla completa</b>':'')+'<br>📅 '+(f.fecha_programada||'Sin fecha')+(productos.length?'<br><span class="c300-product-line">🧴 '+prodTexto+'</span>':'')+(f._ordenes&&f._ordenes.length?'<br>👤 '+f._ordenes.map(function(o){return o.operario?o.operario.nombre:'';}).filter(Boolean).join(', '):'<br>👤 Sin asignar')+(faltanteAutorizado?'<br><span class="c301-authorized-note">✓ Faltante autorizado</span>':'')+'</div></div>'+
           '<div class="c301-card-actions">'+
+            ((!f._ordenes||!f._ordenes.length)?'<button type="button" class="c301-finish" onclick="c307AsignarPersonalDirecto(&quot;'+f.id+'&quot;)">👤 Asignar personal</button>':'')+
             ((f._estado!=='done'&&f._estado!=='cancelled')?'<button type="button" class="c301-finish" onclick="c301TerminarAplicacion(&quot;'+f.id+'&quot;)">✓ Terminar</button>':'')+
             '<button type="button" class="c296-card-manage" onclick="c296GestionarAplicacion(&quot;'+f.id+'&quot;)">Gestionar</button>'+
           '</div></div></div>';
@@ -18804,7 +18835,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C306
+C307
 </div>
 
 <style id="fi128-css">
