@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C307';
+  window.MOOTSIL_BUILD='C308';
 </script>
 
 
@@ -6941,7 +6941,7 @@ function c307TieneFaltanteActual(formulaId, comps){
       return c.item_id && String(x.id)===String(c.item_id);
     });
     var stock=Math.max(0,Number(it?it.stock_actual:0));
-    var req=Number(c.cantidad_base||c.cantidad||0);
+    var req=Number(c.cantidad_base||0);
     return req>stock+0.0000001;
   });
 }
@@ -6954,7 +6954,7 @@ function renderAplicacionesEstatus(){
   Promise.all([
     from('formulas_aplicacion').select('*,tabla:tablas(nombre,plantacion_id),creador:usuarios!creado_por(nombre)').eq('activo',true).eq('es_plantilla',false).gte('fecha_programada',rg.ini).lte('fecha_programada',rg.fin).not('tabla_id','is','null').order('fecha_programada',{ascending:true}).get(),
     from('ordenes_trabajo').select('id,formula_id,estado,operario:usuarios!operario_id(nombre)').not('formula_id','is','null').get(),
-    from('formula_componentes').select('formula_id,item_id,cantidad_base,cantidad,estado_faltante,faltante_detectado,item:inventario_items!item_id(nombre)').get(),
+    from('formula_componentes').select('formula_id,item_id,cantidad_base,estado_faltante,faltante_detectado,item:inventario_items!item_id(nombre)').get(),
     from('inventario_items').select('*').eq('activo',true).order('nombre').get(),
     from('ordenes_trabajo').select('id').eq('validado_ingeniero',false).not('formula_id','is','null').get()
   ]).then(function(r){
@@ -18835,7 +18835,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C307
+C308
 </div>
 
 <style id="fi128-css">
