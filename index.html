@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C303';
+  window.MOOTSIL_BUILD='C304';
 </script>
 
 
@@ -6446,7 +6446,7 @@ function c291ContinuarNuevaAplicacion(){
   formulaVia=C291_APP_VIA;formulaTablaId=tablas[0].id;formulaPlantacionId=pl;
   formulaModoCatalogoDirecto=false;formulaEditandoCatalogo=false;
   window._formulaTablaIdsC292=C292_APP_TABLAS.slice();
-  window._formulaNombreExistente='';window._formulaNombreBaseC295='';window._formulaIngenieroNombreC295=(usuario&&usuario.nombre)||'Ingeniero';window._formulaNotasExistente='';window._formulaFechaExistente=fechaHoyLocal();
+  window._formulaNombreExistente='';window._formulaNombreBaseC295='';window._formulaNombreBloquesCatalogoC304=null;window._formulaIngenieroNombreC295=(usuario&&usuario.nombre)||'Ingeniero';window._formulaNotasExistente='';window._formulaFechaExistente=fechaHoyLocal();
   window._formulaCreadorExistente=null;window._formulaDuracionSurcos=null;
 
   var flow=document.getElementById('c292-flow-body');
@@ -6790,41 +6790,123 @@ function c298GuardarPersonal(){
   }).catch(function(e){alert('Error al guardar asignación: '+e.message);});
 }
 
-function c296CancelarAplicacion(){if(!confirm('¿Cancelar esta aplicación? El registro se conservará para trazabilidad.'))return;Promise.all([from('formulas_aplicacion').eq('id',C296_APP_MANAGE_ID).update({activo:false}),from('ordenes_trabajo').eq('formula_id',C296_APP_MANAGE_ID).update({estado:'cancelada'})]).then(function(){showToast('Aplicación cancelada');c296CerrarGestion();renderAplicacionesEstatus();}).catch(function(e){alert('Error al cancelar: '+e.message);});}
+function c304RevertirInventarioAplicacion(formulaId){
+  return Promise.all([
+    from('ordenes_trabajo').select('id').eq('formula_id',formulaId).get(),
+    from('inventario_items').select('*').eq('activo',true).order('nombre').get()
+  ]).then(function(r){
+    var ordenIds=(r[0]||[]).map(function(o){return o.id;});
+    var inv=r[1]||[];
+    cats.inventario=inv;
+    if(!ordenIds.length)return [];
 
+    return from('movimientos_inventario')
+      .select('id,item_id,tipo,cantidad,motivo,referencia_orden_id')
+      .in('referencia_orden_id',ordenIds).get()
+      .then(function(movs){
+        movs=movs||[];
+        var neto={};
+
+        movs.forEach(function(m){
+          var k=String(m.item_id),cant=Number(m.cantidad||0);
+          if(!neto[k])neto[k]=0;
+
+          if(m.tipo==='salida' && /^Aplicación asignada:|^Aplicación:/i.test(String(m.motivo||''))){
+            neto[k]+=cant;
+          }
+          if(m.tipo==='entrada' && /Reversión por cancelación de aplicación/i.test(String(m.motivo||''))){
+            neto[k]-=cant;
+          }
+        });
+
+        var porId={};inv.forEach(function(it){porId[String(it.id)]=it;});
+        var items=Object.keys(neto).filter(function(k){return neto[k]>0.0000001;});
+
+        return items.reduce(function(p,k){
+          return p.then(function(){
+            var cant=neto[k],it=porId[k]||null;
+            if(!it)return;
+            var stockActual=Math.max(0,Number(it.stock_actual||0));
+            var nuevoStock=stockActual+cant;
+            var ref=ordenIds[0]||null;
+
+            return from('movimientos_inventario').insert({
+              item_id:it.id,tipo:'entrada',cantidad:cant,
+              motivo:'Reversión por cancelación de aplicación',
+              referencia_orden_id:ref,usuario_id:usuario.id,
+              stock_anterior:stockActual,stock_posterior:nuevoStock
+            }).then(function(){
+              it.stock_actual=nuevoStock;
+              return from('inventario_items').eq('id',it.id).update({stock_actual:nuevoStock});
+            });
+          });
+        },Promise.resolve());
+      });
+  });
+}
+
+function c296CancelarAplicacion(){
+  var id=C296_APP_MANAGE_ID;
+  if(!id)return;
+  if(!confirm('¿Cancelar esta aplicación? Se devolverá al inventario únicamente lo que esta aplicación haya descontado y el registro se conservará para trazabilidad.'))return;
+
+  c304RevertirInventarioAplicacion(id).then(function(){
+    return Promise.all([
+      from('formulas_aplicacion').eq('id',id).update({activo:false}),
+      from('ordenes_trabajo').eq('formula_id',id).update({estado:'cancelada'})
+    ]);
+  }).then(function(){
+    return from('inventario_items').select('*').eq('activo',true).order('nombre').get();
+  }).then(function(rows){
+    cats.inventario=rows||[];
+    showToast('✅ Aplicación cancelada · inventario devuelto');
+    c296CerrarGestion();
+    renderAplicacionesEstatus();
+  }).catch(function(e){
+    alert('Error al cancelar: '+e.message);
+  });
+}
 
 function c301TerminarAplicacion(formulaId){
   if(!formulaId)return;
   if(!confirm('¿Confirmar aplicación como terminada manualmente?'))return;
 
-  from('ordenes_trabajo')
-    .select('id,estado,notas_encargado')
-    .eq('formula_id',formulaId).get()
-    .then(function(rows){
-      var ordenes=(rows||[]).filter(function(o){
-        return o.estado!=='cancelada'&&o.estado!=='completada';
-      });
-      if(!ordenes.length){
-        showToast('La aplicación ya está terminada o no tiene órdenes activas.');
-        return [];
-      }
-      var fechaHora=new Date().toLocaleString();
-      var quien=(usuario&&usuario.nombre)?usuario.nombre:'Administrador';
-      return Promise.all(ordenes.map(function(o){
-        var nota=(o.notas_encargado||'').trim();
-        var marca='Cierre manual: '+fechaHora+' · '+quien;
-        var notas=nota?(nota+'\n'+marca):marca;
-        return from('ordenes_trabajo').eq('id',o.id).update({
-          estado:'completada',
-          notas_encargado:notas
-        });
-      }));
-    }).then(function(){
-      showToast('✅ Aplicación terminada manualmente');
-      renderAplicacionesEstatus();
-    }).catch(function(e){
-      alert('Error al terminar la aplicación: '+e.message);
-    });
+  var fechaHora=new Date().toLocaleString();
+  var quien=(usuario&&usuario.nombre)?usuario.nombre:'Administrador';
+  var marca='[C304_CIERRE_MANUAL] '+fechaHora+' · '+quien;
+
+  Promise.all([
+    from('ordenes_trabajo').select('id,estado,notas_encargado').eq('formula_id',formulaId).get(),
+    from('formulas_aplicacion').select('id,notas').eq('id',formulaId).get()
+  ]).then(function(r){
+    var ordenes=(r[0]||[]).filter(function(o){return o.estado!=='cancelada';});
+    var f=r[1]&&r[1][0];
+    if(!f)throw new Error('No se encontró la aplicación.');
+
+    var notasFormula=String(f.notas||'').replace(/\n?\[C304_CIERRE_MANUAL\][^\n]*/g,'').trim();
+    notasFormula=(notasFormula?notasFormula+'\n':'')+marca;
+
+    var actualizarFormula=from('formulas_aplicacion').eq('id',formulaId).update({notas:notasFormula});
+    var actualizarOrdenes=Promise.all(ordenes.map(function(o){
+      var nota=String(o.notas_encargado||'').replace(/\n?Cierre manual:[^\n]*/g,'').trim();
+      nota=(nota?nota+'\n':'')+'Cierre manual: '+fechaHora+' · '+quien;
+      return from('ordenes_trabajo').eq('id',o.id).update({estado:'completada',notas_encargado:nota});
+    }));
+
+    return Promise.all([actualizarFormula,actualizarOrdenes]);
+  }).then(function(){
+    return from('formulas_aplicacion').select('id,notas').eq('id',formulaId).get();
+  }).then(function(rows){
+    var f=rows&&rows[0];
+    if(!f||String(f.notas||'').indexOf('[C304_CIERRE_MANUAL]')<0){
+      throw new Error('El cierre manual no pudo confirmarse en la aplicación.');
+    }
+    showToast('✅ Aplicación terminada manualmente');
+    C291_APP_FILTRO='done';
+    renderAplicacionesEstatus();
+  }).catch(function(e){
+    alert('Error al terminar la aplicación: '+e.message);
+  });
 }
 function renderAplicacionesEstatus(){
   var body=document.getElementById('enc-body');
@@ -6842,8 +6924,9 @@ function renderAplicacionesEstatus(){
 
     formulas.forEach(function(f){
       var os=porFormula[f.id]||[];
-      var completa=os.length&&os.every(function(o){return o.estado==='completada';});
-      var proceso=os.some(function(o){return o.estado==='en_proceso';});
+      var cierreManual=String(f.notas||'').indexOf('[C304_CIERRE_MANUAL]')>-1;
+      var completa=cierreManual||(os.length&&os.every(function(o){return o.estado==='completada';}));
+      var proceso=!cierreManual&&os.some(function(o){return o.estado==='en_proceso';});
       var pendiente=!completa&&!proceso&&f.fecha_programada<=hoy;
       var retrasada=!completa&&f.fecha_programada<hoy;
       f._estado=completa?'done':retrasada?'late':proceso?'process':pendiente?'pending':'week';
@@ -7574,6 +7657,34 @@ function c295PlantacionFormula(f){
   if(/\bjade\b/i.test(f.nombre||''))return 'Jade';
   return '';
 }
+
+function c304BloquesBaseCatalogo(nombre,categoria){
+  var raw=String(nombre||'').trim();
+  var matches=raw.match(/\[[^\]]+\]/g)||[];
+  if(!matches.length)return [c295NombreBaseCatalogo(raw)];
+
+  var plantas=(cats.plantaciones||[]).map(function(p){return String(p.nombre||'').toLowerCase();}).filter(Boolean);
+  var cat=String(categoria||'').toLowerCase();
+  var out=[];
+
+  for(var i=0;i<matches.length;i++){
+    var b=matches[i].replace(/^\[|\]$/g,'').trim();
+    var low=b.toLowerCase();
+
+    if(cat && low===cat) continue;
+    if(/^semana\s*\d+/i.test(b)) break;
+    if(/\btabla\s*\d+/i.test(b) && plantas.some(function(p){return low.indexOf(p)>-1;})) break;
+    if(plantas.some(function(p){return low===p || low.indexOf(p+' ·')===0 || low.indexOf(p+' |')===0;})) break;
+
+    b=b.replace(/\s*\|\s*Semana\s*\d+.*$/i,'').trim();
+    if(!b)continue;
+    out.push(b);
+  }
+
+  if(!out.length)out=[c295NombreBaseCatalogo(raw)];
+  return out;
+}
+
 function c295NombreBaseCatalogo(nombre){
   var n=String(nombre||'').trim(), blocks=n.match(/\[[^\]]+\]/g);
   if(blocks&&blocks.length)n=blocks[0].replace(/^\[|\]$/g,'').trim();
@@ -7586,7 +7697,10 @@ function c295NombreFinal(tablaId){
   var tb=(cats.tablas||[]).find(function(t){return String(t.id)===String(tablaId);});
   var pl=tb?(cats.plantaciones||[]).find(function(p){return String(p.id)===String(tb.plantacion_id);}):c295PlantacionSeleccionada();
   var base=(window._formulaNombreBaseC295||window._formulaNombreExistente||'Fórmula').trim();
-  return '['+base+'] ['+(formulaCategoria||'Sin categoría')+'] [Semana '+c295SemanaISO(window._formulaFechaExistente||fechaHoyLocal())+'] ['+(pl?pl.nombre:'Plantación')+' · '+(tb?tb.nombre:'Tabla')+'] ['+c295Ingeniero()+']';
+  var baseTxt=(window._formulaNombreBloquesCatalogoC304&&window._formulaNombreBloquesCatalogoC304.length)
+    ? window._formulaNombreBloquesCatalogoC304.map(function(x){return '['+x+']';}).join(' ')
+    : '['+base+']';
+  return baseTxt+' ['+(formulaCategoria||'Sin categoría')+'] [Semana '+c295SemanaISO(window._formulaFechaExistente||fechaHoyLocal())+'] ['+(pl?pl.nombre:'Plantación')+' · '+(tb?tb.nombre:'Tabla')+'] ['+c295Ingeniero()+']';
 }
 function c295ActualizarPreviewNombre(){
   var box=document.getElementById('c295-name-preview');if(!box)return;
@@ -7669,7 +7783,10 @@ function c293UsarFormulaCatalogo(formulaId){
     formulaEsPlantilla=false;
     window._formulaDuracionSurcos=f.duracion_o_surcos||null;
     window._formulaVolumenExistente=f.volumen_base_litros||200;
-    window._formulaNombreBaseC295=c295NombreBaseCatalogo(f.nombre||'');window._formulaNombreExistente=window._formulaNombreBaseC295;window._formulaIngenieroNombreC295=(f.creador&&f.creador.nombre)?f.creador.nombre:((usuario&&usuario.nombre)||'Ingeniero');
+    window._formulaNombreBloquesCatalogoC304=c304BloquesBaseCatalogo(f.nombre||'',f.categoria);
+    window._formulaNombreBaseC295=window._formulaNombreBloquesCatalogoC304.join(' · ');
+    window._formulaNombreExistente=window._formulaNombreBaseC295;
+    window._formulaIngenieroNombreC295=(usuario&&usuario.nombre)||'Ingeniero';
     window._formulaNotasExistente=f.notas||'';
     window._formulaFechaExistente=fechaHoyLocal();
 
@@ -7754,7 +7871,9 @@ function renderFormulaPasoNombre(){
     '<div class="form-group"><label>Nombre base / objetivo</label><input type="text" id="fm-nombre-input" placeholder="Ej. Desarrollo vegetativo, Control de trips..." value="'+(nombreActual||'').replace(/"/g,'&quot;')+'"><p class="hint">Mootsil agrega automáticamente categoría, semana, plantación/tabla e ingeniero.</p><div id="c295-name-preview" class="c295-name-preview"></div></div>'+
     '<div class="form-group"><label>Volumen base</label><div style="display:flex;align-items:center;gap:10px;background:var(--gris-1);border-radius:var(--radio-sm);padding:.65rem .9rem;"><span style="font-size:1.5rem;">🛢️</span><strong>200 litros</strong><span class="hint" style="margin:0;">(tambo de referencia del ingeniero)</span></div></div>'+
     '<button class="btn-primary" id="fm-nombre-continuar">Continuar →</button></div>'+backBtn;
-  var inp=document.getElementById('fm-nombre-input');inp.addEventListener('input',c295ActualizarPreviewNombre);c295ActualizarPreviewNombre();
+  var inp=document.getElementById('fm-nombre-input');
+  inp.addEventListener('input',function(){window._formulaNombreBloquesCatalogoC304=null;c295ActualizarPreviewNombre();});
+  c295ActualizarPreviewNombre();
   document.getElementById('fm-nombre-continuar').addEventListener('click',function(){
     var n=(inp.value||'').trim();if(!n){alert('Escribe el nombre base de la fórmula.');return;}
     window._formulaNombreBaseC295=n;window._formulaNombreExistente=n;
@@ -18673,7 +18792,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C303
+C304
 </div>
 
 <style id="fi128-css">
