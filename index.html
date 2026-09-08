@@ -1638,7 +1638,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C319';
+  window.MOOTSIL_BUILD='C321';
 </script>
 
 
@@ -2765,6 +2765,17 @@ function c231Icon(name, cls){
   #c317-inv-item-modal .c319-capture{grid-template-columns:1fr}
   #c317-inv-item-modal .c319-register{width:100%}
 }
+</style>
+
+<style id="c321-edit-photo-header">
+#c318-inv-edit-modal .c321-edit-photo{width:72px;height:72px;border-radius:14px;background:#fff;border:1px solid rgba(255,255,255,.55);display:flex;align-items:center;justify-content:center;overflow:hidden;flex:0 0 auto;cursor:pointer;position:relative}
+#c318-inv-edit-modal .c321-edit-photo img{width:100%;height:100%;object-fit:contain;padding:4px;background:#fff}
+#c318-inv-edit-modal .c321-edit-photo-empty{font-size:.72rem;line-height:1.15;text-align:center;color:#0b6842;font-weight:850;padding:8px}
+#c318-inv-edit-modal .c321-edit-photo-badge{position:absolute;right:4px;bottom:4px;width:24px;height:24px;border-radius:50%;background:#0b6842;color:#fff;display:flex;align-items:center;justify-content:center;font-size:.72rem;border:2px solid #fff}
+#c318-inv-edit-modal .c321-photo-menu{display:none;position:absolute;left:0;top:calc(100% + 6px);z-index:8;background:#fff;border:1px solid #dfe7e2;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:6px;min-width:150px}
+#c318-inv-edit-modal .c321-photo-wrap{position:relative}
+#c318-inv-edit-modal .c321-photo-menu button{width:100%;border:0;background:#fff;text-align:left;padding:8px 9px;border-radius:8px;font-size:.75rem;font-weight:750;color:#254d3c;cursor:pointer}
+#c318-inv-edit-modal .c321-photo-menu button:hover{background:#f1f6f3}
 </style>
 </head>
 <body>
@@ -6210,11 +6221,16 @@ function renderInventarioEditar(itemId){
     catOptsE='<option value="'+it.categoria.replace(/"/g,'&quot;')+'" selected>'+it.categoria+'</option>'+catOptsE;
   }
 
+  var fotoEdit=it.imagen_url?'<img id="c321-edit-photo-img" src="'+it.imagen_url+'">':'<div id="c321-edit-photo-empty" class="c321-edit-photo-empty">+ Agregar<br>foto</div>';
   var overlay=document.createElement('div');
   overlay.id='c318-inv-edit-modal';
   overlay.style.cssText='position:fixed;inset:0;background:rgba(8,35,25,.58);z-index:10080;display:flex;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(2px);';
   overlay.innerHTML='<div style="width:min(720px,96vw);max-height:92vh;overflow:hidden;background:#f7f8f7;border-radius:20px;box-shadow:0 24px 70px rgba(0,0,0,.28);display:flex;flex-direction:column;">'+
-    '<div style="background:linear-gradient(135deg,#075735,#0d6843);color:#fff;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;"><div><div style="font-size:.72rem;opacity:.8;text-transform:uppercase;letter-spacing:.08em;">Editar componente</div><div style="font-size:1.08rem;font-weight:800;margin-top:2px;">'+it.nombre+'</div></div><button id="c318-edit-close" type="button" style="border:0;background:rgba(255,255,255,.14);color:#fff;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;">×</button></div>'+
+    '<div style="background:linear-gradient(135deg,#075735,#0d6843);color:#fff;padding:16px 18px;display:flex;align-items:center;gap:14px;">'+
+      '<div class="c321-photo-wrap"><div id="c321-edit-photo" class="c321-edit-photo">'+fotoEdit+'<span class="c321-edit-photo-badge">✎</span></div><div id="c321-photo-menu" class="c321-photo-menu"><button type="button" id="c321-photo-camera">📷 Cámara</button><button type="button" id="c321-photo-gallery">🖼️ Galería</button></div></div>'+
+      '<div style="min-width:0;flex:1;"><div style="font-size:.72rem;opacity:.8;text-transform:uppercase;letter-spacing:.08em;">Editar componente</div><div style="font-size:1.08rem;font-weight:800;margin-top:2px;">'+it.nombre+'</div><div style="font-size:.74rem;opacity:.82;margin-top:3px;">Toca la imagen para agregarla o cambiarla</div></div>'+
+      '<button id="c318-edit-close" type="button" style="border:0;background:rgba(255,255,255,.14);color:#fff;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;">×</button>'+
+    '</div>'+
     '<div style="overflow:auto;padding:15px 18px 18px;">'+
       '<div style="background:#fff;border:1px solid #e0e7e3;border-radius:15px;padding:14px;">'+
         '<div class="form-group"><label>Nombre</label><input type="text" id="inv-e-nombre" value="'+it.nombre.replace(/"/g,'&quot;')+'"></div>'+
@@ -6222,7 +6238,7 @@ function renderInventarioEditar(itemId){
           '<div class="form-group"><label>Grupo</label><select id="inv-e-grupo">'+grupoOpts+'</select></div>'+
           '<div class="form-group" id="inv-e-categoria-wrap" style="display:'+(cfgGrupoE.categorias?'':'none')+';"><label>Subcategoría</label><select id="inv-e-categoria">'+catOptsE+'</select></div>'+
         '</div>'+
-        '<div class="form-group"><label>Foto del producto</label><div style="display:flex;gap:8px;"><button type="button" onclick="document.getElementById(\'inv-e-imagen-cam\').click()" style="flex:1;padding:.55rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);background:var(--verde-tenue);color:var(--verde);font-weight:600;cursor:pointer;">📷 Cámara</button><button type="button" onclick="document.getElementById(\'inv-e-imagen-gal\').click()" style="flex:1;padding:.55rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);background:var(--gris-1);cursor:pointer;">🖼️ Galería</button></div><div id="inv-e-imagen-status" style="margin-top:.5rem;">'+(it.imagen_url?'<img src="'+it.imagen_url+'" style="max-width:80px;max-height:80px;border-radius:8px;border:1px solid var(--gris-2);">':'')+'</div><input type="hidden" id="inv-e-imagen" value="'+(it.imagen_url||'').replace(/"/g,'&quot;')+'"><input type="file" id="inv-e-imagen-cam" accept="image/*" capture="environment" style="display:none"><input type="file" id="inv-e-imagen-gal" accept="image/*" style="display:none"></div>'+
+        '<input type="hidden" id="inv-e-imagen" value="'+(it.imagen_url||'').replace(/"/g,'&quot;')+'"><input type="file" id="inv-e-imagen-cam" accept="image/*" capture="environment" style="display:none"><input type="file" id="inv-e-imagen-gal" accept="image/*" style="display:none">'+
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
           '<div class="form-group"><label>Unidad de uso</label><select id="inv-e-unidad"><option value="litros">Litros</option><option value="ml">Mililitros</option><option value="kg">Kilogramos</option><option value="gr">Gramos</option><option value="pza">Piezas</option></select></div>'+
           '<div class="form-group"><label>Fecha de caducidad (opcional)</label><input type="date" id="inv-e-caducidad" value="'+(it.fecha_caducidad||'')+'"></div>'+
@@ -6272,22 +6288,31 @@ function renderInventarioEditar(itemId){
     if(f>0)document.getElementById('inv-e-min').value=numFmt((parseFloat(this.value)||0)*f);
   });
 
+  var fotoBtn=document.getElementById('c321-edit-photo');
+  var fotoMenu=document.getElementById('c321-photo-menu');
+  fotoBtn.addEventListener('click',function(e){e.stopPropagation();fotoMenu.style.display=fotoMenu.style.display==='block'?'none':'block';});
+  document.getElementById('c321-photo-camera').onclick=function(e){e.stopPropagation();fotoMenu.style.display='none';document.getElementById('inv-e-imagen-cam').click();};
+  document.getElementById('c321-photo-gallery').onclick=function(e){e.stopPropagation();fotoMenu.style.display='none';document.getElementById('inv-e-imagen-gal').click();};
+  overlay.addEventListener('click',function(){fotoMenu.style.display='none';});
+
   function subirImagenProductoEdit(inputId){
     var f=document.getElementById(inputId).files&&document.getElementById(inputId).files[0];
     if(!f)return;
-    var status=document.getElementById('inv-e-imagen-status');
-    status.innerHTML='<span class="hint">Subiendo foto...</span>';
+    var holder=document.getElementById('c321-edit-photo');
+    holder.innerHTML='<div class="c321-edit-photo-empty">Subiendo...</div><span class="c321-edit-photo-badge">✎</span>';
     var nombre='producto_'+Date.now()+'_'+Math.round(Math.random()*9999)+'.jpg';
     fetch(URL_SB+'/storage/v1/object/evidencias/'+nombre,{method:'POST',headers:{'apikey':KEY_SB,'Authorization':'Bearer '+KEY_SB,'Content-Type':f.type||'image/jpeg','x-upsert':'true'},body:f}).then(function(r){
       if(!r.ok)throw new Error('HTTP '+r.status);
       var url=URL_SB+'/storage/v1/object/public/evidencias/'+nombre;
       document.getElementById('inv-e-imagen').value=url;
-      status.innerHTML='<img src="'+url+'" style="max-width:80px;max-height:80px;border-radius:8px;border:1px solid var(--gris-2);">';
-    }).catch(function(e){status.innerHTML='<span class="hint" style="color:var(--rojo);">No se pudo subir la foto: '+e.message+'</span>';});
+      holder.innerHTML='<img id="c321-edit-photo-img" src="'+url+'"><span class="c321-edit-photo-badge">✎</span>';
+    }).catch(function(e){
+      holder.innerHTML=(it.imagen_url?'<img id="c321-edit-photo-img" src="'+it.imagen_url+'">':'<div class="c321-edit-photo-empty">+ Agregar<br>foto</div>')+'<span class="c321-edit-photo-badge">✎</span>';
+      alert('No se pudo subir la foto: '+e.message);
+    });
   }
   document.getElementById('inv-e-imagen-cam').addEventListener('change',function(){subirImagenProductoEdit('inv-e-imagen-cam');});
   document.getElementById('inv-e-imagen-gal').addEventListener('change',function(){subirImagenProductoEdit('inv-e-imagen-gal');});
-
   document.getElementById('inv-e-guardar').addEventListener('click',function(){
     var nombre=(document.getElementById('inv-e-nombre').value||'').trim();
     if(!nombre){alert('Escribe el nombre del componente.');return;}
@@ -19053,7 +19078,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C319
+C321
 </div>
 
 <style id="fi128-css">
