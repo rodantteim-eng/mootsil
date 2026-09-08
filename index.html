@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C305';
+  window.MOOTSIL_BUILD='C306';
 </script>
 
 
@@ -6871,42 +6871,53 @@ function c301TerminarAplicacion(formulaId){
   if(!formulaId)return;
   if(!confirm('¿Confirmar aplicación como terminada manualmente?'))return;
 
+  var ahora=new Date().toISOString();
   var fechaHora=new Date().toLocaleString();
   var quien=(usuario&&usuario.nombre)?usuario.nombre:'Administrador';
-  var marca='[C304_CIERRE_MANUAL] '+fechaHora+' · '+quien;
 
-  Promise.all([
-    from('ordenes_trabajo').select('id,estado,notas_encargado').eq('formula_id',formulaId).get(),
-    from('formulas_aplicacion').select('id,notas').eq('id',formulaId).get()
-  ]).then(function(r){
-    var ordenes=(r[0]||[]).filter(function(o){return o.estado!=='cancelada';});
-    var f=r[1]&&r[1][0];
-    if(!f)throw new Error('No se encontró la aplicación.');
+  from('ordenes_trabajo')
+    .select('id,estado,notas_encargado,completado_en')
+    .eq('formula_id',formulaId).get()
+    .then(function(rows){
+      var ordenes=(rows||[]).filter(function(o){return o.estado!=='cancelada';});
 
-    var notasFormula=String(f.notas||'').replace(/\n?\[C304_CIERRE_MANUAL\][^\n]*/g,'').trim();
-    notasFormula=(notasFormula?notasFormula+'\n':'')+marca;
+      if(!ordenes.length){
+        throw new Error('Esta aplicación no tiene una asignación activa. Asigna personal antes de marcarla como terminada.');
+      }
 
-    var actualizarFormula=from('formulas_aplicacion').eq('id',formulaId).update({notas:notasFormula});
-    var actualizarOrdenes=Promise.all(ordenes.map(function(o){
-      var nota=String(o.notas_encargado||'').replace(/\n?Cierre manual:[^\n]*/g,'').trim();
-      nota=(nota?nota+'\n':'')+'Cierre manual: '+fechaHora+' · '+quien;
-      return from('ordenes_trabajo').eq('id',o.id).update({estado:'completada',notas_encargado:nota});
-    }));
+      return Promise.all(ordenes.map(function(o){
+        var nota=String(o.notas_encargado||'').trim();
+        var marca='Cierre manual por '+quien+' · '+fechaHora;
+        if(nota.indexOf(marca)<0)nota=(nota?nota+'\n':'')+marca;
 
-    return Promise.all([actualizarFormula,actualizarOrdenes]);
-  }).then(function(){
-    return from('formulas_aplicacion').select('id,notas').eq('id',formulaId).get();
-  }).then(function(rows){
-    var f=rows&&rows[0];
-    if(!f||String(f.notas||'').indexOf('[C304_CIERRE_MANUAL]')<0){
-      throw new Error('El cierre manual no pudo confirmarse en la aplicación.');
-    }
-    showToast('✅ Aplicación terminada manualmente');
-    C291_APP_FILTRO='done';
-    renderAplicacionesEstatus();
-  }).catch(function(e){
-    alert('Error al terminar la aplicación: '+e.message);
-  });
+        return from('ordenes_trabajo').eq('id',o.id).update({
+          estado:'completada',
+          completado_en:ahora,
+          notas_encargado:nota
+        });
+      }));
+    })
+    .then(function(){
+      return from('ordenes_trabajo')
+        .select('id,estado,completado_en')
+        .eq('formula_id',formulaId).get();
+    })
+    .then(function(rows){
+      var activas=(rows||[]).filter(function(o){return o.estado!=='cancelada';});
+      var confirmado=activas.length&&activas.every(function(o){
+        return o.estado==='completada'&&!!o.completado_en;
+      });
+      if(!confirmado){
+        throw new Error('Supabase no confirmó todas las órdenes como completadas.');
+      }
+
+      showToast('✅ Aplicación terminada manualmente');
+      C291_APP_FILTRO='done';
+      renderAplicacionesEstatus();
+    })
+    .catch(function(e){
+      alert('Error al terminar la aplicación: '+e.message);
+    });
 }
 function renderAplicacionesEstatus(){
   var body=document.getElementById('enc-body');
@@ -6924,9 +6935,8 @@ function renderAplicacionesEstatus(){
 
     formulas.forEach(function(f){
       var os=porFormula[f.id]||[];
-      var cierreManual=String(f.notas||'').indexOf('[C304_CIERRE_MANUAL]')>-1;
-      var completa=cierreManual||(os.length&&os.every(function(o){return o.estado==='completada';}));
-      var proceso=!cierreManual&&os.some(function(o){return o.estado==='en_proceso';});
+      var completa=os.length&&os.every(function(o){return o.estado==='completada';});
+      var proceso=!completa&&os.some(function(o){return o.estado==='en_proceso';});
       var pendiente=!completa&&!proceso&&f.fecha_programada<=hoy;
       var retrasada=!completa&&f.fecha_programada<hoy;
       f._estado=completa?'done':retrasada?'late':proceso?'process':pendiente?'pending':'week';
@@ -18794,7 +18804,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C305
+C306
 </div>
 
 <style id="fi128-css">
