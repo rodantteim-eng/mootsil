@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C310';
+  window.MOOTSIL_BUILD='C311';
 </script>
 
 
@@ -2624,8 +2624,6 @@ function c231Icon(name, cls){
 </style>
 
 <style id="c309-aplicaciones-plantacion">
-.c291-card.c309-erandy{border-left-color:#176b4a!important;background:linear-gradient(90deg,#f3faf6 0,#fff 10%)}
-.c291-card.c309-jade{border-left-color:#7a2c91!important;background:linear-gradient(90deg,#faf4fc 0,#fff 10%)}
 .c309-plant-pill{display:inline-flex;align-items:center;padding:2px 7px;border-radius:999px;font-size:.57rem;font-weight:900;margin-right:5px;vertical-align:middle}
 .c309-plant-pill.erandy{background:#e7f4ec;color:#176b4a}
 .c309-plant-pill.jade{background:#f2e7f7;color:#7a2c91}
@@ -7091,9 +7089,8 @@ function renderAplicacionesEstatus(){
         var via=f.via==='Riego'?'Vía Riego':f.via;
         var pNombre=p?p.nombre:'';
         var pLower=String(pNombre).toLowerCase();
-        var pClass=pLower.indexOf('jade')>-1?'c309-jade':(pLower.indexOf('erandy')>-1?'c309-erandy':'');
         var pPill=pLower.indexOf('jade')>-1?'<span class="c309-plant-pill jade">JADE</span>':(pLower.indexOf('erandy')>-1?'<span class="c309-plant-pill erandy">ERANDY</span>':'');
-        return '<div class="c291-card c310-card-click '+f._estado+' '+pClass+'" onclick="if(!event.target.closest(&quot;button&quot;))c310DetalleAplicacion(&quot;'+f.id+'&quot;)"><div class="c291-card-top"><div><div class="c291-card-title">'+(VIA_ICONOS[f.via]||'🧪')+' '+via+' · '+(f.nombre||'Aplicación')+'</div>'+
+        return '<div class="c291-card c310-card-click '+f._estado+'" onclick="if(!event.target.closest(&quot;button&quot;))c310DetalleAplicacion(&quot;'+f.id+'&quot;)"><div class="c291-card-top"><div><div class="c291-card-title">'+(VIA_ICONOS[f.via]||'🧪')+' '+via+' · '+(f.nombre||'Aplicación')+'</div>'+
           '<div class="c291-meta">'+pPill+'📍 '+(p?p.nombre+' · ':'')+(f.tabla?f.tabla.nombre:'')+(f.via==='Riego'?' · <b>Tabla completa</b>':'')+'<br>📅 '+(f.fecha_programada||'Sin fecha')+(productos.length?'<br><span class="c300-product-line">🧴 '+prodTexto+'</span>':'')+(f._ordenes&&f._ordenes.length?'<br>👤 '+f._ordenes.map(function(o){return o.operario?o.operario.nombre:'';}).filter(Boolean).join(', '):'<br>👤 Sin asignar')+(faltanteAutorizado?'<br><span class="c301-authorized-note">✓ Faltante autorizado</span>':'')+'</div></div>'+
           '<div class="c301-card-actions">'+
             ((!f._ordenes||!f._ordenes.length)?'<button type="button" class="c301-finish" onclick="c307AsignarPersonalDirecto(&quot;'+f.id+'&quot;)">👤 Asignar personal</button>':'')+
@@ -18912,7 +18909,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C310
+C311
 </div>
 
 <style id="fi128-css">
