@@ -1635,7 +1635,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C308';
+  window.MOOTSIL_BUILD='C310';
 </script>
 
 
@@ -2621,6 +2621,30 @@ function c231Icon(name, cls){
   padding:7px 10px;font-size:.66rem;font-weight:850;cursor:pointer
 }
 .c301-finish:hover{background:#eef7f1}
+</style>
+
+<style id="c309-aplicaciones-plantacion">
+.c291-card.c309-erandy{border-left-color:#176b4a!important;background:linear-gradient(90deg,#f3faf6 0,#fff 10%)}
+.c291-card.c309-jade{border-left-color:#7a2c91!important;background:linear-gradient(90deg,#faf4fc 0,#fff 10%)}
+.c309-plant-pill{display:inline-flex;align-items:center;padding:2px 7px;border-radius:999px;font-size:.57rem;font-weight:900;margin-right:5px;vertical-align:middle}
+.c309-plant-pill.erandy{background:#e7f4ec;color:#176b4a}
+.c309-plant-pill.jade{background:#f2e7f7;color:#7a2c91}
+</style>
+
+<style id="c310-detalle-aplicacion">
+.c310-card-click{cursor:pointer}
+.c310-card-click:hover{box-shadow:0 4px 16px rgba(18,74,52,.08)}
+.c310-detail{width:min(700px,92vw);max-height:82vh;overflow:auto;background:#fff;border-radius:16px;box-shadow:0 24px 70px rgba(0,0,0,.26)}
+.c310-detail-body{padding:14px 18px 18px}
+.c310-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.c310-detail-box{border:1px solid #e0e7e3;border-radius:10px;padding:10px;background:#fbfdfc}
+.c310-detail-box b{color:#214f3b}
+.c310-components{margin-top:10px;border:1px solid #e0e7e3;border-radius:10px;overflow:hidden}
+.c310-comp{display:grid;grid-template-columns:1fr auto auto;gap:10px;padding:8px 10px;border-bottom:1px solid #edf1ee;font-size:.67rem;align-items:center}
+.c310-comp:last-child{border-bottom:0}
+.c310-comp-name{font-weight:800;color:#224d3b}
+.c310-comp-qty{font-weight:800}
+.c310-comp-stock{font-size:.59rem;color:#6d7a73}
 </style>
 </head>
 <body>
@@ -6488,14 +6512,7 @@ function c296CerrarGestion(){var x=document.getElementById('c296-manage-modal');
 
 function c307AsignarPersonalDirecto(id){
   C296_APP_MANAGE_ID=id;
-  c296GestionarAplicacion(id);
-  setTimeout(function(){
-    var modal=document.getElementById('c296-manage-modal');
-    if(!modal)return;
-    var btns=Array.from(modal.querySelectorAll('button'));
-    var btn=btns.find(function(b){return /Modificar asignación\s*\/\s*personal/i.test(b.textContent||'');});
-    if(btn)btn.click();
-  },120);
+  c296AsignarPersonal();
 }
 
 function c296GestionarAplicacion(id){
@@ -6568,6 +6585,54 @@ function c297PintarEdicion(f){
   c298RenderProductos();
 }
 
+
+function c310FmtNum(n,maxDec){
+  n=Number(n||0);
+  if(!isFinite(n))return '0';
+  var d=(maxDec===undefined?3:maxDec);
+  return Number(n.toFixed(d)).toString();
+}
+
+function c310DetalleAplicacion(id){
+  Promise.all([
+    from('formulas_aplicacion').select('*,tabla:tablas(nombre,plantacion_id)').eq('id',id).get(),
+    from('formula_componentes').select('*,item:inventario_items!item_id(nombre,unidad,stock_actual)').eq('formula_id',id).get(),
+    from('ordenes_trabajo').select('id,estado,operario:usuarios!operario_id(nombre)').eq('formula_id',id).get()
+  ]).then(function(r){
+    var f=r[0]&&r[0][0];
+    if(!f)throw new Error('No se encontró la aplicación.');
+    var comps=(r[1]||[]).filter(function(c){return c.estado_faltante!=='sustituido';});
+    var os=(r[2]||[]).filter(function(o){return o.estado!=='cancelada';});
+    var p=f.tabla?(cats.plantaciones||[]).find(function(x){return String(x.id)===String(f.tabla.plantacion_id);}):null;
+    var personal=os.map(function(o){return o.operario?o.operario.nombre:'';}).filter(Boolean).join(', ')||'Sin asignar';
+
+    var root=document.createElement('div');
+    root.id='c310-detail-modal';
+    root.className='c296-manage-overlay';
+    root.innerHTML='<div class="c310-detail">'+
+      '<div class="c296-head"><div><h3>Detalle de aplicación</h3><div style="font-size:.68rem;color:#6f7d75;margin-top:3px;">'+(f.nombre||'Aplicación')+'</div></div><button class="c291-close" onclick="document.getElementById(&quot;c310-detail-modal&quot;).remove()">×</button></div>'+
+      '<div class="c310-detail-body">'+
+        '<div class="c310-detail-grid">'+
+          '<div class="c310-detail-box"><b>Ubicación</b><br>'+((p&&p.nombre)?p.nombre+' · ':'')+((f.tabla&&f.tabla.nombre)||'')+(f.via==='Riego'?' · Tabla completa':'')+'</div>'+
+          '<div class="c310-detail-box"><b>Fecha</b><br>'+(f.fecha_programada||'Sin fecha')+'</div>'+
+          '<div class="c310-detail-box"><b>Vía / tipo</b><br>'+(f.via||'')+' · '+(f.categoria||'')+'</div>'+
+          '<div class="c310-detail-box"><b>Personal</b><br>'+personal+'</div>'+
+        '</div>'+
+        '<div class="c310-components">'+
+          (comps.length?comps.map(function(c){
+            var nombre=(c.item&&c.item.nombre)||'Producto';
+            var unidad=(c.unidad||(c.item&&c.item.unidad)||'');
+            var cant=Number(c.cantidad_base||0);
+            var stock=Number((c.item&&c.item.stock_actual)||0);
+            return '<div class="c310-comp"><div><div class="c310-comp-name">'+nombre+'</div><div class="c310-comp-stock">Disponible: '+c310FmtNum(stock,3)+' '+unidad+'</div></div><div class="c310-comp-qty">'+c310FmtNum(cant,3)+'</div><div>'+unidad+'</div></div>';
+          }).join(''):'<div class="c310-comp"><div>Sin componentes registrados.</div></div>')+
+        '</div>'+
+      '</div></div>';
+    document.body.appendChild(root);
+    root.addEventListener('click',function(e){if(e.target===root)root.remove();});
+  }).catch(function(e){alert('Error al abrir detalle: '+e.message);});
+}
+
 function c298RenderProductos(){
   var wrap=document.getElementById('c298-product-list');if(!wrap)return;
   var rows=C297_EDIT_COMPONENTS.filter(function(c){return !c._remove;});
@@ -6577,7 +6642,7 @@ function c298RenderProductos(){
     wrap.innerHTML='<div class="c297-components">'+rows.map(function(c){
       var i=C297_EDIT_COMPONENTS.indexOf(c);
       return '<div class="c298-product-card"><div class="c298-prod-top">'+
-        '<div><div class="c298-prod-name">'+(c.nombre||'Producto')+'</div><div class="c298-mini" data-c297-stock="'+i+'">Disponible: '+Number(c.stock||0)+' '+(c.unidad||'')+'</div></div>'+
+        '<div><div class="c298-prod-name">'+(c.nombre||'Producto')+'</div><div class="c298-mini" data-c297-stock="'+i+'">Disponible: '+c310FmtNum(c.stock||0,3)+' '+(c.unidad||'')+'</div></div>'+
         '<div><label>Cantidad</label><input type="number" min="0" step="0.001" data-c297-cant="'+i+'" value="'+Number(c.cantidad||0)+'" oninput="c297RevisarStock()"></div>'+
         '<div><label>Unidad</label><input type="text" data-c297-unit="'+i+'" value="'+(c.unidad||'')+'" readonly></div>'+
         '<div style="display:flex;gap:5px;"><button type="button" class="c298-linkbtn" onclick="c298AbrirPicker('+i+')">Cambiar</button><button type="button" class="c298-linkbtn c298-remove" onclick="c298QuitarProducto('+i+')">Quitar</button></div>'+
@@ -6622,7 +6687,7 @@ function c297CambioProducto(i,id){
   var item=c297ItemInv(id);if(!item)return;
   C297_EDIT_COMPONENTS[i].item_id=id;C297_EDIT_COMPONENTS[i].nombre=item.nombre;C297_EDIT_COMPONENTS[i].unidad=item.unidad||'';C297_EDIT_COMPONENTS[i].stock=Number(item.stock_actual||0);
   var u=document.querySelector('[data-c297-unit="'+i+'"]');if(u)u.value=item.unidad||'';
-  var st=document.querySelector('[data-c297-stock="'+i+'"]');if(st)st.textContent='Disponible: '+Number(item.stock_actual||0)+' '+(item.unidad||'');
+  var st=document.querySelector('[data-c297-stock="'+i+'"]');if(st)st.textContent='Disponible: '+c310FmtNum(item.stock_actual||0,3)+' '+(item.unidad||'');
   c297RevisarStock();
 }
 function c297RevisarStock(){
@@ -6959,6 +7024,15 @@ function renderAplicacionesEstatus(){
     from('ordenes_trabajo').select('id').eq('validado_ingeniero',false).not('formula_id','is','null').get()
   ]).then(function(r){
     var formulas=r[0]||[],ordenes=(r[1]||[]).filter(function(o){return o.estado!=='cancelada';}),comps=r[2]||[];
+    formulas.sort(function(a,b){
+      var da=String(a.fecha_programada||'9999-12-31'),db=String(b.fecha_programada||'9999-12-31');
+      if(da!==db)return da.localeCompare(db);
+      var pa=a.tabla?(cats.plantaciones||[]).find(function(x){return String(x.id)===String(a.tabla.plantacion_id);}):null;
+      var pb=b.tabla?(cats.plantaciones||[]).find(function(x){return String(x.id)===String(b.tabla.plantacion_id);}):null;
+      var na=String((pa&&pa.nombre)||''),nb=String((pb&&pb.nombre)||'');
+      if(na!==nb)return na.localeCompare(nb);
+      return String((a.tabla&&a.tabla.nombre)||'').localeCompare(String((b.tabla&&b.tabla.nombre)||''));
+    });
     cats.inventario=r[3]||cats.inventario||[];
     var pendValidar=(r[4]||[]).length;
     var porFormula={};ordenes.forEach(function(o){if(!porFormula[o.formula_id])porFormula[o.formula_id]=[];porFormula[o.formula_id].push(o);});
@@ -7011,13 +7085,16 @@ function renderAplicacionesEstatus(){
           var inv=(cats.inventario||[]).find(function(x){return String(x.id)===String(c.item_id);});
           return inv?inv.nombre:'';
         }).filter(Boolean);
-        var prodVista=productos.slice(0,3);
-        var prodTexto=prodVista.join(' · ')+(productos.length>3?' · +'+(productos.length-3)+' productos':'');
+        var prodTexto=productos.join(' · ');
         var faltanteAutorizado=compsF.some(function(c){return c.estado_faltante==='autorizado'&&Number(c.faltante_detectado||0)>0;});
         var est=f._estado==='done'?'Terminada':f._estado==='late'?'Retrasada':f._estado==='process'?'En proceso':f._estado==='pending'?'Pendiente':'Programada';
         var via=f.via==='Riego'?'Vía Riego':f.via;
-        return '<div class="c291-card '+f._estado+'"><div class="c291-card-top"><div><div class="c291-card-title">'+(VIA_ICONOS[f.via]||'🧪')+' '+via+' · '+(f.nombre||'Aplicación')+'</div>'+
-          '<div class="c291-meta">📍 '+(p?p.nombre+' · ':'')+(f.tabla?f.tabla.nombre:'')+(f.via==='Riego'?' · <b>Tabla completa</b>':'')+'<br>📅 '+(f.fecha_programada||'Sin fecha')+(productos.length?'<br><span class="c300-product-line">🧴 '+prodTexto+'</span>':'')+(f._ordenes&&f._ordenes.length?'<br>👤 '+f._ordenes.map(function(o){return o.operario?o.operario.nombre:'';}).filter(Boolean).join(', '):'<br>👤 Sin asignar')+(faltanteAutorizado?'<br><span class="c301-authorized-note">✓ Faltante autorizado</span>':'')+'</div></div>'+
+        var pNombre=p?p.nombre:'';
+        var pLower=String(pNombre).toLowerCase();
+        var pClass=pLower.indexOf('jade')>-1?'c309-jade':(pLower.indexOf('erandy')>-1?'c309-erandy':'');
+        var pPill=pLower.indexOf('jade')>-1?'<span class="c309-plant-pill jade">JADE</span>':(pLower.indexOf('erandy')>-1?'<span class="c309-plant-pill erandy">ERANDY</span>':'');
+        return '<div class="c291-card c310-card-click '+f._estado+' '+pClass+'" onclick="if(!event.target.closest(&quot;button&quot;))c310DetalleAplicacion(&quot;'+f.id+'&quot;)"><div class="c291-card-top"><div><div class="c291-card-title">'+(VIA_ICONOS[f.via]||'🧪')+' '+via+' · '+(f.nombre||'Aplicación')+'</div>'+
+          '<div class="c291-meta">'+pPill+'📍 '+(p?p.nombre+' · ':'')+(f.tabla?f.tabla.nombre:'')+(f.via==='Riego'?' · <b>Tabla completa</b>':'')+'<br>📅 '+(f.fecha_programada||'Sin fecha')+(productos.length?'<br><span class="c300-product-line">🧴 '+prodTexto+'</span>':'')+(f._ordenes&&f._ordenes.length?'<br>👤 '+f._ordenes.map(function(o){return o.operario?o.operario.nombre:'';}).filter(Boolean).join(', '):'<br>👤 Sin asignar')+(faltanteAutorizado?'<br><span class="c301-authorized-note">✓ Faltante autorizado</span>':'')+'</div></div>'+
           '<div class="c301-card-actions">'+
             ((!f._ordenes||!f._ordenes.length)?'<button type="button" class="c301-finish" onclick="c307AsignarPersonalDirecto(&quot;'+f.id+'&quot;)">👤 Asignar personal</button>':'')+
             ((f._estado!=='done'&&f._estado!=='cancelled')?'<button type="button" class="c301-finish" onclick="c301TerminarAplicacion(&quot;'+f.id+'&quot;)">✓ Terminar</button>':'')+
@@ -18835,7 +18912,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C308
+C310
 </div>
 
 <style id="fi128-css">
