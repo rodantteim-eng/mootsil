@@ -13293,7 +13293,7 @@ function renderCajaMootsil(periodo,fechaBase){
     var du=ca21AccountDelta(m,'banamex_dolares');if(du>0)entradasUsd+=du;else salidasUsd+=Math.abs(du);
   });
 
-  var semana='Semana '+numeroSemana(new Date(CAJA_FECHA_BASE+'T12:00:00'));
+  var semana='Semana '+numeroSemanaISO(new Date(CAJA_FECHA_BASE+'T12:00:00'));
   var rows=movimientos.length?movimientos.map(function(m){
     var forma=m.tipo==='transferencia'
       ? ca35CuentaLabel(m.cuenta_origen)+' → '+ca35CuentaLabel(m.cuenta_destino)
