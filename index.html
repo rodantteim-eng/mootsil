@@ -3136,10 +3136,27 @@ function c140PrepararPortal(x){
   var nav=document.querySelector('.op-bottom-nav');if(nav)nav.innerHTML='<button class="op-nav-item c140-only active" onclick="renderMiIncorporacion()"><span class="op-nav-ic">🌱</span><span class="op-nav-lbl">Incorporación</span></button><button class="op-nav-item c140-only" onclick="c140ContactoAdministracion()"><span class="op-nav-ic">💬</span><span class="op-nav-lbl">Administración</span></button><button class="op-nav-item c140-only" onclick="salir()"><span class="op-nav-ic">🚪</span><span class="op-nav-lbl">Salir</span></button>';
   return true;
 }
-function renderMiIncorporacion(){
+function renderMiIncorporacion(desdePerfil){
   var body=document.getElementById('op-body'); body.innerHTML='<div class="loading">Cargando tu incorporación...</div>';
   c135EmpleadoRpc('c135_mi_incorporacion').then(function(rows){
-    var x=Array.isArray(rows)?rows[0]:rows;if(!x){document.body.classList.remove('c140-preinc');entrarSegunRol();return;}
+    var x=Array.isArray(rows)?rows[0]:rows;
+    if(!x){
+      document.body.classList.remove('c140-preinc');
+      if(desdePerfil){body.innerHTML='<div class="seccion-titulo">🌱 Mi incorporación</div><div class="form-card"><strong>No hay información de incorporación disponible.</strong><div class="hint" style="margin-top:6px">Tu perfil laboral ya se encuentra activo.</div></div><button class="btn-back" style="margin-top:1rem" onclick="renderPerfilOperario()">← Volver a Perfil</button>';return;}
+      entrarSegunRol();return;
+    }
+    if(x.incorporado_en && desdePerfil){
+      document.body.classList.remove('c140-preinc');
+      var vmOk=c140MetaViaje(x.instrucciones_viaje),metaOk=vmOk.meta||{};
+      var htmlOk='<div class="seccion-titulo">🌱 Mi incorporación</div><div class="form-card"><h3>✓ Incorporación completada</h3><p>Tu proceso de ingreso al Rancho Sagrado Corazón está concluido.</p><div style="display:grid;gap:8px;margin:14px 0">'+
+        '<div class="c140-step ok"><strong>✓ Acceso a Mootsil</strong></div>'+
+        '<div class="c140-step ok"><strong>✓ Reglamento del Rancho</strong></div>'+
+        '<div class="c140-step ok"><strong>✓ Incorporación confirmada</strong></div></div>';
+      if(x.pasaje_url)htmlOk+='<div class="c140-tramo"><strong>🎫 Información de ingreso / pasaje</strong><div style="margin-top:6px">'+ex54Esc(x.pasaje_origen||'Origen')+' → '+ex54Esc(x.pasaje_destino||'Destino')+'</div><a class="btn-primary" style="display:inline-block;margin-top:10px;text-decoration:none" href="'+ex54Esc(x.pasaje_url)+'" target="_blank">Ver mi boleto</a></div>';
+      if(vmOk.texto)htmlOk+='<div class="ex55-subcard"><strong>🚌 Instrucciones de ingreso</strong><div style="white-space:pre-wrap;margin-top:6px">'+ex54Esc(vmOk.texto)+'</div></div>';
+      htmlOk+='</div><button class="btn-back" style="margin-top:1rem" onclick="renderPerfilOperario()">← Volver a Perfil</button>';
+      body.innerHTML=htmlOk;return;
+    }
     if(x.incorporado_en){document.body.classList.remove('c140-preinc');entrarSegunRol();return;}
     c140PrepararPortal(x);
     var vm=c140MetaViaje(x.instrucciones_viaje),meta=vm.meta||{},visto1=!!x.pasaje_url&&c140BoletoVisto(x.pasaje_url),visto2=!!meta.tramo2_url&&c140BoletoVisto(meta.tramo2_url);
@@ -14457,7 +14474,7 @@ function renderPerfilOperario(){
     }
     body.innerHTML='<div class="seccion-titulo">Perfil</div>'+
     '<div class="tarea-card"><div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;"><div><div class="tarea-title">👤 '+usuario.nombre+'</div><div class="tarea-meta">Área / puesto: '+asignacionLbl+antiguedadTxt+cumpleTxt+'</div></div><span style="background:var(--verde-tenue);color:var(--verde-mid);font-size:.72rem;font-weight:800;padding:.28rem .55rem;border-radius:999px;white-space:nowrap;">● '+estadoPerfil+'</span></div></div>'+
-    '<div class="tarea-card" style="cursor:pointer;margin-top:.6rem;" onclick="renderMiIncorporacion()"><div class="tarea-title">🌱 Mi incorporación</div><div class="tarea-meta">Información de ingreso y documentos</div></div>'+'<div class="tarea-card" style="cursor:pointer;margin-top:.6rem;" onclick="renderCambiarMiPin()"><div class="tarea-title">🔒 Cambiar mi PIN</div><div class="tarea-meta">Actualiza tu código de acceso</div></div>'+
+    '<div class="tarea-card" style="cursor:pointer;margin-top:.6rem;" onclick="renderMiIncorporacion(true)"><div class="tarea-title">🌱 Mi incorporación</div><div class="tarea-meta">Información de ingreso y documentos</div></div>'+'<div class="tarea-card" style="cursor:pointer;margin-top:.6rem;" onclick="renderCambiarMiPin()"><div class="tarea-title">🔒 Cambiar mi PIN</div><div class="tarea-meta">Actualiza tu código de acceso</div></div>'+
     '<div class="tarea-card" style="cursor:pointer;margin-top:.6rem;" onclick="renderMisHerramientas()"><div class="tarea-title">🔧 Mis herramientas y equipo</div><div class="tarea-meta">Consulta lo que tienes asignado y su historial</div></div>'+
     '<div class="seccion-titulo" style="margin-top:1rem;font-size:.85rem;">📞 Contacto</div>'+
     '<div class="form-card"><label style="display:block;font-size:.75rem;font-weight:600;color:var(--gris-3);margin-bottom:.4rem;text-transform:uppercase;">Mi teléfono</label><input type="tel" id="perf-tel" value="'+(u.telefono||'').replace(/"/g,'&quot;')+'" placeholder="10 dígitos" style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;margin-bottom:.75rem;">'+
@@ -19179,7 +19196,7 @@ function renderCambiarPin(id,nombre){
 function renderCambiarMiPin(){
   var esOperario = usuario.rol==='operario'||usuario.rol==='cosechador'||usuario.rol==='galerista'||usuario.rol==='labores_eventual';
   var body=document.getElementById(esOperario?'op-body':'enc-body');
-  var volver = esOperario?'cargarTareas()':'renderTablero()';
+  var volver = esOperario?'renderPerfilOperario()':'renderTablero()';
   body.innerHTML='<div class="seccion-titulo">🔒 Cambiar mi PIN</div><div class="form-card"><div class="form-group"><label>Tu PIN actual</label><input type="number" id="mp-actual" placeholder="0000" min="0" max="9999"></div><div class="form-group"><label>Nuevo PIN (4 dígitos)</label><input type="number" id="mp-nuevo" placeholder="0000" min="0" max="9999"></div><div class="form-group"><label>Repite el nuevo PIN</label><input type="number" id="mp-nuevo2" placeholder="0000" min="0" max="9999"></div><button class="btn-primary" id="mp-guardar">Guardar nuevo PIN</button></div><button class="btn-back" style="margin-top:1rem;" onclick="'+volver+'">← Cancelar</button>';
   document.getElementById('mp-guardar').addEventListener('click',function(){
     var actual=String(document.getElementById('mp-actual').value||'').padStart(4,'0');
@@ -19197,7 +19214,7 @@ function renderCambiarMiPin(){
       return api('/rest/v1/rpc/set_pin',{method:'POST',body:{p_usuario_id:usuario.id,p_pin:nuevo}}).then(function(){
         pin=nuevo;
         showToast('✅ PIN actualizado');
-        if(esOperario) cargarTareas(); else renderTablero();
+        if(esOperario) renderPerfilOperario(); else renderTablero();
       });
     }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Guardar nuevo PIN';});
   });
