@@ -17639,14 +17639,24 @@ function c329AbrirTarea(id){
   var modal=document.getElementById('c329-task-modal');
   if(!modal){modal=document.createElement('div');modal.id='c329-task-modal';document.body.appendChild(modal);}
   var filas=[
-    ['Tipo',tp.label],
     ['Ubicación',((p&&p.nombre)||'')+(t.tabla?(' · '+t.tabla.nombre):'')],
     ['Fecha',c239FormatDate(t.fecha_asignacion)],
     ['Estado',est.label]
   ];
+  var c334PuedeAvance=t.estado==='en_proceso'&&t.tabla&&Array.isArray(t.surcos_completados)&&t.surcos_completados.length;
+  if(c334PuedeAvance){
+    var c334Completados=t.surcos_completados.map(Number).filter(function(n){return Number.isFinite(n);}).sort(function(a,b){return a-b;});
+    var c334Hasta=c334Completados.length?c334Completados[c334Completados.length-1]:null;
+    var c334Asignados=[];
+    try{c334Asignados=(calcularSurcosOrden(t,[]).totalAsignados||[]).map(Number).filter(function(n){return Number.isFinite(n);}).sort(function(a,b){return a-b;});}catch(e){}
+    var c334Sig=c334Asignados.find(function(n){return n>c334Hasta&&c334Completados.indexOf(n)===-1;});
+    if(c334Hasta!==null)filas.push(['Avance','Hasta surco '+c334Hasta+(c334Asignados.length?' de '+c334Asignados[c334Asignados.length-1]:'')]);
+    if(c334Sig)filas.push(['Continuar desde','Surco '+c334Sig]);
+  }
   if(t.notas_encargado)filas.push(['Indicaciones',t.notas_encargado]);
   if(t.formula&&t.formula.nombre)filas.push(['Fórmula',t.formula.nombre]);
-  modal.innerHTML='<div class="c329-modal-card"><div class="c329-modal-head"><small>'+c225Esc((tp.icon?tp.icon+' ':'')+tp.label)+'</small><h3>'+c225Esc(c329TituloSimple(t))+'</h3></div><div class="c329-modal-body">'+filas.map(function(r){return '<div class="c329-modal-row"><strong>'+r[0]+':</strong> '+c225Esc(r[1]||'—')+'</div>';}).join('')+'</div><button class="c329-modal-close" type="button" onclick="c329CerrarTarea()">Cerrar</button></div>';
+  var c334Continuar=t.estado==='en_proceso'?'<button class="c329-modal-close" style="background:var(--verde);color:#fff;border-color:var(--verde);" type="button" onclick="c329CerrarTarea();iniciarEjecucion(\''+String(t.id).replace(/'/g,"\\'")+'\')">▶ Continuar tarea</button>':'';
+  modal.innerHTML='<div class="c329-modal-card"><div class="c329-modal-head"><small>'+c225Esc((tp.icon?tp.icon+' ':'')+tp.label)+'</small><h3>'+c225Esc(c329TituloSimple(t))+'</h3></div><div class="c329-modal-body">'+filas.map(function(r){return '<div class="c329-modal-row"><strong>'+r[0]+':</strong> '+c225Esc(r[1]||'—')+'</div>';}).join('')+'</div>'+c334Continuar+'<button class="c329-modal-close" type="button" onclick="c329CerrarTarea()">Cerrar</button></div>';
   modal.classList.add('open');
 }
 function c329CerrarTarea(){var m=document.getElementById('c329-task-modal');if(m)m.classList.remove('open');}
