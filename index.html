@@ -2879,7 +2879,7 @@ function c231Icon(name, cls){
 .c336-actions button{border-radius:11px;padding:12px 8px;font-weight:850;font-size:.73rem;cursor:pointer;background:#fff;border:1px solid #d9e4de;color:#174f35}
 .c336-actions .danger{border-color:#f0b5b0;color:#b3261e}
 .c336-actions .primary{background:#0b613b;color:#fff;border-color:#0b613b}
-.c336-actions .finish{border-color:#8cb6a0;color:#0e5e39}
+.c336-actions .finish{background:#f52222;color:#fff;border-color:#f52222}
 .c336-section-title{font-weight:900;color:#173b2b;font-size:.88rem;margin-bottom:8px}
 .c336-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
 .c336-surco{border:1px solid #dfe5e1;background:#f5f6f5;border-radius:8px;padding:9px 3px;font-weight:800;color:#32473d;cursor:pointer}
@@ -16882,7 +16882,6 @@ function renderAsistenciaMenu(){
       '<button onclick="window._origenPermisoAsistencia=true;renderMisSolicitudes()"><span>'+c231Icon('history')+'</span><b>Mis solicitudes</b></button>'+
       '<button onclick="renderAsisJornadaSinCerrar()"><span>'+c231Icon('warning')+'</span><b>Jornada sin cerrar</b></button>'+
       '<button onclick="renderAsisProblemaRegistro()"><span>'+c231Icon('signal')+'</span><b>Problemas de registro</b></button>'+
-      '<button onclick="renderAsisRegistrosInvalidos()"><span>'+c231Icon('shield')+'</span><b>Registros no válidos</b></button>'+
     '</div>';
 
     var histRows=[];
@@ -17223,10 +17222,10 @@ function renderMisSolicitudes(){
 }
 
 function renderAsisPermisos(){
-  window._origenPermisoAsistencia=true;
+  window._origenPermisoAsistencia=false;
   var body=document.getElementById('op-body');
   body.innerHTML=`<div class="c230-perm-wrap">
-    <button class="c230-back" onclick="renderAsistenciaMenu()">← Asistencia</button>
+    <button class="c230-back" onclick="renderSolicitudesMenu()">← Solicitudes</button>
     <div class="c230-perm-title">📝 Permisos y salida anticipada</div>
     <div class="c230-perm-sub">Solicita un permiso personal o médico, incluida una salida anticipada cuando corresponda.</div>
 
@@ -17244,11 +17243,10 @@ function renderAsisPermisos(){
       </button>
     </div>
 
-    <div id="permisos-resumen"><div class="loading">Cargando...</div></div><button class="btn-back" style="width:100%;margin:10px 0;" onclick="window._origenPermisoAsistencia=true;renderMisSolicitudes()">📋 Ver mis solicitudes</button>
+    <div id="permisos-resumen"><div class="loading">Cargando...</div></div><button class="btn-back" style="width:100%;margin:10px 0;" onclick="window._origenPermisoAsistencia=false;renderMisSolicitudes()">📋 Ver mis solicitudes</button>
 
     <div class="c230-perm-note">
       La salida anticipada quedará registrada para revisión o autorización según corresponda.
-      Después podrás volver directamente a Asistencia.
     </div>
   </div>`;
 
@@ -18211,7 +18209,7 @@ function c336LaborActiva(){
     '<div class="c336-actions">'+
       '<button class="danger" onclick="renderCentroReportes()">🚨 Reportar incidencia</button>'+
       '<button class="primary" onclick="c336AbrirRegistrarAvance()">📝 Registrar avance</button>'+
-      '<button class="finish" onclick="c336TerminarLabor()">🏁 Terminar labor</button>'+
+      '<button class="finish" onclick="c336TerminarLabor()">■ Terminar labor</button>'+
     '</div>'+
   '</div>';
 }
