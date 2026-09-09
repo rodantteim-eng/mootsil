@@ -18041,24 +18041,21 @@ function renderRiegoEjecucion(ordenId){
 }
 
 function sonarAlarmaRiego(){
+  // C341 — aviso breve: exactamente 5 pulsos y se detiene solo.
   try{
     if(!riegoAudioCtx) riegoAudioCtx=new (window.AudioContext||window.webkitAudioContext)();
     var ctx=riegoAudioCtx;
     if(ctx.state==='suspended') ctx.resume();
     var t0=ctx.currentTime;
-    var o1=ctx.createOscillator(), g=ctx.createGain();
-    o1.type='square';
-    o1.frequency.setValueAtTime(700,t0);
-    o1.frequency.linearRampToValueAtTime(1400,t0+0.45);
-    o1.frequency.linearRampToValueAtTime(700,t0+0.9);
-    g.gain.setValueAtTime(0.0001,t0);
-    g.gain.exponentialRampToValueAtTime(1,t0+0.05);
-    g.gain.setValueAtTime(1,t0+0.85);
-    g.gain.exponentialRampToValueAtTime(0.0001,t0+0.95);
-    o1.connect(g);g.connect(ctx.destination);
-    o1.start(t0);o1.stop(t0+1);
+    for(var i=0;i<5;i++){
+      var ini=t0+(i*0.42), fin=ini+0.22;
+      var osc=ctx.createOscillator(), g=ctx.createGain();
+      osc.type='sine';osc.frequency.setValueAtTime(1050,ini);
+      g.gain.setValueAtTime(0.0001,ini);g.gain.exponentialRampToValueAtTime(0.7,ini+0.025);g.gain.exponentialRampToValueAtTime(0.0001,fin);
+      osc.connect(g);g.connect(ctx.destination);osc.start(ini);osc.stop(fin+0.02);
+    }
   }catch(e){}
-  if(navigator.vibrate) navigator.vibrate([350,120,350,120,350]);
+  if(navigator.vibrate) navigator.vibrate([220,200,220,200,220,200,220,200,220]);
 }
 
 // Fase L3 — reconstrucción del estado efectivo LOCAL de una orden (servidor/caché + avances
@@ -20569,6 +20566,37 @@ function c338FmtMin(v){var n=Math.max(0,Number(v)||0);return n<1?'< 1 min':Math.
 function c338SyncLocal(o,c){Object.keys(c).forEach(function(k){o[k]=c[k];});var t=(window.C329_TAREAS||[]).find(function(x){return String(x.id)===String(o.id);});if(t)Object.keys(c).forEach(function(k){t[k]=c[k];});}
 function c338Update(o,c){c338SyncLocal(o,c);riegoActualizarEstado(o,c);}
 function c338Siguiente(o){var idx=riegoOrdenes.findIndex(function(x){return String(x.id)===String(o.id);});for(var i=idx+1;i<riegoOrdenes.length;i++){if(riegoOrdenes[i].estado!=='completada')return riegoOrdenes[i];}for(var j=0;j<idx;j++){if(riegoOrdenes[j].estado!=='completada')return riegoOrdenes[j];}return null;}
+// C341 — Reporte rápido dentro de Riego. No manda al Centro de Reportes ni pide datos que Mootsil ya conoce.
+function renderRiegoIncidenciaRapida(ordenId){
+  var body=document.getElementById('op-body');
+  var o=riegoOrdenes.find(function(x){return String(x.id)===String(ordenId);});
+  if(!o){renderRiegoEjecucion(ordenId);return;}
+  var p=(cats.plantaciones||[]).find(function(x){return o.tabla&&x.id===o.tabla.plantacion_id;});
+  var plant=(p&&p.nombre)||'';var tabla=(o.tabla&&o.tabla.nombre)||'Tabla';
+  repEvidenciaReset();
+  body.innerHTML='<div class="c338-wrap"><div class="c338-top"><button class="c338-back" id="c341-back">←</button><div class="c338-title">Reportar incidencia</div><span class="c338-chip">RIEGO</span></div>'+
+    '<div class="c338-card c338-head"><div class="c338-drop">💧</div><div><div class="c338-name">'+c225Esc(plant+' · '+tabla)+'</div><div class="c338-meta">Toca solamente lo que ocurrió. Mootsil registra la tabla y la hora automáticamente.</div></div></div>'+
+    '<div class="c338-card"><div class="c338-label" style="margin-bottom:10px">¿Qué pasó?</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">'+
+      '<button class="c338-btn" data-c341="fuga" style="min-height:72px;font-size:1rem">💧 Fuga</button>'+
+      '<button class="c338-btn" data-c341="cintilla" style="min-height:72px;font-size:1rem">〰️ Cintilla</button>'+
+      '<button class="c338-btn" data-c341="filtro" style="min-height:72px;font-size:1rem">🔧 Filtro</button>'+
+      '<button class="c338-btn" data-c341="otro" style="min-height:72px;font-size:1rem">⚠️ Otro</button>'+
+    '</div><div id="c341-status" class="c338-meta" style="text-align:center;margin-top:12px"></div></div>'+
+    '<button class="c338-btn" id="c341-cancel" style="width:100%">← Regresar al riego</button></div>';
+  function volver(){renderRiegoEjecucion(o.id);}
+  document.getElementById('c341-back').onclick=volver;document.getElementById('c341-cancel').onclick=volver;
+  body.querySelectorAll('[data-c341]').forEach(function(btn){btn.onclick=function(){
+    var tipo=this.dataset.c341;var desc={fuga:'Fuga en sistema de riego',cintilla:'Cintilla trozada o con problema',filtro:'Filtro con problema / requiere revisión'}[tipo]||'';
+    if(tipo==='otro'){desc=(prompt('Describe brevemente qué pasó:')||'').trim();if(!desc)return;}
+    var categoria=(tipo==='filtro')?'equipo_herramienta':(tipo==='otro'?'otro':'fuga_derrame');
+    var payload={usuario_id:usuario.id,categoria:categoria,descripcion:desc,plantacion_id:(o.tabla&&o.tabla.plantacion_id)||null,tabla_id:(o.tabla&&o.tabla.id)||o.tabla_id||null,prioridad:'media'};
+    var status=document.getElementById('c341-status');body.querySelectorAll('[data-c341]').forEach(function(b){b.disabled=true;});status.textContent='Enviando…';
+    repEnviarReporte(payload,'🚨 Incidencia de riego',usuario.nombre+' · '+plant+' · '+tabla+': '+desc).then(function(r){
+      showToast(r.offline?'📡 Reporte guardado. Se enviará al recuperar señal.':'✅ Reporte enviado al encargado');
+      setTimeout(volver,450);
+    }).catch(function(e){status.textContent='No se pudo enviar. Intenta de nuevo.';body.querySelectorAll('[data-c341]').forEach(function(b){b.disabled=false;});});
+  };});
+}
 function renderRiegoEjecucion(ordenId){
   pararRiegoTimer();var body=document.getElementById('op-body');var o=riegoOrdenes.find(function(x){return String(x.id)===String(ordenId);});if(!o){cargarTareas('porhacer');return;}ordenEjecutando=o;
   var p=(cats.plantaciones||[]).find(function(x){return o.tabla&&x.id===o.tabla.plantacion_id;});var plant=(p&&p.nombre)||'';var tabla=(o.tabla&&o.tabla.nombre)||'Tabla';var dur=Math.max(1,Number(o.duracion_minutos)||45);var total=riegoOrdenes.length;var done=riegoOrdenes.filter(function(x){return x.estado==='completada';}).length;
@@ -20581,7 +20609,7 @@ function renderRiegoEjecucion(ordenId){
     document.getElementById('c338-start').onclick=function(){var now=new Date().toISOString();c338Update(o,{estado:'en_proceso',hora_inicio_real:now,pausado_en:null,motivo_pausa:null,minutos_pausados_acumulados:Number(o.minutos_pausados_acumulados)||0});renderRiegoEjecucion(o.id);};return;
   }
   var inicio=new Date(o.hora_inicio_real).getTime();var pausas=Number(o.minutos_pausados_acumulados)||0;var fin=inicio+dur*60000+pausas*60000;var paused=!!o.pausado_en;var now=paused?new Date(o.pausado_en).getTime():Date.now();var rest=fin-now;var elapsed=Math.max(0,dur*60000-rest);var pct=Math.max(0,Math.min(100,elapsed/(dur*60000)*100));var abs=Math.abs(rest),mm=Math.floor(abs/60000),ss=Math.floor((abs%60000)/1000);var time=(rest<0?'+':'')+String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0');
-  body.innerHTML='<div class="c338-wrap"><div class="c338-top"><button class="c338-back" onclick="pararRiegoTimer();cargarTareas(\'proceso\')">←</button><div class="c338-title">Riego (Hidratación)</div><span class="c338-chip">● '+(paused?'PAUSADO':'EN PROCESO')+'</span></div><div class="c338-card c338-head"><div class="c338-drop">💧</div><div><div class="c338-name">'+c225Esc(plant+' · '+tabla)+'</div><div class="c338-meta">Hidratación · Inicio '+c338FmtHora(o.hora_inicio_real)+'</div></div></div><div class="c338-card c338-current"><div><div class="c338-label">Tabla actual</div><div class="c338-table">'+c225Esc(tabla)+'</div><div class="c338-meta">🌱 '+c225Esc(plant)+' · '+(done+1)+' de '+total+' asignadas</div></div><div class="c338-duration"><div class="c338-label">Tiempo asignado</div><strong>'+dur+':00</strong><span>minutos</span></div></div><div class="c338-card c338-clock" id="c338-clock-card"><div class="c338-label">Tiempo restante</div><div class="time" id="c338-time">'+time+'</div><div class="sub" id="c338-status">'+(paused?'Tiempo congelado':'Riego en curso')+'</div><div class="c338-progress"><span id="c338-bar" style="width:'+pct+'%"></span></div><div class="c338-meta"><span id="c338-elapsed">Transcurrido: '+c338FmtMin(elapsed/60000)+'</span> · <span id="c338-pct">'+Math.round(pct)+'%</span></div><div class="c338-alarm" id="c338-alarm" style="'+(rest<=300000?'':'display:none')+'">🔔 '+(rest<=0?'Tiempo cumplido. Puedes finalizar esta tabla.':'Faltan 5 minutos o menos. Prepárate para cerrar la llave y pasar a la siguiente tabla.')+'</div></div><div class="c338-controls"><button class="c338-btn '+(paused?'primary':'pause')+'" id="c338-pause">'+(paused?'▶ Continuar':'⏸ Pausar')+'</button><button class="c338-btn primary" id="c338-finish">🏁 Finalizar esta tabla</button></div><div class="c338-card"><div class="c338-label">Tablas asignadas hoy</div><div class="c338-tables">'+minis()+'</div></div><div class="c338-card"><div class="c338-label">Registro de esta tabla</div><div class="c338-record"><div>Inicio<strong>'+c338FmtHora(o.hora_inicio_real)+'</strong></div><div>Pausas<strong>'+c338FmtMin(Number(o.minutos_pausados_acumulados)||0)+'</strong></div><div>Tiempo efectivo<strong>'+c338FmtMin(elapsed/60000)+'</strong></div></div></div><div class="c338-bottom"><button class="c338-btn c338-danger" onclick="renderCentroReportes()">🚨 Reportar incidencia</button><button class="c338-btn" onclick="cargarTareas(\'proceso\')">← Volver a Mis tareas</button></div></div>';
+  body.innerHTML='<div class="c338-wrap"><div class="c338-top"><button class="c338-back" onclick="pararRiegoTimer();cargarTareas(\'proceso\')">←</button><div class="c338-title">Riego (Hidratación)</div><span class="c338-chip">● '+(paused?'PAUSADO':'EN PROCESO')+'</span></div><div class="c338-card c338-head"><div class="c338-drop">💧</div><div><div class="c338-name">'+c225Esc(plant+' · '+tabla)+'</div><div class="c338-meta">Hidratación · Inicio '+c338FmtHora(o.hora_inicio_real)+'</div></div></div><div class="c338-card c338-current"><div><div class="c338-label">Tabla actual</div><div class="c338-table">'+c225Esc(tabla)+'</div><div class="c338-meta">🌱 '+c225Esc(plant)+' · '+(done+1)+' de '+total+' asignadas</div></div><div class="c338-duration"><div class="c338-label">Tiempo asignado</div><strong>'+dur+':00</strong><span>minutos</span></div></div><div class="c338-card c338-clock" id="c338-clock-card"><div class="c338-label">Tiempo restante</div><div class="time" id="c338-time">'+time+'</div><div class="sub" id="c338-status">'+(paused?'Tiempo congelado':'Riego en curso')+'</div><div class="c338-progress"><span id="c338-bar" style="width:'+pct+'%"></span></div><div class="c338-meta"><span id="c338-elapsed">Transcurrido: '+c338FmtMin(elapsed/60000)+'</span> · <span id="c338-pct">'+Math.round(pct)+'%</span></div><div class="c338-alarm" id="c338-alarm" style="'+(rest<=300000?'':'display:none')+'">🔔 '+(rest<=0?'Tiempo cumplido. Puedes finalizar esta tabla.':'Faltan 5 minutos o menos. Prepárate para cerrar la llave y pasar a la siguiente tabla.')+'</div></div><div class="c338-controls"><button class="c338-btn '+(paused?'primary':'pause')+'" id="c338-pause">'+(paused?'▶ Continuar':'⏸ Pausar')+'</button><button class="c338-btn primary" id="c338-finish">🏁 Finalizar esta tabla</button></div><div class="c338-card"><div class="c338-label">Tablas asignadas hoy</div><div class="c338-tables">'+minis()+'</div></div><div class="c338-card"><div class="c338-label">Registro de esta tabla</div><div class="c338-record"><div>Inicio<strong>'+c338FmtHora(o.hora_inicio_real)+'</strong></div><div>Pausas<strong>'+c338FmtMin(Number(o.minutos_pausados_acumulados)||0)+'</strong></div><div>Tiempo efectivo<strong>'+c338FmtMin(elapsed/60000)+'</strong></div></div></div><div class="c338-bottom"><button class="c338-btn c338-danger" onclick="renderRiegoIncidenciaRapida(\''+o.id+'\')">🚨 Reportar incidencia</button><button class="c338-btn" onclick="cargarTareas(\'proceso\')">← Volver a Mis tareas</button></div></div>';
   document.getElementById('c338-pause').onclick=function(){pararRiegoTimer();if(paused){var pi=new Date(o.pausado_en).getTime();var add=Math.max(0,(Date.now()-pi)/60000);c338Update(o,{pausado_en:null,motivo_pausa:null,minutos_pausados_acumulados:(Number(o.minutos_pausados_acumulados)||0)+add});}else{c338Update(o,{pausado_en:new Date().toISOString()});}renderRiegoEjecucion(o.id);};
   document.getElementById('c338-finish').onclick=function(){if(!confirm('¿Confirmas que terminaste el riego de '+plant+' · '+tabla+'?'))return;pararRiegoTimer();c338Update(o,{estado:'completada',hora_fin_real:new Date().toISOString(),pausado_en:null});var sig=c338Siguiente(o);if(sig){showToast('✅ Tabla completada · sigue '+riegoNombreTabla(sig.tabla||{}));renderRiegoEjecucion(sig.id);}else{showToast('💧 Riego asignado completado');cargarTareas('terminadas');}};
   if(!paused){var warned=false;function tick(){var rr=fin-Date.now(),aa=Math.abs(rr),m=Math.floor(aa/60000),se=Math.floor((aa%60000)/1000),el=Math.max(0,dur*60000-rr),pc=Math.max(0,Math.min(100,el/(dur*60000)*100));var et=document.getElementById('c338-time');if(!et){pararRiegoTimer();return;}et.textContent=(rr<0?'+':'')+String(m).padStart(2,'0')+':'+String(se).padStart(2,'0');document.getElementById('c338-bar').style.width=pc+'%';document.getElementById('c338-elapsed').textContent='Transcurrido: '+c338FmtMin(el/60000);document.getElementById('c338-pct').textContent=Math.round(pc)+'%';var al=document.getElementById('c338-alarm');if(rr<=300000){al.style.display='block';al.innerHTML='🔔 '+(rr<=0?'Tiempo cumplido. Puedes finalizar esta tabla.':'Faltan 5 minutos o menos. Prepárate para cerrar la llave y pasar a la siguiente tabla.');if(!warned){warned=true;sonarAlarmaRiego();}}}tick();riegoTimer=setInterval(tick,1000);}
