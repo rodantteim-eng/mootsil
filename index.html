@@ -1609,7 +1609,7 @@ function c231Icon(name, cls){
 <meta content="no-cache" http-equiv="Pragma"/>
 <meta content="0" http-equiv="Expires"/>
 <script>
-  window.MOOTSIL_BUILD='C360';
+  window.MOOTSIL_BUILD='C366';
 </script>
 <style id="c245-inicio-mobile-calibrado">
 /* C245 — Calibración responsive del Inicio aprobado.
@@ -20869,3 +20869,68 @@ function renderRiegoEjecucion(ordenId){
 </script>
 </body>
 </html>
+
+<!-- C366 — Cierre visual App Colaborador + reportes contextuales -->
+<style id="c366-app-colaborador-cierre">
+/* Encabezado: la franja oficial conserva su proporción completa en cualquier dispositivo. */
+#screen-operario .op-franja-oficial{
+  width:100%!important;height:auto!important;max-height:none!important;
+  object-fit:contain!important;object-position:center center!important;
+}
+/* Avatar: presencia secundaria y margen seguro respecto al borde. */
+#screen-operario .op-header-actions{padding-right:4px!important;}
+#screen-operario .op-header-avatar,
+#screen-operario .op-header-avatar-fallback{
+  width:54px!important;height:54px!important;min-width:54px!important;
+  border:2px solid rgba(255,255,255,.72)!important;
+  box-shadow:0 2px 7px rgba(0,0,0,.16)!important;
+}
+@media(max-width:430px){
+  #screen-operario .op-header-top{min-height:84px!important;padding:11px 12px 10px!important;}
+  #screen-operario .op-header-actions{gap:.38rem!important;padding-right:2px!important;}
+  #screen-operario .op-header-avatar,
+  #screen-operario .op-header-avatar-fallback{width:42px!important;height:42px!important;min-width:42px!important;font-size:1.25rem!important;}
+  #screen-operario .op-franja-oficial{width:100%!important;height:auto!important;max-height:none!important;object-fit:contain!important;}
+}
+</style>
+<script>
+window.MOOTSIL_BUILD='C366';
+/* Labores usa un reporte contextual, igual que Riego y Aplicaciones: conserva tarea, tabla,
+   plantación y colaborador y vuelve a la labor activa al terminar. */
+function c366ReportarLaborIncidencia(){
+  var o=ordenEjecutando, body=document.getElementById('op-body');
+  if(!o||!o.tabla){renderCentroReportes();return;}
+  var p=cats.plantaciones.find(function(x){return x.id===o.tabla.plantacion_id;});
+  var plant=p?p.nombre:'Plantación', tabla=o.tabla.nombre||'Tabla';
+  body.innerHTML='<div class="c349-wrap"><div class="c349-head"><div><div class="c349-eyebrow">LABOR</div><div class="c349-title">Reportar incidencia</div><div class="c349-sub">'+c225Esc(plant+' · '+tabla)+'</div></div></div>'+ 
+    '<div class="c349-card"><div class="c349-info" style="margin-bottom:10px">La labor, plantación, tabla, colaborador y hora se registran automáticamente.</div>'+ 
+    '<div class="c349-label">¿Qué ocurrió?</div><select class="c349-num" id="c366-lab-inc-t"><option value="">Selecciona...</option><option value="infraestructura">Infraestructura / daño</option><option value="equipo_herramienta">Herramienta / equipo</option><option value="fuga_derrame">Fuga / derrame</option><option value="insumos">Falta de insumo</option><option value="otro">Otro</option></select>'+ 
+    '<div style="margin-top:9px"><input class="c349-num" id="c366-lab-inc-s" type="number" min="1" placeholder="Surco (opcional)"></div>'+ 
+    '<div style="margin-top:9px"><textarea class="c349-num" id="c366-lab-inc-d" rows="3" maxlength="180" placeholder="Detalle breve"></textarea></div></div>'+ 
+    '<div class="c349-actions"><button class="c349-btn warn" id="c366-lab-inc-back">← Regresar a la labor</button><button class="c349-btn primary" id="c366-lab-inc-send">Enviar reporte</button></div></div>';
+  document.getElementById('c366-lab-inc-back').onclick=function(){c336LaborActiva();};
+  document.getElementById('c366-lab-inc-send').onclick=function(){
+    var t=(document.getElementById('c366-lab-inc-t').value||'').trim();
+    var sur=(document.getElementById('c366-lab-inc-s').value||'').trim();
+    var d=(document.getElementById('c366-lab-inc-d').value||'').trim();
+    if(!t){showToast('Selecciona el tipo de incidencia');return;}
+    if(!d){showToast('Agrega un detalle breve');return;}
+    var desc=(sur?'Surco '+sur+' · ':'')+d;
+    var payload={usuario_id:usuario.id,categoria:t,descripcion:desc,plantacion_id:o.tabla.plantacion_id||null,tabla_id:o.tabla_id||o.tabla.id||null,prioridad:'media'};
+    var b=this;if(!lock(b,'Enviando...'))return;
+    repEnviarReporte(payload,'🚨 Incidencia en labor',usuario.nombre+' · '+plant+' · '+tabla+': '+desc).then(function(){showToast('✅ Reporte enviado');setTimeout(c336LaborActiva,250);}).catch(function(){b.disabled=false;b.textContent='Enviar reporte';showToast('No se pudo enviar');});
+  };
+}
+/* Sustituye únicamente el acceso de reporte de la labor activa; Riego y Aplicaciones conservan
+   sus flujos contextuales existentes. */
+(function(){
+  var original=window.c336LaborActiva;
+  if(typeof original!=='function')return;
+  window.c336LaborActiva=function(){
+    original.apply(this,arguments);
+    var body=document.getElementById('op-body'); if(!body)return;
+    var btn=Array.prototype.find.call(body.querySelectorAll('.c336-actions button'),function(b){return /Reportar incidencia/i.test(b.textContent||'');});
+    if(btn) btn.onclick=c366ReportarLaborIncidencia;
+  };
+})();
+</script>
