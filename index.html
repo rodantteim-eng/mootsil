@@ -1184,7 +1184,7 @@ function c231Icon(name, cls){
 .c231-pay-head h2{color:var(--c237-green)!important}
 .c231-pay-head p{font-size:.72rem!important}
 .c231-pay-hero{background:linear-gradient(145deg,#174f35,#0d3d28)!important;border-radius:16px!important;box-shadow:0 7px 18px rgba(20,70,45,.15)!important}
-.c231-pay-hero .amount{color:#f1bd47}
+.c231-pay-hero .amount{color:var(--amarillo)!important}
 .c231-official{display:none!important}
 .c231-breakdown-title{text-transform:none!important;font-size:.9rem!important;letter-spacing:0!important}
 .c231-break-row{grid-template-columns:42px minmax(0,1fr) auto!important;padding:11px 0!important}
@@ -15703,7 +15703,7 @@ function renderApoyosC092(){
    if(!list)return;
    list.innerHTML=apoyos.length?apoyos.map(function(g){
     var m=ap98Meta(g.concepto)||{},nom=m.nombre||'Colaborador';
-    return '<div class="orden-card" style="padding:.7rem .85rem;"><div style="display:flex;justify-content:space-between;gap:8px;"><div><strong>⛽ '+nom+'</strong><div class="orden-meta">'+ap98Concepto(g)+(ap99Descripcion(g)?' · '+ap99Descripcion(g):'')+' · '+g.fecha+(m.autorizado_por_nombre?'<br>Registrado por: '+m.autorizado_por_nombre:'')+'</div></div><strong style="color:var(--verde);">+$'+parseFloat(g.monto||0).toFixed(2)+'</strong></div></div>';
+    return '<div class="orden-card" style="padding:.7rem .85rem;"><div style="display:flex;justify-content:space-between;gap:8px;"><div><strong>⛽ '+nom+'</strong><div class="orden-meta">'+ap98Concepto(g)+(ap99Descripcion(g)?' · '+ap99Descripcion(g):'')+' · '+g.fecha+(m.autorizado_por_nombre?'<br>Registrado por: '+m.autorizado_por_nombre:'')+'</div></div><strong style="color:var(--verde);">+'+c359Money(g.monto||0)+'</strong></div></div>';
    }).join(''):'<div class="empty">No hay apoyos registrados.</div>';
   }).catch(function(e){var l=document.getElementById('ap98-list');if(l)l.innerHTML='<div class="empty">Error: '+e.message+'</div>';});
  }
@@ -16321,6 +16321,17 @@ function actualizarAvatarHeader(){
   }
 }
 
+function c359Money(v){
+  var n=parseFloat(v)||0;
+  try{return new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN',minimumFractionDigits:2,maximumFractionDigits:2}).format(n);}
+  catch(e){return '$'+n.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});}
+}
+function c359FechaCorta(fecha){
+  var d=new Date(String(fecha).slice(0,10)+'T12:00:00');
+  return d.toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'});
+}
+function c359RangoSemana(ini,fin){ return c359FechaCorta(ini)+' al '+c359FechaCorta(fin); }
+
 function renderPagosHistorial(){
   var body=document.getElementById('op-body');
   body.innerHTML='<div class="c237-page"><div class="loading">Cargando historial...</div></div>';
@@ -16346,11 +16357,11 @@ function renderPagosHistorial(){
       html+='<div class="c237-empty">'+c231Icon('history')+'<b>Aún no tienes pagos registrados.</b><div class="c237-meta">Aquí aparecerán tus semanas pagadas.</div></div></div>';
       body.innerHTML=html; return;
     }
-    html+='<div class="c237-summary"><small>Total recibido · últimas '+semanas.length+' semanas</small><strong>$'+totalHistorico.toFixed(2)+'</strong></div>';
+    html+='<div class="c237-summary"><small>Total recibido · últimas '+semanas.length+' semanas</small><strong>'+c359Money(totalHistorico)+'</strong></div>';
     semanas.forEach(function(w){
       var f=w.pagado_en?new Date(w.pagado_en).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}):'';
       var total=w.sueldo+w.extra;
-      html+='<div class="c237-history-card"><div class="c237-card-top"><div><b>Semana '+w.semana_inicio+' · '+w.semana_fin+'</b><div class="c237-meta">'+(w.sueldo?'Sueldo $'+w.sueldo.toFixed(2):'')+(w.extra?' · H.E. $'+w.extra.toFixed(2):'')+'</div></div><strong>$'+total.toFixed(2)+'</strong></div><span class="c237-paid">Pagado'+(f?' · '+f:'')+'</span></div>';
+      var numSem=numeroSemanaISO(new Date(w.semana_inicio+'T12:00:00')); html+='<div class="c237-history-card"><div class="c237-card-top"><div><b>Semana '+numSem+'</b><div class="c237-meta">'+c359RangoSemana(w.semana_inicio,w.semana_fin)+'</div><div class="c237-meta">'+(w.sueldo?'Sueldo '+c359Money(w.sueldo):'')+(w.extra?' · H.E. '+c359Money(w.extra):'')+'</div></div><strong>'+c359Money(total)+'</strong></div><span class="c237-paid">Pagado'+(f?' · '+f:'')+'</span></div>';
     });
     body.innerHTML=html+'</div>';
   }).catch(function(e){body.innerHTML='<div class="c237-page"><div class="c237-empty">No se pudo cargar el historial.</div><button class="c237-back" onclick="renderPagosMenu()">← Pagos</button></div>';});
@@ -16559,7 +16570,7 @@ function renderDebo(){
   var body=document.getElementById('op-body');
   body.innerHTML='<div class="c237-page"><div class="loading">Cargando préstamos...</div></div>';
   from('prestamos').select('*').eq('operario_id',usuario.id).eq('estado','activo').order('creado_en',{ascending:false}).get().then(function(prestamos){
-    var html='<div class="c237-page"><div class="c237-title"><h2>Préstamos y adeudos</h2><button class="c237-back" onclick="renderPagosMenu()">← Pagos</button></div>';
+    var html='<div class="c237-page"><div class="c237-title"><h2>Préstamos y adeudos</h2><button class="c237-back" onclick="renderPagosMenu()">← Pagos</button></div><button class="btn-primary" style="width:100%;margin-bottom:12px;" onclick="renderSolicitarPrestamo()">💰 Solicitar préstamo</button><div class="c237-meta" style="margin:-4px 0 14px;">1 solicitud por mes · monto máximo definido por Administración.</div>';
     if(!prestamos||!prestamos.length){
       html+='<div class="c237-empty">'+c231Icon('debt')+'<b>No tienes préstamos ni adelantos activos.</b><div class="c237-meta">Cuando exista un descuento autorizado, aquí podrás consultar saldo y avance.</div></div></div>';
       body.innerHTML=html; return;
@@ -16573,10 +16584,10 @@ function renderDebo(){
         var monto=parseFloat(p.monto)||0, saldo=Math.max(0,monto-pagado), pct=monto?Math.min(100,(pagado/monto)*100):0;
         saldoTotal+=saldo;
         var prox=pagosDe.find(function(x){return x.estado==='pendiente';});
-        html+='<div class="c237-debt-card"><div class="c237-card-top"><div><b>'+(p.concepto||'Préstamo / adelanto')+'</b><div class="c237-meta">Original $'+monto.toFixed(2)+' · Pagado $'+pagado.toFixed(2)+'</div></div><strong>$'+saldo.toFixed(2)+'</strong></div><div class="c237-meta">Saldo pendiente'+(prox?' · Próximo descuento $'+parseFloat(prox.monto||0).toFixed(2):'')+'</div><div class="c237-progress"><span style="width:'+pct.toFixed(0)+'%"></span></div></div>';
+        html+='<div class="c237-debt-card"><div class="c237-card-top"><div><b>'+(p.concepto||'Préstamo / adelanto')+'</b><div class="c237-meta">Original '+c359Money(monto)+' · Pagado '+c359Money(pagado)+'</div></div><strong>'+c359Money(saldo)+'</strong></div><div class="c237-meta">Saldo pendiente'+(prox?' · Próximo descuento '+c359Money(prox.monto||0):'')+'</div><div class="c237-progress"><span style="width:'+pct.toFixed(0)+'%"></span></div></div>';
       });
       var cards=html.substring(html.indexOf('</div>')+6);
-      body.innerHTML='<div class="c237-page"><div class="c237-title"><h2>Préstamos y adeudos</h2><button class="c237-back" onclick="renderPagosMenu()">← Pagos</button></div><div class="c237-summary"><small>Saldo pendiente total</small><strong>$'+saldoTotal.toFixed(2)+'</strong></div>'+cards;
+      body.innerHTML='<div class="c237-page"><div class="c237-title"><h2>Préstamos y adeudos</h2><button class="c237-back" onclick="renderPagosMenu()">← Pagos</button></div><div class="c237-summary"><small>Saldo pendiente total</small><strong>'+c359Money(saldoTotal)+'</strong></div>'+cards;
     });
   }).catch(function(e){body.innerHTML='<div class="c237-page"><div class="c237-empty">No se pudieron cargar tus préstamos.</div><button class="c237-back" onclick="renderPagosMenu()">← Pagos</button></div>';});
 }
@@ -16666,29 +16677,29 @@ function renderCartera(fechaRef){
 
       html+='<section class="c231-pay-hero">';
       html+='<div class="c231-pay-hero-top"><div><small>MI PAGO DE ESTA SEMANA</small><div class="week">Semana '+numSemana+' · '+rango+'</div></div><div>'+c231Icon('payments')+'</div></div>';
-      html+='<div class="amount">$'+total.toFixed(2)+'</div>';
+      html+='<div class="amount">'+c359Money(total)+'</div>';
       html+='<div class="c231-status">'+(todoLoAplicablePagado?'✓ Depositado':'⌛ Pendiente de depósito')+'</div>';
       html+='</section>';
 
       html+='<div class="c231-official"><strong>Nómina oficial:</strong> este total refleja Administración → Caja → Nómina. Es la cifra oficial mostrada al colaborador.</div>';
       html+='<section class="c231-breakdown"><div class="c231-breakdown-title">Detalle de mi pago</div>';
-      html+='<div class="c231-break-row"><span class="c231-break-ic">'+c231Icon('money')+'</span><span class="c231-break-label"><b>Sueldo</b><small>'+diasPagados.toFixed(1)+' días pagados</small></span><span class="c231-break-val">+$'+totalSueldo.toFixed(2)+'</span></div>';
+      html+='<div class="c231-break-row"><span class="c231-break-ic">'+c231Icon('money')+'</span><span class="c231-break-label"><b>Sueldo</b><small>'+diasPagados.toFixed(1)+' días pagados</small></span><span class="c231-break-val">+'+c359Money(totalSueldo)+'</span></div>';
       if(resumen.retardos) html+='<div class="c231-break-row"><span class="c231-break-ic">'+c231Icon('clock')+'</span><span class="c231-break-label"><b>Retardos</b><small>'+resumen.retardos+' · informativo, sin descuento automático</small></span><span class="c231-break-val">—</span></div>';
       if(resumen.diasPermisoSinGoce) html+='<div class="c231-break-row"><span class="c231-break-ic">'+c231Icon('calendar')+'</span><span class="c231-break-label"><b>Permiso sin goce</b><small>'+resumen.diasPermisoSinGoce+' día(s) no pagado(s)</small></span><span class="c231-break-val minus">Aplicado</span></div>';
-      if(hayExtra) html+='<div class="c231-break-row"><span class="c231-break-ic">'+c231Icon('clock')+'</span><span class="c231-break-label"><b>Horas extra</b><small>'+horasExtra.toFixed(1)+' h registradas</small></span><span class="c231-break-val">+$'+totalExtra.toFixed(2)+'</span></div>';
+      if(hayExtra) html+='<div class="c231-break-row"><span class="c231-break-ic">'+c231Icon('clock')+'</span><span class="c231-break-label"><b>Horas extra</b><small>'+horasExtra.toFixed(1)+' h registradas</small></span><span class="c231-break-val">+'+c359Money(totalExtra)+'</span></div>';
 
       bonosQueCalifican.forEach(function(b){
         var conceptoBono=bo97ConceptoBono(b);
-        html+='<div class="c231-break-row"><span class="c231-break-ic">'+c231Icon('payments')+'</span><span class="c231-break-label"><b>Bono</b><small>'+conceptoBono+'</small></span><span class="c231-break-val">+$'+parseFloat(b.monto||0).toFixed(2)+'</span></div>';
+        html+='<div class="c231-break-row"><span class="c231-break-ic">'+c231Icon('payments')+'</span><span class="c231-break-label"><b>Bono</b><small>'+conceptoBono+'</small></span><span class="c231-break-val">+'+c359Money(b.monto||0)+'</span></div>';
       });
       apoyosOp.forEach(function(g){
-        html+='<div class="c231-break-row"><span class="c231-break-ic">'+c231Icon('payments')+'</span><span class="c231-break-label"><b>Apoyo / viático</b><small>'+ap98Concepto(g)+'</small></span><span class="c231-break-val">+$'+parseFloat(g.monto||0).toFixed(2)+'</span></div>';
+        html+='<div class="c231-break-row"><span class="c231-break-ic">'+c231Icon('payments')+'</span><span class="c231-break-label"><b>Apoyo / viático</b><small>'+ap98Concepto(g)+'</small></span><span class="c231-break-val">+'+c359Money(g.monto||0)+'</span></div>';
       });
       deducciones.forEach(function(d){
         var pr=prestamosActivos.find(function(p){return p.id===d.prestamo_id;});
-        html+='<div class="c231-break-row"><span class="c231-break-ic">'+c231Icon('debt')+'</span><span class="c231-break-label"><b>'+(pr?pr.concepto:'Préstamo / adeudo')+'</b><small>Pago '+d.numero_pago+'</small></span><span class="c231-break-val minus">-$'+parseFloat(d.monto).toFixed(2)+'</span></div>';
+        html+='<div class="c231-break-row"><span class="c231-break-ic">'+c231Icon('debt')+'</span><span class="c231-break-label"><b>'+(pr?pr.concepto:'Préstamo / adeudo')+'</b><small>Pago '+d.numero_pago+'</small></span><span class="c231-break-val minus">-'+c359Money(d.monto)+'</span></div>';
       });
-      html+='<div class="c231-net"><span>Neto de la semana</span><strong>$'+total.toFixed(2)+'</strong></div></section>';
+      html+='<div class="c231-net"><span>Neto de la semana</span><strong>'+c359Money(total)+'</strong></div></section>';
       var mostrarRecibo=String(cfg.mostrar_recibo_colaborador||'false').toLowerCase()==='true';
       if(mostrarRecibo) html+='<button type="button" id="cart-recibo" class="c231-receipt">'+c231Icon('receipt')+' Ver recibo de nómina</button>';
       html+='<div class="c231-secondary"><button type="button" id="c231-hist">'+c231Icon('history')+' Historial de pagos</button><button type="button" id="c231-debo">'+c231Icon('debt')+' Préstamos / adeudos</button></div>';
@@ -16831,7 +16842,8 @@ function renderAsistenciaMenu(){
     var horaExtraTxt=extra?(salEx?((extraDur?extraDur.text:'Registrada')):(entEx?'En curso':(sal?'Pendiente':numFmt(extra.horas_max)+' h autorizadas'))):'—';
 
     var casos = '<div class="c228-special-grid">'+
-      '<button onclick="renderAsisPermisos()"><span>'+c231Icon('exit')+'</span><b>Salida anticipada</b></button>'+
+      '<button onclick="renderAsisPermisos()"><span>'+c231Icon('exit')+'</span><b>Permisos / salida</b></button>'+
+      '<button onclick="window._origenPermisoAsistencia=true;renderMisSolicitudes()"><span>'+c231Icon('history')+'</span><b>Mis solicitudes</b></button>'+
       '<button onclick="renderAsisJornadaSinCerrar()"><span>'+c231Icon('warning')+'</span><b>Jornada sin cerrar</b></button>'+
       '<button onclick="renderAsisProblemaRegistro()"><span>'+c231Icon('signal')+'</span><b>Problemas de registro</b></button>'+
       '<button onclick="renderAsisRegistrosInvalidos()"><span>'+c231Icon('shield')+'</span><b>Registros no válidos</b></button>'+
@@ -17072,7 +17084,7 @@ function limitesMesActual(){
 
 function contarPrestamosDelMes(operarioId){
   var m=limitesMesActual();
-  return from('prestamos').select('id').eq('operario_id',operarioId).gte('creado_en',m.inicio+'T00:00:00').lte('creado_en',m.fin+'T23:59:59.999').get().then(function(rows){return (rows||[]).length;});
+  return from('solicitudes_operario').select('id').eq('operario_id',operarioId).eq('tipo','prestamo').gte('creado_en',m.inicio+'T00:00:00').lte('creado_en',m.fin+'T23:59:59.999').get().then(function(rows){return (rows||[]).length;});
 }
 
 function renderSolicitarPrestamo(){
@@ -17083,27 +17095,27 @@ function renderSolicitarPrestamo(){
     contarPrestamosDelMes(usuario.id)
   ]).then(function(r){
     var cfg={}; (r[0]||[]).forEach(function(c){cfg[c.clave]=c.valor;});
-    var maxMes=parseInt(cfg.prestamo_max_activos_mes)||1;
+    var maxMes=1;
     var montoMax=(cfg.prestamo_monto_max!==undefined&&cfg.prestamo_monto_max!==null&&cfg.prestamo_monto_max!=='')?parseFloat(cfg.prestamo_monto_max):null;
     var usados=r[1]||0;
     var alTope=usados>=maxMes;
     var estadoTxt=alTope
-      ? '<div style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);border-radius:var(--radio-sm);padding:.75rem .9rem;margin-bottom:1rem;"><strong style="color:var(--rojo);">🚫 Ya tienes '+usados+' préstamo(s) activo(s) este mes</strong><div class="hint" style="margin-top:.25rem;">El máximo permitido es '+maxMes+' por mes. Podrás solicitar otro a partir del próximo mes.</div></div>'
-      : '<div style="background:var(--verde-tenue);border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);padding:.75rem .9rem;margin-bottom:1rem;"><strong style="color:var(--verde-mid);">Llevas '+usados+'/'+maxMes+' préstamo(s) usados este mes</strong></div>';
+      ? '<div style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);border-radius:var(--radio-sm);padding:.75rem .9rem;margin-bottom:1rem;"><strong style="color:var(--rojo);">🚫 Ya tienes '+usados+' solicitud(es) de préstamo este mes</strong><div class="hint" style="margin-top:.25rem;">El máximo permitido es 1 solicitud por mes. Podrás solicitar otro a partir del próximo mes.</div></div>'
+      : '<div style="background:var(--verde-tenue);border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);padding:.75rem .9rem;margin-bottom:1rem;"><strong style="color:var(--verde-mid);">Llevas '+usados+'/'+maxMes+' solicitud(es) enviada(s) este mes</strong></div>';
     if(alTope){
       body.innerHTML='<div class="seccion-titulo">💰 Solicitar préstamo</div>'+estadoTxt+'<button class="btn-back" style="margin-top:1rem;" onclick="(window._origenPermisoAsistencia?renderAsistenciaMenu():renderSolicitudesMenu())">← Volver a Asistencia</button>';
       return;
     }
-    body.innerHTML='<div class="seccion-titulo">💰 Solicitar préstamo</div>'+estadoTxt+'<div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Tu solicitud llega directo a administración para revisión — no es automático, te avisarán cuando la resuelvan.'+(montoMax!=null?' Monto máximo por préstamo: $'+montoMax.toFixed(2)+'.':'')+'</p><div class="form-group"><label>¿Cuánto necesitas?</label><input type="number" id="sp-monto" min="0" step="any" placeholder="$0.00"></div><div class="form-group"><label>¿Para qué lo necesitas?</label><textarea id="sp-motivo" rows="4" placeholder="Cuéntanos brevemente el motivo..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="sp-enviar">Enviar solicitud</button></div><button class="btn-back" style="margin-top:1rem;" onclick="(window._origenPermisoAsistencia?renderAsistenciaMenu():renderSolicitudesMenu())">← Volver a Asistencia</button>';
+    body.innerHTML='<div class="seccion-titulo">💰 Solicitar préstamo</div>'+estadoTxt+'<div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Tu solicitud llega directo a administración para revisión — no es automático, te avisarán cuando la resuelvan.'+(montoMax!=null?' Monto máximo autorizado: '+c359Money(montoMax)+'.':'')+'</p><div class="form-group"><label>¿Cuánto necesitas?</label><input type="number" id="sp-monto" min="0" step="any" placeholder="$0.00"></div><div class="form-group"><label>¿Para qué lo necesitas?</label><textarea id="sp-motivo" rows="4" placeholder="Cuéntanos brevemente el motivo..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="sp-enviar">Enviar solicitud</button></div><button class="btn-back" style="margin-top:1rem;" onclick="(window._origenPermisoAsistencia?renderAsistenciaMenu():renderSolicitudesMenu())">← Volver a Asistencia</button>';
     document.getElementById('sp-enviar').addEventListener('click',function(){
       var monto=parseFloat(document.getElementById('sp-monto').value)||0;
       var motivo=(document.getElementById('sp-motivo').value||'').trim();
       if(monto<=0){alert('Escribe cuánto necesitas.');return;}
       if(!motivo){alert('Cuéntanos brevemente para qué es.');return;}
-      if(montoMax!=null&&monto>montoMax){alert('El monto máximo que se puede solicitar por préstamo es $'+montoMax.toFixed(2)+'.');return;}
+      if(montoMax!=null&&monto>montoMax){alert('El monto máximo que se puede solicitar es '+c359Money(montoMax)+'.');return;}
       var btn=this; btn.disabled=true; btn.textContent='Enviando...';
       from('solicitudes_operario').insert({operario_id:usuario.id,tipo:'prestamo',monto_solicitado:monto,mensaje:motivo,estado:'pendiente'}).then(function(){
-        return from('notificaciones').insert({titulo:'💰 Solicitud de préstamo',cuerpo:usuario.nombre+' solicita $'+monto.toFixed(2)+': '+motivo,icono:'💰',leida:false,para_rol:'encargado'});
+        return from('notificaciones').insert({titulo:'💰 Solicitud de préstamo',cuerpo:usuario.nombre+' solicita '+c359Money(monto)+': '+motivo,icono:'💰',leida:false,para_rol:'encargado'});
       }).then(function(){
         showToast('✅ Solicitud enviada');
         renderSolicitudesMenu();
@@ -17137,7 +17149,7 @@ function renderMisSolicitudes(){
     from('permisos').select('*').eq('usuario_id',usuario.id).order('creado_en',{ascending:false}).get()
   ]).then(function(r){
     var solicitudTipoIc={herramienta:'⚠️ ',otro:'💬 ',mantenimiento:'🔧 ',insumo:'📦 '},
-        generales=(r[0]||[]).map(function(s){return {tipo:s.tipo,estado:s.estado,texto:(s.tipo==='prestamo'?'💰 Préstamo · $'+parseFloat(s.monto_solicitado||0).toFixed(2):(solicitudTipoIc[s.tipo]||'💬 ')+s.mensaje.slice(0,60)),respuesta:s.respuesta,fecha:s.creado_en};}),
+        generales=(r[0]||[]).map(function(s){return {tipo:s.tipo,estado:s.estado,texto:(s.tipo==='prestamo'?'💰 Préstamo · '+c359Money(s.monto_solicitado||0):(solicitudTipoIc[s.tipo]||'💬 ')+s.mensaje.slice(0,60)),respuesta:s.respuesta,fecha:s.creado_en};}),
         permisos=(r[1]||[]).map(function(p){return {tipo:'permiso',estado:p.estado,texto:(p.tipo==='medico'?'🩺 Permiso médico':'👤 Permiso personal')+' · '+p.fecha_inicio,respuesta:null,fecha:p.creado_en};});
     var todas=generales.concat(permisos).sort(function(a,b){return new Date(b.fecha)-new Date(a.fecha);});
     if(!todas.length){body.innerHTML='<div class="seccion-titulo">📋 Mis solicitudes</div><div class="empty">Aún no has enviado ninguna solicitud.</div><button class="btn-back" style="margin-top:1rem;" onclick="(window._origenPermisoAsistencia?renderAsistenciaMenu():renderSolicitudesMenu())">← Volver a Asistencia</button>';return;}
@@ -17156,8 +17168,8 @@ function renderAsisPermisos(){
   var body=document.getElementById('op-body');
   body.innerHTML=`<div class="c230-perm-wrap">
     <button class="c230-back" onclick="renderAsistenciaMenu()">← Asistencia</button>
-    <div class="c230-perm-title">🕒 Salida anticipada</div>
-    <div class="c230-perm-sub">Si necesitas retirarte antes de terminar tu jornada, selecciona el motivo.</div>
+    <div class="c230-perm-title">📝 Permisos y salida anticipada</div>
+    <div class="c230-perm-sub">Solicita un permiso personal o médico, incluida una salida anticipada cuando corresponda.</div>
 
     <div class="c230-perm-card">
       <button class="c230-perm-option" onclick="renderFormPermiso('personal')">
@@ -17173,7 +17185,7 @@ function renderAsisPermisos(){
       </button>
     </div>
 
-    <div id="permisos-resumen"><div class="loading">Cargando...</div></div>
+    <div id="permisos-resumen"><div class="loading">Cargando...</div></div><button class="btn-back" style="width:100%;margin:10px 0;" onclick="window._origenPermisoAsistencia=true;renderMisSolicitudes()">📋 Ver mis solicitudes</button>
 
     <div class="c230-perm-note">
       La salida anticipada quedará registrada para revisión o autorización según corresponda.
