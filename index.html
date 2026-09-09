@@ -1996,7 +1996,7 @@ function c231Icon(name, cls){
 .c255-plant{display:inline-flex;padding:3px 7px;border-radius:999px;font-size:.65rem;font-weight:850}
 .c255-plant.erandy{background:#e7f2ec;color:#155c42}.c255-plant.jade{background:#f1e5f5;color:#702786}
 .c255-state{font-size:.65rem;font-weight:850;padding:4px 7px;border-radius:999px;text-align:center;background:#eef2ef;color:#53625b}
-.c255-state.pendiente{background:#fff1d7;color:#9a6200}.c255-state.en_proceso{background:#e3f2fa;color:#17658b}.c255-state.completada{background:#e4f3e9;color:#177044}.c255-state.cancelada{background:#f8e7e5;color:#a13d34}
+.c255-state.pendiente{background:#fff1d7;color:#9a6200}.c255-state.en_proceso{background:#e7f2ec;color:#155c42}.c255-state.completada{background:#e4f3e9;color:#177044}.c255-state.cancelada{background:#f8e7e5;color:#a13d34}
 .c255-empty{padding:24px;text-align:center;color:#7a8781;font-size:.76rem}
 @media(max-width:760px){.c255-hrow{grid-template-columns:72px 1fr 92px}.c255-hperson{grid-column:2}.c255-hwhere{grid-column:2}.c255-state{grid-column:3;grid-row:1}}
 </style>
@@ -4481,21 +4481,25 @@ function c290ImprimirReporteSemanal(){
   if(hist){hc=hist.cloneNode(true);hc.querySelectorAll('button').forEach(function(b){b.remove();});}
 
   d.open();
-  d.write('<!doctype html><html><head><meta charset="utf-8"><title>Sagrado Corazon - Tablero Labores - Semana '+numeroSemanaISO(new Date(rg.ini+'T12:00:00'))+'</title><style>'+
+  d.write('<!doctype html><html><head><meta charset="utf-8"><title>Rancho Sagrado Corazon - Labores - Semana '+numeroSemanaISO(new Date(rg.ini+'T12:00:00'))+'</title><style>'+
   '@page{size:landscape;margin:10mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#173d2e;margin:0;background:#fff}'+
   '.rep-head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #145c42;padding-bottom:8px;margin-bottom:12px}.rep-title{font-size:20px;font-weight:800}.rep-sub{font-size:11px;color:#65756d}.rep-rancho{font-size:12px;font-weight:700;color:#145c42}'+
   '.c256-dashboard,.c255-history{border:1px solid #dce5df;border-radius:10px;overflow:hidden;margin-bottom:14px;background:#fff}.c256-dash-head,.c255-history-head{padding:10px 12px;border-bottom:1px solid #e7ece9}.c256-dash-title,.c255-history-title{font-size:13px;font-weight:800;text-transform:uppercase}.c256-dash-sub,.c255-history-sub{font-size:10px;color:#718078}'+
-  '.c256-summary{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;padding:10px 12px}.c256-stat{border:1px solid #dfe7e2;border-radius:8px;padding:8px}.c256-stat b{display:block;font-size:16px}.c256-stat span{font-size:9px;color:#65756d}'+
+  '.c256-summary{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;padding:10px 12px}.c256-stat{border:1px solid #dfe7e2;border-radius:8px;padding:8px;background:#fff}.c256-stat:nth-child(1){box-shadow:inset 0 -5px 0 #2f80d0}.c256-stat:nth-child(2){box-shadow:inset 0 -5px 0 #e5a21a}.c256-stat:nth-child(3){box-shadow:inset 0 -5px 0 #258653}.c256-stat:nth-child(4){box-shadow:inset 0 -5px 0 #74288f}.c256-stat:nth-child(5){box-shadow:inset 0 -5px 0 #cf3d31}.c256-stat b{display:block;font-size:16px}.c256-stat span{font-size:9px;color:#65756d}'+
   '.c256-plants{display:grid;grid-template-columns:1.15fr .85fr;gap:10px;padding:0 12px 12px}.c256-plant-card{border:1px solid #dfe7e2;border-radius:8px;overflow:hidden}.c256-plant-head{display:flex;justify-content:space-between;color:#fff;padding:6px 8px;font-size:10px;font-weight:800}.c256-plant-card.erandy .c256-plant-head{background:#165c43}.c256-plant-card.jade .c256-plant-head{background:#6d2789}.c256-table-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:7px}.c256-plant-card.jade .c256-table-grid{grid-template-columns:repeat(3,1fr)}.c256-tile{border:1px solid #e0e6e2;border-radius:6px;padding:6px}.c256-tile-title{font-size:10px;font-weight:800}.c256-tile-meta{font-size:8px;color:#7b8781}.c256-bar{height:5px;background:#edf1ee;border-radius:20px;overflow:hidden;margin-top:4px}.c256-bar i{display:block;height:100%;background:#258653}'+
   '.c255-hrow{display:grid;grid-template-columns:60px 1.35fr 1fr 1fr 90px;gap:8px;align-items:center;padding:7px 10px;border-bottom:1px solid #edf1ee;font-size:9px}.c255-hdate,.c255-hlabor{font-weight:800}.c255-hmeta{font-size:8px;color:#77847e}.c255-plant{display:inline-block;padding:2px 5px;border-radius:10px;font-weight:800}.c255-plant.erandy{background:#e7f2ec;color:#155c42}.c255-plant.jade{background:#f1e5f5;color:#702786}.c255-state{font-size:8px;font-weight:800;padding:3px 5px;border-radius:10px;text-align:center}.c255-state.pendiente{background:#fff1d7;color:#9a6200}.c255-state.en_proceso{background:#e3f2fa;color:#17658b}.c255-state.completada{background:#f1e5f5;color:#702786}.c255-state.cancelada{background:#f8e7e5;color:#a13d34}.c255-empty{padding:14px;text-align:center;color:#7a8781;font-size:10px}'+
   '</style></head><body><div class="rep-head"><div><div class="rep-title">Historial semanal de Labores</div><div class="rep-sub">Semana '+numeroSemanaISO(new Date(rg.ini+'T12:00:00'))+' · '+rg.ini+' al '+rg.fin+'</div></div><div class="rep-rancho">Rancho Sagrado Corazón · Zarzamora</div></div>'+
   dc.outerHTML+(hc?hc.outerHTML:'')+'</body></html>');
   d.close();
 
+  var printName='Rancho Sagrado Corazon - Labores - Semana '+numeroSemanaISO(new Date(rg.ini+'T12:00:00'));
+  try{d.title=printName;}catch(_e){}
   setTimeout(function(){
+    var parentTitle=document.title;
+    try{document.title=printName;frame.contentWindow.document.title=printName;}catch(_e){}
     frame.contentWindow.focus();
     frame.contentWindow.print();
-    setTimeout(function(){if(frame&&frame.parentNode)frame.remove();},1500);
+    setTimeout(function(){try{document.title=parentTitle;}catch(_e){}if(frame&&frame.parentNode)frame.remove();},1500);
   },300);
 }
 
@@ -7310,7 +7314,14 @@ function c353Print(title,sub,bodyHtml,fileTitle){
   var frame=document.createElement('iframe');frame.id='c353-print-frame';frame.style.cssText='position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0';document.body.appendChild(frame);
   var d=frame.contentDocument||frame.contentWindow.document;
   d.open();d.write('<!doctype html><html><head><meta charset="utf-8"><title>'+c353Esc(fileTitle||title)+'</title><style>@page{size:landscape;margin:10mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#173d2e;margin:0}.head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #145c42;padding-bottom:8px;margin-bottom:12px}.title{font-size:20px;font-weight:800}.sub{font-size:10px;color:#66766e;margin-top:3px}.rancho{font-size:12px;font-weight:800;color:#145c42;text-align:right}.sum{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:10px 0}.k{border:1px solid #dce5df;border-radius:8px;padding:7px;border-bottom:4px solid #2f80c9}.k:nth-child(2){border-bottom-color:#7a2b91}.k:nth-child(3){border-bottom-color:#278a56}.k:nth-child(4){border-bottom-color:#e0a900}.k b{display:block;font-size:16px}.k span{font-size:9px;color:#6c7b73}table{width:100%;border-collapse:collapse;font-size:9px}th{background:#eef5f1;text-align:left;padding:6px;border:1px solid #dce5df}td{padding:6px;border:1px solid #e2e8e4;vertical-align:top}.done{color:#7a2b91;font-weight:800}.process{color:#278a56;font-weight:800}.pending{color:#a66f00;font-weight:800}.cancel{color:#c8463d;font-weight:800}.foot{margin-top:8px;font-size:8px;color:#718078}</style></head><body><div class="head"><div><div class="title">'+c353Esc(title)+'</div><div class="sub">'+c353Esc(sub)+'</div></div><div class="rancho">Rancho Sagrado Corazón · Zarzamora<br><span class="sub">Impreso '+new Date().toLocaleString('es-MX')+'</span></div></div>'+bodyHtml+'<div class="foot">Historial generado desde Mootsil para control semanal.</div></body></html>');d.close();
-  setTimeout(function(){frame.contentWindow.focus();frame.contentWindow.print();setTimeout(function(){if(frame.parentNode)frame.remove();},1500);},250);
+  var printName=String(fileTitle||title||'Reporte Mootsil');
+  try{d.title=printName;}catch(_e){}
+  setTimeout(function(){
+    var parentTitle=document.title;
+    try{document.title=printName;frame.contentWindow.document.title=printName;}catch(_e){}
+    frame.contentWindow.focus();frame.contentWindow.print();
+    setTimeout(function(){try{document.title=parentTitle;}catch(_e){}if(frame.parentNode)frame.remove();},1500);
+  },250);
 }
 function c353ImprimirHistorialRiegoSemanal(){
   var ini=riegoOperacionSemanaBase(),fin=riegoFechaMasDias(ini,6),oficiales=riegoTablasOficiales();
@@ -7319,7 +7330,7 @@ function c353ImprimirHistorialRiegoSemanal(){
     var done=os.filter(function(o){return o.estado==='completada';}).length,proc=os.filter(function(o){return o.estado==='en_proceso';}).length,pend=os.filter(function(o){return o.estado==='pendiente';}).length;
     var tr=os.map(function(o){var t=oficiales.find(function(x){return String(x.id)===String(o.tabla_id);});var pl=t&&(cats.plantaciones||[]).find(function(x){return String(x.id)===String(t.plantacion_id);});var cls=o.estado==='completada'?'done':o.estado==='en_proceso'?'process':o.estado==='cancelada'?'cancel':'pending';return '<tr><td>'+c353Esc(o.fecha_asignacion)+'</td><td><b>'+c353Esc(pl?pl.nombre:'')+' · '+c353Esc(t?t.nombre:(o.tabla?o.tabla.nombre:'Tabla'))+'</b></td><td>'+c353Esc(o.operario?o.operario.nombre:'Sin asignar')+'</td><td>'+c353Esc((o.duracion_minutos||0)+' min')+'</td><td>'+c353Esc(c353MinEfectivos(o))+'</td><td>'+c353Esc(c353Hora(o.hora_inicio_real))+'</td><td>'+c353Esc(c353Hora(o.completado_en))+'</td><td class="'+cls+'">'+c353Esc(c353EstadoLbl(o.estado))+'</td><td>'+c353Esc(o.notas_encargado||'—')+'</td></tr>';}).join('');
     var html='<div class="sum"><div class="k"><b>'+os.length+'</b><span>Registros</span></div><div class="k"><b>'+done+'</b><span>Terminados</span></div><div class="k"><b>'+proc+'</b><span>En proceso</span></div><div class="k"><b>'+pend+'</b><span>Pendientes</span></div></div><table><thead><tr><th>Fecha</th><th>Plantación / Tabla</th><th>Responsable</th><th>Programado</th><th>Tiempo efectivo</th><th>Inicio</th><th>Cierre</th><th>Estado</th><th>Observación</th></tr></thead><tbody>'+(tr||'<tr><td colspan="9">Sin registros de riego en esta semana.</td></tr>')+'</tbody></table>';
-    c353Print('Historial semanal de Riego','Semana '+riegoSemanaNumero(ini)+' · '+ini+' al '+fin,html,'Sagrado Corazon - Tablero Riego - Semana '+riegoSemanaNumero(ini));
+    c353Print('Historial semanal de Riego','Semana '+riegoSemanaNumero(ini)+' · '+ini+' al '+fin,html,'Rancho Sagrado Corazon - Riego - Semana '+riegoSemanaNumero(ini));
   }).catch(function(e){alert('No se pudo generar el historial semanal de Riego: '+e.message);});
 }
 function c353ImprimirHistorialAplicacionesSemanal(){
@@ -7333,7 +7344,7 @@ function c353ImprimirHistorialAplicacionesSemanal(){
     var done=0,proc=0,pend=0;
     var tr=fs.map(function(f){var fo=os.filter(function(o){return String(o.formula_id)===String(f.id);});var estado=fo.length&&fo.every(function(o){return o.estado==='completada';})?'completada':fo.some(function(o){return o.estado==='en_proceso';})?'en_proceso':'pendiente';if(estado==='completada')done++;else if(estado==='en_proceso')proc++;else pend++;var pl=f.tabla?(cats.plantaciones||[]).find(function(x){return String(x.id)===String(f.tabla.plantacion_id);}):null;var personal=[];fo.forEach(function(o){var n=o.operario&&o.operario.nombre;if(n&&personal.indexOf(n)<0)personal.push(n);});var comp=cs.filter(function(c){return String(c.formula_id)===String(f.id);}).map(function(c){var u=c.item?c.item.unidad:'';var val=(typeof fmtAmigable==='function'?fmtAmigable(Number(c.cantidad_base||0),u):(c.cantidad_base+' '+u));return (c.item?c.item.nombre:'Producto')+' · '+val;}).join('<br>')||'—';var avances=fo.map(function(o){if(Number(o.surcos_completados)>0)return 'Surco '+o.surcos_completados;return '';}).filter(Boolean).join(' / ')|| (f.via==='Riego'?'Tabla completa':'—');var cls=estado==='completada'?'done':estado==='en_proceso'?'process':'pending';return '<tr><td>'+c353Esc(f.fecha_programada||'')+'</td><td><b>'+c353Esc(f.via==='Riego'?'Vía Riego':f.via||'Aplicación')+'</b><br>'+c353Esc(f.nombre||'')+'</td><td>'+c353Esc(pl?pl.nombre:'')+' · '+c353Esc(f.tabla?f.tabla.nombre:'')+'</td><td>'+c353Esc(personal.join(', ')||'Sin asignar')+'</td><td>'+comp+'</td><td>'+c353Esc(avances)+'</td><td class="'+cls+'">'+c353Esc(c353EstadoLbl(estado))+'</td></tr>';}).join('');
     var html='<div class="sum"><div class="k"><b>'+fs.length+'</b><span>Aplicaciones</span></div><div class="k"><b>'+done+'</b><span>Terminadas</span></div><div class="k"><b>'+proc+'</b><span>En proceso</span></div><div class="k"><b>'+pend+'</b><span>Pendientes</span></div></div><table><thead><tr><th>Fecha</th><th>Tipo / Fórmula</th><th>Plantación / Tabla</th><th>Colaborador(es)</th><th>Componentes</th><th>Avance</th><th>Estado</th></tr></thead><tbody>'+(tr||'<tr><td colspan="7">Sin aplicaciones en esta semana.</td></tr>')+'</tbody></table>';
-    c353Print('Historial semanal de Aplicaciones','Semana '+numeroSemanaISO(new Date(rg.ini+'T12:00:00'))+' · '+rg.ini+' al '+rg.fin,html,'Sagrado Corazon - Tablero Aplicaciones - Semana '+numeroSemanaISO(new Date(rg.ini+'T12:00:00')));
+    c353Print('Historial semanal de Aplicaciones','Semana '+numeroSemanaISO(new Date(rg.ini+'T12:00:00'))+' · '+rg.ini+' al '+rg.fin,html,'Rancho Sagrado Corazon - Aplicaciones - Semana '+numeroSemanaISO(new Date(rg.ini+'T12:00:00')));
   }).catch(function(e){alert('No se pudo generar el historial semanal de Aplicaciones: '+e.message);});
 }
 
