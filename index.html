@@ -1638,7 +1638,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C333';
+  window.MOOTSIL_BUILD='C335';
 </script>
 
 
@@ -15990,10 +15990,17 @@ function obtenerJornadaHoy(){
 }
 
 function elegirLaborDestacada(todas){
-  var tareasTodas=(todas||[]).filter(function(t){return !ordenEsTiempo(t);});
+  var hoy=fechaHoyLocal();
+  var tareasTodas=(todas||[]).filter(function(t){return !ordenEsTiempo(t)&&t.estado!=='completada'&&t.estado!=='cancelada';});
   var enProceso=tareasTodas.filter(function(t){return t.estado==='en_proceso';});
-  if(enProceso.length) return enProceso[0];
+  if(enProceso.length){
+    enProceso.sort(function(a,b){return String(a.fecha_asignacion||'').localeCompare(String(b.fecha_asignacion||''));});
+    return enProceso[0];
+  }
+  var hoyPend=tareasTodas.filter(function(t){return t.estado==='pendiente'&&t.fecha_asignacion===hoy;});
+  if(hoyPend.length) return hoyPend[0];
   var pendientes=tareasTodas.filter(function(t){return t.estado==='pendiente';});
+  pendientes.sort(function(a,b){return String(a.fecha_asignacion||'').localeCompare(String(b.fecha_asignacion||''));});
   return pendientes.length?pendientes[0]:null;
 }
 
@@ -16154,20 +16161,21 @@ function construirBloqueLaborDelDia(destacada,hoy,horasExtraPorClave,componentes
     cont+='<div class="c239-card-title">'+c231Icon('tasks')+' Tarea actual</div>'+
       '<div class="op-jornada-vacio" style="color:rgba(255,255,255,.78);padding:18px 0 6px;">No tienes una tarea pendiente por ahora.</div>';
   } else {
-    var kind=c239TaskKind(destacada), titulo=c239TaskTitle(destacada), lugar=c239TaskPlace(destacada);
-    var rango=c239TaskRange(destacada), equipo=c239TaskEquipment(destacada);
+    var tp=c329TipoTarea(destacada), titulo=c329TituloSimple(destacada);
+    var p=destacada.tabla?cats.plantaciones.find(function(x){return x.id===destacada.tabla.plantacion_id;}):null;
+    var lugar=[p&&p.nombre,destacada.tabla&&destacada.tabla.nombre].filter(Boolean).join(' · ');
+    var accion=destacada.estado==='en_proceso'?'CONTINUAR':'VER TAREA';
     var prior=(destacada.prioridad==='alta'||destacada.prioritaria===true)?'<span class="c239-priority">★ Prioritaria</span>':'';
-    cont+='<div class="c239-card-title"><span class="c239-kind-icon">'+c239TaskIcon(kind.key)+'</span> TAREA DEL DÍA '+prior+'</div>'+
-      '<div class="c239-task-name">'+titulo+'</div><div class="c239-task-meta">'+
-      '<div>'+c231Icon('tasks')+' '+kind.label+'</div>'+
-      (lugar?'<div>'+c231Icon('calendar')+' '+lugar+'</div>':'')+
-      (rango?'<div>'+c231Icon('history')+' '+rango+'</div>':'')+
-      (equipo?'<div>'+c231Icon('shield')+' '+equipo+'</div>':'')+
+    cont+='<div class="c239-card-title">TAREA DEL DÍA '+prior+'</div>'+
+      '<div class="c239-task-name">'+c225Esc(titulo)+'</div><div class="c239-task-meta">'+
+      '<div>'+c225Esc((tp.icon?tp.icon+' ':'')+tp.label)+'</div>'+
+      (lugar?'<div>📍 '+c225Esc(lugar)+'</div>':'')+
       '</div>'+
-      '<button class="c239-task-action" id="op-labor-iniciar" data-oid="'+destacada.id+'" data-pendiente="'+(destacada.estado==='pendiente'?'1':'0')+'">VER TAREA</button>';
+      '<button class="c239-task-action" id="op-labor-iniciar" data-oid="'+destacada.id+'" data-pendiente="'+(destacada.estado==='pendiente'?'1':'0')+'">'+accion+'</button>';
   }
   return cont+'</div>';
 }
+
 function construirBloqueRendimientoProvisional(score){
   var final=score&&isFinite(score.final)?Math.max(0,Math.min(10,score.final)):0;
   var nivel=Math.max(1,Math.min(5,Math.ceil(final/2)||1));
@@ -16185,7 +16193,7 @@ function pintarInicio(jornada,datosTareas,score,esCache){
   try{window.scrollTo(0,0);}catch(_e){}
   var body=document.getElementById('op-body');
   var hoy=fechaHoyLocal();
-  var todas=(datosTareas&&datosTareas.todas)||[];
+  var todas=(datosTareas&&datosTareas.todas)||[]; window.C329_TAREAS=todas;
   var horasExtraPorClave=(datosTareas&&datosTareas.horasExtraPorClave)||{};
   var componentesPorFormula=(datosTareas&&datosTareas.componentesPorFormula)||{};
   var destacada=elegirLaborDestacada(todas);
@@ -16237,8 +16245,10 @@ function pintarInicio(jornada,datosTareas,score,esCache){
   var btnVer=document.getElementById('op-labor-iniciar');
   if(btnVer) btnVer.addEventListener('click',function(){
     pararJornadaTimer();
-    // En Inicio solo abre el flujo de la tarea; el inicio efectivo ocurre dentro de Mis tareas.
-    iniciarEjecucion(this.dataset.oid);
+    var oid=this.dataset.oid;
+    var t=(window.C329_TAREAS||[]).find(function(x){return String(x.id)===String(oid);});
+    if(t){c329AbrirTarea(oid);return;}
+    iniciarEjecucion(oid);
   });
 
   pararJornadaTimer();
@@ -17631,6 +17641,17 @@ function c329EstadoTarea(t,hoy){
   if(t.fecha_asignacion===hoy)return {label:'HOY',css:'hoy'};
   return {label:'PROGRAMADA',css:'programada'};
 }
+function c335IniciarDesdeModal(id){
+  var t=(window.C329_TAREAS||[]).find(function(x){return String(x.id)===String(id);});
+  if(!t)return;
+  c329CerrarTarea();
+  if(t.estado==='pendiente'){
+    marcarOrdenEnProceso(t.id);
+    t.estado='en_proceso';
+  }
+  iniciarEjecucion(t.id);
+}
+
 function c329AbrirTarea(id){
   var t=(window.C329_TAREAS||[]).find(function(x){return String(x.id)===String(id);});
   if(!t)return;
@@ -17638,27 +17659,46 @@ function c329AbrirTarea(id){
   var tp=c329TipoTarea(t), est=c329EstadoTarea(t,fechaHoyLocal());
   var modal=document.getElementById('c329-task-modal');
   if(!modal){modal=document.createElement('div');modal.id='c329-task-modal';document.body.appendChild(modal);}
+
   var filas=[
     ['Ubicación',((p&&p.nombre)||'')+(t.tabla?(' · '+t.tabla.nombre):'')],
     ['Fecha',c239FormatDate(t.fecha_asignacion)],
     ['Estado',est.label]
   ];
-  var c334PuedeAvance=t.estado==='en_proceso'&&t.tabla&&Array.isArray(t.surcos_completados)&&t.surcos_completados.length;
-  if(c334PuedeAvance){
-    var c334Completados=t.surcos_completados.map(Number).filter(function(n){return Number.isFinite(n);}).sort(function(a,b){return a-b;});
-    var c334Hasta=c334Completados.length?c334Completados[c334Completados.length-1]:null;
-    var c334Asignados=[];
-    try{c334Asignados=(calcularSurcosOrden(t,[]).totalAsignados||[]).map(Number).filter(function(n){return Number.isFinite(n);}).sort(function(a,b){return a-b;});}catch(e){}
-    var c334Sig=c334Asignados.find(function(n){return n>c334Hasta&&c334Completados.indexOf(n)===-1;});
-    if(c334Hasta!==null)filas.push(['Avance','Hasta surco '+c334Hasta+(c334Asignados.length?' de '+c334Asignados[c334Asignados.length-1]:'')]);
-    if(c334Sig)filas.push(['Continuar desde','Surco '+c334Sig]);
+
+  if(t.estado==='en_proceso' && t.tabla){
+    var avance=calcularSurcosOrden(t,[]);
+    var hechos=(avance.union||[]).map(Number).filter(function(n){return Number.isFinite(n);}).sort(function(a,b){return a-b;});
+    var asignados=(avance.totalAsignados||[]).map(Number).filter(function(n){return Number.isFinite(n);}).sort(function(a,b){return a-b;});
+    if(asignados.length){
+      if(hechos.length){
+        var hasta=hechos[hechos.length-1];
+        var primero=hechos[0];
+        filas.push(['Avance registrado','Surcos '+primero+'–'+hasta]);
+        var sig=asignados.find(function(n){return hechos.indexOf(n)===-1 && n>hasta;});
+        if(!sig) sig=asignados.find(function(n){return hechos.indexOf(n)===-1;});
+        if(sig) filas.push(['Continuar desde','Surco '+sig]);
+      }else{
+        filas.push(['Avance registrado','Sin avance registrado']);
+        filas.push(['Continuar desde','Surco '+asignados[0]]);
+      }
+    }
   }
+
   if(t.notas_encargado)filas.push(['Indicaciones',t.notas_encargado]);
   if(t.formula&&t.formula.nombre)filas.push(['Fórmula',t.formula.nombre]);
-  var c334Continuar=t.estado==='en_proceso'?'<button class="c329-modal-close" style="background:var(--verde);color:#fff;border-color:var(--verde);" type="button" onclick="c329CerrarTarea();iniciarEjecucion(\''+String(t.id).replace(/'/g,"\\'")+'\')">▶ Continuar tarea</button>':'';
-  modal.innerHTML='<div class="c329-modal-card"><div class="c329-modal-head"><small>'+c225Esc((tp.icon?tp.icon+' ':'')+tp.label)+'</small><h3>'+c225Esc(c329TituloSimple(t))+'</h3></div><div class="c329-modal-body">'+filas.map(function(r){return '<div class="c329-modal-row"><strong>'+r[0]+':</strong> '+c225Esc(r[1]||'—')+'</div>';}).join('')+'</div>'+c334Continuar+'<button class="c329-modal-close" type="button" onclick="c329CerrarTarea()">Cerrar</button></div>';
+
+  var accion='';
+  if(t.estado==='pendiente'){
+    accion='<button class="c329-modal-close" style="background:var(--verde);color:#fff;border-color:var(--verde);" type="button" onclick="c335IniciarDesdeModal(\''+String(t.id).replace(/'/g,"\\'")+'\')">▶ Iniciar tarea</button>';
+  }else if(t.estado==='en_proceso'){
+    accion='<button class="c329-modal-close" style="background:var(--verde);color:#fff;border-color:var(--verde);" type="button" onclick="c335IniciarDesdeModal(\''+String(t.id).replace(/'/g,"\\'")+'\')">▶ Continuar tarea</button>';
+  }
+
+  modal.innerHTML='<div class="c329-modal-card"><div class="c329-modal-head"><small>'+c225Esc((tp.icon?tp.icon+' ':'')+tp.label)+'</small><h3>'+c225Esc(c329TituloSimple(t))+'</h3></div><div class="c329-modal-body">'+filas.map(function(r){return '<div class="c329-modal-row"><strong>'+r[0]+':</strong> '+c225Esc(r[1]||'—')+'</div>';}).join('')+'</div>'+accion+'<button class="c329-modal-close" type="button" onclick="c329CerrarTarea()">Cerrar</button></div>';
   modal.classList.add('open');
 }
+
 function c329CerrarTarea(){var m=document.getElementById('c329-task-modal');if(m)m.classList.remove('open');}
 
 function construirTarjetaTarea(t,hoy,horasExtraPorClave,componentesPorFormula,opts){
@@ -19266,7 +19306,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C333
+C335
 </div>
 
 <style id="fi128-css">
