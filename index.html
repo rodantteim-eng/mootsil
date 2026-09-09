@@ -17477,7 +17477,7 @@ function obtenerDatosTareasOperario(){
   return Promise.all([
     from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_cantidad_insumo,unidad_insumo,requiere_tiempo,requiere_formula),subtipo:subtipos_labor(nombre,requiere_tiempo),activo_rancho:activos_rancho(nombre,imagen_url),formula:formulas_aplicacion(nombre,via,categoria)').eq('operario_id',usuario.id).in('estado',['pendiente','en_proceso']).order('fecha_asignacion',{ascending:true}).get(),
     from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo),subtipo:subtipos_labor(nombre,requiere_tiempo),activo_rancho:activos_rancho(nombre,imagen_url)').eq('operario_id',usuario.id).eq('fecha_asignacion',hoy).order('creado_en',{ascending:false}).get(),
-    from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo),subtipo:subtipos_labor(nombre,requiere_tiempo),activo_rancho:activos_rancho(nombre,imagen_url)').eq('operario_id',usuario.id).eq('estado','completada').order('fecha_asignacion',{ascending:false}).limit(60).get(),
+    from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_tiempo,requiere_formula),subtipo:subtipos_labor(nombre,requiere_tiempo),activo_rancho:activos_rancho(nombre,imagen_url),formula:formulas_aplicacion(nombre,via,categoria)').eq('operario_id',usuario.id).eq('estado','completada').order('fecha_asignacion',{ascending:false}).limit(60).get(),
     from('horas_extra_asignadas').select('fecha,tipo_labor_id,horas_max,creado_en').eq('operario_id',usuario.id).eq('estado','aprobada').get()
   ]).then(function(res){
     var todas=res[0]||[], hoyOrdenes=res[1]||[], completadas=res[2]||[];
@@ -17701,6 +17701,7 @@ function c340EsRiegoHidratacion(t){
   return /riego/.test(tipo) && (/hidrat/.test(sub)||/hidrat/.test(nota)||(!sub&&ordenEsTiempo(t)));
 }
 function c340EsVisibleEnMisTareas(t){
+  if(t&&t.formula_id) return true; // Aplicaciones siempre conservan trazabilidad en Mis tareas, también al terminar.
   return !ordenEsTiempo(t) || c340EsRiegoHidratacion(t);
 }
 
@@ -20568,7 +20569,7 @@ function renderRiegoEjecucion(ordenId){
   function renderEtapa(o,st,k){
     stop();var body=document.getElementById('op-body'),c=ctx(o),ts=tiempos(o),mins=ts[k],e=st.etapas[k],cfg={previo:{titulo:'Riego previo con agua limpia',icon:'💧',texto:'Humedece el sustrato antes de iniciar la inyección de la mezcla.',sig:'inyeccion',boton:'Iniciar inyección'},inyeccion:{titulo:'Inyección de la mezcla',icon:'🧪',texto:'Inyecta la mezcla preparada durante el tiempo indicado por Ingeniería.',sig:'arrastre',boton:'Iniciar arrastre'},arrastre:{titulo:'Arrastre con agua limpia',icon:'🚿',texto:'Continúa únicamente con agua limpia para desplazar la mezcla por el sistema.',sig:'finalizar',boton:'Finalizar tabla'}}[k];
     if(!e.inicio)e.inicio=new Date().toISOString();save(o,st);
-    body.innerHTML='<div class="c344-wrap">'+top(o,c,k)+'<div class="c344-card c344-clock"><div style="font-size:2rem;margin-bottom:6px">'+cfg.icon+'</div><div class="c344-section">'+cfg.titulo+'</div><div class="c344-meta" style="margin-bottom:10px">'+cfg.texto+'</div><div class="c344-time" id="c345-time">--:--</div><div class="c344-status" id="c345-status">En proceso</div><div class="c344-progress"><span id="c345-bar" style="width:0%"></span></div>'+(mins?'<div class="c344-meta" style="margin-top:8px">Tiempo indicado: <strong>'+mins+' minutos</strong></div>':'<div class="c344-warning">Este tiempo aún no está configurado por separado en el Tablero. Controla físicamente esta etapa y confírmala cuando termine.</div>')+'</div><div class="c344-actions"><button class="c344-btn" id="c345-pause">'+(e.pausadoEn?'▶ Reanudar':'⏸ Pausar')+'</button><button class="c344-btn primary" id="c345-next">✓ '+cfg.boton+'</button><button class="c344-btn danger" onclick="c345ReportarAplicIncidencia(\''+o.id+'\')">🚨 Reportar incidencia</button><button class="c344-btn" onclick="c345StopAplicTimer();cargarTareas(\'proceso\')">← Mis tareas</button></div></div>';
+    body.innerHTML='<div class="c344-wrap">'+top(o,c,k)+'<div class="c344-card c344-clock"><div style="font-size:2rem;margin-bottom:6px">'+cfg.icon+'</div><div class="c344-section">'+cfg.titulo+'</div><div class="c344-meta" style="margin-bottom:10px">'+cfg.texto+'</div><div class="c344-time" id="c345-time">--:--</div><div class="c344-status" id="c345-status">En proceso</div><div class="c344-progress"><span id="c345-bar" style="width:0%"></span></div>'+(mins?'<div class="c344-meta" style="margin-top:8px">Tiempo indicado: <strong>'+mins+' minutos</strong></div>':(k==='previo'?'<div class="c344-info">Realiza el riego previo de la tabla. Cuando esté listo para iniciar la aplicación, confirma para continuar.</div>':'<div class="c344-info">Continúa con agua limpia hasta completar el arrastre. Cuando termine, confirma para continuar.</div>'))+'</div><div class="c344-actions"><button class="c344-btn" id="c345-pause">'+(e.pausadoEn?'▶ Reanudar':'⏸ Pausar')+'</button><button class="c344-btn primary" id="c345-next">✓ '+cfg.boton+'</button><button class="c344-btn danger" onclick="c345ReportarAplicIncidencia(\''+o.id+'\')">🚨 Reportar incidencia</button><button class="c344-btn" onclick="c345StopAplicTimer();cargarTareas(\'proceso\')">← Mis tareas</button></div></div>';
     function elapsed(){var ini=new Date(e.inicio).getTime(),end=e.pausadoEn?new Date(e.pausadoEn).getTime():Date.now();return Math.max(0,end-ini-(Number(e.pausasMs)||0));}
     function tick(){var el=elapsed(),total=mins*60000,rem=mins?Math.max(0,total-el):el,mm=Math.floor(rem/60000),ss=Math.floor((rem%60000)/1000),te=document.getElementById('c345-time');if(!te){stop();return;}te.textContent=(mins?'':'+')+String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0');var pct=mins?Math.max(0,Math.min(100,el/total*100)):0;document.getElementById('c345-bar').style.width=pct+'%';var stx=document.getElementById('c345-status');if(e.pausadoEn)stx.textContent='Tiempo en pausa';else if(mins&&el>=total){te.classList.add('over');stx.textContent='Tiempo cumplido';}else stx.textContent='En proceso';}
     document.getElementById('c345-pause').onclick=function(){if(e.pausadoEn){var pi=new Date(e.pausadoEn).getTime();e.pausasMs=(Number(e.pausasMs)||0)+Math.max(0,Date.now()-pi);e.pausadoEn=null;}else e.pausadoEn=new Date().toISOString();save(o,st);renderEtapa(o,st,k);};
@@ -20576,9 +20577,43 @@ function renderRiegoEjecucion(ordenId){
   }
   function durEt(e){if(!e||!e.inicio)return 0;var fin=e.fin?new Date(e.fin).getTime():(e.pausadoEn?new Date(e.pausadoEn).getTime():Date.now());return Math.max(0,fin-new Date(e.inicio).getTime()-(Number(e.pausasMs)||0));}
   function fmt(ms){var s=Math.round(ms/1000),m=Math.floor(s/60),r=s%60;return String(m).padStart(2,'0')+':'+String(r).padStart(2,'0');}
+  function c346CerrarAplicacionRiego(o,st){
+    var btn=document.getElementById('c345-finish');
+    if(btn){btn.disabled=true;btn.textContent='Guardando...';}
+    var total=(calcularSurcosOrden(o,[]).totalAsignados||[]).map(Number);
+    var ahora=new Date().toISOString();
+    var usados=Number(o.tambos_planeados)||Number(o.tambos_usados)||1;
+    var upd={estado:'completada',surcos_completados:total,herramienta_limpia:true,completado_en:ahora};
+    if(o.tipo_labor&&o.tipo_labor.requiere_formula) upd.tambos_usados=usados;
+    var reg={usuario_id:usuario.id,tabla_id:o.tabla_id,tipo_labor_id:o.tipo_labor_id,subtipo_labor_id:o.subtipo_labor_id||null,surcos_trabajados:total,cantidad_insumo:o.volumen_aplicado_litros||null,foto_url:null,capturado_en:ahora,orden_id:o.id,epp_confirmado:Object.assign({},st.epp||{},{confirmado_en:ahora,flujo:'via_riego',riego_previo_ms:durEt(st.etapas.previo),inyeccion_ms:durEt(st.etapas.inyeccion),arrastre_ms:durEt(st.etapas.arrastre)})};
+    function aplicarLocal(){
+      o.estado='completada';o.surcos_completados=total;o.completado_en=ahora;o.tambos_usados=usados;
+      try{var a=window.C329_TAREAS||[];a.forEach(function(x){if(String(x.id)===String(o.id)){x.estado='completada';x.surcos_completados=total;x.completado_en=ahora;}});}catch(e){}
+      clear(o);ordenEjecutando=null;
+    }
+    function terminarUI(){aplicarLocal();showToast('✅ Aplicación terminada y guardada');cargarTareas('terminadas');}
+    if(!navigator.onLine){
+      colaOffline.push(reg);localStorage.setItem('mootsil_cola',JSON.stringify(colaOffline));
+      riegoEncolar(o.id,upd);terminarUI();return;
+    }
+    // C346: primero cerramos la ORDEN real. No limpiamos el flujo local hasta confirmar que Supabase la devuelve como completada.
+    from('ordenes_trabajo').eq('id',o.id).update(upd).then(function(){
+      return from('ordenes_trabajo').select('id,estado,formula_id,completado_en').eq('id',o.id).get();
+    }).then(function(rows){
+      var guardada=(rows||[])[0];
+      if(!guardada||guardada.estado!=='completada'||String(guardada.formula_id||'')!==String(o.formula_id||'')) throw new Error('No se confirmó el cierre de la aplicación.');
+      // El registro operativo y el aviso son trazabilidad adicional; no pueden deshacer el cierre ya confirmado.
+      return from('registros_labor').insert(reg).catch(function(e){console.warn('C346 registro_labor',e);});
+    }).then(function(){
+      return from('notificaciones').insert({titulo:'✅ Aplicación vía riego terminada',cuerpo:usuario.nombre+' terminó '+((o.formula&&o.formula.nombre)||'la aplicación')+' en '+((o.tabla&&o.tabla.nombre)||'la tabla')+'.',icono:'✅',leida:false,para_rol:'encargado'}).catch(function(){});
+    }).then(terminarUI).catch(function(e){
+      if(btn){btn.disabled=false;btn.textContent='✓ Finalizar tabla';}
+      alert('No se pudo cerrar la aplicación. La tarea permanece abierta para no perderla.\n\n'+(e&&e.message?e.message:e));
+    });
+  }
   function renderFinal(o,st){stop();var body=document.getElementById('op-body'),c=ctx(o),ts=tiempos(o);body.innerHTML='<div class="c344-wrap">'+top(o,c,'finalizar')+'<div class="c344-card"><div class="c344-section">Resumen de esta tabla</div><div class="c344-summary"><div><small>Ubicación</small><strong>'+esc(c.plant+' · '+c.tabla)+'</strong></div><div><small>Volumen</small><strong>'+c.vol+' L</strong></div><div><small>Riego previo</small><strong>'+fmt(durEt(st.etapas.previo))+'</strong></div><div><small>Inyección</small><strong>'+fmt(durEt(st.etapas.inyeccion))+'</strong></div><div><small>Arrastre</small><strong>'+fmt(durEt(st.etapas.arrastre))+'</strong></div><div><small>Tiempo de inyección programado</small><strong>'+(ts.inyeccion?ts.inyeccion+' min':'Sin tiempo')+'</strong></div></div><div class="c344-info" style="margin-top:10px">Al finalizar, Mootsil cerrará esta tabla y actualizará la misma aplicación del Tablero.</div></div><div class="c344-actions"><button class="c344-btn" id="c345-back-arr">← Volver al arrastre</button><button class="c344-btn primary" id="c345-finish">✓ Finalizar tabla</button><button class="c344-btn danger" onclick="c345ReportarAplicIncidencia(\''+o.id+'\')">🚨 Reportar incidencia</button></div></div>';
     document.getElementById('c345-back-arr').onclick=function(){st.fase='arrastre';save(o,st);renderEtapa(o,st,'arrastre');};
-    document.getElementById('c345-finish').onclick=function(){var total=calcularSurcosOrden(o,[]).totalAsignados||[];capturaEjec.surcos=total.map(Number);capturaEjec.epp=Object.assign({},st.epp||{});capturaEjec.insumosConfirmados=(st.productos||[]).slice();capturaEjec.tambosEsteAvance=0;capturaEjec.requiereLimpieza=false;capturaEjec.herramientaLimpia=true;clear(o);guardarEjec();};
+    document.getElementById('c345-finish').onclick=function(){if(!confirm('¿Confirmas que esta aplicación vía riego quedó terminada en esta tabla?'))return;c346CerrarAplicacionRiego(o,st);};
   }
   window.c345ReportarAplicIncidencia=function(id){
     stop();var o=ordenEjecutando;if(!o||String(o.id)!==String(id))return;var body=document.getElementById('op-body'),c=ctx(o),total=Math.max(0,Number(o.tabla&&o.tabla.cantidad_surcos)||0),st=load(o);var tipos={fuga:['Fuga leve','Fuga fuerte','Conexión / unión','Manguera / línea'],cintilla:['Trozada','Con fuga','Obstruida','Conexión dañada'],filtro:['Requiere limpieza','Requiere reemplazo','Dañado','Con fuga'],otro:['Falta de presión','Llave / válvula','Manguera principal','Otra incidencia']};
