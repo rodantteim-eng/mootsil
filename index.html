@@ -6894,7 +6894,8 @@ function c310DetalleAplicacion(id){
             var insuficiente=!noHay&&stock+0.000001<cant;
             var flag=noHay?'<span class="c325-stock-flag none">⚠ Sin existencia</span>':(insuficiente?'<span class="c325-stock-flag low">⚠ Insuficiente</span>':'');
             var rowClass=noHay?' c325-stock-missing':(insuficiente?' c325-stock-low':'');
-            return '<div class="c314-comp'+rowClass+'"><div class="c314-comp-name"><span class="c314-comp-icon">'+(noHay?'⚠️':compIcon(nombre))+'</span><span>'+nombre+flag+'</span></div><div class="c314-comp-qty">'+c310FmtNum(cant,3)+' '+unidad+'</div></div>';
+            var cantCampo=(window.c350UnidadCampo?window.c350UnidadCampo(cant,unidad):(c310FmtNum(cant,3)+' '+unidad));
+            return '<div class="c314-comp'+rowClass+'"><div class="c314-comp-name"><span class="c314-comp-icon">'+(noHay?'⚠️':compIcon(nombre))+'</span><span>'+nombre+flag+'</span></div><div class="c314-comp-qty">'+cantCampo+'</div></div>';
           }).join(''):'<div class="c314-comp"><div class="c314-comp-name">Sin componentes registrados.</div><div></div></div>')+
         '</div>'+
       '</div>'+
@@ -9099,12 +9100,18 @@ function guardarAplicacion(){
   var lbAplic=cats.tiposLabor.find(function(l){return l.requiere_formula;});
   var tambosPlan=aplic.tambosPlaneados||1;
   var payloadBase={asignado_por:usuario.id,tabla_id:aplic.tablaId,tipo_labor_id:lbAplic.id,formula_id:aplic.formula.id,bomba_usada:aplic.bomba,volumen_aplicado_litros:aplic.volumen*tambosPlan,factor_escala:aplic.factor,tambos_planeados:tambosPlan,tambos_usados:0,fecha_asignacion:aplic.fecha,notas_encargado:notas,estado:'pendiente',validado_ingeniero:false,duracion:'dia',es_hora_extra:aplic.esExtra};
-  var ordenesPromesa=Promise.all(aplic.operarios.map(function(oid){
-    return from('ordenes_trabajo').insert(Object.assign({},payloadBase,{operario_id:oid}));
-  }));
+  // C351 — una misma fórmula/tabla/fecha no puede generar dos tareas activas para el mismo colaborador.
+  var operariosUnicos=Array.from(new Set((aplic.operarios||[]).map(String)));
+  var ordenesPromesa=from('ordenes_trabajo').select('id,operario_id,estado').eq('formula_id',aplic.formula.id).eq('tabla_id',aplic.tablaId).eq('fecha_asignacion',aplic.fecha).in('estado',['pendiente','en_proceso']).get().then(function(existentes){
+    existentes=existentes||[];
+    var ya=new Set(existentes.map(function(o){return String(o.operario_id);}));
+    var faltantes=operariosUnicos.filter(function(oid){return !ya.has(String(oid));});
+    if(!faltantes.length)return [];
+    return Promise.all(faltantes.map(function(oid){return from('ordenes_trabajo').insert(Object.assign({},payloadBase,{operario_id:oid}));}));
+  });
   ordenesPromesa.then(function(resultados){
     var primeraOrdenId=resultados&&resultados[0]&&resultados[0][0]&&resultados[0][0].id;
-    var autorizarExtra = aplic.esExtra ? Promise.all(aplic.operarios.map(function(oid){
+    var autorizarExtra = aplic.esExtra ? Promise.all(operariosUnicos.map(function(oid){
       return from('horas_extra_asignadas').insert({operario_id:oid,asignado_por:usuario.id,fecha:aplic.fecha,motivo:notas,tipo_labor_id:lbAplic.id,estado:'aprobada',horas_max:aplic.horasExtra});
     })) : Promise.resolve();
     var unidadMovTxt=(aplic.modoCantidad==='bombas'&&aplic.bomba!=='inyeccion')?'bombas':'tambos';
@@ -9120,7 +9127,7 @@ function guardarAplicacion(){
     return from('inventario_items').select('*').eq('activo',true).order('nombre').get();
   }).then(function(rows){
     cats.inventario=rows||[];
-    return Promise.all(aplic.operarios.map(function(oid){
+    return Promise.all(operariosUnicos.map(function(oid){
       return from('notificaciones').insert({titulo:aplic.esExtra?'⏰ Aplicación (hora extra) asignada':'🧪 Aplicación asignada',cuerpo:usuario.nombre+' asignó a '+(cats.operarios.find(function(o){return o.id===oid;})||{}).nombre+': '+aplic.formula.nombre+(aplic.esExtra?' (hora extra)':''),icono:aplic.esExtra?'⏰':'🧪',leida:false,para_rol:'operario',para_usuario:oid});
     }));
   }).then(function(){
