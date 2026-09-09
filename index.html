@@ -16091,7 +16091,8 @@ function c241Icon(name){
     drop:'<path d="M24 6S11 22 11 31a13 13 0 0 0 26 0C37 22 24 6 24 6z"/>',
     berry:'<circle cx="18" cy="24" r="5"/><circle cx="26" cy="21" r="5"/><circle cx="30" cy="29" r="5"/><circle cx="21" cy="31" r="5"/><path d="M24 15c1-5 5-7 10-7-1 5-4 8-10 8"/>',
     clock:'<circle cx="24" cy="24" r="17"/><path d="M24 14v11l7 4"/>',
-    user:'<circle cx="24" cy="16" r="7"/><path d="M10 41c2-9 8-14 14-14s12 5 14 14"/>'
+    user:'<circle cx="24" cy="16" r="7"/><path d="M10 41c2-9 8-14 14-14s12 5 14 14"/>',
+    request:'<rect x="10" y="8" width="28" height="34" rx="4"/><path d="M17 17h14M17 24h10M17 31h7"/><path d="M29 34l7-7 3 3-7 7-4 1z"/>'
   };
   return '<svg '+a+'>'+(p[name]||p.leaf)+'</svg>';
 }
@@ -16273,6 +16274,7 @@ function pintarInicio(jornada,datosTareas,score,esCache){
       '<button id="op-acceso-historial"><span class="qic">'+c241Icon('chart')+'</span><span>Historial</span></button>'+
       '<button id="op-acceso-pagos"><span class="qic">'+c241Icon('wallet')+'</span><span>Pagos</span></button>'+
       '<button id="op-acceso-avisos"><span class="qic">'+c241Icon('megaphone')+'</span><span>Avisos</span></button>'+
+      '<button id="op-acceso-solicitudes" class="c361-quick-request"><span class="qic">'+c241Icon('request')+'</span><span>Solicitudes</span></button>'+
     '</div>';
 
   var proximasHtml='<div class="c239-section-title"><span>Próximas tareas</span><button class="c239-see-all" id="op-proximas-todas">Ver todas</button></div>'+
@@ -16295,6 +16297,7 @@ function pintarInicio(jornada,datosTareas,score,esCache){
   var btnPagos=document.getElementById('op-acceso-pagos'); if(btnPagos) btnPagos.addEventListener('click',function(){tabOperario('pagos');});
   var btnHist=document.getElementById('op-acceso-historial'); if(btnHist) btnHist.addEventListener('click',function(){pararJornadaTimer();cargarTareas('terminadas');});
   var btnAvis=document.getElementById('op-acceso-avisos'); if(btnAvis) btnAvis.addEventListener('click',function(){pararJornadaTimer();tabOperario('notif');});
+  var btnSolicitudes=document.getElementById('op-acceso-solicitudes'); if(btnSolicitudes) btnSolicitudes.addEventListener('click',function(){pararJornadaTimer();window._origenPermisoAsistencia=false;renderSolicitudesMenu();});
   var btnTodas=document.getElementById('op-proximas-todas'); if(btnTodas) btnTodas.addEventListener('click',function(){tabOperario('tareas');});
   var btnVer=document.getElementById('op-labor-iniciar');
   if(btnVer) btnVer.addEventListener('click',function(){
@@ -17103,21 +17106,19 @@ function marcarAsistencia(tipo,modalidad){
 }
 
 function renderSolicitudesMenu(){
+  window._origenPermisoAsistencia=false;
   var body=document.getElementById('op-body');
-  body.innerHTML='<div class="seccion-titulo">📨 Solicitudes</div><div style="display:flex;flex-direction:column;gap:.75rem;"><div class="tarea-card" style="cursor:pointer;" onclick="renderAsisPermisos()"><div class="tarea-title">📝 Permisos</div><div class="tarea-meta">Solicita un permiso personal o médico</div></div><div class="tarea-card" style="cursor:pointer;" onclick="renderSolicitarPrestamo()"><div class="tarea-title">💰 Solicitar préstamo</div><div class="tarea-meta">Pide un adelanto o préstamo a administración</div></div><div class="tarea-card" style="cursor:pointer;" onclick="renderSolicitudOtro()"><div class="tarea-title">💬 Otro asunto</div><div class="tarea-meta">Cualquier tema directo con administración</div></div><div class="tarea-card" style="cursor:pointer;" onclick="renderMisSolicitudes()"><div class="tarea-title">📋 Mis solicitudes</div><div class="tarea-meta">Revisa el estatus de lo que has pedido</div></div></div>';
-}
-
-function limitesMesActual(){
-  var hoy=fechaHoyLocal();
-  var inicio=hoy.slice(0,7)+'-01';
-  var finD=new Date(inicio+'T00:00:00'); finD.setMonth(finD.getMonth()+1); finD.setDate(0);
-  var fin=finD.toISOString().slice(0,10);
-  return {inicio:inicio,fin:fin};
-}
-
-function contarPrestamosDelMes(operarioId){
-  var m=limitesMesActual();
-  return from('solicitudes_operario').select('id').eq('operario_id',operarioId).eq('tipo','prestamo').gte('creado_en',m.inicio+'T00:00:00').lte('creado_en',m.fin+'T23:59:59.999').get().then(function(rows){return (rows||[]).length;});
+  try{body.scrollTop=0;window.scrollTo(0,0);}catch(_e){}
+  body.innerHTML='<div class="c361-requests">'+
+    '<div class="c361-requests-head"><div class="c361-requests-icon">'+c241Icon('request')+'</div><div><h2>Solicitudes</h2><p>¿Qué necesitas solicitar?</p></div></div>'+ 
+    '<div class="c361-requests-grid">'+
+      '<button class="c361-request-card personal" onclick="renderAsisPermisos()"><span class="c361-request-ic">👤</span><span class="c361-request-copy"><b>Permisos</b><small>Permiso personal, médico o salida anticipada</small></span><span class="c361-chevron">›</span></button>'+ 
+      '<button class="c361-request-card loan" onclick="renderSolicitarPrestamo()"><span class="c361-request-ic">💰</span><span class="c361-request-copy"><b>Solicitar préstamo</b><small>Solicitud directa a Administración</small></span><span class="c361-chevron">›</span></button>'+ 
+      '<button class="c361-request-card other" onclick="renderSolicitudOtro()"><span class="c361-request-ic">💬</span><span class="c361-request-copy"><b>Otro asunto</b><small>Envía un tema directo a Administración</small></span><span class="c361-chevron">›</span></button>'+ 
+      '<button class="c361-request-card history" onclick="renderMisSolicitudes()"><span class="c361-request-ic">📋</span><span class="c361-request-copy"><b>Mis solicitudes</b><small>Consulta el estado y seguimiento</small></span><span class="c361-chevron">›</span></button>'+ 
+    '</div>'+ 
+    '<button class="c361-home-back" onclick="irInicioOperario()">← Volver a Inicio</button>'+ 
+  '</div>';
 }
 
 function renderSolicitarPrestamo(){
@@ -17136,10 +17137,10 @@ function renderSolicitarPrestamo(){
       ? '<div style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);border-radius:var(--radio-sm);padding:.75rem .9rem;margin-bottom:1rem;"><strong style="color:var(--rojo);">🚫 Ya tienes '+usados+' solicitud(es) de préstamo este mes</strong><div class="hint" style="margin-top:.25rem;">El máximo permitido es 1 solicitud por mes. Podrás solicitar otro a partir del próximo mes.</div></div>'
       : '<div style="background:var(--verde-tenue);border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);padding:.75rem .9rem;margin-bottom:1rem;"><strong style="color:var(--verde-mid);">Llevas '+usados+'/'+maxMes+' solicitud(es) enviada(s) este mes</strong></div>';
     if(alTope){
-      body.innerHTML='<div class="seccion-titulo">💰 Solicitar préstamo</div>'+estadoTxt+'<button class="btn-back" style="margin-top:1rem;" onclick="(window._origenPermisoAsistencia?renderAsistenciaMenu():renderSolicitudesMenu())">← Volver a Asistencia</button>';
+      body.innerHTML='<div class="seccion-titulo">💰 Solicitar préstamo</div>'+estadoTxt+'<button class="btn-back" style="margin-top:1rem;" onclick="renderSolicitudesMenu()">← Volver a Solicitudes</button>';
       return;
     }
-    body.innerHTML='<div class="seccion-titulo">💰 Solicitar préstamo</div>'+estadoTxt+'<div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Tu solicitud llega directo a administración para revisión — no es automático, te avisarán cuando la resuelvan.'+(montoMax!=null?' Monto máximo autorizado: '+c359Money(montoMax)+'.':'')+'</p><div class="form-group"><label>¿Cuánto necesitas?</label><input type="number" id="sp-monto" min="0" step="any" placeholder="$0.00"></div><div class="form-group"><label>¿Para qué lo necesitas?</label><textarea id="sp-motivo" rows="4" placeholder="Cuéntanos brevemente el motivo..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="sp-enviar">Enviar solicitud</button></div><button class="btn-back" style="margin-top:1rem;" onclick="(window._origenPermisoAsistencia?renderAsistenciaMenu():renderSolicitudesMenu())">← Volver a Asistencia</button>';
+    body.innerHTML='<div class="seccion-titulo">💰 Solicitar préstamo</div>'+estadoTxt+'<div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Tu solicitud llega directo a administración para revisión — no es automático, te avisarán cuando la resuelvan.'+(montoMax!=null?' Monto máximo autorizado: '+c359Money(montoMax)+'.':'')+'</p><div class="form-group"><label>¿Cuánto necesitas?</label><input type="number" id="sp-monto" min="0" step="any" placeholder="$0.00"></div><div class="form-group"><label>¿Para qué lo necesitas?</label><textarea id="sp-motivo" rows="4" placeholder="Cuéntanos brevemente el motivo..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="sp-enviar">Enviar solicitud</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderSolicitudesMenu()">← Volver a Solicitudes</button>';
     document.getElementById('sp-enviar').addEventListener('click',function(){
       var monto=parseFloat(document.getElementById('sp-monto').value)||0;
       var motivo=(document.getElementById('sp-motivo').value||'').trim();
@@ -17160,7 +17161,7 @@ function renderSolicitarPrestamo(){
 function renderSolicitudOtro(contexto){
   var esSugerencia=contexto==='sugerencia';
   var body=document.getElementById('op-body');
-  body.innerHTML='<div class="seccion-titulo">'+(esSugerencia?'💡 Sugerencia':'💬 Otro asunto')+'</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">'+(esSugerencia?'Comparte una idea o sugerencia — administración la va a revisar.':'Para cualquier tema que no sea permiso ni préstamo — administración lo va a revisar directamente.')+'</p><div class="form-group"><label>Cuéntanos qué necesitas</label><textarea id="so-mensaje" rows="5" placeholder="Escribe tu mensaje aquí..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="so-enviar">Enviar '+(esSugerencia?'sugerencia':'solicitud')+'</button></div><button class="btn-back" style="margin-top:1rem;" onclick="'+(esSugerencia?'renderCentroReportes()':'renderSolicitudesMenu()')+'">← Volver</button>';
+  body.innerHTML='<div class="seccion-titulo">'+(esSugerencia?'💡 Sugerencia':'💬 Otro asunto')+'</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">'+(esSugerencia?'Comparte una idea o sugerencia — administración la va a revisar.':'Para cualquier tema que no sea permiso ni préstamo — administración lo va a revisar directamente.')+'</p><div class="form-group"><label>Cuéntanos qué necesitas</label><textarea id="so-mensaje" rows="5" placeholder="Escribe tu mensaje aquí..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="so-enviar">Enviar '+(esSugerencia?'sugerencia':'solicitud')+'</button></div><button class="btn-back" style="margin-top:1rem;" onclick="'+(esSugerencia?'renderCentroReportes()':'renderSolicitudesMenu()')+'">← '+(esSugerencia?'Volver':'Volver a Solicitudes')+'</button>';
   document.getElementById('so-enviar').addEventListener('click',function(){
     var mensaje=(document.getElementById('so-mensaje').value||'').trim();
     if(!mensaje){alert('Escribe tu mensaje.');return;}
@@ -17185,14 +17186,14 @@ function renderMisSolicitudes(){
         generales=(r[0]||[]).map(function(s){return {tipo:s.tipo,estado:s.estado,texto:(s.tipo==='prestamo'?'💰 Préstamo · '+c359Money(s.monto_solicitado||0):(solicitudTipoIc[s.tipo]||'💬 ')+s.mensaje.slice(0,60)),respuesta:s.respuesta,fecha:s.creado_en};}),
         permisos=(r[1]||[]).map(function(p){return {tipo:'permiso',estado:p.estado,texto:(p.tipo==='medico'?'🩺 Permiso médico':'👤 Permiso personal')+' · '+p.fecha_inicio,respuesta:null,fecha:p.creado_en};});
     var todas=generales.concat(permisos).sort(function(a,b){return new Date(b.fecha)-new Date(a.fecha);});
-    if(!todas.length){body.innerHTML='<div class="seccion-titulo">📋 Mis solicitudes</div><div class="empty">Aún no has enviado ninguna solicitud.</div><button class="btn-back" style="margin-top:1rem;" onclick="(window._origenPermisoAsistencia?renderAsistenciaMenu():renderSolicitudesMenu())">← Volver a Asistencia</button>';return;}
+    if(!todas.length){body.innerHTML='<div class="seccion-titulo">📋 Mis solicitudes</div><div class="empty">Aún no has enviado ninguna solicitud.</div><button class="btn-back" style="margin-top:1rem;" onclick="renderSolicitudesMenu()">← Volver a Solicitudes</button>';return;}
     var badges={pendiente:['⏳ Pendiente','var(--tierra)'],atendida:['✅ Atendida','var(--verde-mid)'],aprobado:['✅ Aprobada','var(--verde-mid)'],rechazado:['❌ Rechazada','var(--rojo)'],rechazada:['❌ Rechazada','var(--rojo)']};
     var html='<div class="seccion-titulo">📋 Mis solicitudes</div>'+todas.map(function(s){
       var b=badges[s.estado]||['⏳ '+s.estado,'var(--gris-3)'];
       var f=new Date(s.fecha).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
       return '<div class="orden-card"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.87rem;">'+s.texto+'</strong><span style="font-size:.72rem;font-weight:700;color:'+b[1]+';">'+b[0]+'</span></div><div class="orden-meta">'+f+(s.respuesta?'<br/>📩 '+s.respuesta:'')+'</div></div>';
     }).join('');
-    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="(window._origenPermisoAsistencia?renderAsistenciaMenu():renderSolicitudesMenu())">← Volver a Asistencia</button>';
+    body.innerHTML=html+'<button class="btn-back" style="margin-top:1rem;" onclick="renderSolicitudesMenu()">← Volver a Solicitudes</button>';
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
@@ -20767,6 +20768,25 @@ function renderRiegoEjecucion(ordenId){
 
 <style id="c349-foliar-flow-css">
 .c349-wrap{max-width:620px;margin:0 auto;padding-bottom:22px}.c349-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px}.c349-eyebrow{font-size:.7rem;font-weight:900;letter-spacing:.08em;color:#258442;text-transform:uppercase}.c349-title{font-size:1.18rem;font-weight:900;color:#173d2c;margin-top:3px}.c349-sub{font-size:.82rem;color:#66766e;margin-top:4px}.c349-chip{font-size:.67rem;font-weight:900;padding:6px 8px;border-radius:999px;background:#e9f7e9;color:#258442;white-space:nowrap}.c349-progress{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin:10px 0 14px}.c349-step{padding:7px 4px;border-radius:8px;background:#edf1ee;color:#7c8982;font-size:.65rem;font-weight:850;text-align:center}.c349-step.on{background:#dff1e4;color:#176a3b;box-shadow:inset 0 0 0 1px #79b98c}.c349-step.done{background:#e3f3e7;color:#24723c}.c349-card{background:#fff;border:1px solid #e1e8e3;border-radius:14px;padding:14px;margin-bottom:11px;box-shadow:0 2px 8px rgba(32,61,45,.05)}.c349-label{font-size:.72rem;font-weight:900;color:#397050;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}.c349-check{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #edf1ee}.c349-check:last-child{border-bottom:0}.c349-check input{width:23px;height:23px;flex:0 0 auto}.c349-product{display:flex;align-items:center;gap:10px}.c349-product strong{display:block;font-size:.88rem;color:#243b2f}.c349-product small{display:block;color:#748078;margin-top:2px}.c349-timer{text-align:center;padding:18px 8px}.c349-timer small{display:block;font-size:.73rem;color:#748078;font-weight:800;text-transform:uppercase}.c349-timer strong{display:block;font-size:3rem;line-height:1.05;color:#1e5d38;letter-spacing:.02em;margin:7px 0}.c349-start{display:inline-block;padding:6px 10px;border-radius:999px;background:#f2f5f3;color:#57675e;font-size:.72rem;font-weight:800}.c349-actions{display:grid;gap:9px}.c349-btn{border:0;border-radius:12px;padding:13px 14px;font-weight:900;font-size:.9rem;cursor:pointer}.c349-btn.primary{background:#277b45;color:#fff}.c349-btn.warn{background:#fff;color:#176a3b;border:1.5px solid #277b45}.c349-btn.danger{background:#fff0ee;color:#a43c31;border:1px solid #efc7c1}.c349-btn:disabled{opacity:.45;cursor:not-allowed}.c349-info{background:#f4f8f5;border-radius:10px;padding:10px 11px;font-size:.78rem;color:#5e6e65;line-height:1.45}.c349-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.c349-surco{padding:10px 2px;border-radius:9px;border:1px solid #d8e1da;background:#fff;font-weight:850;color:#42564a}.c349-surco.done{background:#e7f4ea;color:#287340;opacity:.58}.c349-surco.sel{background:#dff1e4;border-color:#277b45;color:#176a3b;box-shadow:inset 0 0 0 1px #277b45}.c349-summary{display:grid;grid-template-columns:1fr 1fr;gap:8px}.c349-summary div{background:#f6f8f6;border-radius:9px;padding:9px}.c349-summary small{display:block;color:#758079;font-size:.68rem}.c349-summary strong{display:block;margin-top:2px;color:#294333;font-size:.82rem}.c349-num{width:100%;box-sizing:border-box;padding:11px;border:1px solid #ced9d1;border-radius:9px;font-size:1rem}.c350-clean{margin-top:12px!important;padding:13px 12px!important;border:2px solid #4b9863!important;border-radius:11px;background:#edf8f0}.c350-clean input{width:29px!important;height:29px!important;accent-color:#277b45}.c350-clean span{font-weight:900;color:#194b2d;font-size:.9rem}
+
+/* C361 — Centro de Solicitudes integrado a la App Colaborador */
+.c239-quick .c361-quick-request{grid-column:1/-1;min-height:70px!important;flex-direction:row!important;justify-content:center!important;gap:10px!important;background:#fff!important;border:1px solid #dce8df!important}
+.c239-quick .c361-quick-request .qic{background:#edf4ef!important;color:#174f35!important}
+.c361-requests{padding:12px 12px 92px;max-width:720px;margin:0 auto;background:#f8faf8;min-height:100%}
+.c361-requests-head{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #e0e9e2;border-radius:18px;padding:16px 15px;margin:2px 0 13px;box-shadow:0 2px 8px rgba(17,70,43,.06)}
+.c361-requests-icon{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:#edf4ef;color:#174f35;flex:0 0 48px}
+.c361-requests-icon svg{width:27px;height:27px}
+.c361-requests-head h2{margin:0;color:#123e2a;font-size:1.32rem;line-height:1.1;font-weight:850}
+.c361-requests-head p{margin:5px 0 0;color:#6f7c74;font-size:.83rem}
+.c361-requests-grid{display:flex;flex-direction:column;gap:10px}
+.c361-request-card{width:100%;display:flex;align-items:center;gap:12px;text-align:left;background:#fff;border:1px solid #e0e9e2;border-radius:16px;padding:13px 14px;min-height:78px;box-shadow:0 2px 8px rgba(17,70,43,.05);cursor:pointer;color:#20372b}
+.c361-request-card:active{transform:scale(.992)}
+.c361-request-ic{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;font-size:1.45rem;flex:0 0 46px;background:#edf4ef}
+.c361-request-card.loan .c361-request-ic{background:#fff6dc}.c361-request-card.other .c361-request-ic{background:#eef2fb}.c361-request-card.history .c361-request-ic{background:#f1ecf8}
+.c361-request-copy{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}.c361-request-copy b{font-size:.98rem;color:#183d2a}.c361-request-copy small{font-size:.76rem;color:#768178;line-height:1.28}
+.c361-chevron{font-size:1.7rem;color:#7f9588;font-weight:400;padding-left:4px}
+.c361-home-back{width:100%;margin-top:14px;border:1px solid #d8e4dc;background:#fff;color:#24583c;border-radius:14px;padding:12px;font-size:.86rem;font-weight:750;cursor:pointer}
+@media(max-width:420px){.c361-requests{padding:9px 10px 88px}.c361-requests-head{padding:14px 13px}.c361-request-card{min-height:74px;padding:12px}.c361-request-copy b{font-size:.94rem}}
 </style>
 <script id="c349-foliar-flow">
 (function(){
