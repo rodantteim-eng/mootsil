@@ -1638,7 +1638,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C339';
+  window.MOOTSIL_BUILD='C340';
 </script>
 
 
@@ -17633,7 +17633,7 @@ function c329TipoTarea(t){
     return {icon:'🍃',label:'APLICACIÓN FOLIAR',css:'foliar'};
   }
 
-  if(/hidratacion|riego/.test(tipo))
+  if(c340EsRiegoHidratacion(t)||/hidratacion|riego/.test(tipo))
     return {icon:'💧',label:'RIEGO',css:'riego'};
 
   return {icon:'✂️',label:'LABOR',css:'labor'};
@@ -17775,6 +17775,18 @@ function c336EnSemanaActual(t){
   var r=c336RangoSemanaActual(); return f>=r.ini&&f<=r.fin;
 }
 
+
+function c340EsRiegoHidratacion(t){
+  if(!t)return false;
+  var tipo=((t.tipo_labor&&t.tipo_labor.nombre)||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  var sub=((t.subtipo&&t.subtipo.nombre)||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  var nota=String(t.notas_encargado||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  return /riego/.test(tipo) && (/hidrat/.test(sub)||/hidrat/.test(nota)||(!sub&&ordenEsTiempo(t)));
+}
+function c340EsVisibleEnMisTareas(t){
+  return !ordenEsTiempo(t) || c340EsRiegoHidratacion(t);
+}
+
 function pintarTareas(todas,hoyOrdenes,esCache,completadas,evidenciaPorOrden,componentesPorFormula,horasExtraPorClave){
   completadas=completadas||[];
   var body=document.getElementById('op-body');
@@ -17782,8 +17794,8 @@ function pintarTareas(todas,hoyOrdenes,esCache,completadas,evidenciaPorOrden,com
   var cont=document.getElementById('tareas-contenido');
   try{
     var hoy=fechaHoyLocal();
-    var abiertas=(todas||[]).filter(function(t){return !ordenEsTiempo(t)&&c336EnSemanaActual(t);});
-    var cerradas=(completadas||[]).filter(function(t){return !ordenEsTiempo(t)&&c336EnSemanaActual(t);});
+    var abiertas=(todas||[]).filter(function(t){return c340EsVisibleEnMisTareas(t)&&c336EnSemanaActual(t);});
+    var cerradas=(completadas||[]).filter(function(t){return c340EsVisibleEnMisTareas(t)&&c336EnSemanaActual(t);});
     window.C329_TAREAS=abiertas.concat(cerradas);
 
     var programadas=abiertas.filter(function(t){return t.estado==='pendiente'&&t.fecha_asignacion>hoy;});
@@ -19475,7 +19487,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C337
+C340
 </div>
 
 <style id="fi128-css">
