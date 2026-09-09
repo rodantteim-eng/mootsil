@@ -1609,7 +1609,7 @@ function c231Icon(name, cls){
 <meta content="no-cache" http-equiv="Pragma"/>
 <meta content="0" http-equiv="Expires"/>
 <script>
-  window.MOOTSIL_BUILD='C340';
+  window.MOOTSIL_BUILD='C360';
 </script>
 <style id="c245-inicio-mobile-calibrado">
 /* C245 — Calibración responsive del Inicio aprobado.
@@ -4985,6 +4985,7 @@ function c250LaborVisual(nombre){
 var c253TipoPersonal='base';
 var c253Seleccionados=[];
 var c253TablaId=null;
+var c253TablaIds=[]; // C360: permite asignar una misma labor a una o varias tablas
 
 function c253ListaPersonal(){
   return c253TipoPersonal==='eventual' ? (cats.eventuales||[]) : (cats.operarios||[]);
@@ -5025,9 +5026,16 @@ function c253Picks(){
   }).join('');
 }
 function c253SeleccionarTabla(id){
-  c253TablaId=id;
-  var ftb=document.getElementById('ftb');if(ftb)ftb.value=id||'';
-  document.querySelectorAll('.c253-table').forEach(function(b){b.classList.toggle('sel',b.dataset.id===id);});
+  // C360: selección múltiple para jornada regular y hora extra.
+  var i=c253TablaIds.indexOf(id);
+  if(i>-1)c253TablaIds.splice(i,1);else c253TablaIds.push(id);
+  c253TablaId=c253TablaIds.length?c253TablaIds[0]:null; // compatibilidad con código anterior
+  var ftb=document.getElementById('ftb');if(ftb)ftb.value=c253TablaId||'';
+  document.querySelectorAll('.c253-table').forEach(function(b){
+    b.classList.toggle('sel',c253TablaIds.indexOf(b.dataset.id)>-1);
+  });
+  var cnt=document.getElementById('c253-tablas-count');
+  if(cnt)cnt.textContent=c253TablaIds.length?(c253TablaIds.length+' tabla'+(c253TablaIds.length===1?'':'s')+' seleccionada'+(c253TablaIds.length===1?'':'s')):'Selecciona una o varias tablas';
 }
 function c253Fecha(tipo){
   var d=new Date();
@@ -5054,7 +5062,7 @@ function c253RenderAsignacion(){
     panel.innerHTML='<div class="c253-empty"><b>Selecciona una labor</b><br>La asignación aparecerá aquí.</div>';
     return;
   }
-  c253Seleccionados=[];c253TablaId=null;c253TipoPersonal='base';
+  c253Seleccionados=[];c253TablaId=null;c253TablaIds=[];c253TipoPersonal='base';
   var lb=asignarLaborSel,v=c250LaborVisual(lb.nombre||'Labor');
   var noTabla=lb.requiere_tabla===false;
   var plants=(cats.plantaciones||[]).map(function(p){
@@ -5084,7 +5092,7 @@ function c253RenderAsignacion(){
     (subops.length?'<div class="c253-field"><label>Variante</label><select id="fsb"><option value="">Selecciona...</option>'+subops.map(function(x){return '<option value="'+x.id+'">'+x.nombre+'</option>';}).join('')+'</select></div>':'<select id="fsb" style="display:none"><option value=""></option></select>')+
     (lb.requiere_cantidad_insumo?'<div class="c253-field"><label>Cantidad esperada</label><input type="text" id="fca" placeholder="0"></div>':'<input type="hidden" id="fca" value="">')+
     '<div class="c253-section" style="margin-top:.72rem;">Ubicación</div>'+
-    (noTabla?'<div class="c253-rule">Actividad general · no requiere plantación ni tabla.</div><input type="hidden" id="ftb" value="">':'<input type="hidden" id="ftb" value="">'+plants)+
+    (noTabla?'<div class="c253-rule">Actividad general · no requiere plantación ni tabla.</div><input type="hidden" id="ftb" value="">':'<input type="hidden" id="ftb" value="">'+plants+'<div id="c253-tablas-count" class="c253-rule" style="margin-top:.45rem;"><b>Selecciona una o varias tablas.</b> Cada tabla conservará su avance independiente.</div>')+
     '<div class="c253-section" style="margin-top:.72rem;">Personal asignado</div><div id="c253-personal"></div>'+
     '<div class="c253-section" style="margin-top:.72rem;">Asignación</div>'+
     '<div class="c256-opmode"><label>Tipo de jornada</label><div class="c256-opmode-row"><button id="c256-reg" type="button" class="'+(modoAsignacionLabor==='normal'?'sel':'')+'" onclick="c256SetModalidad(&quot;normal&quot;)">Jornada regular</button><button id="c256-extra" type="button" class="'+(modoAsignacionLabor==='extra'?'sel':'')+'" onclick="c256SetModalidad(&quot;extra&quot;)">Hora extra</button></div></div>'+
@@ -5239,7 +5247,7 @@ function renderFormAsignar(){
   var body=document.getElementById('c260-nueva-body');
   if(!body)return;
   C274_CAT_SEL=null;C274_VAR_SEL=null;asignarLaborSel=null;asignarLaborSubSel=null;
-  c253Seleccionados=[];c253TablaId=null;c253TipoPersonal='base';modoAsignacionLabor='normal';horasExtraAutorizadas=2;
+  c253Seleccionados=[];c253TablaId=null;c253TablaIds=[];c253TipoPersonal='base';modoAsignacionLabor='normal';horasExtraAutorizadas=2;
 
   var tiles=C274_CATALOGO_LABORES.map(function(cat){
     return '<button type="button" class="c274-cat" data-cat="'+cat.k+'" onclick="c275ElegirCatalogo(&quot;'+cat.k+'&quot;)">'+
@@ -5257,7 +5265,7 @@ function renderFormAsignar(){
       '<div id="labor-otra-box" class="c253-other" style="display:none;">'+
         '<label style="display:block;font-size:.65rem;font-weight:850;color:#78867e;margin-bottom:.25rem;">NOMBRE DE LA LABOR</label>'+
         '<input type="text" id="labor-otra-input" placeholder="Ej. Reparar cerco, recoger plástico, limpiar bodega..." style="width:100%;min-height:39px;border:1px solid #d2ddd6;border-radius:10px;padding:.56rem .68rem;">'+
-        '<label style="display:flex;align-items:center;gap:.4rem;margin-top:.45rem;font-size:.73rem;"><input type="checkbox" id="labor-otra-tabla" checked> Se realiza en una tabla</label>'+
+        '<label style="display:flex;align-items:center;gap:.4rem;margin-top:.45rem;font-size:.73rem;"><input type="checkbox" id="labor-otra-tabla" checked> Se realiza por tabla (permite una o varias)</label>'+
         '<label style="display:flex;align-items:center;gap:.4rem;margin-top:.38rem;font-size:.73rem;"><input type="checkbox" id="labor-otra-catalogo"> Guardar como labor frecuente</label>'+
         '<button type="button" id="labor-otra-btn" class="c253-assign" style="margin-top:.5rem;">Usar esta labor</button>'+
       '</div>'+
@@ -5275,13 +5283,24 @@ function renderFormAsignar(){
       c253RenderAsignacion();
       var box=document.getElementById('labor-otra-box');if(box)box.style.display='none';
     }
-    var existente=(cats.tiposLabor||[]).find(function(l){return (l.nombre||'').toLowerCase()===nombre.toLowerCase();});
+    var existente=(cats.tiposLabor||[]).find(function(l){return (l.nombre||'').trim().toLowerCase()===nombre.toLowerCase();});
     if(existente){usar(existente);return;}
-    from('tipos_labor').insert({nombre:nombre,requiere_cantidad_insumo:false,requiere_tiempo:false,requiere_tabla:requiereTablaNueva,activo:enCatalogoNueva,orden:100}).then(function(){
-      return from('tipos_labor').select('*').eq('nombre',nombre).get();
-    }).then(function(rows){
-      var lb=rows&&rows[0]?rows[0]:null;if(!lb)return;
-      if(enCatalogoNueva&&!cats.tiposLabor.some(function(x){return String(x.id)===String(lb.id);})){cats.tiposLabor.push(lb);}
+    // C360: el catálogo cargado puede omitir labores inactivas. Antes de insertar, consultar la tabla real.
+    function buscarReal(){
+      return from('tipos_labor').select('*').eq('nombre',nombre).get().then(function(rows){return rows&&rows[0]?rows[0]:null;});
+    }
+    buscarReal().then(function(real){
+      if(real)return real;
+      return from('tipos_labor').insert({nombre:nombre,requiere_cantidad_insumo:false,requiere_tiempo:false,requiere_tabla:requiereTablaNueva,activo:enCatalogoNueva,orden:100}).then(function(){
+        return buscarReal();
+      }).catch(function(e){
+        // Si otra fila ya existe por la restricción única, reutilizarla en vez de mostrar el error.
+        if((e&&e.message||'').toLowerCase().indexOf('duplicate key')>-1 || (e&&e.code)==='23505')return buscarReal();
+        throw e;
+      });
+    }).then(function(lb){
+      if(!lb)throw new Error('No se pudo recuperar la labor.');
+      if(!cats.tiposLabor.some(function(x){return String(x.id)===String(lb.id);})){cats.tiposLabor.push(lb);}
       usar(lb);
     }).catch(function(e){alert('Error: '+e.message);});
   });
@@ -5697,34 +5716,47 @@ function guardarOrden(){
   }
 
   var noTablaGuardar=!!(lb&&lb.requiere_tabla===false);
-  var tbId=noTablaGuardar?null:c253TablaId;
-  if(!noTablaGuardar&&!tbId){alert('Faltan datos obligatorios.');return;}
+  var tablaIds=noTablaGuardar?[null]:c253TablaIds.slice();
+  // Compatibilidad con una selección antigua si hubiera quedado sólo en c253TablaId.
+  if(!noTablaGuardar&&!tablaIds.length&&c253TablaId)tablaIds=[c253TablaId];
+  if(!noTablaGuardar&&!tablaIds.length){alert('Selecciona al menos una tabla.');return;}
   var sub=document.getElementById('fsb').value||null;
   var cant=parseFloat(document.getElementById('fca').value)||null;
-  var tb=tbId?cats.tablas.find(function(t){return t.id===tbId;}):null;
-  var surcosTablaCompleta=[];
-  if(!noTablaGuardar&&tb){
-    var totalSurcos=parseInt(tb.cantidad_surcos)||0;
-    if(totalSurcos<1){alert('La tabla seleccionada no tiene configurado su número de surcos.');return;}
-    surcosTablaCompleta=Array.from({length:totalSurcos},function(_,i){return i+1;});
+  var tablasSel=tablaIds.filter(Boolean).map(function(id){return cats.tablas.find(function(t){return t.id===id;});}).filter(Boolean);
+  if(!noTablaGuardar&&tablasSel.length!==tablaIds.length){alert('No se pudo identificar una de las tablas seleccionadas.');return;}
+  var surcosPorTabla={};
+  if(!noTablaGuardar){
+    for(var ti=0;ti<tablasSel.length;ti++){
+      var tsel=tablasSel[ti];
+      var totalSurcos=parseInt(tsel.cantidad_surcos)||0;
+      if(totalSurcos<1){alert('La tabla '+(tsel.nombre||'seleccionada')+' no tiene configurado su número de surcos.');return;}
+      surcosPorTabla[tsel.id]=Array.from({length:totalSurcos},function(_,i){return i+1;});
+    }
   }
   var esExtra=modoAsignacionLabor==='extra';
   var botonGuardar=document.querySelector('#c253-asignacion .c253-assign');
   if(botonGuardar){botonGuardar.disabled=true;botonGuardar.textContent='Guardando...';}
-  var payloads=opIds.map(function(oid){
-    return {asignado_por:usuario.id,operario_id:oid,tabla_id:tbId,tipo_labor_id:lbId,subtipo_labor_id:sub,surcos_asignados:noTablaGuardar?[]:surcosTablaCompleta,cantidad_insumo_esperada:cant,duracion:dur,fecha_asignacion:fec,notas_encargado:not,estado:'pendiente',es_hora_extra:esExtra};
+  // C360: una orden por persona y por tabla; todas pertenecen a la misma programación y cada tabla conserva avance propio.
+  var payloads=[];
+  opIds.forEach(function(oid){
+    tablaIds.forEach(function(tid){
+      payloads.push({asignado_por:usuario.id,operario_id:oid,tabla_id:tid,tipo_labor_id:lbId,subtipo_labor_id:sub,surcos_asignados:noTablaGuardar?[]:surcosPorTabla[tid],cantidad_insumo_esperada:cant,duracion:dur,fecha_asignacion:fec,notas_encargado:not,estado:'pendiente',es_hora_extra:esExtra});
+    });
   });
   Promise.all(payloads.map(function(pl){return from('ordenes_trabajo').insert(pl);})).then(function(insertados){
-    // Verificación inmediata: la labor existe realmente antes de cerrar el modal.
+    // Verificación inmediata de todas las combinaciones persona × tabla.
     var verificar=from('ordenes_trabajo')
       .select('id,operario_id,tabla_id,tipo_labor_id,subtipo_labor_id,fecha_asignacion,estado')
       .eq('tipo_labor_id',lbId)
       .eq('fecha_asignacion',fec)
       .in('operario_id',opIds);
-    if(tbId)verificar.eq('tabla_id',tbId);else verificar.is('tabla_id','null');
+    if(noTablaGuardar)verificar.is('tabla_id','null');else verificar.in('tabla_id',tablaIds);
     return verificar.get().then(function(rows){
         var encontrados=(rows||[]).filter(function(r){return r.estado==='pendiente'||r.estado==='en_proceso';});
-        if(encontrados.length<opIds.length) throw new Error('La labor no quedó confirmada para todo el personal seleccionado.');
+        var faltan=payloads.some(function(pl){
+          return !encontrados.some(function(r){return String(r.operario_id)===String(pl.operario_id)&&String(r.tabla_id||'')===String(pl.tabla_id||'');});
+        });
+        if(faltan) throw new Error('La labor no quedó confirmada para todo el personal y tablas seleccionadas.');
         return encontrados;
       });
   }).then(function(){
@@ -5734,10 +5766,11 @@ function guardarOrden(){
         return from('horas_extra_asignadas').insert({operario_id:oid,asignado_por:usuario.id,fecha:fec,motivo:not,tipo_labor_id:lbId,estado:'aprobada',horas_max:horasExtraAutorizadas});
       })).catch(function(e){console.warn('Hora extra secundaria:',e.message);});
     }
+    var ubicTxt=noTablaGuardar?'':(tablasSel.length===1?(' en '+tablasSel[0].nombre):(' en '+tablasSel.length+' tablas'));
     Promise.all(opIds.map(function(oid){
-      return from('notificaciones').insert({titulo:esExtra?'⏰ Hora extra asignada':'📋 Nueva tarea asignada',cuerpo:usuario.nombre+' asignó a '+(cats.equipoDeCampo.find(function(o){return o.id===oid;})||{}).nombre+': '+(lb?lb.nombre:'')+(tb?(' en '+tb.nombre):'')+(esExtra?' (hora extra)':''),icono:esExtra?'⏰':'📋',leida:false,para_rol:'operario',para_usuario:oid});
+      return from('notificaciones').insert({titulo:esExtra?'⏰ Hora extra asignada':'📋 Nueva tarea asignada',cuerpo:usuario.nombre+' asignó a '+(cats.equipoDeCampo.find(function(o){return o.id===oid;})||{}).nombre+': '+(lb?lb.nombre:'')+ubicTxt+(esExtra?' (hora extra)':''),icono:esExtra?'⏰':'📋',leida:false,para_rol:'operario',para_usuario:oid});
     })).catch(function(e){console.warn('Notificación secundaria:',e.message);});
-    showToast('📋 Labor guardada correctamente: '+(lb?lb.nombre:''));
+    showToast((esExtra?'⏰ Hora extra':'📋 Labor')+' guardada correctamente: '+(lb?lb.nombre:'')+(noTablaGuardar?'':(' · '+tablasSel.length+' tabla'+(tablasSel.length===1?'':'s'))));
     c269IrSemanaFecha(fec);
     c260CerrarNueva();
     cargarCatalogos().catch(function(){return null;}).then(function(){
