@@ -17490,17 +17490,17 @@ function obtenerDatosTareasOperario(){
       if(!horasExtraPorClave[k]||(h.creado_en||'')>(horasExtraPorClave[k]._creado||'')) horasExtraPorClave[k]={horas:h.horas_max,_creado:h.creado_en||''};
     });
     var idsComp=completadas.map(function(o){return o.id;});
-    var evidenciaFetch = idsComp.length ? from('registros_labor').select('orden_id,foto_url').in('orden_id',idsComp).get() : Promise.resolve([]);
+    var evidenciaFetch = idsComp.length ? from('registros_labor').select('orden_id,foto_url,capturado_en,epp_confirmado').in('orden_id',idsComp).get() : Promise.resolve([]);
     var formulaIds=Array.from(new Set(todas.concat(completadas).filter(function(t){return t.formula_id;}).map(function(t){return t.formula_id;})));
     var componentesFetch = formulaIds.length ? from('formula_componentes').select('*,item:inventario_items!item_id(nombre,unidad)').in('formula_id',formulaIds).get() : Promise.resolve([]);
     return Promise.all([evidenciaFetch,componentesFetch]).then(function(r2){
       var regs=r2[0]||[], compRows=r2[1]||[];
-      var evidenciaPorOrden={};
-      (regs||[]).forEach(function(r){evidenciaPorOrden[r.orden_id]=!!r.foto_url;});
+      var evidenciaPorOrden={}, ejecucionPorOrden={};
+      (regs||[]).forEach(function(r){evidenciaPorOrden[r.orden_id]=!!r.foto_url;if(r.epp_confirmado&&r.epp_confirmado.flujo==='via_riego')ejecucionPorOrden[r.orden_id]=r;});
       var componentesPorFormula={};
       compRows.forEach(function(c){(componentesPorFormula[c.formula_id]=componentesPorFormula[c.formula_id]||[]).push(c);});
-      var resultado={todas:todas,hoyOrdenes:hoyOrdenes,completadas:completadas,evidenciaPorOrden:evidenciaPorOrden,componentesPorFormula:componentesPorFormula,horasExtraPorClave:horasExtraPorClave};
-      try{localStorage.setItem('mootsil_tareas_cache_'+usuario.id,JSON.stringify({todas:todas,hoyOrdenes:hoyOrdenes,completadas:completadas,evidenciaPorOrden:evidenciaPorOrden,componentesPorFormula:componentesPorFormula,horasExtraPorClave:horasExtraPorClave,ts:Date.now()}));}catch(e){}
+      var resultado={todas:todas,hoyOrdenes:hoyOrdenes,completadas:completadas,evidenciaPorOrden:evidenciaPorOrden,ejecucionPorOrden:ejecucionPorOrden,componentesPorFormula:componentesPorFormula,horasExtraPorClave:horasExtraPorClave};
+      try{localStorage.setItem('mootsil_tareas_cache_'+usuario.id,JSON.stringify({todas:todas,hoyOrdenes:hoyOrdenes,completadas:completadas,evidenciaPorOrden:evidenciaPorOrden,ejecucionPorOrden:ejecucionPorOrden,componentesPorFormula:componentesPorFormula,horasExtraPorClave:horasExtraPorClave,ts:Date.now()}));}catch(e){}
       return resultado;
     });
   });
@@ -17514,11 +17514,11 @@ function cargarTareas(subtab){
   var body=document.getElementById('op-body');
   body.innerHTML=barraSubtabsTareas()+'<div id="tareas-contenido"><div class="loading">Cargando tus tareas...</div></div>';
   obtenerDatosTareasOperario().then(function(d){
-    pintarTareas(d.todas,d.hoyOrdenes,false,d.completadas,d.evidenciaPorOrden,d.componentesPorFormula,d.horasExtraPorClave);
+    pintarTareas(d.todas,d.hoyOrdenes,false,d.completadas,d.evidenciaPorOrden,d.componentesPorFormula,d.horasExtraPorClave);window.C348_EJECUCION_POR_ORDEN=d.ejecucionPorOrden||{};
   }).catch(function(err){
     var cache=null;
     try{cache=JSON.parse(localStorage.getItem('mootsil_tareas_cache_'+usuario.id)||'null');}catch(e){}
-    if(cache){ pintarTareas(cache.todas,cache.hoyOrdenes,true,cache.completadas||[],cache.evidenciaPorOrden||{},cache.componentesPorFormula||{},cache.horasExtraPorClave||{}); }
+    if(cache){ window.C348_EJECUCION_POR_ORDEN=cache.ejecucionPorOrden||{}; pintarTareas(cache.todas,cache.hoyOrdenes,true,cache.completadas||[],cache.evidenciaPorOrden||{},cache.componentesPorFormula||{},cache.horasExtraPorClave||{}); }
     else{
       var cont=document.getElementById('tareas-contenido');
       if(cont) cont.innerHTML='<div class="empty">📡 Sin señal y sin tareas guardadas.<br/>Conéctate al menos una vez para descargarlas.</div>';
@@ -17655,6 +17655,20 @@ function c329AbrirTarea(id){
       '</div></div>';
   }
 
+  var ejecDetalle='';
+  if(t.estado==='completada'&&t.formula_id){
+    var er=(window.C348_EJECUCION_POR_ORDEN||{})[t.id], ep=er&&er.epp_confirmado||{};
+    if(er){
+      function c348Hora(v){if(!v)return '—';try{return new Date(v).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});}catch(e){return '—';}}
+      function c348Dur(ms){ms=Number(ms)||0;var sec=Math.round(ms/1000),m=Math.floor(sec/60),r=sec%60;return String(m).padStart(2,'0')+':'+String(r).padStart(2,'0');}
+      ejecDetalle='<div class="c347-formula-box"><div class="c347-formula-toggle" style="cursor:default"><span><b>✓ Resumen de ejecución</b><small>Registro de esta aplicación</small></span></div><div class="c347-formula-list">'+
+        '<div><span>Inicio</span><strong>'+c348Hora(ep.inicio_flujo)+'</strong></div>'+
+        '<div><span>Inyección</span><strong>'+c348Dur(ep.inyeccion_ms)+'</strong></div>'+
+        '<div><span>Cierre</span><strong>'+c348Hora(er.capturado_en)+'</strong></div>'+
+        '<div><span>Incidencias</span><strong>'+(ep.incidencias||'Sin incidencia registrada en cierre')+'</strong></div></div></div>';
+    }
+  }
+
   var accion='';
   if(t.estado==='pendiente'){
     accion='<button class="c329-modal-close" style="background:var(--verde);color:#fff;border-color:var(--verde);" type="button" onclick="c335IniciarDesdeModal(\''+String(t.id).replace(/'/g,"\\'")+'\')">▶ Iniciar tarea</button>';
@@ -17662,7 +17676,7 @@ function c329AbrirTarea(id){
     accion='<button class="c329-modal-close" style="background:var(--verde);color:#fff;border-color:var(--verde);" type="button" onclick="c335IniciarDesdeModal(\''+String(t.id).replace(/'/g,"\\'")+'\')">▶ Continuar tarea</button>';
   }
 
-  modal.innerHTML='<div class="c329-modal-card"><div class="c329-modal-head"><small>'+c225Esc((tp.icon?tp.icon+' ':'')+tp.label)+'</small><h3>'+c225Esc(c329TituloSimple(t))+'</h3></div><div class="c329-modal-body">'+filas.map(function(r){return '<div class="c329-modal-row"><strong>'+r[0]+':</strong> '+c225Esc(r[1]||'—')+'</div>';}).join('')+formulaDetalle+'</div>'+accion+'<button class="c329-modal-close" type="button" onclick="c329CerrarTarea()">Cerrar</button></div>';
+  modal.innerHTML='<div class="c329-modal-card"><div class="c329-modal-head"><small>'+c225Esc((tp.icon?tp.icon+' ':'')+tp.label)+'</small><h3>'+c225Esc(c329TituloSimple(t))+'</h3></div><div class="c329-modal-body">'+filas.map(function(r){return '<div class="c329-modal-row"><strong>'+r[0]+':</strong> '+c225Esc(r[1]||'—')+'</div>';}).join('')+formulaDetalle+ejecDetalle+'</div>'+accion+'<button class="c329-modal-close" type="button" onclick="c329CerrarTarea()">Cerrar</button></div>';
   modal.classList.add('open');
 }
 
@@ -20568,6 +20582,11 @@ function renderRiegoEjecucion(ordenId){
   }
   function stepbar(f){var arr=['preparar','previo','inyeccion','arrastre','finalizar'],i=arr.indexOf(f);return '<div class="c344-stepbar" style="grid-template-columns:repeat(5,1fr)">'+arr.map(function(x,n){var lab=['1 · Mezcla','2 · Riego previo','3 · Inyección','4 · Arrastre','5 · Finalizar'][n];return '<div class="c344-step '+(n<i?'done':n===i?'active':'')+'">'+lab+'</div>';}).join('')+'</div>';}
   function top(o,c,f){var chip={preparar:'PREPARAR',previo:'RIEGO PREVIO',inyeccion:'INYECCIÓN',arrastre:'ARRASTRE',finalizar:'CIERRE'}[f]||'EN PROCESO';return '<div class="c344-top"><button class="c344-back" onclick="c345StopAplicTimer();cargarTareas(\'proceso\')">←</button><div class="c344-title">Aplicación vía riego</div><span class="c344-chip">'+chip+'</span></div><div class="c344-card c344-head"><div><h3>'+esc(c.plant+' · '+c.tabla)+'</h3><div class="c344-meta">'+esc((o.formula&&o.formula.nombre)||'Aplicación')+' · '+esc(c239FormatDate(o.fecha_asignacion))+'</div></div><div class="c344-volume"><small>Volumen</small>'+c.vol+' L</div></div>'+stepbar(f);}
+  function c348Lock(btn,txt){if(!btn||btn.disabled)return false;btn.disabled=true;btn.dataset.c348Old=btn.textContent;btn.textContent=txt||'Procesando...';return true;}
+  function c348Unlock(btn){if(!btn)return;btn.disabled=false;if(btn.dataset.c348Old)btn.textContent=btn.dataset.c348Old;}
+  function c348Siguiente(o){
+    try{var all=window.C329_TAREAS||[];return all.find(function(x){return String(x.id)!==String(o.id)&&x.formula_id&&String(x.formula_id)===String(o.formula_id)&&x.fecha_asignacion===o.fecha_asignacion&&(x.estado==='pendiente'||x.estado==='en_proceso');})||null;}catch(e){return null;}
+  }
   function renderPreparar(o,st){
     stop();var body=document.getElementById('op-body'),c=ctx(o),comps=o.componentesFormula||[];var E=[['guantes','🧤 Guantes'],['cubrebocas','😷 Mascarilla'],['lentes','🥽 Lentes'],['mangalarga','👕 Manga larga']];
     var epp=E.map(function(x){return '<label><input type="checkbox" data-c345-epp="'+x[0]+'" '+(st.epp&&st.epp[x[0]]?'checked':'')+'><span>'+x[1]+'</span></label>';}).join('');
@@ -20576,7 +20595,7 @@ function renderRiegoEjecucion(ordenId){
     function valid(){var ae=E.every(function(x){return st.epp&&st.epp[x[0]];}),ap=comps.every(function(z){return (st.productos||[]).map(String).indexOf(String(z.item_id))>-1;}),b=document.getElementById('c345-ready');if(b)b.disabled=!(ae&&ap);}
     body.querySelectorAll('[data-c345-epp]').forEach(function(x){x.onchange=function(){st.epp=st.epp||{};st.epp[this.dataset.c345Epp]=this.checked;save(o,st);valid();};});
     body.querySelectorAll('[data-c345-prod]').forEach(function(x){x.onchange=function(){var id=this.dataset.c345Prod;st.productos=st.productos||[];var i=st.productos.map(String).indexOf(String(id));if(this.checked&&i<0)st.productos.push(id);if(!this.checked&&i>=0)st.productos.splice(i,1);save(o,st);valid();};});
-    document.getElementById('c345-ready').onclick=function(){st.fase='previo';save(o,st);capturaEjec.epp=Object.assign({},st.epp);capturaEjec.insumosConfirmados=(st.productos||[]).slice();if(o.estado==='pendiente'){marcarOrdenEnProceso(o.id);o.estado='en_proceso';}renderEtapa(o,st,'previo');};valid();
+    document.getElementById('c345-ready').onclick=function(){var b=this;if(!c348Lock(b,'Continuando...'))return;st.fase='previo';save(o,st);capturaEjec.epp=Object.assign({},st.epp);capturaEjec.insumosConfirmados=(st.productos||[]).slice();if(o.estado==='pendiente'){marcarOrdenEnProceso(o.id);o.estado='en_proceso';}renderEtapa(o,st,'previo');};valid();
   }
   function renderEtapa(o,st,k){
     stop();var body=document.getElementById('op-body'),c=ctx(o),ts=tiempos(o),mins=ts[k],e=st.etapas[k],cfg={previo:{titulo:'Riego previo con agua limpia',icon:'💧',texto:'Humedece el sustrato antes de iniciar la inyección de la mezcla.',sig:'inyeccion',boton:'Iniciar inyección'},inyeccion:{titulo:'Inyección de la mezcla',icon:'🧪',texto:'Inyecta la mezcla preparada durante el tiempo indicado por Ingeniería.',sig:'arrastre',boton:'Iniciar arrastre'},arrastre:{titulo:'Arrastre con agua limpia',icon:'🚿',texto:'Continúa únicamente con agua limpia para desplazar la mezcla por el sistema.',sig:'finalizar',boton:'Finalizar tabla'}}[k];
@@ -20585,11 +20604,12 @@ function renderRiegoEjecucion(ordenId){
     function elapsed(){var ini=new Date(e.inicio).getTime(),end=e.pausadoEn?new Date(e.pausadoEn).getTime():Date.now();return Math.max(0,end-ini-(Number(e.pausasMs)||0));}
     function tick(){var el=elapsed(),total=mins*60000,rem=mins?Math.max(0,total-el):el,mm=Math.floor(rem/60000),ss=Math.floor((rem%60000)/1000),te=document.getElementById('c345-time');if(!te){stop();return;}te.textContent=(mins?'':'+')+String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0');var pct=mins?Math.max(0,Math.min(100,el/total*100)):0;document.getElementById('c345-bar').style.width=pct+'%';var stx=document.getElementById('c345-status');if(e.pausadoEn)stx.textContent='Tiempo en pausa';else if(mins&&el>=total){te.classList.add('over');stx.textContent='Tiempo cumplido';}else stx.textContent='En proceso';}
     document.getElementById('c345-pause').onclick=function(){if(e.pausadoEn){var pi=new Date(e.pausadoEn).getTime();e.pausasMs=(Number(e.pausasMs)||0)+Math.max(0,Date.now()-pi);e.pausadoEn=null;}else e.pausadoEn=new Date().toISOString();save(o,st);renderEtapa(o,st,k);};
-    document.getElementById('c345-next').onclick=function(){var msg=k==='previo'?'¿Confirmas que terminó el riego previo?':k==='inyeccion'?'¿Confirmas que terminó la inyección de la mezcla?':'¿Confirmas que terminó el arrastre con agua limpia?';if(!confirm(msg))return;e.fin=new Date().toISOString();e.pausadoEn=null;st.fase=cfg.sig;save(o,st);if(cfg.sig==='finalizar')renderFinal(o,st);else renderEtapa(o,st,cfg.sig);};tick();if(!e.pausadoEn)timer=setInterval(tick,1000);
+    document.getElementById('c345-next').onclick=function(){var b=this,msg=k==='previo'?'¿Confirmas que terminó el riego previo?':k==='inyeccion'?'¿Confirmas que terminó la inyección de la mezcla?':'¿Confirmas que terminó el arrastre con agua limpia?';if(!confirm(msg))return;if(!c348Lock(b,'Guardando etapa...'))return;e.fin=new Date().toISOString();e.pausadoEn=null;st.fase=cfg.sig;save(o,st);if(cfg.sig==='finalizar')renderFinal(o,st);else renderEtapa(o,st,cfg.sig);};tick();if(!e.pausadoEn)timer=setInterval(tick,1000);
   }
   function durEt(e){if(!e||!e.inicio)return 0;var fin=e.fin?new Date(e.fin).getTime():(e.pausadoEn?new Date(e.pausadoEn).getTime():Date.now());return Math.max(0,fin-new Date(e.inicio).getTime()-(Number(e.pausasMs)||0));}
   function fmt(ms){var s=Math.round(ms/1000),m=Math.floor(s/60),r=s%60;return String(m).padStart(2,'0')+':'+String(r).padStart(2,'0');}
   function c346CerrarAplicacionRiego(o,st){
+    var c=ctx(o);
     var btn=document.getElementById('c345-finish');
     if(btn){btn.disabled=true;btn.textContent='Guardando...';}
     var total=(calcularSurcosOrden(o,[]).totalAsignados||[]).map(Number);
@@ -20597,13 +20617,13 @@ function renderRiegoEjecucion(ordenId){
     var usados=Number(o.tambos_planeados)||Number(o.tambos_usados)||1;
     var upd={estado:'completada',surcos_completados:total,herramienta_limpia:true,completado_en:ahora};
     if(o.tipo_labor&&o.tipo_labor.requiere_formula) upd.tambos_usados=usados;
-    var reg={usuario_id:usuario.id,tabla_id:o.tabla_id,tipo_labor_id:o.tipo_labor_id,subtipo_labor_id:o.subtipo_labor_id||null,surcos_trabajados:total,cantidad_insumo:o.volumen_aplicado_litros||null,foto_url:null,capturado_en:ahora,orden_id:o.id,epp_confirmado:Object.assign({},st.epp||{},{confirmado_en:ahora,flujo:'via_riego',riego_previo_ms:durEt(st.etapas.previo),inyeccion_ms:durEt(st.etapas.inyeccion),arrastre_ms:durEt(st.etapas.arrastre)})};
+    var reg={usuario_id:usuario.id,tabla_id:o.tabla_id,tipo_labor_id:o.tipo_labor_id,subtipo_labor_id:o.subtipo_labor_id||null,surcos_trabajados:total,cantidad_insumo:o.volumen_aplicado_litros||null,foto_url:null,capturado_en:ahora,orden_id:o.id,epp_confirmado:Object.assign({},st.epp||{},{confirmado_en:ahora,flujo:'via_riego',inicio_flujo:(st.etapas.previo&&st.etapas.previo.inicio)||null,riego_previo_ms:durEt(st.etapas.previo),inyeccion_ms:durEt(st.etapas.inyeccion),arrastre_ms:durEt(st.etapas.arrastre)})};
     function aplicarLocal(){
       o.estado='completada';o.surcos_completados=total;o.completado_en=ahora;o.tambos_usados=usados;
       try{var a=window.C329_TAREAS||[];a.forEach(function(x){if(String(x.id)===String(o.id)){x.estado='completada';x.surcos_completados=total;x.completado_en=ahora;}});}catch(e){}
       clear(o);ordenEjecutando=null;
     }
-    function terminarUI(){aplicarLocal();showToast('✅ Aplicación terminada y guardada');cargarTareas('terminadas');}
+    function terminarUI(){var sig=c348Siguiente(o),sc=sig?ctx(sig):null;aplicarLocal();if(sig){showToast('✅ '+c.plant+' · '+c.tabla+' terminada · Siguiente: '+sc.plant+' · '+sc.tabla);cargarTareas(sig.estado==='en_proceso'?'proceso':'porhacer');}else{showToast('✅ Aplicación terminada y guardada');cargarTareas('terminadas');}}
     if(!navigator.onLine){
       colaOffline.push(reg);localStorage.setItem('mootsil_cola',JSON.stringify(colaOffline));
       riegoEncolar(o.id,upd);terminarUI();return;
@@ -20623,9 +20643,8 @@ function renderRiegoEjecucion(ordenId){
       alert('No se pudo cerrar la aplicación. La tarea permanece abierta para no perderla.\n\n'+(e&&e.message?e.message:e));
     });
   }
-  function renderFinal(o,st){stop();var body=document.getElementById('op-body'),c=ctx(o),ts=tiempos(o);body.innerHTML='<div class="c344-wrap">'+top(o,c,'finalizar')+'<div class="c344-card"><div class="c344-section">Resumen de esta tabla</div><div class="c344-summary"><div><small>Ubicación</small><strong>'+esc(c.plant+' · '+c.tabla)+'</strong></div><div><small>Volumen</small><strong>'+c.vol+' L</strong></div><div><small>Riego previo</small><strong>'+fmt(durEt(st.etapas.previo))+'</strong></div><div><small>Inyección</small><strong>'+fmt(durEt(st.etapas.inyeccion))+'</strong></div><div><small>Arrastre</small><strong>'+fmt(durEt(st.etapas.arrastre))+'</strong></div><div><small>Tiempo de inyección programado</small><strong>'+(ts.inyeccion?ts.inyeccion+' min':'Sin tiempo')+'</strong></div></div><div class="c344-info" style="margin-top:10px">Al finalizar, Mootsil cerrará esta tabla y actualizará la misma aplicación del Tablero.</div></div><div class="c344-actions"><button class="c344-btn" id="c345-back-arr">← Volver al arrastre</button><button class="c344-btn primary" id="c345-finish">✓ Finalizar tabla</button><button class="c344-btn danger" onclick="c345ReportarAplicIncidencia(\''+o.id+'\')">🚨 Reportar incidencia</button></div></div>';
-    document.getElementById('c345-back-arr').onclick=function(){st.fase='arrastre';save(o,st);renderEtapa(o,st,'arrastre');};
-    document.getElementById('c345-finish').onclick=function(){if(!confirm('¿Confirmas que esta aplicación vía riego quedó terminada en esta tabla?'))return;c346CerrarAplicacionRiego(o,st);};
+  function renderFinal(o,st){stop();var body=document.getElementById('op-body'),c=ctx(o),ts=tiempos(o);body.innerHTML='<div class="c344-wrap">'+top(o,c,'finalizar')+'<div class="c344-card"><div class="c344-section">Resumen de esta tabla</div><div class="c344-summary"><div><small>Ubicación</small><strong>'+esc(c.plant+' · '+c.tabla)+'</strong></div><div><small>Volumen</small><strong>'+c.vol+' L</strong></div><div><small>Riego previo</small><strong>'+fmt(durEt(st.etapas.previo))+'</strong></div><div><small>Inyección</small><strong>'+fmt(durEt(st.etapas.inyeccion))+'</strong></div><div><small>Arrastre</small><strong>'+fmt(durEt(st.etapas.arrastre))+'</strong></div><div><small>Tiempo de inyección programado</small><strong>'+(ts.inyeccion?ts.inyeccion+' min':'Sin tiempo')+'</strong></div></div><div class="c344-info" style="margin-top:10px">Al finalizar, Mootsil cerrará esta tabla y actualizará la misma aplicación del Tablero.</div></div><div class="c344-actions"><button class="c344-btn primary" id="c345-finish">✓ Finalizar tabla</button><button class="c344-btn danger" onclick="c345ReportarAplicIncidencia(\''+o.id+'\')">🚨 Reportar incidencia</button></div></div>';
+    document.getElementById('c345-finish').onclick=function(){if(this.disabled)return;if(!confirm('¿Confirmas que esta aplicación vía riego quedó terminada en esta tabla?'))return;c346CerrarAplicacionRiego(o,st);};
   }
   window.c345ReportarAplicIncidencia=function(id){
     stop();var o=ordenEjecutando;if(!o||String(o.id)!==String(id))return;var body=document.getElementById('op-body'),c=ctx(o),total=Math.max(0,Number(o.tabla&&o.tabla.cantidad_surcos)||0),st=load(o);var tipos={fuga:['Fuga leve','Fuga fuerte','Conexión / unión','Manguera / línea'],cintilla:['Trozada','Con fuga','Obstruida','Conexión dañada'],filtro:['Requiere limpieza','Requiere reemplazo','Dañado','Con fuga'],otro:['Falta de presión','Llave / válvula','Manguera principal','Otra incidencia']};
