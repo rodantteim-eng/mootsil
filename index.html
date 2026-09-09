@@ -1638,7 +1638,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C336';
+  window.MOOTSIL_BUILD='C337';
 </script>
 
 
@@ -18079,6 +18079,19 @@ function fusionarSurcosLocales(o){
 }
 
 function c336InicioKey(id){return 'mootsil_labor_inicio_'+usuario.id+'_'+id;}
+function c337StartedKey(id){return 'mootsil_labor_started_'+usuario.id+'_'+id;}
+function c337MarcarIniciada(o){
+  try{
+    if(o&&o.id){
+      localStorage.setItem(c337StartedKey(o.id),'1');
+      if(!localStorage.getItem(c336InicioKey(o.id))) localStorage.setItem(c336InicioKey(o.id),new Date().toISOString());
+    }
+  }catch(e){}
+}
+function c337EstaIniciada(o){
+  try{return !!(o&&o.id&&localStorage.getItem(c337StartedKey(o.id)));}catch(e){return false;}
+}
+
 function c336HoraInicio(o){
   var key=c336InicioKey(o.id), v=localStorage.getItem(key);
   if(!v){v=new Date().toISOString();localStorage.setItem(key,v);}
@@ -18096,6 +18109,7 @@ function c336ResumenProgreso(o){
 }
 function c336LaborActiva(){
   var o=ordenEjecutando, body=document.getElementById('op-body');
+  c337MarcarIniciada(o);
   if(!o||!o.tabla){cargarTareas('proceso');return;}
   var p=cats.plantaciones.find(function(x){return x.id===o.tabla.plantacion_id;});
   var pr=c336ResumenProgreso(o);
@@ -18106,10 +18120,11 @@ function c336LaborActiva(){
   body.innerHTML='<div class="c336-wrap">'+
     '<div class="c336-top"><button class="c336-back" onclick="ordenEjecutando=null;cargarTareas(\'proceso\')">←</button><div class="c336-title">Labor activa</div><span class="c336-chip">● EN PROCESO</span></div>'+
     '<div class="c336-card"><div class="c336-labor-head"><div class="c336-type-pill">'+c225Esc((tp.icon?tp.icon+' ':'')+tp.label)+'</div><div><div class="c336-labor-name">'+c225Esc(titulo)+'</div><div style="font-size:.78rem;color:#68786f;margin-top:4px;">'+c225Esc((p?p.nombre:'')+' · '+o.tabla.nombre)+'</div></div></div>'+
-      '<div class="c336-meta"><div>📍 <strong>'+c225Esc((p?p.nombre:'')+' · '+o.tabla.nombre)+'</strong></div><div>📋 <strong>'+c225Esc(rango)+'</strong></div><div>🕒 Inicio hoy <strong>'+c225Esc(c336HoraInicio(o))+'</strong></div><div>📅 <strong>'+c225Esc(c239FormatDate(o.fecha_asignacion))+'</strong></div></div>'+
+      '<div class="c336-meta"><div>📍 <strong>'+c225Esc((p?p.nombre:'')+' · '+o.tabla.nombre)+'</strong></div><div>📋 <strong>'+c225Esc(rango)+'</strong></div><div>🕒 Inicio de ejecución <strong>'+c225Esc(c336HoraInicio(o))+'</strong></div><div>📅 <strong>'+c225Esc(c239FormatDate(o.fecha_asignacion))+'</strong></div></div>'+
     '</div>'+
-    '<div class="c336-card"><div class="c336-section-title">Avance de la labor</div><div class="c336-progress"><div><div class="c336-progress-big">'+c225Esc(avance)+'</div><div class="c336-progress-sub">El avance se registra únicamente cuando tú lo indicas.</div></div><div class="c336-next">Continuar desde<br><strong>'+c225Esc(cont)+'</strong></div></div></div>'+
+    '<div class="c336-card"><div class="c336-section-title">Avance de la labor</div><div class="c336-progress"><div><div class="c336-progress-big">'+c225Esc(avance)+'</div><div class="c336-progress-sub">Puedes salir y volver después. La labor continuará desde el último avance registrado.</div></div><div class="c336-next">Continuar desde<br><strong>'+c225Esc(cont)+'</strong></div></div></div>'+
     (o.notas_encargado?'<div class="c336-card"><div class="c336-section-title">Indicaciones</div><div style="font-size:.8rem;color:#53645b;">'+c225Esc(o.notas_encargado)+'</div></div>':'')+
+    '<div class="c336-info">La labor permanece <strong>En proceso</strong> hasta que se termine. Puedes registrar varios avances hoy o continuar otro día desde el siguiente surco pendiente.</div>'+
     '<div class="c336-actions">'+
       '<button class="danger" onclick="renderCentroReportes()">🚨 Reportar incidencia</button>'+
       '<button class="primary" onclick="c336AbrirRegistrarAvance()">📝 Registrar avance</button>'+
@@ -18170,7 +18185,10 @@ function c336TerminarLabor(){
   var r=calcularSurcosOrden(o,[]);
   capturaEjec.surcos=(r.faltan||[]).map(Number);
   ejecutarGuardadoFinal(o);
-  try{localStorage.removeItem(c336InicioKey(o.id));}catch(e){}
+  try{
+    localStorage.removeItem(c336InicioKey(o.id));
+    localStorage.removeItem(c337StartedKey(o.id));
+  }catch(e){}
 }
 
 function prepararEjecucion(o,esOffline){
@@ -19456,7 +19474,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C336
+C337
 </div>
 
 <style id="fi128-css">
