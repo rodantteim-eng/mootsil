@@ -16629,7 +16629,7 @@ function renderDebo(){
 }
 function renderCartera(fechaRef){
   var body=document.getElementById('op-body');
-  body.innerHTML='<div class="seccion-titulo">👛 Cartera</div><div class="loading">Calculando...</div>';
+  body.innerHTML='<div class="seccion-titulo">💳 Mis pagos</div><div class="loading">Cargando tu pago...</div>';
   var lunes=inicioDeSemana(fechaRef);
   var domingo=new Date(lunes); domingo.setDate(lunes.getDate()+6);
   var semanaInicio=lunes.toISOString().slice(0,10), semanaFin=domingo.toISOString().slice(0,10);
@@ -17121,41 +17121,66 @@ function renderSolicitudesMenu(){
   '</div>';
 }
 
+function c362PrestamosMes(uid){
+  var ahora=new Date();
+  var ini=new Date(ahora.getFullYear(),ahora.getMonth(),1);
+  var fin=new Date(ahora.getFullYear(),ahora.getMonth()+1,1);
+  return from('solicitudes_operario').select('id,estado,creado_en').eq('operario_id',uid).eq('tipo','prestamo').gte('creado_en',ini.toISOString()).lt('creado_en',fin.toISOString()).get().then(function(rows){return (rows||[]).length;});
+}
 function renderSolicitarPrestamo(){
   var body=document.getElementById('op-body');
-  body.innerHTML='<div class="seccion-titulo">💰 Solicitar préstamo</div><div class="loading">Revisando tus préstamos de este mes...</div>';
-  Promise.all([
-    from('config_app').select('*').get(),
-    contarPrestamosDelMes(usuario.id)
-  ]).then(function(r){
-    var cfg={}; (r[0]||[]).forEach(function(c){cfg[c.clave]=c.valor;});
-    var maxMes=1;
-    var montoMax=(cfg.prestamo_monto_max!==undefined&&cfg.prestamo_monto_max!==null&&cfg.prestamo_monto_max!=='')?parseFloat(cfg.prestamo_monto_max):null;
-    var usados=r[1]||0;
-    var alTope=usados>=maxMes;
-    var estadoTxt=alTope
-      ? '<div style="background:var(--rojo-tenue);border:1.5px solid var(--rojo);border-radius:var(--radio-sm);padding:.75rem .9rem;margin-bottom:1rem;"><strong style="color:var(--rojo);">🚫 Ya tienes '+usados+' solicitud(es) de préstamo este mes</strong><div class="hint" style="margin-top:.25rem;">El máximo permitido es 1 solicitud por mes. Podrás solicitar otro a partir del próximo mes.</div></div>'
-      : '<div style="background:var(--verde-tenue);border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);padding:.75rem .9rem;margin-bottom:1rem;"><strong style="color:var(--verde-mid);">Llevas '+usados+'/'+maxMes+' solicitud(es) enviada(s) este mes</strong></div>';
+  var validado=false, usados=0, maxMes=1, montoMax=null, alTope=false;
+  body.innerHTML='<div class="seccion-titulo">💰 Solicitar préstamo</div>'+
+    '<div id="sp-estado" style="background:var(--verde-tenue);border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);padding:.75rem .9rem;margin-bottom:1rem;"><strong style="color:var(--verde-mid);">Validando tu límite mensual...</strong><div class="hint" style="margin-top:.25rem;">Puedes revisar y llenar el formulario mientras validamos.</div></div>'+
+    '<div class="form-card"><p class="hint" id="sp-ayuda" style="margin-bottom:.75rem;">Tu solicitud llega directo a administración para revisión — no es automática; te avisarán cuando la resuelvan.</p><div class="form-group"><label>¿Cuánto necesitas?</label><input type="number" id="sp-monto" min="0" step="any" placeholder="$0.00"></div><div class="form-group"><label>¿Para qué lo necesitas?</label><textarea id="sp-motivo" rows="4" placeholder="Cuéntanos brevemente el motivo..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="sp-enviar">Enviar solicitud</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderSolicitudesMenu()">← Volver a Solicitudes</button>';
+
+  var estado=document.getElementById('sp-estado'), ayuda=document.getElementById('sp-ayuda'), btn=document.getElementById('sp-enviar');
+  function pintarEstado(){
+    if(!estado)return;
     if(alTope){
-      body.innerHTML='<div class="seccion-titulo">💰 Solicitar préstamo</div>'+estadoTxt+'<button class="btn-back" style="margin-top:1rem;" onclick="renderSolicitudesMenu()">← Volver a Solicitudes</button>';
-      return;
+      estado.style.background='var(--rojo-tenue)';estado.style.borderColor='var(--rojo)';
+      estado.innerHTML='<strong style="color:var(--rojo);">🚫 Ya tienes '+usados+' solicitud(es) de préstamo este mes</strong><div class="hint" style="margin-top:.25rem;">El máximo permitido es '+maxMes+' solicitud(es) por mes. Podrás solicitar otra cuando inicie el próximo mes.</div>';
+      if(btn){btn.disabled=true;btn.textContent='Límite mensual alcanzado';}
+    }else{
+      estado.style.background='var(--verde-tenue)';estado.style.borderColor='var(--verde-mid)';
+      estado.innerHTML='<strong style="color:var(--verde-mid);">Llevas '+usados+'/'+maxMes+' solicitud(es) enviada(s) este mes</strong>';
+      if(btn){btn.disabled=false;btn.textContent='Enviar solicitud';}
     }
-    body.innerHTML='<div class="seccion-titulo">💰 Solicitar préstamo</div>'+estadoTxt+'<div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Tu solicitud llega directo a administración para revisión — no es automático, te avisarán cuando la resuelvan.'+(montoMax!=null?' Monto máximo autorizado: '+c359Money(montoMax)+'.':'')+'</p><div class="form-group"><label>¿Cuánto necesitas?</label><input type="number" id="sp-monto" min="0" step="any" placeholder="$0.00"></div><div class="form-group"><label>¿Para qué lo necesitas?</label><textarea id="sp-motivo" rows="4" placeholder="Cuéntanos brevemente el motivo..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="sp-enviar">Enviar solicitud</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderSolicitudesMenu()">← Volver a Solicitudes</button>';
-    document.getElementById('sp-enviar').addEventListener('click',function(){
-      var monto=parseFloat(document.getElementById('sp-monto').value)||0;
-      var motivo=(document.getElementById('sp-motivo').value||'').trim();
-      if(monto<=0){alert('Escribe cuánto necesitas.');return;}
-      if(!motivo){alert('Cuéntanos brevemente para qué es.');return;}
-      if(montoMax!=null&&monto>montoMax){alert('El monto máximo que se puede solicitar es '+c359Money(montoMax)+'.');return;}
-      var btn=this; btn.disabled=true; btn.textContent='Enviando...';
-      from('solicitudes_operario').insert({operario_id:usuario.id,tipo:'prestamo',monto_solicitado:monto,mensaje:motivo,estado:'pendiente'}).then(function(){
-        return from('notificaciones').insert({titulo:'💰 Solicitud de préstamo',cuerpo:usuario.nombre+' solicita '+c359Money(monto)+': '+motivo,icono:'💰',leida:false,para_rol:'encargado'});
-      }).then(function(){
-        showToast('✅ Solicitud enviada');
-        renderSolicitudesMenu();
-      }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Enviar solicitud';});
-    });
-  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+    if(ayuda&&montoMax!=null) ayuda.innerHTML='Tu solicitud llega directo a administración para revisión — no es automática; te avisarán cuando la resuelvan. Monto máximo autorizado: <strong>'+c359Money(montoMax)+'</strong>.';
+  }
+
+  var validacion=Promise.all([
+    from('config_app').select('*').get(),
+    c362PrestamosMes(usuario.id)
+  ]);
+  var timeout=new Promise(function(_,reject){setTimeout(function(){reject(new Error('timeout'));},7000);});
+  Promise.race([validacion,timeout]).then(function(r){
+    var cfg={};(r[0]||[]).forEach(function(c){cfg[c.clave]=c.valor;});
+    maxMes=parseInt(cfg.prestamo_max_activos_mes||1)||1;
+    montoMax=(cfg.prestamo_monto_max!==undefined&&cfg.prestamo_monto_max!==null&&cfg.prestamo_monto_max!=='')?parseFloat(cfg.prestamo_monto_max):null;
+    usados=r[1]||0; alTope=usados>=maxMes; validado=true; pintarEstado();
+  }).catch(function(){
+    validado=false;
+    if(estado){estado.style.background='#fff8e6';estado.style.borderColor='#e0a800';estado.innerHTML='<strong>No pudimos validar el límite mensual.</strong><div class="hint" style="margin-top:.25rem;">Revisa tu conexión y vuelve a intentar antes de enviar.</div>';}
+    if(btn){btn.disabled=false;btn.textContent='Reintentar validación';}
+  });
+
+  if(btn)btn.addEventListener('click',function(){
+    if(!validado){renderSolicitarPrestamo();return;}
+    if(alTope)return;
+    var monto=parseFloat(document.getElementById('sp-monto').value)||0;
+    var motivo=(document.getElementById('sp-motivo').value||'').trim();
+    if(monto<=0){alert('Escribe cuánto necesitas.');return;}
+    if(!motivo){alert('Cuéntanos brevemente para qué es.');return;}
+    if(montoMax!=null&&monto>montoMax){alert('El monto máximo que se puede solicitar es '+c359Money(montoMax)+'.');return;}
+    var enviar=this;enviar.disabled=true;enviar.textContent='Validando y enviando...';
+    c362PrestamosMes(usuario.id).then(function(actuales){
+      if(actuales>=maxMes)throw new Error('Ya alcanzaste el máximo de solicitudes de préstamo de este mes.');
+      return from('solicitudes_operario').insert({operario_id:usuario.id,tipo:'prestamo',monto_solicitado:monto,mensaje:motivo,estado:'pendiente'});
+    }).then(function(){
+      return from('notificaciones').insert({titulo:'💰 Solicitud de préstamo',cuerpo:usuario.nombre+' solicita '+c359Money(monto)+': '+motivo,icono:'💰',leida:false,para_rol:'encargado'});
+    }).then(function(){showToast('✅ Solicitud enviada');renderSolicitudesMenu();}).catch(function(e){alert(e.message||'No se pudo enviar la solicitud.');enviar.disabled=false;enviar.textContent='Enviar solicitud';});
+  });
 }
 
 function renderSolicitudOtro(contexto){
