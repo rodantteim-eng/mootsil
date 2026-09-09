@@ -2896,6 +2896,9 @@ function c231Icon(name, cls){
  .c336-progress{grid-template-columns:1fr}.c336-next{text-align:left}
 }
 </style>
+<style id="c347-formula-detalle">
+.c347-formula-box{margin-top:12px;border:1px solid #dfe7e1;border-radius:12px;overflow:hidden;background:#f8faf8}.c347-formula-toggle{width:100%;border:0;background:transparent;padding:12px 13px;display:flex;align-items:center;justify-content:space-between;text-align:left;color:#24352b;cursor:pointer}.c347-formula-toggle span:first-child{display:flex;flex-direction:column;gap:2px}.c347-formula-toggle b{font-size:.8rem}.c347-formula-toggle small{font-size:.68rem;color:#78857d;font-weight:600}.c347-arrow{font-size:1.25rem;color:#607066}.c347-formula-list{border-top:1px solid #e2e9e4;padding:5px 12px}.c347-formula-list>div{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #edf1ee;font-size:.75rem}.c347-formula-list>div:last-child{border-bottom:0}.c347-formula-list strong{text-align:right;white-space:nowrap;color:#405548}.c347-empty{color:#7b8780!important;justify-content:flex-start!important}
+</style>
 </head>
 <body>
 <div class="screen active" id="screen-login">
@@ -17488,7 +17491,7 @@ function obtenerDatosTareasOperario(){
     });
     var idsComp=completadas.map(function(o){return o.id;});
     var evidenciaFetch = idsComp.length ? from('registros_labor').select('orden_id,foto_url').in('orden_id',idsComp).get() : Promise.resolve([]);
-    var formulaIds=Array.from(new Set(todas.filter(function(t){return t.formula_id;}).map(function(t){return t.formula_id;})));
+    var formulaIds=Array.from(new Set(todas.concat(completadas).filter(function(t){return t.formula_id;}).map(function(t){return t.formula_id;})));
     var componentesFetch = formulaIds.length ? from('formula_componentes').select('*,item:inventario_items!item_id(nombre,unidad)').in('formula_id',formulaIds).get() : Promise.resolve([]);
     return Promise.all([evidenciaFetch,componentesFetch]).then(function(r2){
       var regs=r2[0]||[], compRows=r2[1]||[];
@@ -17644,6 +17647,14 @@ function c329AbrirTarea(id){
   if(t.notas_encargado)filas.push(['Indicaciones',t.notas_encargado]);
   if(t.formula&&t.formula.nombre)filas.push(['Fórmula',t.formula.nombre]);
 
+  var formulaDetalle='';
+  if(t.formula_id){
+    var comps=((window.C329_COMPONENTES_POR_FORMULA||{})[t.formula_id]||[]);
+    formulaDetalle='<div class="c347-formula-box"><button type="button" class="c347-formula-toggle" onclick="var b=this.nextElementSibling;b.hidden=!b.hidden;this.querySelector(\'.c347-arrow\').textContent=b.hidden?\'›\':\'⌄\';"><span><b>🧪 Componentes de la fórmula</b><small>'+comps.length+' componente'+(comps.length===1?'':'s')+'</small></span><span class="c347-arrow">›</span></button><div class="c347-formula-list" hidden>'+
+      (comps.length?comps.map(function(c){var nom=(c.item&&c.item.nombre)||'Componente';var cant=c.cantidad_base!=null?c.cantidad_base:'';var uni=(c.item&&c.item.unidad)||'';return '<div><span>'+c225Esc(nom)+'</span><strong>'+c225Esc(String(cant)+(uni?' '+uni:''))+'</strong></div>';}).join(''):'<div class="c347-empty">Sin componentes registrados.</div>')+
+      '</div></div>';
+  }
+
   var accion='';
   if(t.estado==='pendiente'){
     accion='<button class="c329-modal-close" style="background:var(--verde);color:#fff;border-color:var(--verde);" type="button" onclick="c335IniciarDesdeModal(\''+String(t.id).replace(/'/g,"\\'")+'\')">▶ Iniciar tarea</button>';
@@ -17651,7 +17662,7 @@ function c329AbrirTarea(id){
     accion='<button class="c329-modal-close" style="background:var(--verde);color:#fff;border-color:var(--verde);" type="button" onclick="c335IniciarDesdeModal(\''+String(t.id).replace(/'/g,"\\'")+'\')">▶ Continuar tarea</button>';
   }
 
-  modal.innerHTML='<div class="c329-modal-card"><div class="c329-modal-head"><small>'+c225Esc((tp.icon?tp.icon+' ':'')+tp.label)+'</small><h3>'+c225Esc(c329TituloSimple(t))+'</h3></div><div class="c329-modal-body">'+filas.map(function(r){return '<div class="c329-modal-row"><strong>'+r[0]+':</strong> '+c225Esc(r[1]||'—')+'</div>';}).join('')+'</div>'+accion+'<button class="c329-modal-close" type="button" onclick="c329CerrarTarea()">Cerrar</button></div>';
+  modal.innerHTML='<div class="c329-modal-card"><div class="c329-modal-head"><small>'+c225Esc((tp.icon?tp.icon+' ':'')+tp.label)+'</small><h3>'+c225Esc(c329TituloSimple(t))+'</h3></div><div class="c329-modal-body">'+filas.map(function(r){return '<div class="c329-modal-row"><strong>'+r[0]+':</strong> '+c225Esc(r[1]||'—')+'</div>';}).join('')+formulaDetalle+'</div>'+accion+'<button class="c329-modal-close" type="button" onclick="c329CerrarTarea()">Cerrar</button></div>';
   modal.classList.add('open');
 }
 
@@ -17715,6 +17726,7 @@ function pintarTareas(todas,hoyOrdenes,esCache,completadas,evidenciaPorOrden,com
     var abiertas=(todas||[]).filter(function(t){return c340EsVisibleEnMisTareas(t)&&c336EnSemanaActual(t);});
     var cerradas=(completadas||[]).filter(function(t){return c340EsVisibleEnMisTareas(t)&&c336EnSemanaActual(t);});
     window.C329_TAREAS=abiertas.concat(cerradas);
+    window.C329_COMPONENTES_POR_FORMULA=componentesPorFormula||{};
 
     var programadas=abiertas.filter(function(t){return t.estado==='pendiente'&&t.fecha_asignacion>hoy;});
     var hoyPend=abiertas.filter(function(t){return t.estado==='pendiente'&&t.fecha_asignacion===hoy;});
