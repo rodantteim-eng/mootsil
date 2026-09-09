@@ -951,6 +951,13 @@ body.c140-preinc .op-body-shell{padding-bottom:78px}
 
 /* C316 — Inventario: subcategorías compactas */
 @media(max-width:700px){#inv-subcat-wrap{min-width:0} #enc-body [style*="grid-template-columns:minmax(0,1fr) minmax(210px,300px)"]{grid-template-columns:1fr!important}}
+
+/* C367 — App Colaborador: Avisos y Centro de Reportes */
+.c367-wrap{max-width:760px;margin:0 auto;padding:16px 14px 28px}.c367-head{margin-bottom:14px}.c367-eyebrow{font-size:.72rem;font-weight:800;letter-spacing:.08em;color:#8a8f89;text-transform:uppercase}.c367-title{font-size:1.35rem;font-weight:850;color:var(--verde);margin:4px 0}.c367-sub{font-size:.82rem;color:var(--gris-3)}
+.c367-emergency{width:100%;border:1px solid #f0c7c4;border-left:5px solid var(--rojo);background:#fff4f3;border-radius:16px;padding:15px;text-align:left;margin:10px 0 14px;cursor:pointer}.c367-emergency strong{display:block;color:var(--rojo);font-size:1rem}.c367-emergency span{font-size:.78rem;color:#6d716d}
+.c367-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.c367-action{border:1px solid #e1e6e2;background:#fff;border-radius:15px;padding:16px 10px;min-height:92px;text-align:center;font-family:inherit;cursor:pointer}.c367-action .ic{display:flex;width:40px;height:40px;border-radius:12px;margin:0 auto 7px;align-items:center;justify-content:center;background:#f3f7f4;font-size:1.2rem}.c367-action strong{display:block;color:var(--verde);font-size:.84rem}.c367-my{width:100%;margin-top:12px;border:1px solid #dce5de;background:#fff;border-radius:15px;padding:14px;font-weight:800;color:var(--verde);font-family:inherit;cursor:pointer}.c367-recent{margin-top:18px}.c367-recent-title{font-size:.78rem;font-weight:850;color:#8a8f89;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}.c367-report-row{background:#fff;border:1px solid #e3e8e4;border-radius:13px;padding:12px;margin-bottom:8px;cursor:pointer}.c367-report-top{display:flex;justify-content:space-between;gap:8px;align-items:center}.c367-report-meta{font-size:.72rem;color:#7b817d;margin-top:4px}
+.c367-notif-tabs{display:flex;gap:8px;margin:10px 0 14px}.c367-notif-tabs button{flex:1;border:1px solid #dce4de;background:#fff;border-radius:999px;padding:9px;font-family:inherit;font-weight:800;color:var(--verde)}.c367-notif-tabs button.active{background:var(--verde);color:#fff}.c367-notif-card{background:#fff;border:1px solid #e1e7e2;border-radius:15px;padding:13px;margin-bottom:9px;display:flex;gap:11px}.c367-notif-card.unread{border-left:4px solid #f2ad00;background:#fffdf6}.c367-notif-ic{width:38px;height:38px;border-radius:12px;background:#f2f7f3;display:flex;align-items:center;justify-content:center;flex:0 0 auto}.c367-notif-body{min-width:0;flex:1}.c367-notif-body strong{display:block;color:var(--verde);font-size:.86rem;margin-bottom:3px}.c367-notif-body .txt{font-size:.76rem;color:#626a65;line-height:1.35}.c367-notif-time{font-size:.68rem;color:#929792;margin-top:5px}.c367-empty{background:#fff;border:1px solid #e1e7e2;border-radius:15px;padding:24px;text-align:center;color:#7c837e;font-size:.82rem}
+@media(max-width:560px){.c367-wrap{padding:14px 12px 24px}.c367-grid{grid-template-columns:repeat(2,1fr)}.c367-title{font-size:1.2rem}.c367-action{min-height:86px;padding:13px 7px}}
 </style>
 <!-- C143: expediente en incorporación + rol cosecha + seguimiento sin duplicidad -->
 <style id="c224-simple-ui">
@@ -5809,8 +5816,28 @@ function c224AbrirAvisos(modo){
   C224_AVISOS_MODO=modo||'pendientes';
   renderNotifs('enc-body');
 }
+function renderAvisosColaborador(modo){
+  var body=document.getElementById('op-body'); modo=modo||'nuevos';
+  document.querySelectorAll('.op-bottom-nav .op-nav-item').forEach(function(t){t.classList.remove('active');});
+  body.innerHTML='<div class="c367-wrap"><div class="loading">Cargando avisos...</div></div>';
+  consultaNotifsPropias(false).then(function(rows){
+    var data=(rows||[]).slice(0,60), nuevos=data.filter(function(n){return !n.leida;});
+    var visibles=modo==='nuevos'?nuevos:data.filter(function(n){return n.leida;}).slice(0,20);
+    var cards=visibles.map(function(n){
+      var diff=Math.floor((Date.now()-new Date(n.creado_en))/1000);
+      var t=diff<60?'hace un momento':diff<3600?'hace '+Math.floor(diff/60)+' min':diff<86400?'hace '+Math.floor(diff/3600)+' h':'hace '+Math.floor(diff/86400)+' días';
+      return '<div class="c367-notif-card '+(!n.leida?'unread':'')+'"><div class="c367-notif-ic">'+(n.icono||'🔔')+'</div><div class="c367-notif-body"><strong>'+n.titulo+'</strong><div class="txt">'+(n.cuerpo||'')+'</div><div class="c367-notif-time">'+t+'</div></div></div>';
+    }).join('');
+    body.innerHTML='<div class="c367-wrap"><div class="c367-head"><div class="c367-eyebrow">Avisos</div><div class="c367-title">Mis avisos</div><div class="c367-sub">Aquí aparecen únicamente tus avisos nuevos y los recientes.</div></div>'+ 
+      '<div class="c367-notif-tabs"><button class="'+(modo==='nuevos'?'active':'')+'" onclick="renderAvisosColaborador(\'nuevos\')">Nuevos'+(nuevos.length?' ('+nuevos.length+')':'')+'</button><button class="'+(modo==='recientes'?'active':'')+'" onclick="renderAvisosColaborador(\'recientes\')">Recientes</button></div>'+ 
+      (cards||'<div class="c367-empty">'+(modo==='nuevos'?'✓ No tienes avisos nuevos.':'No hay avisos recientes.')+'</div>')+'<button class="btn-back" style="margin-top:14px" onclick="tabOperario(\'inicio\')">← Volver a Inicio</button></div>';
+    if(modo==='nuevos'&&nuevos.length){Promise.all(nuevos.map(function(n){return from('notificaciones').eq('id',n.id).update({leida:true});})).then(actualizarBadgeAvisos).catch(function(){});}
+  }).catch(function(e){body.innerHTML='<div class="c367-wrap"><div class="c367-empty">No se pudieron cargar los avisos.</div></div>';});
+}
+
 function renderNotifs(bodyId){
   var body=document.getElementById(bodyId);
+  if(bodyId==='op-body'){ renderAvisosColaborador(); return; }
   body.innerHTML='<div class="loading">Cargando avisos...</div>';
   var esPanelLiderazgo = bodyId==='enc-body';
   Promise.all([
@@ -13943,43 +13970,33 @@ function repEsColaborador(){
 function renderCentroReportes(){
   var body=document.getElementById('op-body');
   document.querySelectorAll('.op-bottom-nav .op-nav-item').forEach(function(t){t.classList.remove('active');});
-  body.innerHTML='<div class="seccion-titulo">🚨 Centro de Reportes</div><div class="loading">Cargando...</div>';
-  from('alertas_campo').select('*').eq('usuario_id',usuario.id).order('creado_en',{ascending:false}).limit(20).get().then(function(rows){
+  body.innerHTML='<div class="c367-wrap"><div class="c367-head"><div class="c367-eyebrow">Centro de reportes</div><div class="c367-title">Reportar en campo</div><div class="c367-sub">Informa una incidencia al encargado. Si estás dentro de una tarea, usa Reportar incidencia para conservar automáticamente su contexto.</div></div><div class="loading">Cargando...</div></div>';
+  from('alertas_campo').select('*').eq('usuario_id',usuario.id).order('creado_en',{ascending:false}).limit(12).get().then(function(rows){
     var relevantes=(rows||[]).filter(function(r){return r.categoria!=='emergencia';});
-    var resumen={pendiente:0,en_revision:0,programada:0,atendida:0,rechazada:0};
-    relevantes.forEach(function(r){ if(resumen.hasOwnProperty(r.estado)) resumen[r.estado]++; });
-    var resumenHtml='<div class="stats-row rpt-resumen-grid">'+
-      Object.keys(ESTADO_REPORTE_LABELS).map(function(k){
-        return '<div class="stat-card"><div class="stat-num" style="color:'+ESTADO_REPORTE_LABELS[k].color+';font-size:1.2rem;">'+resumen[k]+'</div><div class="stat-lbl">'+ESTADO_REPORTE_LABELS[k].lbl+'</div></div>';
-      }).join('')+'</div>';
-    var recientesHtml=relevantes.slice(0,5).map(function(r){
-      var meta=REPORTE_CATEGORIA_META[r.categoria]||{ic:'🚨',lbl:r.categoria};
+    var recientes=relevantes.slice(0,3).map(function(r){
+      var meta=REPORTE_CATEGORIA_META[r.categoria]||{ic:'📝',lbl:r.categoria};
       var f=new Date(r.creado_en).toLocaleDateString('es-MX',{day:'2-digit',month:'short'});
-      var estLbl=ESTADO_REPORTE_LABELS[r.estado]||{lbl:r.estado,color:'var(--gris-3)'};
-      return '<div class="orden-card" style="cursor:pointer;" data-ver="'+r.id+'"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:.87rem;">'+meta.ic+' '+meta.lbl+'</strong><span style="font-size:.72rem;font-weight:700;color:'+estLbl.color+';">'+estLbl.lbl+'</span></div><div class="orden-meta">'+f+(r.descripcion?' · '+r.descripcion.slice(0,50):'')+'</div></div>';
+      var est=ESTADO_REPORTE_LABELS[r.estado]||{lbl:r.estado,color:'var(--gris-3)'};
+      return '<div class="c367-report-row" data-ver="'+r.id+'"><div class="c367-report-top"><strong>'+meta.ic+' '+meta.lbl+'</strong><span style="font-size:.7rem;font-weight:800;color:'+est.color+'">'+est.lbl+'</span></div><div class="c367-report-meta">'+f+(r.descripcion?' · '+r.descripcion.slice(0,58):'')+'</div></div>';
     }).join('');
-    var accesosHtml='<div class="op-inicio-card"><div class="op-inicio-titulo">Reportes rápidos</div><div class="op-accesos-grid">'+
-      '<button class="op-acceso-item" id="cr-acc-incidencia"><span class="op-acceso-ic">📝</span><span>Incidencia</span></button>'+
-      '<button class="op-acceso-item" id="cr-acc-mantenimiento"><span class="op-acceso-ic">🔧</span><span>Mantenimiento</span></button>'+
-      '<button class="op-acceso-item" id="cr-acc-riego"><span class="op-acceso-ic">💧</span><span>Riego</span></button>'+
-      '<button class="op-acceso-item" id="cr-acc-insumos"><span class="op-acceso-ic">📦</span><span>Insumos</span></button>'+
-      '<button class="op-acceso-item" id="cr-acc-sugerencia"><span class="op-acceso-ic">💡</span><span>Sugerencia</span></button>'+
-      '</div></div>';
-    body.innerHTML='<div class="seccion-titulo">🚨 Centro de Reportes</div>'+
-      '<p class="hint" style="margin-bottom:.75rem;">Reporta lo que encuentres en campo. Se avisa de inmediato al encargado.</p>'+
-      resumenHtml+
-      '<div class="tarea-card" style="cursor:pointer;border-left-color:var(--rojo);background:var(--rojo-tenue);margin-top:.75rem;" onclick="renderAccidenteSeguridad()"><div class="tarea-title" style="color:var(--rojo);">🤕 Accidente / Emergencia</div><div class="tarea-meta">Reporta un accidente o avisa una emergencia</div></div>'+
-      accesosHtml+
-      '<div class="seccion-titulo" style="margin-top:1rem;display:flex;justify-content:space-between;align-items:center;">Reportes recientes<button type="button" onclick="renderMisReportes()" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">Ver todos →</button></div>'+
-      (recientesHtml||'<div class="empty">Aún no has hecho ningún reporte.</div>')+
-      '<button class="btn-back" style="margin-top:1rem;" onclick="tabOperario(\'inicio\')">← Volver</button>';
+    body.innerHTML='<div class="c367-wrap"><div class="c367-head"><div class="c367-eyebrow">Centro de reportes</div><div class="c367-title">Reportar en campo</div><div class="c367-sub">Selecciona lo que necesitas reportar. El encargado recibirá el aviso.</div></div>'+ 
+      '<button class="c367-emergency" onclick="renderAccidenteSeguridad()"><strong>🚨 Accidente / Emergencia</strong><span>Atención prioritaria para accidentes o situaciones de riesgo.</span></button>'+ 
+      '<div class="c367-grid">'+
+      '<button class="c367-action" id="cr-acc-incidencia"><span class="ic">📝</span><strong>Incidencia</strong></button>'+ 
+      '<button class="c367-action" id="cr-acc-mantenimiento"><span class="ic">🔧</span><strong>Mantenimiento</strong></button>'+ 
+      '<button class="c367-action" id="cr-acc-riego"><span class="ic">💧</span><strong>Riego</strong></button>'+ 
+      '<button class="c367-action" id="cr-acc-insumos"><span class="ic">📦</span><strong>Insumos</strong></button>'+ 
+      '<button class="c367-action" id="cr-acc-sugerencia"><span class="ic">💡</span><strong>Sugerencia</strong></button></div>'+ 
+      '<button class="c367-my" onclick="renderMisReportes()">📋 Mis reportes y seguimiento →</button>'+ 
+      '<div class="c367-recent"><div class="c367-recent-title">Recientes</div>'+(recientes||'<div class="c367-empty">Aún no has hecho reportes.</div>')+'</div>'+ 
+      '<button class="btn-back" style="margin-top:14px" onclick="tabOperario(\'inicio\')">← Volver a Inicio</button></div>';
     body.querySelectorAll('[data-ver]').forEach(function(el){el.addEventListener('click',function(){renderDetalleReporte(this.dataset.ver);});});
-    document.getElementById('cr-acc-incidencia').addEventListener('click',function(){renderNuevoReporteIncidencia();});
-    document.getElementById('cr-acc-mantenimiento').addEventListener('click',function(){renderSolicitudMantenimiento();});
-    document.getElementById('cr-acc-riego').addEventListener('click',function(){renderNuevoReporteIncidencia('fuga_derrame');});
-    document.getElementById('cr-acc-insumos').addEventListener('click',function(){renderSolicitudInsumo();});
-    document.getElementById('cr-acc-sugerencia').addEventListener('click',function(){renderSolicitudOtro('sugerencia');});
-  }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
+    document.getElementById('cr-acc-incidencia').onclick=function(){renderNuevoReporteIncidencia();};
+    document.getElementById('cr-acc-mantenimiento').onclick=function(){renderSolicitudMantenimiento();};
+    document.getElementById('cr-acc-riego').onclick=function(){renderNuevoReporteIncidencia('fuga_derrame');};
+    document.getElementById('cr-acc-insumos').onclick=function(){renderSolicitudInsumo();};
+    document.getElementById('cr-acc-sugerencia').onclick=function(){renderSolicitudOtro('sugerencia');};
+  }).catch(function(e){body.innerHTML='<div class="c367-wrap"><div class="c367-empty">No se pudieron cargar tus reportes: '+e.message+'</div></div>';});
 }
 
 // 8-1 — Nuevo reporte de incidencia
