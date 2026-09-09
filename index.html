@@ -1638,7 +1638,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C330';
+  window.MOOTSIL_BUILD='C331';
 </script>
 
 
@@ -2796,7 +2796,8 @@ function c231Icon(name, cls){
 .c329-flow-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin:0 0 12px}
 .c329-flow-tabs button{border:1px solid #dfe7e2;background:#fff;border-radius:9px;padding:8px 3px;font-size:.62rem;font-weight:850;color:#40564b;cursor:pointer;line-height:1.15}
 .c329-flow-tabs button.active{background:#075b38;color:#fff;border-color:#075b38}
-.c329-simple-card{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e0e7e3;border-radius:12px;padding:11px 12px;margin:8px 0;box-shadow:0 2px 7px rgba(15,62,42,.035);cursor:pointer}
+.c329-simple-card{--estado:#cfd8d3;--estado-rgb:207,216,211;display:flex;align-items:center;gap:10px;background:linear-gradient(270deg,rgba(var(--estado-rgb),.075) 0,#fff 10%);border:1px solid #e0e7e3;border-right:5px solid var(--estado);border-radius:12px;padding:11px 12px;margin:8px 0;box-shadow:7px 4px 15px rgba(var(--estado-rgb),.16);cursor:pointer}
+.c329-simple-card.programada{--estado:#2584b8;--estado-rgb:37,132,184}.c329-simple-card.hoy{--estado:#d0a000;--estado-rgb:208,160,0}.c329-simple-card.proceso{--estado:#258354;--estado-rgb:37,131,84}.c329-simple-card.terminada{--estado:#6d2789;--estado-rgb:109,39,137}.c329-simple-card.retrasada{--estado:#b84d3f;--estado-rgb:184,77,63}
 .c329-type{width:58px;min-width:58px;text-align:center;border-radius:9px;padding:7px 3px;font-size:.57rem;font-weight:900;line-height:1.12;background:#edf6f0;color:#176b45}
 .c329-type.riego{background:#eaf5fc;color:#1977b3}.c329-type.foliar{background:#fff5dc;color:#ad6b00}.c329-type.drench{background:#e9f7f4;color:#087f70}.c329-type.cosecha{background:#f4eaf8;color:#70358c}
 .c329-simple-main{min-width:0;flex:1}.c329-simple-main b{display:block;color:#173629;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.c329-simple-main span{display:block;color:#68766f;font-size:.7rem;margin-top:3px}
@@ -17446,10 +17447,9 @@ function c329TipoTarea(t){
   var via=((t&&t.formula&&t.formula.via)||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   var txt=tipo+' '+via;
   if(/cosecha|recoleccion|corte de fruta/.test(txt)) return {label:'COSECHA',css:'cosecha'};
-  if(/drench/.test(txt)) return {label:'APLICACIÓN\\nDRENCH',css:'drench'};
-  if((t&&t.formula_id)&&/foliar/.test(txt)) return {label:'APLICACIÓN\\nFOLIAR',css:'foliar'};
-  if(/foliar/.test(txt)) return {label:'APLICACIÓN\\nFOLIAR',css:'foliar'};
+  if(/drench/.test(txt)) return {label:'DRENCH',css:'drench'};
   if(/riego|hidratacion|fertirriego|fertirrig|inyeccion/.test(txt)) return {label:'RIEGO',css:'riego'};
+  if(/foliar/.test(txt)||(t&&t.formula_id)) return {label:'FOLIAR',css:'foliar'};
   return {label:'LABOR',css:'labor'};
 }
 function c329TituloSimple(t){
@@ -17489,10 +17489,9 @@ function construirTarjetaTarea(t,hoy,horasExtraPorClave,componentesPorFormula,op
   var p=t.tabla?cats.plantaciones.find(function(x){return x.id===t.tabla.plantacion_id;}):null;
   var tp=c329TipoTarea(t), est=c329EstadoTarea(t,hoy);
   var ubic=[p&&p.nombre,t.tabla&&t.tabla.nombre].filter(Boolean).join(' · ')||'Actividad general';
-  return '<div class="c329-simple-card" data-c329-open="'+t.id+'">'+
+  return '<div class="c329-simple-card '+est.css+'" data-c329-open="'+t.id+'">'+
     '<div class="c329-type '+tp.css+'">'+tp.label.replace('\\n','<br>')+'</div>'+
     '<div class="c329-simple-main"><b>'+c225Esc(c329TituloSimple(t))+'</b><span>'+c225Esc(ubic)+'</span></div>'+
-    '<span class="c329-state '+est.css+'">'+est.label+'</span>'+
   '</div>';
 }
 
