@@ -1638,7 +1638,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C331';
+  window.MOOTSIL_BUILD='C332';
 </script>
 
 
@@ -2810,6 +2810,77 @@ function c231Icon(name, cls){
 .c329-modal-close{width:100%;border:0;background:#f1f5f2;color:#164d34;padding:12px;font-weight:900;cursor:pointer}
 @media(max-width:430px){.c329-flow-tabs{gap:3px}.c329-flow-tabs button{font-size:.55rem;padding:7px 1px}.c329-simple-card{padding:9px}.c329-type{width:52px;min-width:52px}.c329-simple-main b{font-size:.84rem}}
 </style>
+
+<style id="c332-mis-tareas-final">
+/* Estados: mismo lenguaje del Tablero, con sombra superior en los botones */
+.c329-flow-tabs{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:7px;
+  border:0;
+  background:transparent;
+  overflow:visible;
+}
+.c329-flow-tabs button{
+  --tab:#cfd8d3;
+  position:relative;
+  border:1px solid #dfe7e2 !important;
+  border-radius:11px !important;
+  background:#fff !important;
+  color:#365347 !important;
+  min-height:46px;
+  padding:11px 4px 8px !important;
+  box-shadow:inset 0 4px 0 var(--tab),0 2px 7px rgba(16,58,42,.05);
+  font-size:.63rem !important;
+  font-weight:850 !important;
+}
+.c329-flow-tabs button:nth-child(1){--tab:#2f80b7}
+.c329-flow-tabs button:nth-child(2){--tab:#d5a000}
+.c329-flow-tabs button:nth-child(3){--tab:#2f8b57}
+.c329-flow-tabs button:nth-child(4){--tab:#71308d}
+.c329-flow-tabs button:nth-child(5){--tab:#c7443b}
+.c329-flow-tabs button.active{
+  background:color-mix(in srgb,var(--tab) 9%,#fff) !important;
+  color:#173b2b !important;
+  box-shadow:inset 0 5px 0 var(--tab),0 4px 10px color-mix(in srgb,var(--tab) 18%,transparent) !important;
+}
+
+/* La ficha usa el estado sólo como franja/sombra izquierda */
+.c329-simple-card{
+  background:#fff !important;
+  border:1px solid #e0e7e3 !important;
+  border-left:5px solid var(--estado) !important;
+  border-right:1px solid #e0e7e3 !important;
+  box-shadow:-7px 4px 15px rgba(var(--estado-rgb),.15),0 2px 7px rgba(15,62,42,.035) !important;
+  padding:10px 12px !important;
+}
+
+/* Etiquetas de tipo sobrias: sin dibujos grandes ni colores exagerados */
+.c329-type{
+  width:92px !important;
+  min-width:92px !important;
+  border-radius:8px !important;
+  padding:7px 5px !important;
+  font-size:.55rem !important;
+  line-height:1.18 !important;
+  letter-spacing:.015em;
+  background:#eef6f1 !important;
+  color:#176b45 !important;
+  border:1px solid rgba(23,107,69,.08);
+}
+.c329-type.riego{background:#edf6fb !important;color:#2476a0 !important;border-color:rgba(36,118,160,.10)}
+.c329-type.foliar{background:#fff7e8 !important;color:#9d6500 !important;border-color:rgba(157,101,0,.10)}
+.c329-type.drench{background:#eef8f6 !important;color:#14786d !important;border-color:rgba(20,120,109,.10)}
+.c329-type.aplicacion-riego{background:#eef6fb !important;color:#2476a0 !important;border-color:rgba(36,118,160,.10)}
+.c329-type.cosecha{background:#f5eff8 !important;color:#70358c !important;border-color:rgba(112,53,140,.10)}
+
+@media(max-width:430px){
+  .c329-flow-tabs{gap:4px}
+  .c329-flow-tabs button{font-size:.53rem !important;min-height:43px;padding:10px 2px 7px !important}
+  .c329-type{width:82px !important;min-width:82px !important;font-size:.50rem !important}
+}
+</style>
+
 </head>
 <body>
 
@@ -17445,16 +17516,62 @@ function barraSubtabsTareas(){
 function c329TipoTarea(t){
   var tipo=((t&&t.tipo_labor&&t.tipo_labor.nombre)||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   var via=((t&&t.formula&&t.formula.via)||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  var txt=tipo+' '+via;
-  if(/cosecha|recoleccion|corte de fruta/.test(txt)) return {label:'COSECHA',css:'cosecha'};
-  if(/drench/.test(txt)) return {label:'DRENCH',css:'drench'};
-  if(/riego|hidratacion|fertirriego|fertirrig|inyeccion/.test(txt)) return {label:'RIEGO',css:'riego'};
-  if(/foliar/.test(txt)||(t&&t.formula_id)) return {label:'FOLIAR',css:'foliar'};
+  var formula=((t&&t.formula&&t.formula.nombre)||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  var txt=[tipo,via,formula,(t&&t.bomba_usada)||''].join(' ');
+
+  if(/cosecha|recoleccion|corte de fruta/.test(txt))
+    return {label:'COSECHA',css:'cosecha'};
+
+  /* Aplicaciones: primero se clasifica por vía para no confundirlas con hidratación. */
+  if(t&&t.formula_id){
+    if(/drench/.test(txt))
+      return {label:'APLICACIÓN DRENCH',css:'drench'};
+    if(/foliar/.test(txt))
+      return {label:'APLICACIÓN FOLIAR',css:'foliar'};
+    if(/riego|fertirriego|fertirrig|inyeccion/.test(txt))
+      return {label:'APLICACIÓN RIEGO',css:'aplicacion-riego'};
+    /* Fórmula sin vía explícita: conserva Aplicación Foliar como respaldo visual, no LABOR. */
+    return {label:'APLICACIÓN FOLIAR',css:'foliar'};
+  }
+
+  /* Riego sin fórmula = hidratación. */
+  if(/hidratacion|riego/.test(tipo))
+    return {label:'RIEGO',css:'riego'};
+
   return {label:'LABOR',css:'labor'};
+}
+function c332FormulaTitulo(nombre){
+  var n=String(nombre||'').trim();
+  if(!n)return '';
+  var partes=[];
+  n.replace(/\[([^\]]+)\]/g,function(_,x){partes.push(String(x||'').trim());return _;});
+  if(partes.length){
+    var utiles=partes.filter(function(x){
+      return !/^semana\s+\d+/i.test(x) &&
+             !/^(erandy|jade)\s*\|/i.test(x) &&
+             !/^(cesar|hugo|admin|dueño|dueno)(\s|$)/i.test(x);
+    });
+    if(utiles.length)return utiles.slice(0,2).join(' · ');
+    return partes[0];
+  }
+  return n.replace(/\s*\|\s*semana\s+\d+.*$/i,'').trim();
 }
 function c329TituloSimple(t){
   if(!t)return 'Actividad';
+  var tp=c329TipoTarea(t);
+
+  if(tp.label.indexOf('APLICACIÓN')===0 && t.formula && t.formula.nombre){
+    var f=c332FormulaTitulo(t.formula.nombre);
+    if(f && !/^aplicaciones?$/i.test(f)) return f;
+  }
+
+  if(tp.label==='RIEGO') return 'Hidratación';
+  if(tp.label==='COSECHA') return 'Cosecha';
+
   var tipo=(t.tipo_labor&&t.tipo_labor.nombre)||'Actividad';
+  if(/^aplicaciones?$/i.test(tipo) && t.formula && t.formula.nombre){
+    return c332FormulaTitulo(t.formula.nombre)||'Aplicación';
+  }
   if(t.subtipo&&t.subtipo.nombre) return tipo+' · '+t.subtipo.nombre;
   return tipo;
 }
@@ -17473,14 +17590,14 @@ function c329AbrirTarea(id){
   var modal=document.getElementById('c329-task-modal');
   if(!modal){modal=document.createElement('div');modal.id='c329-task-modal';document.body.appendChild(modal);}
   var filas=[
-    ['Tipo',tp.label.replace('\\n',' ')],
+    ['Tipo',tp.label],
     ['Ubicación',((p&&p.nombre)||'')+(t.tabla?(' · '+t.tabla.nombre):'')],
     ['Fecha',c239FormatDate(t.fecha_asignacion)],
     ['Estado',est.label]
   ];
   if(t.notas_encargado)filas.push(['Indicaciones',t.notas_encargado]);
   if(t.formula&&t.formula.nombre)filas.push(['Fórmula',t.formula.nombre]);
-  modal.innerHTML='<div class="c329-modal-card"><div class="c329-modal-head"><small>'+tp.label.replace('\\n',' · ')+'</small><h3>'+c225Esc(c329TituloSimple(t))+'</h3></div><div class="c329-modal-body">'+filas.map(function(r){return '<div class="c329-modal-row"><strong>'+r[0]+':</strong> '+c225Esc(r[1]||'—')+'</div>';}).join('')+'</div><button class="c329-modal-close" type="button" onclick="c329CerrarTarea()">Cerrar</button></div>';
+  modal.innerHTML='<div class="c329-modal-card"><div class="c329-modal-head"><small>'+tp.label+'</small><h3>'+c225Esc(c329TituloSimple(t))+'</h3></div><div class="c329-modal-body">'+filas.map(function(r){return '<div class="c329-modal-row"><strong>'+r[0]+':</strong> '+c225Esc(r[1]||'—')+'</div>';}).join('')+'</div><button class="c329-modal-close" type="button" onclick="c329CerrarTarea()">Cerrar</button></div>';
   modal.classList.add('open');
 }
 function c329CerrarTarea(){var m=document.getElementById('c329-task-modal');if(m)m.classList.remove('open');}
@@ -17490,7 +17607,7 @@ function construirTarjetaTarea(t,hoy,horasExtraPorClave,componentesPorFormula,op
   var tp=c329TipoTarea(t), est=c329EstadoTarea(t,hoy);
   var ubic=[p&&p.nombre,t.tabla&&t.tabla.nombre].filter(Boolean).join(' · ')||'Actividad general';
   return '<div class="c329-simple-card '+est.css+'" data-c329-open="'+t.id+'">'+
-    '<div class="c329-type '+tp.css+'">'+tp.label.replace('\\n','<br>')+'</div>'+
+    '<div class="c329-type '+tp.css+'">'+c225Esc(tp.label)+'</div>'+
     '<div class="c329-simple-main"><b>'+c225Esc(c329TituloSimple(t))+'</b><span>'+c225Esc(ubic)+'</span></div>'+
   '</div>';
 }
@@ -19090,7 +19207,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C330
+C332
 </div>
 
 <style id="fi128-css">
