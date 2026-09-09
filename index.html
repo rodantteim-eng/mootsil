@@ -1638,7 +1638,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C332';
+  window.MOOTSIL_BUILD='C333';
 </script>
 
 
@@ -2878,6 +2878,58 @@ function c231Icon(name, cls){
   .c329-flow-tabs{gap:4px}
   .c329-flow-tabs button{font-size:.53rem !important;min-height:43px;padding:10px 2px 7px !important}
   .c329-type{width:82px !important;min-width:82px !important;font-size:.50rem !important}
+}
+</style>
+
+
+<style id="c333-tipo-icono-texto">
+.c329-type{
+  width:auto !important;
+  min-width:118px !important;
+  max-width:145px;
+  display:inline-flex !important;
+  align-items:center;
+  justify-content:flex-start;
+  gap:6px;
+  text-align:left !important;
+  border-radius:9px !important;
+  padding:7px 9px !important;
+  font-size:.55rem !important;
+  line-height:1.15 !important;
+  font-weight:900 !important;
+  letter-spacing:.01em;
+  background:#f5f7f6 !important;
+  color:#21493a !important;
+  border:1px solid #e1e7e3 !important;
+  box-shadow:0 1px 3px rgba(15,62,42,.04);
+}
+.c333-type-icon{
+  flex:0 0 auto;
+  font-size:1rem;
+  line-height:1;
+}
+.c333-type-text{
+  display:block;
+  white-space:normal;
+}
+.c329-type.riego,
+.c329-type.foliar,
+.c329-type.drench,
+.c329-type.aplicacion-riego,
+.c329-type.cosecha{
+  background:#f5f7f6 !important;
+  color:#21493a !important;
+  border-color:#e1e7e3 !important;
+}
+@media(max-width:430px){
+  .c329-type{
+    min-width:104px !important;
+    max-width:118px;
+    padding:6px 7px !important;
+    gap:5px;
+    font-size:.49rem !important;
+  }
+  .c333-type-icon{font-size:.92rem}
 }
 </style>
 
@@ -17520,25 +17572,22 @@ function c329TipoTarea(t){
   var txt=[tipo,via,formula,(t&&t.bomba_usada)||''].join(' ');
 
   if(/cosecha|recoleccion|corte de fruta/.test(txt))
-    return {label:'COSECHA',css:'cosecha'};
+    return {icon:'🫐',label:'COSECHA',css:'cosecha'};
 
-  /* Aplicaciones: primero se clasifica por vía para no confundirlas con hidratación. */
   if(t&&t.formula_id){
     if(/drench/.test(txt))
-      return {label:'APLICACIÓN DRENCH',css:'drench'};
+      return {icon:'🎒',label:'APLICACIÓN DRENCH',css:'drench'};
     if(/foliar/.test(txt))
-      return {label:'APLICACIÓN FOLIAR',css:'foliar'};
+      return {icon:'🍃',label:'APLICACIÓN FOLIAR',css:'foliar'};
     if(/riego|fertirriego|fertirrig|inyeccion/.test(txt))
-      return {label:'APLICACIÓN RIEGO',css:'aplicacion-riego'};
-    /* Fórmula sin vía explícita: conserva Aplicación Foliar como respaldo visual, no LABOR. */
-    return {label:'APLICACIÓN FOLIAR',css:'foliar'};
+      return {icon:'🚰',label:'APLICACIÓN RIEGO',css:'aplicacion-riego'};
+    return {icon:'🍃',label:'APLICACIÓN FOLIAR',css:'foliar'};
   }
 
-  /* Riego sin fórmula = hidratación. */
   if(/hidratacion|riego/.test(tipo))
-    return {label:'RIEGO',css:'riego'};
+    return {icon:'💧',label:'RIEGO',css:'riego'};
 
-  return {label:'LABOR',css:'labor'};
+  return {icon:'✂️',label:'LABOR',css:'labor'};
 }
 function c332FormulaTitulo(nombre){
   var n=String(nombre||'').trim();
@@ -17597,7 +17646,7 @@ function c329AbrirTarea(id){
   ];
   if(t.notas_encargado)filas.push(['Indicaciones',t.notas_encargado]);
   if(t.formula&&t.formula.nombre)filas.push(['Fórmula',t.formula.nombre]);
-  modal.innerHTML='<div class="c329-modal-card"><div class="c329-modal-head"><small>'+tp.label+'</small><h3>'+c225Esc(c329TituloSimple(t))+'</h3></div><div class="c329-modal-body">'+filas.map(function(r){return '<div class="c329-modal-row"><strong>'+r[0]+':</strong> '+c225Esc(r[1]||'—')+'</div>';}).join('')+'</div><button class="c329-modal-close" type="button" onclick="c329CerrarTarea()">Cerrar</button></div>';
+  modal.innerHTML='<div class="c329-modal-card"><div class="c329-modal-head"><small>'+c225Esc((tp.icon?tp.icon+' ':'')+tp.label)+'</small><h3>'+c225Esc(c329TituloSimple(t))+'</h3></div><div class="c329-modal-body">'+filas.map(function(r){return '<div class="c329-modal-row"><strong>'+r[0]+':</strong> '+c225Esc(r[1]||'—')+'</div>';}).join('')+'</div><button class="c329-modal-close" type="button" onclick="c329CerrarTarea()">Cerrar</button></div>';
   modal.classList.add('open');
 }
 function c329CerrarTarea(){var m=document.getElementById('c329-task-modal');if(m)m.classList.remove('open');}
@@ -17607,7 +17656,7 @@ function construirTarjetaTarea(t,hoy,horasExtraPorClave,componentesPorFormula,op
   var tp=c329TipoTarea(t), est=c329EstadoTarea(t,hoy);
   var ubic=[p&&p.nombre,t.tabla&&t.tabla.nombre].filter(Boolean).join(' · ')||'Actividad general';
   return '<div class="c329-simple-card '+est.css+'" data-c329-open="'+t.id+'">'+
-    '<div class="c329-type '+tp.css+'">'+c225Esc(tp.label)+'</div>'+
+    '<div class="c329-type '+tp.css+'"><span class="c333-type-icon">'+c225Esc(tp.icon||'')+'</span><span class="c333-type-text">'+c225Esc(tp.label)+'</span></div>'+
     '<div class="c329-simple-main"><b>'+c225Esc(c329TituloSimple(t))+'</b><span>'+c225Esc(ubic)+'</span></div>'+
   '</div>';
 }
@@ -19207,7 +19256,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C332
+C333
 </div>
 
 <style id="fi128-css">
