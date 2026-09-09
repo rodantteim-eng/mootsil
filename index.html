@@ -1638,7 +1638,7 @@ function c231Icon(name, cls){
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <script>
-  window.MOOTSIL_BUILD='C335';
+  window.MOOTSIL_BUILD='C336';
 </script>
 
 
@@ -2930,6 +2930,45 @@ function c231Icon(name, cls){
     font-size:.49rem !important;
   }
   .c333-type-icon{font-size:.92rem}
+}
+</style>
+
+
+<style id="c336-labor-activa">
+.c336-wrap{max-width:760px;margin:0 auto;padding:14px 14px 90px}
+.c336-top{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.c336-back{border:0;background:transparent;color:var(--verde);font-size:1.35rem;cursor:pointer}
+.c336-title{font-size:1.18rem;font-weight:900;color:var(--verde);flex:1}
+.c336-chip{display:inline-flex;align-items:center;gap:5px;background:#e9f4ed;color:#17653f;border-radius:999px;padding:6px 10px;font-size:.68rem;font-weight:900}
+.c336-card{background:#fff;border:1px solid #dfe7e2;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 2px 8px rgba(15,62,42,.04)}
+.c336-labor-head{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center}
+.c336-type-pill{display:inline-flex;align-items:center;gap:6px;background:#eef6f1;color:#176b45;border-radius:9px;padding:7px 9px;font-size:.65rem;font-weight:900}
+.c336-labor-name{font-size:1.16rem;font-weight:900;color:#173b2b;margin-top:7px}
+.c336-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;margin-top:12px;font-size:.8rem;color:#53645b}
+.c336-meta strong{color:#173b2b}
+.c336-progress{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
+.c336-progress-big{font-size:1.55rem;font-weight:900;color:#0e5e39}
+.c336-progress-sub{font-size:.78rem;color:#66766e;margin-top:4px}
+.c336-next{background:#eef7f1;border-radius:10px;padding:10px 12px;color:#174f35;font-weight:800;text-align:center;min-width:125px}
+.c336-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px}
+.c336-actions button{border-radius:11px;padding:12px 8px;font-weight:850;font-size:.73rem;cursor:pointer;background:#fff;border:1px solid #d9e4de;color:#174f35}
+.c336-actions .danger{border-color:#f0b5b0;color:#b3261e}
+.c336-actions .primary{background:#0b613b;color:#fff;border-color:#0b613b}
+.c336-actions .finish{border-color:#8cb6a0;color:#0e5e39}
+.c336-section-title{font-weight:900;color:#173b2b;font-size:.88rem;margin-bottom:8px}
+.c336-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.c336-surco{border:1px solid #dfe5e1;background:#f5f6f5;border-radius:8px;padding:9px 3px;font-weight:800;color:#32473d;cursor:pointer}
+.c336-surco.hecho{background:#eaf5ed;color:#17653f;border-color:#cde4d5}
+.c336-surco.actual{background:#fff0d7;color:#9c5a00;border-color:#e7a228}
+.c336-surco:disabled{cursor:default}
+.c336-info{background:#eef5ff;border:1px solid #cfe0f3;color:#315b7c;border-radius:10px;padding:10px 12px;font-size:.75rem;line-height:1.45;margin:10px 0}
+.c336-save-row{display:grid;grid-template-columns:1fr 1.35fr;gap:8px;margin-top:12px}
+.c336-save-row button{border-radius:11px;padding:12px;font-weight:850;cursor:pointer}
+.c336-cancel{background:#fff;border:1px solid #cfd8d3;color:#31483d}
+.c336-save{background:#0b613b;border:1px solid #0b613b;color:#fff}
+@media(max-width:520px){
+ .c336-wrap{padding:10px 10px 88px}.c336-meta{grid-template-columns:1fr}.c336-actions{grid-template-columns:1fr}.c336-grid{grid-template-columns:repeat(5,1fr)}
+ .c336-progress{grid-template-columns:1fr}.c336-next{text-align:left}
 }
 </style>
 
@@ -17722,6 +17761,20 @@ function marcarOrdenEnProceso(oid){
   }
 }
 
+
+function c336RangoSemanaActual(){
+  var d=new Date(fechaHoyLocal()+'T12:00:00');
+  var dow=d.getDay(); var delta=(dow===0?-6:1-dow);
+  var ini=new Date(d); ini.setDate(d.getDate()+delta);
+  var fin=new Date(ini); fin.setDate(ini.getDate()+6);
+  function ymd(x){return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');}
+  return {ini:ymd(ini),fin:ymd(fin)};
+}
+function c336EnSemanaActual(t){
+  var f=t&&t.fecha_asignacion; if(!f)return false;
+  var r=c336RangoSemanaActual(); return f>=r.ini&&f<=r.fin;
+}
+
 function pintarTareas(todas,hoyOrdenes,esCache,completadas,evidenciaPorOrden,componentesPorFormula,horasExtraPorClave){
   completadas=completadas||[];
   var body=document.getElementById('op-body');
@@ -17729,8 +17782,8 @@ function pintarTareas(todas,hoyOrdenes,esCache,completadas,evidenciaPorOrden,com
   var cont=document.getElementById('tareas-contenido');
   try{
     var hoy=fechaHoyLocal();
-    var abiertas=(todas||[]).filter(function(t){return !ordenEsTiempo(t);});
-    var cerradas=(completadas||[]).filter(function(t){return !ordenEsTiempo(t);});
+    var abiertas=(todas||[]).filter(function(t){return !ordenEsTiempo(t)&&c336EnSemanaActual(t);});
+    var cerradas=(completadas||[]).filter(function(t){return !ordenEsTiempo(t)&&c336EnSemanaActual(t);});
     window.C329_TAREAS=abiertas.concat(cerradas);
 
     var programadas=abiertas.filter(function(t){return t.estado==='pendiente'&&t.fecha_asignacion>hoy;});
@@ -18024,6 +18077,102 @@ function fusionarSurcosLocales(o){
   var r=calcularSurcosOrden(o,pendientes); // misma función de L1, mismo Set() sin duplicados
   return Object.assign({},o,{surcos_completados:r.union});
 }
+
+function c336InicioKey(id){return 'mootsil_labor_inicio_'+usuario.id+'_'+id;}
+function c336HoraInicio(o){
+  var key=c336InicioKey(o.id), v=localStorage.getItem(key);
+  if(!v){v=new Date().toISOString();localStorage.setItem(key,v);}
+  try{return new Date(v).toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit',hour12:true});}catch(e){return '—';}
+}
+function c336EsLaborPura(o){
+  try{return c329TipoTarea(o).label==='LABOR' && !o.activo_rancho_id && !!o.tabla_id;}catch(e){return false;}
+}
+function c336ResumenProgreso(o){
+  var r=calcularSurcosOrden(o,[]);
+  var total=(r.totalAsignados||[]).map(Number).filter(Number.isFinite).sort(function(a,b){return a-b;});
+  var hechos=(r.union||[]).map(Number).filter(Number.isFinite).sort(function(a,b){return a-b;});
+  var sig=total.find(function(n){return hechos.indexOf(n)===-1;});
+  return {total:total,hechos:hechos,siguiente:sig};
+}
+function c336LaborActiva(){
+  var o=ordenEjecutando, body=document.getElementById('op-body');
+  if(!o||!o.tabla){cargarTareas('proceso');return;}
+  var p=cats.plantaciones.find(function(x){return x.id===o.tabla.plantacion_id;});
+  var pr=c336ResumenProgreso(o);
+  var titulo=c329TituloSimple(o), tp=c329TipoTarea(o);
+  var rango=pr.total.length?('Surcos '+pr.total[0]+' – '+pr.total[pr.total.length-1]):'Tabla asignada';
+  var avance=pr.hechos.length?(pr.hechos.length+' / '+pr.total.length+' surcos registrados'):'Sin avance registrado';
+  var cont=pr.siguiente?('Surco '+pr.siguiente):'Sin surcos pendientes';
+  body.innerHTML='<div class="c336-wrap">'+
+    '<div class="c336-top"><button class="c336-back" onclick="ordenEjecutando=null;cargarTareas(\'proceso\')">←</button><div class="c336-title">Labor activa</div><span class="c336-chip">● EN PROCESO</span></div>'+
+    '<div class="c336-card"><div class="c336-labor-head"><div class="c336-type-pill">'+c225Esc((tp.icon?tp.icon+' ':'')+tp.label)+'</div><div><div class="c336-labor-name">'+c225Esc(titulo)+'</div><div style="font-size:.78rem;color:#68786f;margin-top:4px;">'+c225Esc((p?p.nombre:'')+' · '+o.tabla.nombre)+'</div></div></div>'+
+      '<div class="c336-meta"><div>📍 <strong>'+c225Esc((p?p.nombre:'')+' · '+o.tabla.nombre)+'</strong></div><div>📋 <strong>'+c225Esc(rango)+'</strong></div><div>🕒 Inicio hoy <strong>'+c225Esc(c336HoraInicio(o))+'</strong></div><div>📅 <strong>'+c225Esc(c239FormatDate(o.fecha_asignacion))+'</strong></div></div>'+
+    '</div>'+
+    '<div class="c336-card"><div class="c336-section-title">Avance de la labor</div><div class="c336-progress"><div><div class="c336-progress-big">'+c225Esc(avance)+'</div><div class="c336-progress-sub">El avance se registra únicamente cuando tú lo indicas.</div></div><div class="c336-next">Continuar desde<br><strong>'+c225Esc(cont)+'</strong></div></div></div>'+
+    (o.notas_encargado?'<div class="c336-card"><div class="c336-section-title">Indicaciones</div><div style="font-size:.8rem;color:#53645b;">'+c225Esc(o.notas_encargado)+'</div></div>':'')+
+    '<div class="c336-actions">'+
+      '<button class="danger" onclick="renderCentroReportes()">🚨 Reportar incidencia</button>'+
+      '<button class="primary" onclick="c336AbrirRegistrarAvance()">📝 Registrar avance</button>'+
+      '<button class="finish" onclick="c336TerminarLabor()">🏁 Terminar labor</button>'+
+    '</div>'+
+  '</div>';
+}
+function c336AbrirRegistrarAvance(){
+  var o=ordenEjecutando, body=document.getElementById('op-body');
+  if(!o||!o.tabla)return;
+  var p=cats.plantaciones.find(function(x){return x.id===o.tabla.plantacion_id;});
+  var pr=c336ResumenProgreso(o);
+  if(!pr.total.length){alert('Esta labor no tiene surcos configurados.');return;}
+  var inicio=pr.siguiente;
+  if(!inicio){alert('Todos los surcos están registrados. Si la labor realmente terminó, usa “Terminar labor”.');return;}
+  capturaEjec.surcoTocado=null; capturaEjec.surcos=[];
+  function pintar(){
+    var hasta=capturaEjec.surcoTocado?Number(capturaEjec.surcoTocado):null;
+    var rango=capturaEjec.surcoTocado?calcularRangoAutomatico(pr.total.map(String),String(inicio),String(capturaEjec.surcoTocado)):[];
+    capturaEjec.surcos=rango.map(Number);
+    var botones=pr.total.map(function(n){
+      if(pr.hechos.indexOf(n)>-1)return '<button class="c336-surco hecho" disabled>'+n+' ✓</button>';
+      var actual=rango.map(Number).indexOf(n)>-1;
+      return '<button class="c336-surco '+(actual?'actual':'')+'" data-c336-surco="'+n+'">'+n+'</button>';
+    }).join('');
+    body.innerHTML='<div class="c336-wrap">'+
+      '<div class="c336-top"><button class="c336-back" onclick="c336LaborActiva()">←</button><div class="c336-title">Registrar avance</div><span class="c336-chip">DESDE LABOR ACTIVA</span></div>'+
+      '<div class="c336-card"><div class="c336-section-title">¿Hasta dónde llegaste?</div><div style="font-size:.8rem;color:#596a61;">Selecciona únicamente el último surco trabajado. Mootsil registrará automáticamente desde el <strong>surco '+inicio+'</strong> hasta el que selecciones.</div></div>'+
+      '<div class="c336-card"><div class="c336-section-title">'+c225Esc((p?p.nombre:'')+' · '+o.tabla.nombre)+'</div><div class="c336-grid">'+botones+'</div></div>'+
+      (hasta?'<div class="c336-info">Se registrará esta ejecución del <strong>surco '+inicio+' al '+hasta+'</strong> ('+capturaEjec.surcos.length+' surcos).</div>':'<div class="c336-info">Aún no has seleccionado el último surco trabajado.</div>')+
+      '<div class="c336-save-row"><button class="c336-cancel" onclick="c336LaborActiva()">Cancelar</button><button class="c336-save" '+(hasta?'':'disabled')+' onclick="c336GuardarAvance()">Guardar avance</button></div>'+
+    '</div>';
+    body.querySelectorAll('[data-c336-surco]').forEach(function(b){b.addEventListener('click',function(){capturaEjec.surcoTocado=this.dataset.c336Surco;pintar();});});
+  }
+  pintar();
+}
+function c336GuardarAvance(){
+  var o=ordenEjecutando;
+  if(!o||!capturaEjec.surcos||!capturaEjec.surcos.length){alert('Selecciona hasta qué surco llegaste.');return;}
+  var r=calcularSurcosOrden(o,capturaEjec.surcos);
+  var now=new Date().toISOString();
+  var reg={usuario_id:usuario.id,tabla_id:o.tabla_id,tipo_labor_id:o.tipo_labor_id,subtipo_labor_id:o.subtipo_labor_id||null,surcos_trabajados:capturaEjec.surcos,cantidad_insumo:null,foto_url:null,capturado_en:now,orden_id:o.id,epp_confirmado:null};
+  var upd={estado:'en_proceso',surcos_completados:r.union};
+  function local(){
+    colaOffline.push(reg);localStorage.setItem('mootsil_cola',JSON.stringify(colaOffline));riegoEncolar(o.id,upd);
+    o.surcos_completados=r.union;o.estado='en_proceso';capturaEjec.surcos=[];capturaEjec.surcoTocado=null;
+    showToast('📡 Avance guardado en el celular. Se sincronizará al recuperar señal.');c336LaborActiva();
+  }
+  if(!navigator.onLine){local();return;}
+  from('registros_labor').insert(reg).then(function(){return from('ordenes_trabajo').eq('id',o.id).update(upd);}).then(function(){
+    o.surcos_completados=r.union;o.estado='en_proceso';capturaEjec.surcos=[];capturaEjec.surcoTocado=null;
+    showToast('✅ Avance registrado. La labor continúa en proceso.');c336LaborActiva();
+  }).catch(function(){local();});
+}
+function c336TerminarLabor(){
+  var o=ordenEjecutando;if(!o)return;
+  if(!confirm('¿Confirmas que esta labor quedó terminada en toda la asignación?\\n\\nUsa esta opción sólo cuando realmente haya concluido.'))return;
+  var r=calcularSurcosOrden(o,[]);
+  capturaEjec.surcos=(r.faltan||[]).map(Number);
+  ejecutarGuardadoFinal(o);
+  try{localStorage.removeItem(c336InicioKey(o.id));}catch(e){}
+}
+
 function prepararEjecucion(o,esOffline){
   ordenEjecutando=o; pasoEjec=1; capturaEjec={surcos:[],cantidad:0,foto:false,herramientaLimpia:false,requiereLimpieza:false,epp:{},tambosEsteAvance:1,surcoTocado:null};
   if(o.activo_rancho_id){renderEjecMantenimiento();return;}
@@ -18045,6 +18194,7 @@ function prepararEjecucion(o,esOffline){
       renderEjec();
     }).catch(function(e){alert('No se pudo cargar la fórmula de esta aplicación.\n\nError: '+e.message);});
   } else {
+    if(c336EsLaborPura(o)){c336LaborActiva();return;}
     renderEjec();
   }
 }
@@ -19306,7 +19456,7 @@ document.addEventListener('click',function(e){
 
 <div id="mootsil-build-version" style="position:fixed;right:6px;bottom:4px;z-index:99999;
 font:600 9px/1 Arial,sans-serif;color:rgba(255,255,255,.55);pointer-events:none;">
-C335
+C336
 </div>
 
 <style id="fi128-css">
