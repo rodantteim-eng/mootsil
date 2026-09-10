@@ -2975,10 +2975,8 @@ function c231Icon(name, cls){
 </span>
 <span class="op-btn-avisos-lbl">Avisos</span>
 </button>
-<button type="button" id="op-header-profile-btn" aria-label="Abrir perfil" onclick="renderPerfilOperario()" oncontextmenu="return false;" style="border:0;background:transparent;padding:0;margin:0;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">
-<img alt="Mi Mootsilito" class="op-header-avatar" id="op-header-avatar" style="display:none;pointer-events:none;user-select:none;-webkit-user-select:none;" draggable="false"/>
-<div class="op-header-avatar-fallback" id="op-header-avatar-fallback" style="pointer-events:none;user-select:none;-webkit-user-select:none;">🧑‍🌾</div>
-</button>
+<img alt="Mi Mootsilito" class="op-header-avatar" id="op-header-avatar" style="display:none;"/>
+<div class="op-header-avatar-fallback" id="op-header-avatar-fallback">🧑‍🌾</div>
 </div>
 </div>
 <img alt="Rancho Sagrado Corazón · Zarzamora" class="op-franja-oficial" id="op-franja-img" src=""/>
@@ -14471,17 +14469,18 @@ function renderSolicitudInsumo(){
     }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Enviar solicitud';});
   });
 }
-// C368 — Foto de perfil del colaborador: recorte centrado y compresión local.
-function c368PrepararAvatar(file){
+
+// C369 — Foto de perfil aislada en Perfil, sin tocar el avatar del encabezado.
+function c369PrepararAvatar(file){
   return new Promise(function(resolve,reject){
     var img=new Image();
     var url=URL.createObjectURL(file);
     img.onload=function(){
       try{
-        var side=Math.min(img.naturalWidth||img.width,img.naturalHeight||img.height);
-        var sx=((img.naturalWidth||img.width)-side)/2, sy=((img.naturalHeight||img.height)-side)/2;
-        var canvas=document.createElement('canvas');canvas.width=640;canvas.height=640;
-        var ctx=canvas.getContext('2d');ctx.drawImage(img,sx,sy,side,side,0,0,640,640);
+        var w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;
+        var side=Math.min(w,h),sx=(w-side)/2,sy=(h-side)/2;
+        var canvas=document.createElement('canvas'); canvas.width=640; canvas.height=640;
+        var ctx=canvas.getContext('2d'); ctx.drawImage(img,sx,sy,side,side,0,0,640,640);
         URL.revokeObjectURL(url);
         canvas.toBlob(function(blob){blob?resolve(blob):reject(new Error('No se pudo preparar la imagen.'));},'image/jpeg',0.84);
       }catch(e){URL.revokeObjectURL(url);reject(e);}
@@ -14489,6 +14488,26 @@ function c368PrepararAvatar(file){
     img.onerror=function(){URL.revokeObjectURL(url);reject(new Error('No se pudo leer la imagen.'));};
     img.src=url;
   });
+}
+function c369GuardarAvatar(file){
+  if(!file)return;
+  if(!/^image\//.test(file.type||'')){alert('Selecciona una imagen válida.');return;}
+  if(file.size>12*1024*1024){alert('La imagen es demasiado grande. Selecciona una foto menor a 12 MB.');return;}
+  showToast('📷 Preparando foto...');
+  c369PrepararAvatar(file).then(function(blob){
+    var path='perfiles/'+usuario.id+'/avatar_'+Date.now()+'.jpg';
+    return fetch(URL_SB+'/storage/v1/object/evidencias/'+path,{method:'POST',headers:{apikey:KEY_SB,Authorization:'Bearer '+KEY_SB,'Content-Type':'image/jpeg','x-upsert':'true'},body:blob}).then(function(r){
+      if(!r.ok)return r.text().then(function(t){throw new Error(t||'No se pudo cargar la foto');});
+      var url=URL_SB+'/storage/v1/object/public/evidencias/'+path;
+      return from('usuarios').eq('id',usuario.id).update({avatar_url:url}).then(function(){return url;});
+    });
+  }).then(function(url){
+    usuario.avatarUrl=url;
+    try{var ses=JSON.parse(localStorage.getItem('mootsil_sesion')||'null');if(ses&&ses.usuario){ses.usuario.avatarUrl=url;localStorage.setItem('mootsil_sesion',JSON.stringify(ses));}}catch(e){}
+    actualizarAvatarHeader();
+    showToast('✅ Foto de perfil actualizada');
+    renderPerfilOperario();
+  }).catch(function(e){alert('No se pudo guardar la foto. '+(e&&e.message?e.message:''));});
 }
 
 function renderPerfilOperario(){
@@ -14513,10 +14532,11 @@ function renderPerfilOperario(){
     }
     var perfilAvatar=u.avatar_url||usuario.avatarUrl||'';
     var perfilAvatarHtml=perfilAvatar
-      ? '<img id="perf-avatar-img" src="'+perfilAvatar+'" alt="Foto de perfil" style="width:86px;height:86px;border-radius:50%;object-fit:cover;border:3px solid #fff;box-shadow:0 0 0 2px var(--verde-tenue);">'
-      : '<div id="perf-avatar-fallback" style="width:86px;height:86px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--verde-tenue);font-size:2.15rem;border:3px solid #fff;box-shadow:0 0 0 2px var(--verde-tenue);">'+MOOTSILITO_FALLBACK_IC+'</div>';
+      ? '<img src="'+perfilAvatar+'" alt="Foto de perfil" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid #fff;box-shadow:0 0 0 2px var(--verde-tenue);pointer-events:none;user-select:none;">'
+      : '<div style="width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--verde-tenue);font-size:1.9rem;border:3px solid #fff;box-shadow:0 0 0 2px var(--verde-tenue);">'+MOOTSILITO_FALLBACK_IC+'</div>';
     body.innerHTML='<div class="seccion-titulo">Perfil</div>'+
-    '<div class="tarea-card"><div style="display:flex;gap:.9rem;align-items:flex-start;"><div id="perf-avatar-btn" oncontextmenu="return false;" style="flex:0 0 auto;position:relative;display:inline-block;text-align:center;user-select:none;-webkit-user-select:none;">'+perfilAvatarHtml.replace('<img id="perf-avatar-img"','<img draggable="false" oncontextmenu="return false" style="pointer-events:none;user-select:none;-webkit-user-select:none;" id="perf-avatar-img"').replace(' style="width:86px',' style="pointer-events:none;user-select:none;-webkit-user-select:none;width:86px')+'</div><div style="min-width:0;flex:1;"><div style="display:flex;justify-content:space-between;gap:.6rem;align-items:flex-start;"><div><div class="tarea-title">'+usuario.nombre+'</div><div class="tarea-meta">Área / puesto: '+asignacionLbl+antiguedadTxt+cumpleTxt+'</div></div><span style="background:var(--verde-tenue);color:var(--verde-mid);font-size:.72rem;font-weight:800;padding:.28rem .55rem;border-radius:999px;white-space:nowrap;">● '+estadoPerfil+'</span></div><div style="display:flex;gap:.45rem;flex-wrap:wrap;margin-top:.65rem;"><label for="perf-avatar-cam" style="flex:1;min-width:120px;text-align:center;padding:.72rem .8rem;border:1.5px solid var(--verde-mid);border-radius:12px;background:var(--verde-tenue);color:var(--verde);font-weight:800;cursor:pointer;touch-action:manipulation;">📷 Tomar foto</label><label for="perf-avatar-gal" style="flex:1;min-width:120px;text-align:center;padding:.72rem .8rem;border:1.5px solid var(--gris-2);border-radius:12px;background:#fff;color:var(--verde);font-weight:800;cursor:pointer;touch-action:manipulation;">🖼️ Elegir foto</label></div><input id="perf-avatar-cam" type="file" accept="image/*" capture="user" style="position:absolute;left:-10000px;width:1px;height:1px;opacity:0;"/><input id="perf-avatar-gal" type="file" accept="image/*" style="position:absolute;left:-10000px;width:1px;height:1px;opacity:0;"/><div class="hint" style="margin-top:.45rem;">La foto se recorta automáticamente y se guarda en tu perfil.</div></div></div></div>'+
+    '<div class="tarea-card"><div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;"><div><div class="tarea-title">👤 '+usuario.nombre+'</div><div class="tarea-meta">Área / puesto: '+asignacionLbl+antiguedadTxt+cumpleTxt+'</div></div><span style="background:var(--verde-tenue);color:var(--verde-mid);font-size:.72rem;font-weight:800;padding:.28rem .55rem;border-radius:999px;white-space:nowrap;">● '+estadoPerfil+'</span></div></div>'+
+    '<div class="tarea-card" style="margin-top:.6rem;"><div style="display:flex;gap:.85rem;align-items:center;">'+perfilAvatarHtml+'<div style="flex:1;min-width:0;"><div class="tarea-title">Foto de perfil</div><div class="tarea-meta">Solo cambia tu fotografía. Tu información laboral no se modifica.</div><div style="display:flex;gap:.55rem;flex-wrap:wrap;margin-top:.65rem;"><label for="perf-foto-camara" class="btn-primary" style="display:inline-flex;align-items:center;justify-content:center;cursor:pointer;width:auto;padding:.62rem .8rem;margin:0;">📷 Tomar foto</label><label for="perf-foto-galeria" class="btn-back" style="display:inline-flex;align-items:center;justify-content:center;cursor:pointer;width:auto;padding:.62rem .8rem;margin:0;">🖼️ Elegir foto</label><input id="perf-foto-camara" type="file" accept="image/*" capture="user" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;"><input id="perf-foto-galeria" type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;"></div></div></div></div>'+
     '<div class="tarea-card" style="cursor:pointer;margin-top:.6rem;" onclick="renderMiIncorporacion(true)"><div class="tarea-title">🌱 Mi incorporación</div><div class="tarea-meta">Información de ingreso y documentos</div></div>'+'<div class="tarea-card" style="cursor:pointer;margin-top:.6rem;" onclick="renderCambiarMiPin()"><div class="tarea-title">🔒 Cambiar mi PIN</div><div class="tarea-meta">Actualiza tu código de acceso</div></div>'+
     '<div class="tarea-card" style="cursor:pointer;margin-top:.6rem;" onclick="renderMisHerramientas()"><div class="tarea-title">🔧 Mis herramientas y equipo</div><div class="tarea-meta">Consulta lo que tienes asignado y su historial</div></div>'+
     '<div class="seccion-titulo" style="margin-top:1rem;font-size:.85rem;">📞 Contacto</div>'+
@@ -14535,40 +14555,10 @@ function renderPerfilOperario(){
     '<div class="tarea-card" style="cursor:pointer;" onclick="renderMisContratos()"><div class="tarea-title">📝 Contratos</div><div class="tarea-meta">Ver mis contratos</div></div>'+
     '</div>'+
     '<div class="seccion-titulo" style="margin-top:1rem;font-size:.85rem;">Cuenta</div><button type="button" onclick="salir()" style="width:100%;border:0;border-radius:var(--radio);background:var(--rojo);color:#fff;padding:1rem;font-size:.9rem;font-weight:800;cursor:pointer;">🚪 Cerrar sesión</button><div style="height:1rem;"></div>';
-    var perfAvatarBtn=document.getElementById('perf-avatar-btn');
-    var perfAvatarCam=document.getElementById('perf-avatar-cam');
-    var perfAvatarGal=document.getElementById('perf-avatar-gal');
-    function c368ProcesarSeleccionAvatar(input){
-      var file=input&&input.files&&input.files[0];
-      if(!file)return;
-      if(!/^image\//.test(file.type)){alert('Selecciona una imagen.');input.value='';return;}
-      if(file.size>12*1024*1024){alert('La imagen es demasiado grande. Selecciona una foto menor a 12 MB.');input.value='';return;}
-      if(perfAvatarCam)perfAvatarCam.disabled=true;
-      if(perfAvatarGal)perfAvatarGal.disabled=true;
-      if(perfAvatarBtn)perfAvatarBtn.style.opacity='.65';
-      showToast('📷 Preparando foto...');
-      c368PrepararAvatar(file).then(function(blob){
-        var path='perfiles/'+usuario.id+'/avatar_'+Date.now()+'.jpg';
-        return fetch(URL_SB+'/storage/v1/object/evidencias/'+path,{method:'POST',headers:{apikey:KEY_SB,Authorization:'Bearer '+KEY_SB,'Content-Type':'image/jpeg','x-upsert':'true'},body:blob}).then(function(r){
-          if(!r.ok)return r.text().then(function(t){throw new Error(t||'No se pudo cargar la foto');});
-          var url=URL_SB+'/storage/v1/object/public/evidencias/'+path;
-          return from('usuarios').eq('id',usuario.id).update({avatar_url:url}).then(function(){return url;});
-        });
-      }).then(function(url){
-        usuario.avatarUrl=url;
-        try{var ses=JSON.parse(localStorage.getItem('mootsil_sesion')||'null');if(ses&&ses.usuario){ses.usuario.avatarUrl=url;localStorage.setItem('mootsil_sesion',JSON.stringify(ses));}}catch(e){}
-        actualizarAvatarHeader();
-        showToast('✅ Foto de perfil actualizada');
-        renderPerfilOperario();
-      }).catch(function(e){
-        if(perfAvatarCam)perfAvatarCam.disabled=false;
-        if(perfAvatarGal)perfAvatarGal.disabled=false;
-        if(perfAvatarBtn)perfAvatarBtn.style.opacity='';
-        alert('No se pudo guardar la foto de perfil. '+(e&&e.message?e.message:''));
-      });
-    }
-    if(perfAvatarCam)perfAvatarCam.addEventListener('change',function(){c368ProcesarSeleccionAvatar(this);});
-    if(perfAvatarGal)perfAvatarGal.addEventListener('change',function(){c368ProcesarSeleccionAvatar(this);});
+    var fotoCam=document.getElementById('perf-foto-camara');
+    var fotoGal=document.getElementById('perf-foto-galeria');
+    if(fotoCam)fotoCam.addEventListener('change',function(){var f=this.files&&this.files[0];this.value='';c369GuardarAvatar(f);});
+    if(fotoGal)fotoGal.addEventListener('change',function(){var f=this.files&&this.files[0];this.value='';c369GuardarAvatar(f);});
     document.getElementById('perf-guardar').addEventListener('click',function(){
       var tel=document.getElementById('perf-tel').value||null;
       var ceNombre=document.getElementById('perf-ce-nombre').value||null;
