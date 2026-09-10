@@ -14536,7 +14536,7 @@ function renderPerfilOperario(){
       : '<div style="width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--verde-tenue);font-size:1.9rem;border:3px solid #fff;box-shadow:0 0 0 2px var(--verde-tenue);">'+MOOTSILITO_FALLBACK_IC+'</div>';
     body.innerHTML='<div class="seccion-titulo">Perfil</div>'+
     '<div class="tarea-card"><div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;"><div><div class="tarea-title">👤 '+usuario.nombre+'</div><div class="tarea-meta">Área / puesto: '+asignacionLbl+antiguedadTxt+cumpleTxt+'</div></div><span style="background:var(--verde-tenue);color:var(--verde-mid);font-size:.72rem;font-weight:800;padding:.28rem .55rem;border-radius:999px;white-space:nowrap;">● '+estadoPerfil+'</span></div></div>'+
-    '<div class="tarea-card" style="margin-top:.6rem;"><div style="display:flex;gap:.85rem;align-items:center;">'+perfilAvatarHtml+'<div style="flex:1;min-width:0;"><div class="tarea-title">Foto de perfil</div><div class="tarea-meta">Solo cambia tu fotografía. Tu información laboral no se modifica.</div><div style="display:flex;gap:.55rem;flex-wrap:wrap;margin-top:.65rem;"><label for="perf-foto-camara" class="btn-primary" style="display:inline-flex;align-items:center;justify-content:center;cursor:pointer;width:auto;padding:.62rem .8rem;margin:0;">📷 Tomar foto</label><label for="perf-foto-galeria" class="btn-back" style="display:inline-flex;align-items:center;justify-content:center;cursor:pointer;width:auto;padding:.62rem .8rem;margin:0;">🖼️ Elegir foto</label><input id="perf-foto-camara" type="file" accept="image/*" capture="user" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;"><input id="perf-foto-galeria" type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;"></div></div></div></div>'+
+    '<div class="tarea-card" style="margin-top:.6rem;"><div style="display:flex;gap:.85rem;align-items:center;">'+perfilAvatarHtml+'<div style="flex:1;min-width:0;"><div class="tarea-title">Foto de perfil</div><div class="tarea-meta">Solo cambia tu fotografía. Tu información laboral no se modifica.</div><div style="margin-top:.65rem;"><label for="perf-foto-native" style="display:block;font-size:.76rem;font-weight:800;color:var(--verde);margin-bottom:.38rem;">📷 Seleccionar foto</label><input id="perf-foto-native" type="file" accept="image/jpeg,image/png,image/webp,image/*" style="display:block;width:100%;max-width:420px;padding:.58rem .65rem;border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);background:#fff;color:var(--verde);font-size:.82rem;cursor:pointer;"><div class="tarea-meta" style="margin-top:.38rem;">En celular abre el selector nativo para elegir una imagen o usar la cámara, según tu equipo.</div></div></div></div></div>'+
     '<div class="tarea-card" style="cursor:pointer;margin-top:.6rem;" onclick="renderMiIncorporacion(true)"><div class="tarea-title">🌱 Mi incorporación</div><div class="tarea-meta">Información de ingreso y documentos</div></div>'+'<div class="tarea-card" style="cursor:pointer;margin-top:.6rem;" onclick="renderCambiarMiPin()"><div class="tarea-title">🔒 Cambiar mi PIN</div><div class="tarea-meta">Actualiza tu código de acceso</div></div>'+
     '<div class="tarea-card" style="cursor:pointer;margin-top:.6rem;" onclick="renderMisHerramientas()"><div class="tarea-title">🔧 Mis herramientas y equipo</div><div class="tarea-meta">Consulta lo que tienes asignado y su historial</div></div>'+
     '<div class="seccion-titulo" style="margin-top:1rem;font-size:.85rem;">📞 Contacto</div>'+
@@ -14555,10 +14555,13 @@ function renderPerfilOperario(){
     '<div class="tarea-card" style="cursor:pointer;" onclick="renderMisContratos()"><div class="tarea-title">📝 Contratos</div><div class="tarea-meta">Ver mis contratos</div></div>'+
     '</div>'+
     '<div class="seccion-titulo" style="margin-top:1rem;font-size:.85rem;">Cuenta</div><button type="button" onclick="salir()" style="width:100%;border:0;border-radius:var(--radio);background:var(--rojo);color:#fff;padding:1rem;font-size:.9rem;font-weight:800;cursor:pointer;">🚪 Cerrar sesión</button><div style="height:1rem;"></div>';
-    var fotoCam=document.getElementById('perf-foto-camara');
-    var fotoGal=document.getElementById('perf-foto-galeria');
-    if(fotoCam)fotoCam.addEventListener('change',function(){var f=this.files&&this.files[0];this.value='';c369GuardarAvatar(f);});
-    if(fotoGal)fotoGal.addEventListener('change',function(){var f=this.files&&this.files[0];this.value='';c369GuardarAvatar(f);});
+    var fotoNative=document.getElementById('perf-foto-native');
+    if(fotoNative)fotoNative.addEventListener('change',function(){
+      var f=this.files&&this.files[0];
+      if(!f)return;
+      c369GuardarAvatar(f);
+      this.value='';
+    });
     document.getElementById('perf-guardar').addEventListener('click',function(){
       var tel=document.getElementById('perf-tel').value||null;
       var ceNombre=document.getElementById('perf-ce-nombre').value||null;
