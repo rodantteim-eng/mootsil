@@ -6063,10 +6063,10 @@ function renderInventario(grupoInicial){
   html+=pintarTabsInventario(grupoInicial);
   if(!puedeEditar) html+='<p class="hint" style="margin-bottom:.75rem;">👁️ Modo de solo consulta.</p>';
   html+='<div style="margin-bottom:.65rem;"><label style="display:block;font-size:.7rem;font-weight:700;color:var(--gris-3);text-transform:uppercase;letter-spacing:.05em;margin:0 0 5px 2px;">Buscar</label><input type="text" id="inv-buscar" placeholder="Buscar producto..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"></div>';
-  var admScBtn=document.getElementById('inv-subcat-admin-btn');if(admScBtn)admScBtn.addEventListener('click',function(){abrirAdministrarSubcategorias(grupoInicial);});
   if(!items.length){
     html+='<div class="empty">'+tituloGrupo+': aún no hay componentes registrados.'+(puedeEditar?'<br/>Toca "+ Componente" para agregar el primero.':'')+'</div>';
     body.innerHTML=html;
+    var admScBtn=document.getElementById('inv-subcat-admin-btn'); if(admScBtn) admScBtn.onclick=function(e){e.preventDefault();abrirAdministrarSubcategorias(grupoInicial);};
     if(puedeEditar) document.getElementById('inv-nuevo-btn').addEventListener('click',function(){renderInventarioNuevo({grupo:grupoInicial});});
     var impVacio=document.getElementById('inv-imprimir-btn');if(impVacio)impVacio.disabled=true;
     return;
@@ -6083,6 +6083,7 @@ function renderInventario(grupoInicial){
   html+='<div style="margin-bottom:.75rem;"><label style="display:block;font-size:.7rem;font-weight:700;color:var(--gris-3);text-transform:uppercase;letter-spacing:.05em;margin:0 0 5px 2px;">Subcategorías</label><div id="inv-subcat-chips" style="display:flex;gap:6px;overflow-x:auto;padding:1px 1px 6px;scrollbar-width:thin;">'+categorias.map(function(c){var n=contarCategoria(c);return '<button type="button" class="inv-subcat-chip'+(c==='Todos'?' active':'')+'" data-cat="'+String(c).replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'" style="white-space:nowrap;border:1px solid '+(c==='Todos'?'var(--verde-mid)':'var(--gris-2)')+';background:'+(c==='Todos'?'var(--verde-tenue)':'#fff')+';color:'+(c==='Todos'?'var(--verde)':'var(--gris-4)')+';border-radius:999px;padding:.42rem .7rem;font-size:.75rem;font-weight:700;cursor:pointer;">'+c+' <span style="display:inline-block;min-width:18px;padding:1px 5px;margin-left:3px;border-radius:999px;background:rgba(0,0,0,.06);font-size:.68rem;">'+n+'</span></button>';}).join('')+'</div></div>';
   html+='<div id="inv-filas"></div>';
   body.innerHTML=html;
+  var admScBtn=document.getElementById('inv-subcat-admin-btn'); if(admScBtn) admScBtn.onclick=function(e){e.preventDefault();abrirAdministrarSubcategorias(grupoInicial);};
   if(puedeEditar) document.getElementById('inv-nuevo-btn').addEventListener('click',function(){renderInventarioNuevo({grupo:grupoInicial});});
   var catActiva='Todos', ultimaLista=[];
   function pintarFilas(filtro){
