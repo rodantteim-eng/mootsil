@@ -5990,7 +5990,7 @@ var REFACCIONES_SUBCATEGORIAS=['Gasolina','Aceite 2 Tiempos','Aceite 4 Tiempos',
 var GALERA_SUBCATEGORIAS=['Clamshell 6oz','Clamshell 9oz','Clamshell 12oz','Clamshell 18oz','Cajas de cartón','Charolas','Bolsas','Etiquetas / Stickers','Ligas','Cinta adhesiva','Otros'];
 var LIMPIEZA_SUBCATEGORIAS=['Cloro','Jabón / Detergente','Trapeadores','Escobas','Bolsas de basura','Guantes de limpieza','Desinfectante','Papel / Toallas','Otros'];
 var GRUPOS_INVENTARIO={
-  insumos:{lbl:'🌿 Agroquímicos',categorias:INSUMO_SUBCATEGORIAS},
+  insumos:{lbl:'🌿 Agroquímicos y Nutrición',categorias:INSUMO_SUBCATEGORIAS},
   galera:{lbl:'🏭 Galera',categorias:GALERA_SUBCATEGORIAS},
   limpieza:{lbl:'🧹 Limpieza',categorias:LIMPIEZA_SUBCATEGORIAS},
   seguridad:{lbl:'🦺 Seguridad',categorias:SEGURIDAD_SUBCATEGORIAS},
@@ -6001,9 +6001,9 @@ var GRUPOS_INVENTARIO={
   otros:{lbl:'📦 Otros',categorias:['Otros']}
 };
 var ORDEN_GRUPOS_INVENTARIO=['insumos','galera','limpieza','seguridad','refacciones','infraestructura','riego','tutoreo','otros'];
-var GRUPO_NOMBRE_PLANO={insumos:'Insumos',galera:'Galera',limpieza:'Limpieza',seguridad:'Seguridad',refacciones:'Refacciones y Combustibles'};
+var GRUPO_NOMBRE_PLANO={insumos:'Agroquímicos y Nutrición',galera:'Galera',limpieza:'Limpieza',seguridad:'Seguridad',refacciones:'Refacciones y Combustibles'};
 var TABS_INVENTARIO=[
-  {key:'insumos',lbl:'📦 Insumos',fn:"renderInventario('insumos')"},
+  {key:'insumos',lbl:'🌿 Agroquímicos y Nutrición',fn:"renderInventario('insumos')"},
   {key:'galera',lbl:'🏭 Galera',fn:"renderInventario('galera')"},
   {key:'limpieza',lbl:'🧹 Limpieza',fn:"renderInventario('limpieza')"},
   {key:'seguridad',lbl:'🦺 Seguridad',fn:"renderInventario('seguridad')"},
@@ -6435,7 +6435,7 @@ function renderInventarioEditar(itemId){
       '<div style="background:#fff;border:1px solid #e0e7e3;border-radius:15px;padding:14px;">'+
         '<div class="form-group"><label>Nombre</label><input type="text" id="inv-e-nombre" value="'+it.nombre.replace(/"/g,'&quot;')+'"></div>'+
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'+
-          '<div class="form-group"><label>Grupo</label><select id="inv-e-grupo">'+grupoOpts+'</select></div>'+
+          '<div class="form-group"><label>Categoría</label><select id="inv-e-grupo">'+grupoOpts+'</select></div>'+
           '<div class="form-group" id="inv-e-categoria-wrap" style="display:'+(cfgGrupoE.categorias?'':'none')+';"><label>Subcategoría</label><select id="inv-e-categoria">'+catOptsE+'</select></div>'+
         '</div>'+
         '<input type="hidden" id="inv-e-imagen" value="'+(it.imagen_url||'').replace(/"/g,'&quot;')+'"><input type="file" id="inv-e-imagen-cam" accept="image/*" capture="environment" style="display:none"><input type="file" id="inv-e-imagen-gal" accept="image/*" style="display:none">'+
@@ -12977,7 +12977,7 @@ function abrirTesoreriaC324(){
 
 function renderAdministracionMenu(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="ad17-shell"><div class="ad17-head"><div><div class="ad17-eyebrow">Administración · C380</div><div class="ad17-title">Control del Rancho</div><div class="ad17-sub">Finanzas, personal, compras y operación administrativa de Mootsil.</div></div></div><div class="ad17-grid">'+
+  body.innerHTML='<div class="ad17-shell"><div class="ad17-head"><div><div class="ad17-eyebrow">Administración · C381</div><div class="ad17-title">Control del Rancho</div><div class="ad17-sub">Finanzas, personal, compras y operación administrativa de Mootsil.</div></div></div><div class="ad17-grid">'+
     '<div class="ad17-card primary em60-card" data-admin="tesoreria"><div class="ic">🏦</div><h3>Tesorería</h3><p>Bancos, efectivo, ingresos, pagos, transferencias e historial permanente.</p><div class="em60-actions"><button type="button" data-cajago="ingresar">➕ Ingresar efectivo</button><button type="button" data-cajago="compras">🧾 Compras</button><button type="button" data-cajago="gastos">💳 Gastos</button></div></div>'+
     '<div class="ad17-card blue em60-card" data-admin="empleados"><div class="ic">👥</div><h3>Empleados</h3><p>Asistencia, solicitudes, contratación y expedientes del personal.</p><div class="em60-actions"><button type="button" data-empgo="asistencia">📋 Asistencia</button><button type="button" data-empgo="solicitudes">📨 Solicitudes</button><button type="button" data-empgo="postulantes">🧑‍🌾 Postulantes</button><button type="button" data-empgo="expedientes">👤 Expedientes</button></div></div>'+
     '<div class="ad17-card gold em60-card" data-admin="compensaciones"><div class="ic">💰</div><h3>Nómina y Compensaciones</h3><p>Nómina, bonos por objetivos y apoyos económicos al personal.</p><div class="em60-actions"><button type="button" data-compgo="nomina">💰 Nómina</button><button type="button" data-compgo="bonos">🎯 Bonos</button><button type="button" data-compgo="apoyos">⛽ Apoyos</button></div></div>'+
