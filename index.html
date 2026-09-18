@@ -6001,6 +6001,35 @@ var GRUPOS_INVENTARIO={
   otros:{lbl:'📦 Otros',categorias:['Otros']}
 };
 var ORDEN_GRUPOS_INVENTARIO=['insumos','galera','limpieza','seguridad','refacciones','infraestructura','riego','tutoreo','otros'];
+// C384 — Administración de subcategorías por categoría principal
+var INV_SUBCAT_STORAGE='mootsil_inv_subcategorias_c384';
+function invSubcatCfgLeer(){try{return JSON.parse(localStorage.getItem(INV_SUBCAT_STORAGE)||'{}')||{};}catch(e){return {};}}
+function invSubcatCfgGuardar(cfg){try{localStorage.setItem(INV_SUBCAT_STORAGE,JSON.stringify(cfg||{}));}catch(e){}}
+function invSubcatAplicar(){
+  var cfg=invSubcatCfgLeer();
+  Object.keys(cfg).forEach(function(g){if(GRUPOS_INVENTARIO[g]&&Array.isArray(cfg[g].activas))GRUPOS_INVENTARIO[g].categorias=cfg[g].activas.slice();});
+}
+invSubcatAplicar();
+function invEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function abrirAdministrarSubcategorias(grupo){
+  var base=GRUPOS_INVENTARIO[grupo]; if(!base||!base.categorias)return;
+  var cfg=invSubcatCfgLeer(), gcfg=cfg[grupo]||{}, inactivas=Array.isArray(gcfg.inactivas)?gcfg.inactivas.slice():[];
+  var usadas=Array.from(new Set((cats.inventario||[]).filter(function(x){return (x.grupo||'insumos')===grupo;}).map(function(x){return x.categoria;}).filter(Boolean)));
+  var todas=Array.from(new Set(base.categorias.concat(inactivas).concat(usadas)));
+  var ov=document.createElement('div');ov.id='inv-subcat-admin';ov.style.cssText='position:fixed;inset:0;background:rgba(8,35,25,.58);z-index:10120;display:flex;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(2px)';
+  function pintar(){
+    var filas=todas.map(function(c){var n=(cats.inventario||[]).filter(function(x){return (x.grupo||'insumos')===grupo&&x.categoria===c;}).length;var activo=inactivas.indexOf(c)===-1;return '<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #e8ece9"><div style="flex:1"><strong>'+invEsc(c)+'</strong> <span style="font-size:.7rem;background:#eef2ef;border-radius:999px;padding:2px 6px">'+n+'</span>'+(activo?'':' <span style="font-size:.68rem;color:#8a5a20">Desactivada</span>')+'</div><button type="button" class="inv-sc-edit" data-c="'+invEsc(c)+'" style="border:1px solid #ccd7d0;background:#fff;border-radius:7px;padding:5px 8px;cursor:pointer">Editar</button><button type="button" class="inv-sc-toggle" data-c="'+invEsc(c)+'" style="border:1px solid #ccd7d0;background:#fff;border-radius:7px;padding:5px 8px;cursor:pointer">'+(activo?'Desactivar':'Activar')+'</button></div>';}).join('');
+    ov.querySelector('#inv-sc-list').innerHTML=filas||'<div class="empty">Sin subcategorías.</div>';
+    ov.querySelectorAll('.inv-sc-edit').forEach(function(b){b.onclick=function(){var viejo=this.dataset.c,nuevo=(prompt('Nuevo nombre para “'+viejo+'”:',viejo)||'').trim();if(!nuevo||nuevo===viejo)return;if(todas.some(function(x){return x.toLowerCase()===nuevo.toLowerCase()&&x!==viejo;})){alert('Ya existe una subcategoría con ese nombre.');return;}var afectados=(cats.inventario||[]).filter(function(x){return (x.grupo||'insumos')===grupo&&x.categoria===viejo;});var prom=afectados.length?from('inventario_items').eq('grupo',grupo).eq('categoria',viejo).update({categoria:nuevo}):Promise.resolve();Promise.resolve(prom).then(function(){todas=todas.map(function(x){return x===viejo?nuevo:x;});base.categorias=base.categorias.map(function(x){return x===viejo?nuevo:x;});inactivas=inactivas.map(function(x){return x===viejo?nuevo:x;});(cats.inventario||[]).forEach(function(x){if((x.grupo||'insumos')===grupo&&x.categoria===viejo)x.categoria=nuevo;});guardar();pintar();showToast('✅ Subcategoría actualizada');}).catch(function(e){alert('Error: '+e.message);});};});
+    ov.querySelectorAll('.inv-sc-toggle').forEach(function(b){b.onclick=function(){var c=this.dataset.c,i=inactivas.indexOf(c);if(i>-1){inactivas.splice(i,1);if(base.categorias.indexOf(c)===-1)base.categorias.push(c);}else{if(!confirm('¿Desactivar “'+c+'” para nuevas asignaciones? Los productos existentes conservarán esta subcategoría.'))return;inactivas.push(c);base.categorias=base.categorias.filter(function(x){return x!==c;});}guardar();pintar();};});
+  }
+  function guardar(){cfg[grupo]={activas:base.categorias.slice(),inactivas:inactivas.slice()};invSubcatCfgGuardar(cfg);}
+  ov.innerHTML='<div style="width:min(650px,96vw);max-height:88vh;overflow:auto;background:#f8faf8;border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.28)"><div style="background:linear-gradient(135deg,#075735,#0d6843);color:#fff;padding:15px 18px;display:flex;align-items:center"><div style="flex:1"><div style="font-size:.7rem;opacity:.8;text-transform:uppercase">Inventario</div><strong>Administrar subcategorías</strong></div><button id="inv-sc-close" style="border:0;background:rgba(255,255,255,.14);color:#fff;width:34px;height:34px;border-radius:50%;font-size:20px">×</button></div><div style="padding:15px 18px"><div style="display:flex;gap:8px;margin-bottom:12px"><input id="inv-sc-new" placeholder="Nueva subcategoría" style="flex:1;padding:.6rem;border:1.5px solid #ccd7d0;border-radius:8px"><button id="inv-sc-add" class="btn-primary" style="width:auto;margin:0;padding:7px 12px">+ Agregar</button></div><div id="inv-sc-list"></div><p class="hint" style="margin-top:10px">Editar actualiza también los productos que ya usan esa subcategoría. Desactivar no borra productos.</p></div></div>';
+  document.body.appendChild(ov);ov.querySelector('#inv-sc-close').onclick=function(){ov.remove();renderInventario(grupo);};ov.addEventListener('click',function(e){if(e.target===ov){ov.remove();renderInventario(grupo);}});
+  ov.querySelector('#inv-sc-add').onclick=function(){var c=(ov.querySelector('#inv-sc-new').value||'').trim();if(!c)return;if(todas.some(function(x){return x.toLowerCase()===c.toLowerCase();})){alert('Esa subcategoría ya existe.');return;}todas.push(c);base.categorias.push(c);guardar();ov.querySelector('#inv-sc-new').value='';pintar();showToast('✅ Subcategoría agregada');};
+  pintar();
+}
+
 var GRUPO_NOMBRE_PLANO={insumos:'Agroquímicos y Nutrición',galera:'Galera',limpieza:'Limpieza',seguridad:'Seguridad',refacciones:'Refacciones y Combustibles'};
 var TABS_INVENTARIO=[
   {key:'insumos',lbl:'🌿 Agroquímicos y Nutrición',fn:"renderInventario('insumos')"},
@@ -6030,10 +6059,11 @@ function renderInventario(grupoInicial){
   var puedeEditar=usuario.rol!=='ingeniero';
   var cfgGrupo=GRUPOS_INVENTARIO[grupoInicial]||GRUPOS_INVENTARIO.insumos;
   var tituloGrupo=cfgGrupo.lbl;
-  var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;gap:8px;">'+tituloGrupo+'<div style="display:flex;align-items:center;gap:8px;"><button type="button" id="inv-imprimir-btn" style="border:1px solid var(--gris-2);background:#fff;color:var(--verde);border-radius:8px;padding:.38rem .65rem;font-size:.76rem;font-weight:700;cursor:pointer;">🖨 Imprimir</button>'+(puedeEditar?'<button type="button" id="inv-nuevo-btn" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Componente</button>':'')+'</div></div>';
+  var html='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;gap:8px;">'+tituloGrupo+'<div style="display:flex;align-items:center;gap:8px;"><button type="button" id="inv-imprimir-btn" style="border:1px solid var(--gris-2);background:#fff;color:var(--verde);border-radius:8px;padding:.38rem .65rem;font-size:.76rem;font-weight:700;cursor:pointer;">🖨 Imprimir</button>'+(puedeEditar&&cfgGrupo.categorias?'<button type="button" id="inv-subcat-admin-btn" style="border:1px solid var(--gris-2);background:#fff;color:var(--verde);border-radius:8px;padding:.38rem .65rem;font-size:.76rem;font-weight:700;cursor:pointer;">⚙ Subcategorías</button>':'')+(puedeEditar?'<button type="button" id="inv-nuevo-btn" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">+ Componente</button>':'')+'</div></div>';
   html+=pintarTabsInventario(grupoInicial);
   if(!puedeEditar) html+='<p class="hint" style="margin-bottom:.75rem;">👁️ Modo de solo consulta.</p>';
   html+='<div style="margin-bottom:.65rem;"><label style="display:block;font-size:.7rem;font-weight:700;color:var(--gris-3);text-transform:uppercase;letter-spacing:.05em;margin:0 0 5px 2px;">Buscar</label><input type="text" id="inv-buscar" placeholder="Buscar producto..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.85rem;"></div>';
+  var admScBtn=document.getElementById('inv-subcat-admin-btn');if(admScBtn)admScBtn.addEventListener('click',function(){abrirAdministrarSubcategorias(grupoInicial);});
   if(!items.length){
     html+='<div class="empty">'+tituloGrupo+': aún no hay componentes registrados.'+(puedeEditar?'<br/>Toca "+ Componente" para agregar el primero.':'')+'</div>';
     body.innerHTML=html;
