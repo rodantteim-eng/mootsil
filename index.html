@@ -9503,7 +9503,7 @@ function renderHistorialCompras105(){
           '<button type="button" class="ca21-action-btn" id="hc183-limpiar">Limpiar filtros</button>'+
         '</div>'+
         '<div class="hc183-table-wrap"><table class="hc183-table"><thead><tr>'+
-          '<th>Fecha</th><th>Proveedor</th><th>Factura</th><th>Forma</th><th>Total</th><th>Pagado</th><th>Pendiente</th><th>Estado</th>'+
+          '<th>Fecha</th><th>Proveedor</th><th>Factura</th><th>Forma</th><th>Total</th><th>Pagado</th><th>Pendiente</th><th>Estado</th><th>Acción</th>'+
         '</tr></thead><tbody id="hc183-body"></tbody></table></div>'+
       '</div>';
 
@@ -9539,7 +9539,7 @@ function renderHistorialCompras105(){
 
       var tb=document.getElementById('hc183-body');
       if(!rows.length){
-        tb.innerHTML='<tr><td colspan="8" class="hc183-empty">No hay compras que coincidan con los filtros.</td></tr>';
+        tb.innerHTML='<tr><td colspan="9" class="hc183-empty">No hay compras que coincidan con los filtros.</td></tr>';
         return;
       }
       tb.innerHTML=rows.map(function(c){
@@ -9554,6 +9554,7 @@ function renderHistorialCompras105(){
           '<td class="num">$'+formatMonto(pag)+'</td>'+
           '<td class="num '+(pend>0?'pending':'')+'">$'+formatMonto(pend)+'</td>'+
           '<td><span class="hc183-status '+est+'">'+esc(labelEstado(c))+'</span></td>'+
+          '<td><button type="button" class="btn-sm hc183-edit-compra" data-id="'+esc(c.id)+'">✏️ Editar</button></td>'+
         '</tr>';
       }).join('');
     }
@@ -9563,6 +9564,10 @@ function renderHistorialCompras105(){
       Object.keys(els).forEach(function(k){els[k].value='';});render();
     };
     document.getElementById('hc183-back').onclick=renderAdministracionMenu;
+    document.getElementById('hc183-body').addEventListener('click',function(e){
+      var b=e.target.closest&&e.target.closest('.hc183-edit-compra');
+      if(b) renderEditarCompra(b.dataset.id,renderHistorialCompras105);
+    });
     render();
   }).catch(function(e){body.innerHTML='<div class="empty">Error: '+e.message+'</div>';});
 }
@@ -10674,6 +10679,9 @@ function renderEditarCompra(compraId,volverFn){
   function pintar(compra,gastosRows){
     var hoy=fechaHoyLocal();
     var provOpts=cats.proveedores.map(function(p){return '<option value="'+p.id+'"'+(p.id===compra.proveedor_id?' selected':'')+'>'+p.nombre+(p.giro?' — '+p.giro:'')+'</option>';}).join('');
+    var cajaEd=ca21Load();
+    var movCompraEd=(cajaEd.movimientos||[]).find(function(m){return String(m.compra_id||'')===String(compra.id)&&m.origen==='Compras';});
+    var cuentaPagoOriginal=movCompraEd&&movCompraEd.cuenta?movCompraEd.cuenta:'efectivo';
     body.innerHTML='<div class="seccion-titulo" style="display:flex;justify-content:space-between;align-items:center;">✏️ Editar compra<button type="button" id="ec-cancelar-top" style="border:none;background:none;color:var(--verde-mid);font-size:.78rem;font-weight:600;cursor:pointer;">← Cancelar</button></div>'+
       '<div class="form-card">'+
       '<div class="form-group"><label>Proveedor</label><select id="ec-proveedor"><option value="">Sin proveedor</option>'+provOpts+'</select></div>'+
@@ -10681,6 +10689,7 @@ function renderEditarCompra(compraId,volverFn){
       '<div class="form-group"><label>Fecha</label><input type="date" id="ec-fecha" value="'+compra.fecha+'" max="'+hoy+'"></div>'+
       '<div class="form-group"><label>Forma de pago</label><div style="display:flex;gap:8px;"><button type="button" class="op-chip'+(compra.forma_pago==='contado'?' sel':'')+'" id="ec-fp-contado">'+(compra.forma_pago==='contado'?'✓ ':'')+'Contado</button><button type="button" class="op-chip'+(compra.forma_pago==='credito'?' sel':'')+'" id="ec-fp-credito">'+(compra.forma_pago==='credito'?'✓ ':'')+'Crédito</button></div></div>'+
       '<div class="form-group" id="ec-vencimiento-wrap" style="display:'+(compra.forma_pago==='credito'?'':'none')+';"><label>Fecha de vencimiento del pago</label><input type="date" id="ec-vencimiento" value="'+(compra.fecha_vencimiento||'')+'"></div>'+
+      '<div class="form-group" id="ec-cuenta-pago-wrap" style="display:'+(compra.forma_pago==='credito'?'none':'')+';"><label>Cuenta de pago</label><select id="ec-cuenta-pago"><option value="efectivo"'+(cuentaPagoOriginal==='efectivo'?' selected':'')+'>Efectivo en caja</option><option value="banamex_pesos"'+(cuentaPagoOriginal==='banamex_pesos'?' selected':'')+'>Banamex Pesos</option><option value="banamex_dolares"'+(cuentaPagoOriginal==='banamex_dolares'?' selected':'')+'>Banamex Dólares</option><option value="santander_pesos"'+(cuentaPagoOriginal==='santander_pesos'?' selected':'')+'>Santander Pesos</option></select><p class="hint">Si corriges la cuenta, Caja moverá el cargo de la cuenta anterior a la nueva sin duplicar la compra.</p></div>'+
       '<div class="form-group"><label>Comprobante / foto o PDF de la factura</label><div id="ec-comprobante-actual">'+(compra.comprobante_url?('<p class="hint">Actual: <a href="'+compra.comprobante_url+'" target="_blank">🧾 Ver comprobante</a> · <button type="button" id="ec-comprobante-quitar" style="border:none;background:none;color:var(--rojo);font-size:.78rem;font-weight:600;cursor:pointer;text-decoration:underline;">🗑️ Quitar</button></p>'):'<p class="hint">Sin comprobante adjuntado.</p>')+'</div><input type="file" id="ec-comprobante" accept="image/*,.pdf"><p class="hint" id="ec-comprobante-status"></p></div>'+
       '</div>'+
       '<div class="seccion-titulo" style="margin-top:1rem;font-size:.9rem;">Productos de la factura</div>'+
@@ -10865,7 +10874,7 @@ function renderEditarCompra(compraId,volverFn){
     });
 
     var formaPagoSel=compra.forma_pago;
-    function actualizarVisibilidadVencimiento(){document.getElementById('ec-vencimiento-wrap').style.display=formaPagoSel==='credito'?'':'none';}
+    function actualizarVisibilidadVencimiento(){document.getElementById('ec-vencimiento-wrap').style.display=formaPagoSel==='credito'?'':'none';var cp=document.getElementById('ec-cuenta-pago-wrap');if(cp)cp.style.display=formaPagoSel==='credito'?'none':'';}
     document.getElementById('ec-fp-contado').addEventListener('click',function(){formaPagoSel='contado';this.classList.add('sel');this.textContent='✓ Contado';document.getElementById('ec-fp-credito').classList.remove('sel');document.getElementById('ec-fp-credito').textContent='Crédito';actualizarVisibilidadVencimiento();});
     document.getElementById('ec-fp-credito').addEventListener('click',function(){formaPagoSel='credito';this.classList.add('sel');this.textContent='✓ Crédito';document.getElementById('ec-fp-contado').classList.remove('sel');document.getElementById('ec-fp-contado').textContent='Contado';actualizarVisibilidadVencimiento();});
 
@@ -10896,6 +10905,7 @@ function renderEditarCompra(compraId,volverFn){
       var proveedorId=document.getElementById('ec-proveedor').value||null;
       var esCredito=formaPagoSel==='credito';
       var vencimiento=esCredito?(document.getElementById('ec-vencimiento').value||null):null;
+      var cuentaPagoNueva=esCredito?null:(document.getElementById('ec-cuenta-pago').value||'efectivo');
       if(esCredito&&!vencimiento){alert('Captura la fecha de vencimiento del pago a crédito.');return;}
       var lineasNuevasValidas=nuevas.filter(function(f){return (parseFloat(f.monto)||0)>0;});
       for(var i=0;i<lineasNuevasValidas.length;i++){
@@ -11033,17 +11043,26 @@ function renderEditarCompra(compraId,volverFn){
           });
         },Promise.resolve());
       }).then(function(){
+        var caja=ca21Load();
+        var mov=caja.movimientos.find(function(m){return String(m.compra_id||'')===String(compraId)&&m.origen==='Compras';});
         if(formaPagoSel!=='credito'){
-          var caja=ca21Load();
-          var mov=caja.movimientos.find(function(m){return m.compra_id===compraId&&m.origen==='Compras';});
-          if(mov){
-            mov.monto=total;
-            mov.fecha=fecha;
+          if(!mov){
+            mov={id:'compra-'+compraId,compra_id:compraId,fecha:fecha,hora:ca21Now(),tipo:'salida',cuenta:cuentaPagoNueva,monto:total,categoria:'Compra',concepto:'Compra'+(numeroFactura?' · Factura '+numeroFactura:''),persona:'Proveedor',forma:cuentaPagoNueva,origen:'Compras',estado:'Pagado',usuario:(usuario&&usuario.nombre)||'Usuario'};
+            caja.movimientos.push(mov);
+          } else {
+            var cuentaAnterior=mov.cuenta||'efectivo';
+            mov.monto=total; mov.fecha=fecha; mov.cuenta=cuentaPagoNueva; mov.forma=cuentaPagoNueva;
             mov.concepto='Compra'+(numeroFactura?' · Factura '+numeroFactura:'');
-            ca21Save(caja);
+            if(cuentaAnterior!==cuentaPagoNueva){
+              mov.correccion_cuenta={anterior:cuentaAnterior,nueva:cuentaPagoNueva,fecha:new Date().toISOString(),usuario:(usuario&&usuario.nombre)||'Usuario'};
+            }
           }
+          ca21Save(caja);
+        } else if(mov){
+          caja.movimientos=caja.movimientos.filter(function(m){return m!==mov;});
+          ca21Save(caja);
         }
-        showToast('✅ Compra actualizada · Inventario ajustado por diferencia');
+        showToast(cuentaPagoOriginal!==cuentaPagoNueva&&formaPagoSel!=='credito'?'✅ Compra actualizada · Cuenta de pago corregida':'✅ Compra actualizada · Inventario ajustado por diferencia');
         volver();
       }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='Guardar cambios';});
     });
