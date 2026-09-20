@@ -819,9 +819,7 @@ const draftIds=['nombre','nacimiento','telefono','direccion','puesto','ingreso',
     <button type="button" class="c205-close" onclick="c205CerrarConsulta()">×</button>
     <div class="eyebrow">Seguimiento</div>
     <h2>Consulta tu solicitud</h2>
-    <p>Ingresa el folio que recibiste al enviar tu registro y tu teléfono.</p>
-    <label>Folio</label>
-    <input id="c205FolioInput" maxlength="8" placeholder="Ej. A1B2C3D4">
+    <p>Ingresa el teléfono que utilizaste al registrarte.</p>
     <label>Teléfono</label>
     <input id="c205TelefonoInput" type="tel" placeholder="Tu teléfono">
     <div id="c205ConsultaError" class="c205-error"></div>
@@ -859,9 +857,7 @@ const draftIds=['nombre','nacimiento','telefono','direccion','puesto','ingreso',
       el.onclick=f[i];
       el.onkeydown=(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();f[i]();}};
     });
-    const savedFolio=localStorage.getItem('mootsil_postulacion_folio');
     const savedTel=localStorage.getItem('mootsil_postulacion_telefono');
-    if(savedFolio) document.getElementById('c205FolioInput').value=savedFolio;
     if(savedTel) document.getElementById('c205TelefonoInput').value=savedTel;
   }
   document.addEventListener('DOMContentLoaded',wire);
@@ -872,11 +868,11 @@ const draftIds=['nombre','nacimiento','telefono','direccion','puesto','ingreso',
   };
   window.c205CerrarConsulta=function(){document.getElementById('c205ConsultModal').classList.add('hidden')};
 
-  async function c205FetchEstado(folioVal,telVal){
-    const r=await fetch(URL_SB+'/rest/v1/rpc/consultar_estado_postulacion_folio',{
+  async function c205FetchEstadoTelefono(telVal){
+    const r=await fetch(URL_SB+'/rest/v1/rpc/consultar_estado_postulacion_telefono',{
       method:'POST',
       headers:{apikey:KEY_SB,Authorization:'Bearer '+KEY_SB,'Content-Type':'application/json'},
-      body:JSON.stringify({p_folio:folioVal,p_telefono:telVal})
+      body:JSON.stringify({p_telefono:telVal})
     });
     if(!r.ok) throw new Error('No fue posible consultar el estado.');
     const data=await r.json();
@@ -912,11 +908,11 @@ const draftIds=['nombre','nacimiento','telefono','direccion','puesto','ingreso',
     const detail=document.getElementById('c212StatusDetail');
     if(detail){
       if(['autorizada','autorizado','aprobada','aprobado','confirmada','confirmado'].includes(e)){
-        detail.textContent='Tu solicitud fue aceptada y ya estás en proceso de incorporación. Conserva tu folio para futuras consultas.';
+        detail.textContent='Tu solicitud fue aceptada y ya estás en proceso de incorporación. Puedes consultar nuevamente con tu teléfono.';
       }else if(['rechazada','rechazado','no_seleccionada','no seleccionado'].includes(e)){
-        detail.textContent='Tu proceso de selección ha concluido. Puedes conservar tu folio como referencia.';
+        detail.textContent='Tu proceso de selección ha concluido.';
       }else{
-        detail.textContent='Tu solicitud continúa en revisión. Puedes volver a consultar este folio más adelante.';
+        detail.textContent='Tu solicitud continúa en revisión. Puedes volver a consultar con tu teléfono más adelante.';
       }
     }
     if(mr){
@@ -950,13 +946,29 @@ const draftIds=['nombre','nacimiento','telefono','direccion','puesto','ingreso',
   }
 
   window.c205ConsultarManual=async function(){
-    const f=document.getElementById('c205FolioInput').value.trim();
     const t=document.getElementById('c205TelefonoInput').value.trim();
     const err=document.getElementById('c205ConsultaError');
-    if(f.length!==8||!t){err.textContent='Ingresa tu folio de 8 caracteres y tu teléfono.';return}
+    const digits=t.replace(/\D/g,'');
+    if(digits.length<10){err.textContent='Ingresa el teléfono con el que realizaste tu registro.';return}
     err.textContent='Consultando...';
-    try{await c205Consultar(f,t);err.textContent=''}
-    catch(e){err.textContent=e.message}
+    try{
+      const row=await c205FetchEstadoTelefono(t);
+      if(!row) throw new Error('No encontramos una solicitud con ese teléfono.');
+      const f=String(row.id||'').replace(/-/g,'').slice(0,8).toUpperCase();
+      if(!f) throw new Error('No fue posible identificar la solicitud.');
+      localStorage.setItem('mootsil_postulacion_folio',f);
+      localStorage.setItem('mootsil_postulacion_telefono',t);
+      c205RenderEstado(row.estado,row.motivo_rechazo);
+      document.querySelector('.app').classList.remove('hiring-welcome');
+      document.getElementById('welcome').classList.add('hidden');
+      document.getElementById('formapp').classList.add('hidden');
+      document.getElementById('success').classList.remove('hidden');
+      document.querySelector('.app').classList.add('c210-status-mode');
+      document.getElementById('folio').textContent='Folio de registro: '+f;
+      c205CerrarConsulta();
+      setTimeout(()=>document.getElementById('success')?.scrollIntoView({behavior:'smooth',block:'start'}),30);
+      err.textContent='';
+    }catch(e){err.textContent=e.message}
   };
 
   window.c205ConsultarGuardada=async function(){
