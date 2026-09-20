@@ -2907,10 +2907,23 @@ function c231Icon(name, cls){
 <style id="c347-formula-detalle">
 .c347-formula-box{margin-top:12px;border:1px solid #dfe7e1;border-radius:12px;overflow:hidden;background:#f8faf8}.c347-formula-toggle{width:100%;border:0;background:transparent;padding:12px 13px;display:flex;align-items:center;justify-content:space-between;text-align:left;color:#24352b;cursor:pointer}.c347-formula-toggle span:first-child{display:flex;flex-direction:column;gap:2px}.c347-formula-toggle b{font-size:.8rem}.c347-formula-toggle small{font-size:.68rem;color:#78857d;font-weight:600}.c347-arrow{font-size:1.25rem;color:#607066}.c347-formula-list{border-top:1px solid #e2e9e4;padding:5px 12px}.c347-formula-list>div{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #edf1ee;font-size:.75rem}.c347-formula-list>div:last-child{border-bottom:0}.c347-formula-list strong{text-align:right;white-space:nowrap;color:#405548}.c347-empty{color:#7b8780!important;justify-content:flex-start!important}
 </style>
+
+<style id="c388-acceso-visual">
+#screen-login{min-height:100vh;background:linear-gradient(145deg,#0c3b28 0%,#15583a 58%,#0b3424 100%);padding:34px 18px;box-sizing:border-box;align-items:center;justify-content:center}
+#screen-login.active{display:flex!important;flex-direction:column}
+#screen-login .login-logo{color:#fff;text-align:center;margin-bottom:16px}
+#screen-login .login-logo img{width:92px;height:auto;display:block;margin:0 auto 12px;filter:drop-shadow(0 7px 14px rgba(0,0,0,.22))}
+#screen-login .login-logo h1{color:#fff;margin:0;font-size:1.55rem}
+#screen-login .login-logo p{color:#f3d05d;margin:.35rem 0 0;font-weight:700}
+#screen-login .login-card{width:min(100%,390px);background:#fff;border-radius:18px;padding:24px;box-shadow:0 18px 50px rgba(0,0,0,.24);box-sizing:border-box}
+#screen-login .login-card h2{color:#173f2d;margin-top:0}
+#screen-login .login-card:before{content:'PERSONAL AUTORIZADO';display:block;text-align:center;color:#7a857f;font-size:.68rem;font-weight:900;letter-spacing:.12em;margin-bottom:10px}
+#screen-login .c388-help{text-align:center;color:#dfe9e3;font-size:.72rem;margin-top:14px;max-width:390px;line-height:1.45}
+</style>
 </head>
 <body>
 <div class="screen active" id="screen-login">
-<div class="login-logo"><h1>🫐 Mootsil</h1><p>Rancho · Módulo de Labores</p></div>
+<div class="login-logo"><img src="escudo-oficial-rancho.png" alt="Rancho Sagrado Corazón"><h1>Mootsil</h1><p>Rancho Sagrado Corazón</p></div>
 <div class="login-card">
 <h2>Ingresa tu PIN</h2>
 <p class="sub">Toca los 4 dígitos para entrar</p>
@@ -2934,6 +2947,7 @@ function c231Icon(name, cls){
 </div>
 <div class="pin-error" id="pin-error"></div>
 </div>
+<div class="c388-help">Acceso exclusivo para personal autorizado del Rancho Sagrado Corazón.</div>
 </div>
 <div class="screen" id="screen-encargado">
 <div class="app-header">
@@ -19659,7 +19673,7 @@ guardarProgramacionRiegoV1=function(){
     });
 };
 
-function salir(){usuario=null;pin='';dibujarPin();setErr('');mostrar('screen-login');}
+function salir(){usuario=null;pin='';try{localStorage.removeItem('mootsil_sesion');}catch(e){} dibujarPin();setErr('');mostrar('screen-login');}
 
 /* C330 — limpiar Service Worker legado C245.
    Este candidato se sirve directo desde Pages; no debe quedar una versión antigua controlando index.html. */
