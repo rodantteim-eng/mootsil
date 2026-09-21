@@ -15935,105 +15935,81 @@ function renderApoyosC092(){
  cargarLista();
 }
 
-var cosecha={plantacionId:null,tablaId:null,surcos:[],operarios:[],fecha:null,notas:null};
+var cosecha={plantacionId:null,tablaId:null,asignaciones:{},operarios:[],fecha:null,notas:null};
 
 function cosechaReset(){
-  cosecha={plantacionId:null,tablaId:null,surcos:[],operarios:[],fecha:fechaHoyLocal(),notas:null};
+  cosecha={plantacionId:null,tablaId:null,asignaciones:{},operarios:[],fecha:fechaHoyLocal(),notas:null};
 }
+function cosEsc(v){return String(v==null?'':v).replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c];});}
+function cosNombreOperario(id){var o=(cats.cosechadores||[]).find(function(x){return String(x.id)===String(id);});return o?o.nombre:'Cosechador';}
+function cosSurcosUsados(excepto){var out=[];Object.keys(cosecha.asignaciones||{}).forEach(function(id){if(String(id)!==String(excepto))out=out.concat(cosecha.asignaciones[id]||[]);});return out.map(Number);}
+function cosTotalAsignados(){return Object.keys(cosecha.asignaciones||{}).reduce(function(n,id){return n+(cosecha.asignaciones[id]||[]).length;},0);}
 
 function renderAsigCosechaPlantaciones(){
   var body=document.getElementById('enc-body');
-  var html='<div class="seccion-titulo">🧺 Cosecha · Plantación</div><div class="riego-grid">';
-  cats.plantaciones.forEach(function(p){
-    html+='<div class="riego-circle neutra" data-pid="'+p.id+'"><span>'+p.nombre+'</span></div>';
-  });
+  var html='<div class="seccion-titulo">🧺 Cosecha · Programar</div><div class="form-card" style="margin-bottom:14px;border-top:4px solid #6f238d"><div style="font-weight:800;color:var(--verde);font-size:1rem">Nueva cosecha</div><div class="hint" style="margin-top:4px">Elige la plantación y después distribuirás los surcos entre cada cosechador. Cada persona recibirá únicamente sus propios surcos.</div></div><div class="riego-grid">';
+  cats.plantaciones.forEach(function(p){html+='<div class="riego-circle neutra" data-pid="'+p.id+'"><span>'+cosEsc(p.nombre)+'</span></div>';});
   html+='</div>';
   body.innerHTML=html;
-  body.querySelectorAll('[data-pid]').forEach(function(el){el.addEventListener('click',function(){cosecha.plantacionId=this.dataset.pid;renderAsigCosechaTablas();});});
+  body.querySelectorAll('[data-pid]').forEach(function(el){el.addEventListener('click',function(){cosecha.plantacionId=this.dataset.pid;cosecha.tablaId=null;cosecha.asignaciones={};cosecha.operarios=[];renderAsigCosechaTablas();});});
 }
 
 function renderAsigCosechaTablas(){
   var body=document.getElementById('enc-body');
-  var p=cats.plantaciones.find(function(x){return x.id===cosecha.plantacionId;});
-  var tabs=cats.tablas.filter(function(t){return t.plantacion_id===cosecha.plantacionId;});
-  var html='<div class="seccion-titulo">🧺 '+(p?p.nombre:'')+' · Elige tabla</div><div class="riego-grid">';
-  tabs.forEach(function(t){html+='<div class="riego-circle neutra" data-tid="'+t.id+'"><span>'+t.nombre+'</span></div>';});
-  html+='</div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigCosechaPlantaciones()">← Volver a plantación</button>';
+  var p=cats.plantaciones.find(function(x){return String(x.id)===String(cosecha.plantacionId);});
+  var tabs=cats.tablas.filter(function(t){return String(t.plantacion_id)===String(cosecha.plantacionId);});
+  var html='<div class="seccion-titulo">🧺 '+cosEsc(p?p.nombre:'')+' · Elige tabla</div><div class="riego-grid">';
+  tabs.forEach(function(t){html+='<div class="riego-circle neutra" data-tid="'+t.id+'"><span>'+cosEsc(t.nombre)+'</span><small style="display:block;font-size:.68rem;margin-top:4px">'+(t.cantidad_surcos||'—')+' surcos</small></div>';});
+  html+='</div><button class="btn-back" style="margin-top:1rem" onclick="renderAsigCosechaPlantaciones()">← Volver a plantación</button>';
   body.innerHTML=html;
-  body.querySelectorAll('[data-tid]').forEach(function(el){el.addEventListener('click',function(){cosecha.tablaId=this.dataset.tid;renderAsigCosechaSurcos();});});
+  body.querySelectorAll('[data-tid]').forEach(function(el){el.addEventListener('click',function(){cosecha.tablaId=this.dataset.tid;cosecha.asignaciones={};cosecha.operarios=[];renderAsigCosechaDistribucion();});});
 }
 
-function renderAsigCosechaSurcos(){
+function renderAsigCosechaDistribucion(){
   var body=document.getElementById('enc-body');
-  var t=cats.tablas.find(function(x){return x.id===cosecha.tablaId;});
+  var t=cats.tablas.find(function(x){return String(x.id)===String(cosecha.tablaId);});
+  var p=cats.plantaciones.find(function(x){return String(x.id)===String(cosecha.plantacionId);});
   var n=(t&&t.cantidad_surcos)?t.cantidad_surcos:12;
-  cosecha.surcos=[];
-  var botones='';
-  for(var i=1;i<=n;i++) botones+='<button type="button" class="surco-btn" data-n="'+i+'">'+i+'</button>';
-  body.innerHTML='<div class="seccion-titulo">🧺 '+(t?t.nombre:'')+' · Surcos a cosechar</div><div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;"><button type="button" id="cos-todos" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--verde-mid);background:var(--verde-tenue);color:var(--verde);font-size:.78rem;font-weight:600;cursor:pointer;">Tabla completa</button><button type="button" id="cos-ninguno" style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--gris-2);background:var(--gris-1);font-size:.78rem;cursor:pointer;">Limpiar</button></div><div class="surcos-grid" id="cos-fsc">'+botones+'</div><button class="btn-primary" id="cos-surcos-continuar" style="margin-top:1.25rem;">Continuar →</button><button class="btn-back" style="margin-top:.75rem;" onclick="renderAsigCosechaTablas()">← Volver a tabla</button>';
-  document.querySelectorAll('#cos-fsc .surco-btn').forEach(function(b){b.addEventListener('click',function(){
-    var num=parseInt(this.dataset.n);var idx=cosecha.surcos.indexOf(num);
-    if(idx>-1){cosecha.surcos.splice(idx,1);this.classList.remove('sel');}else{cosecha.surcos.push(num);this.classList.add('sel');}
-  });});
-  document.getElementById('cos-todos').addEventListener('click',function(){
-    cosecha.surcos=[];
-    document.querySelectorAll('#cos-fsc .surco-btn').forEach(function(b){cosecha.surcos.push(parseInt(b.dataset.n));b.classList.add('sel');});
-  });
-  document.getElementById('cos-ninguno').addEventListener('click',function(){
-    cosecha.surcos=[];
-    document.querySelectorAll('#cos-fsc .surco-btn').forEach(function(b){b.classList.remove('sel');});
-  });
-  document.getElementById('cos-surcos-continuar').addEventListener('click',function(){
-    if(!cosecha.surcos.length){alert('Selecciona al menos un surco, o toca "Tabla completa".');return;}
-    renderAsigCosechaOperarios();
+  var cards=(cats.cosechadores||[]).map(function(o){var sel=(cosecha.asignaciones[o.id]||[]);return '<button type="button" class="op-chip'+(sel.length?' sel':'')+'" data-cos-op="'+o.id+'" style="text-align:left"><strong>'+cosEsc(o.nombre)+'</strong><span style="display:block;font-size:.68rem;margin-top:2px">'+(sel.length?sel.length+' surco(s): '+sel.join(', '):'Sin asignar')+'</span></button>';}).join('');
+  body.innerHTML='<div class="seccion-titulo">🧺 Distribuir surcos</div><div class="form-card" style="margin-bottom:12px;border-top:4px solid '+((p&&/jade/i.test(p.nombre))?'#6f238d':'#23824d')+'"><strong>'+cosEsc(p?p.nombre:'')+' · '+cosEsc(t?t.nombre:'')+'</strong><div class="hint">'+n+' surcos disponibles · '+cosTotalAsignados()+' asignados. Selecciona un cosechador y marca sus surcos.</div></div><div class="form-card"><label style="font-weight:750">Cosechadores</label><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">'+(cards||'<span class="hint">No hay cosechadores activos registrados.</span>')+'</div><div id="cos-dist-editor" style="margin-top:14px"></div><button class="btn-primary" id="cos-dist-cont" style="margin-top:16px">Continuar →</button></div><button class="btn-back" style="margin-top:1rem" onclick="renderAsigCosechaTablas()">← Volver a tabla</button>';
+  body.querySelectorAll('[data-cos-op]').forEach(function(b){b.addEventListener('click',function(){cosEditarOperario(this.dataset.cosOp);});});
+  document.getElementById('cos-dist-cont').addEventListener('click',function(){
+    var ids=Object.keys(cosecha.asignaciones).filter(function(id){return (cosecha.asignaciones[id]||[]).length;});
+    if(!ids.length){alert('Asigna al menos un surco a un cosechador.');return;}
+    cosecha.operarios=ids; renderAsigCosechaFecha();
   });
 }
 
-function renderAsigCosechaOperarios(){
-  var body=document.getElementById('enc-body');
-  var opO=cats.cosechadores.map(function(o){return '<button type="button" class="op-chip'+(cosecha.operarios.indexOf(o.id)>-1?' sel':'')+'" data-id="'+o.id+'" onclick="toggleChip(this)">'+o.nombre+'</button>';}).join('');
-  body.innerHTML='<div class="seccion-titulo">🧺 ¿Quién cosecha?</div><div class="form-card">'+(cats.cosechadores.length?'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1rem;">'+opO+'</div>':'<p class="hint">No hay usuarios con rol "cosechador" registrados. Créalos en Config.</p>')+'<button class="btn-primary" id="cos-op-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigCosechaSurcos()">← Volver a surcos</button>';
-  document.getElementById('cos-op-continuar').addEventListener('click',function(){
-    var opIds=Array.from(document.querySelectorAll('.op-chip.sel')).map(function(c){return c.dataset.id;});
-    if(!opIds.length){alert('Selecciona al menos un cosechador.');return;}
-    cosecha.operarios=opIds;
-    renderAsigCosechaFecha();
-  });
+function cosEditarOperario(oid){
+  var t=cats.tablas.find(function(x){return String(x.id)===String(cosecha.tablaId);});var n=(t&&t.cantidad_surcos)||12;
+  var usados=cosSurcosUsados(oid),propios=(cosecha.asignaciones[oid]||[]).map(Number),bot='';
+  for(var i=1;i<=n;i++){var ocupado=usados.indexOf(i)>-1,sel=propios.indexOf(i)>-1;bot+='<button type="button" class="surco-btn'+(sel?' sel':'')+'" data-cos-surco="'+i+'" '+(ocupado?'disabled title="Ya asignado a otro cosechador" style="opacity:.28"':'')+'>'+i+'</button>';}
+  var ed=document.getElementById('cos-dist-editor');
+  ed.innerHTML='<div style="border-top:1px solid #e2e8e4;padding-top:12px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><strong>'+cosEsc(cosNombreOperario(oid))+'</strong><span class="hint">'+propios.length+' surco(s)</span></div><div class="hint" style="margin:4px 0 9px">Toca los surcos que trabajará esta persona. Los grises ya pertenecen a otro cosechador.</div><div class="surcos-grid">'+bot+'</div></div>';
+  ed.querySelectorAll('[data-cos-surco]:not([disabled])').forEach(function(b){b.addEventListener('click',function(){var num=Number(this.dataset.cosSurco),a=(cosecha.asignaciones[oid]||[]).map(Number),ix=a.indexOf(num);if(ix>-1)a.splice(ix,1);else a.push(num);a.sort(function(x,y){return x-y;});if(a.length)cosecha.asignaciones[oid]=a;else delete cosecha.asignaciones[oid];renderAsigCosechaDistribucion();setTimeout(function(){cosEditarOperario(oid);},0);});});
 }
 
 function renderAsigCosechaFecha(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo">🧺 Fecha</div><div class="form-card"><div class="form-group"><label>Fecha de cosecha</label><input type="date" id="cos-fecha" value="'+cosecha.fecha+'"></div><button class="btn-primary" id="cos-fecha-continuar">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigCosechaOperarios()">← Volver a cosechadores</button>';
-  document.getElementById('cos-fecha-continuar').addEventListener('click',function(){
-    cosecha.fecha=document.getElementById('cos-fecha').value||cosecha.fecha;
-    renderAsigCosechaNotas();
-  });
+  body.innerHTML='<div class="seccion-titulo">🧺 Fecha e indicaciones</div><div class="form-card"><div class="form-group"><label>Fecha de cosecha</label><input type="date" id="cos-fecha" value="'+cosEsc(cosecha.fecha)+'"></div><div class="form-group"><label>Indicaciones para los cosechadores (opcional)</label><textarea id="cos-notas" rows="3" placeholder="Ej. Seleccionar fruta negra, firme y sin humedad.">'+cosEsc(cosecha.notas||'')+'</textarea></div><button class="btn-primary" id="cos-fecha-continuar">Revisar programación →</button></div><button class="btn-back" style="margin-top:1rem" onclick="renderAsigCosechaDistribucion()">← Volver a distribución</button>';
+  document.getElementById('cos-fecha-continuar').addEventListener('click',function(){cosecha.fecha=document.getElementById('cos-fecha').value||cosecha.fecha;cosecha.notas=(document.getElementById('cos-notas').value||'').trim()||null;renderAsigCosechaNotas();});
 }
 
 function renderAsigCosechaNotas(){
-  var body=document.getElementById('enc-body');
-  var t=cats.tablas.find(function(x){return x.id===cosecha.tablaId;});
-  var p=cats.plantaciones.find(function(x){return x.id===cosecha.plantacionId;});
-  var opNombres=cosecha.operarios.map(function(id){var o=cats.cosechadores.find(function(x){return x.id===id;});return o?o.nombre:'';}).join(', ');
-  body.innerHTML='<div class="seccion-titulo">🧺 Confirmar cosecha</div><div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row"><span class="resumen-key">Ubicación</span><span class="resumen-val">📍 '+(p?p.nombre:'')+' · '+(t?t.nombre:'')+'</span></div><div class="resumen-row"><span class="resumen-key">Surcos</span><span class="resumen-val">'+cosecha.surcos.join(', ')+'</span></div><div class="resumen-row"><span class="resumen-key">Cosechadores</span><span class="resumen-val">'+opNombres+'</span></div><div class="resumen-row"><span class="resumen-key">Fecha</span><span class="resumen-val">'+cosecha.fecha+'</span></div></div><div class="form-group"><label>Notas (opcional)</label><input type="text" id="cos-notas" placeholder="Instrucciones para el cosechador..."></div><button class="btn-primary" id="cos-finalizar">✅ Asignar cosecha</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigCosechaFecha()">← Volver a fecha</button>';
+  var body=document.getElementById('enc-body'),t=cats.tablas.find(function(x){return String(x.id)===String(cosecha.tablaId);}),p=cats.plantaciones.find(function(x){return String(x.id)===String(cosecha.plantacionId);});
+  var filas=cosecha.operarios.map(function(id){return '<div class="resumen-row"><span class="resumen-key">'+cosEsc(cosNombreOperario(id))+'</span><span class="resumen-val">Surcos '+cosEsc((cosecha.asignaciones[id]||[]).join(', '))+'</span></div>';}).join('');
+  body.innerHTML='<div class="seccion-titulo">🧺 Revisar programación</div><div class="form-card"><div class="resumen-card" style="margin-bottom:1rem"><div class="resumen-row"><span class="resumen-key">Ubicación</span><span class="resumen-val">📍 '+cosEsc(p?p.nombre:'')+' · '+cosEsc(t?t.nombre:'')+'</span></div><div class="resumen-row"><span class="resumen-key">Fecha</span><span class="resumen-val">'+cosEsc(cosecha.fecha)+'</span></div>'+filas+(cosecha.notas?'<div class="resumen-row"><span class="resumen-key">Indicaciones</span><span class="resumen-val">'+cosEsc(cosecha.notas)+'</span></div>':'')+'</div><div class="hint" style="margin-bottom:12px">Se creará una orden independiente para cada cosechador con únicamente sus surcos.</div><button class="btn-primary" id="cos-finalizar">✅ Programar cosecha</button></div><button class="btn-back" style="margin-top:1rem" onclick="renderAsigCosechaFecha()">← Volver</button>';
   document.getElementById('cos-finalizar').addEventListener('click',guardarCosecha);
 }
 
 function guardarCosecha(){
-  var btn=document.getElementById('cos-finalizar'); btn.disabled=true; btn.textContent='Guardando...';
-  var notas=document.getElementById('cos-notas').value||null;
+  var btn=document.getElementById('cos-finalizar');btn.disabled=true;btn.textContent='Guardando...';
   var lbCosecha=cats.tiposLabor.find(function(l){return l.es_cosecha;});
-  if(!lbCosecha){alert('No se encontró el tipo de labor "Cosecha" en el catálogo.');btn.disabled=false;btn.textContent='✅ Asignar cosecha';return;}
-  Promise.all(cosecha.operarios.map(function(oid){
-    return from('ordenes_trabajo').insert({asignado_por:usuario.id,operario_id:oid,tabla_id:cosecha.tablaId,tipo_labor_id:lbCosecha.id,surcos_asignados:cosecha.surcos,duracion:'dia',fecha_asignacion:cosecha.fecha,notas_encargado:notas,estado:'pendiente'});
-  })).then(function(){
-    return Promise.all(cosecha.operarios.map(function(oid){
-      return from('notificaciones').insert({titulo:'🧺 Cosecha asignada',cuerpo:usuario.nombre+' asignó a '+(cats.cosechadores.find(function(o){return o.id===oid;})||{}).nombre+' cosechar '+cosecha.surcos.length+' surco(s)',icono:'🧺',leida:false,para_rol:'operario',para_usuario:oid});
-    }));
-  }).then(function(){
-    showToast('✅ Cosecha asignada. Puedes asignar otra.');
-    renderAsigCosechaPlantaciones();
-  }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='✅ Asignar cosecha';});
+  if(!lbCosecha){alert('No se encontró el tipo de labor Cosecha en el catálogo.');btn.disabled=false;btn.textContent='✅ Programar cosecha';return;}
+  var ids=cosecha.operarios.filter(function(id){return (cosecha.asignaciones[id]||[]).length;});
+  Promise.all(ids.map(function(oid){return from('ordenes_trabajo').insert({asignado_por:usuario.id,operario_id:oid,tabla_id:cosecha.tablaId,tipo_labor_id:lbCosecha.id,surcos_asignados:cosecha.asignaciones[oid],duracion:'dia',fecha_asignacion:cosecha.fecha,notas_encargado:cosecha.notas,estado:'pendiente'});})).then(function(){
+    return Promise.all(ids.map(function(oid){var sur=(cosecha.asignaciones[oid]||[]);return from('notificaciones').insert({titulo:'🧺 Cosecha asignada',cuerpo:'Cosecha programada · Surcos '+sur.join(', '),icono:'🧺',leida:false,para_rol:'operario',para_usuario:oid});}));
+  }).then(function(){showToast('✅ Cosecha programada para '+ids.length+' cosechador(es)');cosechaReset();renderAsigCosechaPlantaciones();}).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='✅ Programar cosecha';});
 }
 
 function renderAsignarExtra(lb){
