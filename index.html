@@ -3641,7 +3641,7 @@ function tabEncargado(tab){
   else if(tab==='inventario') renderInventario();
   else if(tab==='aplicaciones') renderAplicacionesEstatus();
   else if(tab==='riego') renderRiegoControl();
-  else if(tab==='cosecha'){cosechaReset();renderAsigCosechaPlantaciones();}
+  else if(tab==='cosecha'){cosechaReset();renderCosechaTablero();}
   else if(tab==='labores') renderLaboresEstatus();
   else if(tab==='validar') renderValidar();
   else if(tab==='config') renderConfig();
@@ -15936,6 +15936,7 @@ function renderApoyosC092(){
 }
 
 var cosecha={plantacionId:null,tablaId:null,asignaciones:{},operarios:[],fecha:null,notas:null};
+var cosechaSemanaOffset=0;
 
 function cosechaReset(){
   cosecha={plantacionId:null,tablaId:null,asignaciones:{},operarios:[],fecha:fechaHoyLocal(),notas:null};
@@ -15944,6 +15945,44 @@ function cosEsc(v){return String(v==null?'':v).replace(/[&<>\"']/g,function(c){r
 function cosNombreOperario(id){var o=(cats.cosechadores||[]).find(function(x){return String(x.id)===String(id);});return o?o.nombre:'Cosechador';}
 function cosSurcosUsados(excepto){var out=[];Object.keys(cosecha.asignaciones||{}).forEach(function(id){if(String(id)!==String(excepto))out=out.concat(cosecha.asignaciones[id]||[]);});return out.map(Number);}
 function cosTotalAsignados(){return Object.keys(cosecha.asignaciones||{}).reduce(function(n,id){return n+(cosecha.asignaciones[id]||[]).length;},0);}
+
+function cosSemanaRango(offset){
+  var d=new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate()+((offset||0)*7));
+  var day=d.getDay(); var diff=(day===0?-6:1-day); var ini=new Date(d); ini.setDate(d.getDate()+diff);
+  var fin=new Date(ini); fin.setDate(ini.getDate()+6);
+  function iso(x){return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');}
+  return {ini:iso(ini),fin:iso(fin)};
+}
+function cosFechaCorta(v){if(!v)return '';var a=String(v).slice(0,10).split('-');return a.length===3?(a[2]+'/'+a[1]+'/'+a[0]):v;}
+function cosEstadoLabel(o){
+  var hoy=fechaHoyLocal();
+  if(o.estado==='completada')return ['Terminada','badge-completada'];
+  if(o.estado==='en_proceso')return ['En proceso','badge-en_proceso'];
+  if(String(o.fecha_asignacion||'')<hoy)return ['Pendiente','badge-pendiente'];
+  return ['Programada','badge-pendiente'];
+}
+function renderCosechaTablero(){
+  var body=document.getElementById('enc-body'),rg=cosSemanaRango(cosechaSemanaOffset);
+  body.innerHTML='<div class="seccion-titulo">🧺 Cosecha</div><div class="form-card"><div class="loading">Cargando programación...</div></div>';
+  var lb=cats.tiposLabor.find(function(l){return l.es_cosecha;});
+  if(!lb){body.innerHTML='<div class="seccion-titulo">🧺 Cosecha</div><div class="empty">No se encontró el tipo de labor Cosecha.</div>';return;}
+  from('ordenes_trabajo').select('id,fecha_asignacion,estado,operario_id,tabla_id,surcos_asignados,notas_encargado,operario:usuarios!operario_id(nombre),tabla:tablas(nombre,plantacion_id)').eq('tipo_labor_id',lb.id).gte('fecha_asignacion',rg.ini).lte('fecha_asignacion',rg.fin).order('fecha_asignacion',{ascending:false}).get().then(function(rows){
+    rows=rows||[]; var hoy=fechaHoyLocal();
+    var programadas=rows.filter(function(o){return o.estado==='pendiente'&&String(o.fecha_asignacion||'')>=hoy;}).length;
+    var proceso=rows.filter(function(o){return o.estado==='en_proceso';}).length;
+    var terminadas=rows.filter(function(o){return o.estado==='completada';}).length;
+    var pendientes=rows.filter(function(o){return o.estado!=='completada'&&String(o.fecha_asignacion||'')<hoy;}).length;
+    function tablaBox(t,p){var rr=rows.filter(function(o){return String(o.tabla_id)===String(t.id);});return '<button type="button" class="form-card" style="text-align:left;padding:12px;min-height:72px;border:1px solid #dce4df;box-shadow:none"><strong>'+cosEsc(t.nombre)+'</strong><div class="hint" style="margin-top:5px">'+rr.length+' asignación(es)</div></button>';}
+    function plantBloque(p){var ts=cats.tablas.filter(function(t){return String(t.plantacion_id)===String(p.id);});var jade=/jade/i.test(p.nombre||'');return '<div style="border:1px solid #d8e2dc;border-radius:12px;overflow:hidden;background:#fff"><div style="background:'+(jade?'#6f238d':'#17613e')+';color:#fff;padding:8px 12px;font-weight:800;display:flex;justify-content:space-between"><span>PLANTACIÓN '+cosEsc(String(p.nombre||'').toUpperCase())+'</span><span>'+ts.length+' tablas</span></div><div style="display:grid;grid-template-columns:repeat('+Math.max(1,Math.min(4,ts.length))+',1fr);gap:8px;padding:10px">'+ts.map(function(t){return tablaBox(t,p);}).join('')+'</div></div>';}
+    var grupos={}; rows.forEach(function(o){var k=o.fecha_asignacion+'|'+o.tabla_id;if(!grupos[k])grupos[k]=[];grupos[k].push(o);});
+    var lista=Object.keys(grupos).sort().reverse().map(function(k){var g=grupos[k],o=g[0],p=cats.plantaciones.find(function(x){return o.tabla&&String(x.id)===String(o.tabla.plantacion_id);});var jade=p&&/jade/i.test(p.nombre||'');var estados=g.map(cosEstadoLabel),prior=estados.some(function(x){return x[0]==='En proceso';})?['En proceso','badge-en_proceso']:estados.some(function(x){return x[0]==='Pendiente';})?['Pendiente','badge-pendiente']:estados.every(function(x){return x[0]==='Terminada';})?['Terminada','badge-completada']:['Programada','badge-pendiente'];var sur=g.reduce(function(n,x){return n+((x.surcos_asignados||[]).length);},0);var personas=g.map(function(x){return '<div style="padding:7px 0;border-top:1px solid #edf1ee"><strong>'+cosEsc(x.operario?x.operario.nombre:'Cosechador')+'</strong><span class="hint" style="margin-left:8px">Surcos '+cosEsc((x.surcos_asignados||[]).join(', '))+'</span></div>';}).join('');return '<div class="form-card" style="border-top:4px solid '+(jade?'#6f238d':'#23824d')+';margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><strong>'+cosEsc(p?p.nombre:'')+' · '+cosEsc(o.tabla?o.tabla.nombre:'')+'</strong><div class="hint">'+cosFechaCorta(o.fecha_asignacion)+' · '+g.length+' cosechador(es) · '+sur+' surcos</div></div><span class="orden-badge '+prior[1]+'">'+prior[0]+'</span></div>'+personas+'</div>';}).join('');
+    body.innerHTML='<div class="seccion-titulo">🧺 Cosecha</div><div class="form-card" style="padding:0;overflow:hidden"><div style="padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid #e2e8e4"><div><strong style="color:var(--verde);font-size:1rem">AVANCE SEMANAL DE COSECHA</strong><div class="hint">'+cosFechaCorta(rg.ini)+' al '+cosFechaCorta(rg.fin)+' · control por plantación y tabla</div></div><button class="btn-primary" id="cos-nueva" style="width:auto;padding:9px 16px">+ Programar cosecha</button></div><div style="padding:12px 16px"><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><button class="btn-sm" id="cos-prev">← Semana anterior</button><button class="btn-sm" id="cos-now">Esta semana</button><button class="btn-sm" id="cos-next">Semana siguiente →</button></div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px"><div class="form-card" style="border-bottom:4px solid #2b78c5"><strong style="font-size:1.2rem">'+programadas+'</strong><div class="hint">Programadas</div></div><div class="form-card" style="border-bottom:4px solid #d49a19"><strong style="font-size:1.2rem">'+pendientes+'</strong><div class="hint">Pendientes</div></div><div class="form-card" style="border-bottom:4px solid #23824d"><strong style="font-size:1.2rem">'+proceso+'</strong><div class="hint">En proceso</div></div><div class="form-card" style="border-bottom:4px solid #6f238d"><strong style="font-size:1.2rem">'+terminadas+'</strong><div class="hint">Terminadas</div></div><div style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:12px">'+cats.plantaciones.map(plantBloque).join('')+'</div></div></div></div><div style="margin-top:14px">'+(lista||'<div class="empty">No hay cosechas programadas para la semana seleccionada.</div>')+'</div>';
+    document.getElementById('cos-nueva').onclick=function(){cosechaReset();renderAsigCosechaPlantaciones();};
+    document.getElementById('cos-prev').onclick=function(){cosechaSemanaOffset--;renderCosechaTablero();};
+    document.getElementById('cos-now').onclick=function(){cosechaSemanaOffset=0;renderCosechaTablero();};
+    document.getElementById('cos-next').onclick=function(){cosechaSemanaOffset++;renderCosechaTablero();};
+  }).catch(function(e){body.innerHTML='<div class="seccion-titulo">🧺 Cosecha</div><div class="empty">Error al cargar cosecha: '+cosEsc(e.message)+'</div>';});
+}
 
 function renderAsigCosechaPlantaciones(){
   var body=document.getElementById('enc-body');
@@ -16009,7 +16048,7 @@ function guardarCosecha(){
   var ids=cosecha.operarios.filter(function(id){return (cosecha.asignaciones[id]||[]).length;});
   Promise.all(ids.map(function(oid){return from('ordenes_trabajo').insert({asignado_por:usuario.id,operario_id:oid,tabla_id:cosecha.tablaId,tipo_labor_id:lbCosecha.id,surcos_asignados:cosecha.asignaciones[oid],duracion:'dia',fecha_asignacion:cosecha.fecha,notas_encargado:cosecha.notas,estado:'pendiente'});})).then(function(){
     return Promise.all(ids.map(function(oid){var sur=(cosecha.asignaciones[oid]||[]);return from('notificaciones').insert({titulo:'🧺 Cosecha asignada',cuerpo:'Cosecha programada · Surcos '+sur.join(', '),icono:'🧺',leida:false,para_rol:'operario',para_usuario:oid});}));
-  }).then(function(){showToast('✅ Cosecha programada para '+ids.length+' cosechador(es)');cosechaReset();renderAsigCosechaPlantaciones();}).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='✅ Programar cosecha';});
+  }).then(function(){showToast('✅ Cosecha programada para '+ids.length+' cosechador(es)');cosechaReset();renderCosechaTablero();}).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='✅ Programar cosecha';});
 }
 
 function renderAsignarExtra(lb){
