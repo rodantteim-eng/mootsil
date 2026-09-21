@@ -11941,7 +11941,20 @@ function em69RenderAsistencia(fecha){
     from('permisos').select('*').eq('estado','aprobado').lte('fecha_inicio',fin).gte('fecha_fin',inicio).get(),
     from('horas_extra_asignadas').select('id,operario_id,fecha,horas_max,tipo_labor_id,motivo,estado').gte('fecha',inicio).lte('fecha',fin).eq('estado','aprobada').get()
   ]).then(function(rr){
-    var users=(rr[0]||[]).filter(function(u){return ['operario','cosechador','galerista','labores_eventual'].indexOf(u.rol)>=0;});
+    var baseUsers=(rr[0]||[]).filter(function(u){return ['operario','cosechador','galerista','labores_eventual'].indexOf(u.rol)>=0;});
+    // C393: un acceso activo no basta para aparecer en Asistencia.
+    // Si existe seguimiento de incorporación, sólo aparece después de "Incorporado".
+    return Promise.all(baseUsers.map(function(u){
+      return c133AdminRpc('c135_admin_ver_incorporacion',{p_usuario_id:u.id}).then(function(rows){
+        var inc=Array.isArray(rows)?rows[0]:rows;
+        u._inc_asistencia=inc||null; return u;
+      }).catch(function(){u._inc_asistencia=null;return u;});
+    })).then(function(users){
+      users=users.filter(function(u){return !(u._inc_asistencia && !u._inc_asistencia.incorporado_en);});
+      return [users,rr];
+    });
+  }).then(function(pack){
+    var users=pack[0],rr=pack[1];
     var regs=rr[1]||[],permisos=rr[2]||[],extras=rr[3]||[];
     var regMap={},permMap={},heRows={};
 
@@ -15977,7 +15990,7 @@ function renderCosechaTablero(){
     var grupos={}; rows.forEach(function(o){var k=o.fecha_asignacion+'|'+o.tabla_id;if(!grupos[k])grupos[k]=[];grupos[k].push(o);});
     var clavesCosecha=Object.keys(grupos).sort(function(a,b){var ga=grupos[a][0],gb=grupos[b][0];var fa=String(ga.fecha_asignacion||''),fb=String(gb.fecha_asignacion||'');if(fa!==fb)return fa.localeCompare(fb);return String(ga.id||'').localeCompare(String(gb.id||''));});
     var numeroPorClave={}; clavesCosecha.forEach(function(k,i){numeroPorClave[k]=i+1;});
-    var lista=clavesCosecha.slice().reverse().map(function(k){var g=grupos[k],o=g[0],p=cats.plantaciones.find(function(x){return o.tabla&&String(x.id)===String(o.tabla.plantacion_id);});var jade=p&&/jade/i.test(p.nombre||'');var estados=g.map(cosEstadoLabel),prior=estados.some(function(x){return x[0]==='En proceso';})?['En proceso','badge-en_proceso']:estados.some(function(x){return x[0]==='Pendiente';})?['Pendiente','badge-pendiente']:estados.every(function(x){return x[0]==='Terminada';})?['Terminada','badge-completada']:['Programada','badge-pendiente'];var sur=g.reduce(function(n,x){return n+((x.surcos_asignados||[]).length);},0);var personas=g.map(function(x){return '<div style="padding:7px 0;border-top:1px solid #edf1ee"><strong>'+cosEsc(x.operario?x.operario.nombre:'Cosechador')+'</strong><span class="hint" style="margin-left:8px">Surcos '+cosEsc((x.surcos_asignados||[]).join(', '))+'</span></div>';}).join('');var fechaObj=new Date(String(o.fecha_asignacion||'')+'T12:00:00');var semana=numeroSemanaISO(fechaObj);var chipBase='display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;font-size:.78rem;font-weight:800;border:1px solid #d9e3dd;background:#f7faf8;color:#183f2c';var chips='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:7px"><span style="'+chipBase+'">Semana '+semana+'</span><span style="'+chipBase+';background:#eef5ff;border-color:#cfe0f5;color:#245f9b">Cosecha '+numeroPorClave[k]+'</span><span style="'+chipBase+';background:'+(jade?'#f5ecf8':'#edf7f1')+';border-color:'+(jade?'#ddc4e7':'#c9e2d2')+';color:'+(jade?'#6f238d':'#17613e')+'">'+cosEsc(p?p.nombre:'')+'</span><span style="'+chipBase+'">'+cosEsc(o.tabla?o.tabla.nombre:'')+'</span></div>';return '<div class="form-card" style="border-top:4px solid '+(jade?'#6f238d':'#23824d')+';margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div>'+chips+'<div class="hint">'+cosFechaCorta(o.fecha_asignacion)+' · '+g.length+' cosechador(es) · '+sur+' surcos</div></div><span class="orden-badge '+prior[1]+'">'+prior[0]+'</span></div>'+personas+'</div>';}).join('');
+    var lista=clavesCosecha.slice().reverse().map(function(k){var g=grupos[k],o=g[0],p=cats.plantaciones.find(function(x){return o.tabla&&String(x.id)===String(o.tabla.plantacion_id);});var jade=p&&/jade/i.test(p.nombre||'');var estados=g.map(cosEstadoLabel),prior=estados.some(function(x){return x[0]==='En proceso';})?['En proceso','badge-en_proceso']:estados.some(function(x){return x[0]==='Pendiente';})?['Pendiente','badge-pendiente']:estados.every(function(x){return x[0]==='Terminada';})?['Terminada','badge-completada']:['Programada','badge-pendiente'];var sur=g.reduce(function(n,x){return n+((x.surcos_asignados||[]).length);},0);var personas=g.map(function(x){return '<div style="padding:7px 0;border-top:1px solid #edf1ee"><strong>'+cosEsc(x.operario?x.operario.nombre:'Cosechador')+'</strong><span class="hint" style="margin-left:8px">Surcos '+cosEsc((x.surcos_asignados||[]).join(', '))+'</span></div>';}).join('');var fechaObj=new Date(String(o.fecha_asignacion||'')+'T12:00:00');var semana=numeroSemanaISO(fechaObj);var diasNom=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'],mesNom=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];var fechaTitulo=diasNom[fechaObj.getDay()]+' '+fechaObj.getDate()+' '+mesNom[fechaObj.getMonth()]+' '+String(fechaObj.getFullYear()).slice(-2);var titulo='Semana '+semana+' | '+fechaTitulo+' | Cosecha '+numeroPorClave[k]+' | '+cosEsc(p?p.nombre:'')+' | '+cosEsc(o.tabla?o.tabla.nombre:'');return '<div class="form-card" style="border-top:4px solid '+(jade?'#6f238d':'#23824d')+';margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><div style="font-size:1rem;font-weight:850;color:#183f2c;margin-bottom:5px">'+titulo+'</div><div class="hint">'+g.length+' cosechador(es) · '+sur+' surcos</div></div><span class="orden-badge '+prior[1]+'">'+prior[0]+'</span></div>'+personas+'</div>';}).join('');
     body.innerHTML='<div class="seccion-titulo">🧺 Cosecha</div><div class="form-card" style="padding:0;overflow:hidden"><div style="padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid #e2e8e4"><div><strong style="color:var(--verde);font-size:1rem">AVANCE SEMANAL DE COSECHA</strong><div class="hint">'+cosFechaCorta(rg.ini)+' al '+cosFechaCorta(rg.fin)+' · control por plantación y tabla</div></div><button class="btn-primary" id="cos-nueva" style="width:auto;padding:9px 16px">+ Programar cosecha</button></div><div style="padding:12px 16px"><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><button class="btn-sm" id="cos-prev">← Semana anterior</button><button class="btn-sm" id="cos-now">Esta semana</button><button class="btn-sm" id="cos-next">Semana siguiente →</button></div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px"><div class="form-card" style="border-bottom:4px solid #2b78c5"><strong style="font-size:1.2rem">'+programadas+'</strong><div class="hint">Programadas</div></div><div class="form-card" style="border-bottom:4px solid #d49a19"><strong style="font-size:1.2rem">'+pendientes+'</strong><div class="hint">Pendientes</div></div><div class="form-card" style="border-bottom:4px solid #23824d"><strong style="font-size:1.2rem">'+proceso+'</strong><div class="hint">En proceso</div></div><div class="form-card" style="border-bottom:4px solid #6f238d"><strong style="font-size:1.2rem">'+terminadas+'</strong><div class="hint">Terminadas</div></div><div style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:12px">'+cats.plantaciones.map(plantBloque).join('')+'</div></div></div></div><div style="margin-top:14px">'+(lista||'<div class="empty">No hay cosechas programadas para la semana seleccionada.</div>')+'</div>';
     document.getElementById('cos-nueva').onclick=function(){cosechaReset();renderAsigCosechaPlantaciones();};
     document.getElementById('cos-prev').onclick=function(){cosechaSemanaOffset--;renderCosechaTablero();};
@@ -18961,6 +18974,7 @@ function renderAltasBajas(){
       var badge=(cargo==='Cosecha')?'':(' <span class="em58-badge '+(tipo==='Eventual'?'em58-eventual':'em58-base')+'">'+tipo.toUpperCase()+'</span>');
       var acciones='<button class="btn-sm ex55-action-exp" onclick="renderEditarUsuario(\''+u.id+'\',\''+ex54Esc(u.nombre).replace(/'/g,"\\'")+'\',\''+u.rol+'\','+(u.certificado_ambas?'true':'false')+')">Expediente</button><button class="btn-sm ex55-action-pin" onclick="renderCambiarPin(\''+u.id+'\',\''+ex54Esc(u.nombre).replace(/'/g,"\\'")+'\')">PIN</button><button class="btn-sm ex55-action-cred" onclick="renderCredencialId(\''+u.id+'\')">Credencial</button>';
       if(!enInc) acciones+=(u.activo?'<button class="btn-sm ex55-action-baja" onclick="bajaUsuario(\''+u.id+'\')">Dar de baja</button>':'<button class="btn-sm btn-iniciar" onclick="altaUsuario(\''+u.id+'\')">Reactivar</button>');
+      acciones+='<button class="btn-sm" style="border-color:#efb8b2;background:#fff4f2;color:#b42318" onclick="eliminarExpediente(\''+u.id+'\',\''+ex54Esc(u.nombre).replace(/'/g,"\\'")+'\')">Eliminar</button>';
       return '<div class="ex54-row"><div><div class="ex54-name">'+u.nombre+badge+'</div><div class="ex54-role">'+cargo+(u.fecha_ingreso?' · '+ingresoLbl+u.fecha_ingreso:'')+'</div></div><div><div class="ex54-status" style="color:'+estadoColor+';">'+estado+'</div><div class="ex54-role">'+(cargo==='Cosecha'?'Pago por caja · se define en Cosecha':'Sueldo base: $'+(parseFloat(u.sueldo_base)||0).toFixed(2))+'</div></div><div class="orden-actions">'+acciones+'</div></div>';
     }).join('');
     body.innerHTML=html+'</div><button class="em59-back" style="margin-top:.8rem;" onclick="renderAdministracionMenu()">← Empleados</button>';
@@ -19398,6 +19412,17 @@ function guardarPin(id){
   var pin=String(document.getElementById('cp-p').value).padStart(4,'0');
   if(pin.length!==4){alert('El PIN debe tener 4 dígitos.');return;}
   api('/rest/v1/rpc/set_pin',{method:'POST',body:{p_usuario_id:id,p_pin:pin}}).then(function(){alert('PIN actualizado.');renderAltasBajas();});
+}
+
+function eliminarExpediente(id,nombre){
+  if(!confirm('¿ELIMINAR definitivamente el expediente de '+nombre+'?\n\nEsta acción es sólo para registros duplicados o creados por error y no se puede deshacer.'))return;
+  if(!confirm('Confirma por segunda vez: eliminar '+nombre+'.'))return;
+  from('usuarios').eq('id',id).delete().then(function(){
+    var all=ex54Load(); delete all[id]; ex54Save(all);
+    showToast('Expediente eliminado'); renderAltasBajas();
+  }).catch(function(e){
+    alert('No se pudo eliminar el expediente porque tiene información relacionada que debe conservarse.\n\nSi es un registro con historial, utiliza Dar de baja.\n\nDetalle: '+(e.message||e));
+  });
 }
 
 function bajaUsuario(id){if(confirm('¿Dar de baja? El expediente y todo su historial se conservarán.')) from('usuarios').eq('id',id).update({activo:false}).then(function(){ex57AddHist(id,'Estatus','Activo','Inactivo');renderAltasBajas();});}
