@@ -5197,6 +5197,7 @@ var C274_CATALOGO_LABORES=[
     'Reemplazo · Plásticos','Reemplazo · Malla','Reemplazo · Arcos','Reemplazo · Tutores'
   ]},
   {k:'chincharrear',nombre:'Chincharrear',icono:c275Icon('chincharrear'),variantes:[]},
+  {k:'herbicida',nombre:'Herbicida',icono:c275Icon('otros'),variantes:[]},
   {k:'otros',nombre:'Otros',icono:c275Icon('otros'),variantes:[]}
 ];
 var C274_CAT_SEL=null;
@@ -5213,6 +5214,7 @@ function c274BuscarTipo(cat){
     trampas:['trampas'],
     infraestructura:['infraestructura'],
     chincharrear:['chincharrear'],
+    herbicida:['herbicida'],
     otros:['otros','otra labor']
   };
   var aa=aliases[cat.k]||[cat.nombre.toLowerCase()];
@@ -5244,6 +5246,22 @@ function c274AsegurarTipo(cat){
       if(!(cats.tiposLabor||[]).some(function(x){return String(x.id)===String(lb.id);})){
         cats.tiposLabor.push(lb);
       }
+      return lb;
+    });
+  }
+
+  // C394: Herbicida es categoría oficial del catálogo de Labores.
+  // Si aún no existe en tipos_labor, se crea una sola vez y queda activa.
+  if(cat.k==='herbicida'){
+    function buscarHerbicida(){
+      return from('tipos_labor').select('*').eq('nombre','Herbicida').get().then(function(rows){return rows&&rows[0]?rows[0]:null;});
+    }
+    return buscarHerbicida().then(function(lb){
+      if(lb)return lb;
+      return from('tipos_labor').insert({nombre:'Herbicida',requiere_cantidad_insumo:false,requiere_tiempo:false,requiere_tabla:true,activo:true,orden:95}).then(buscarHerbicida);
+    }).then(function(lb){
+      if(!lb)throw new Error('No se pudo crear la labor Herbicida.');
+      if(!(cats.tiposLabor||[]).some(function(x){return String(x.id)===String(lb.id);}))cats.tiposLabor.push(lb);
       return lb;
     });
   }
@@ -19417,11 +19435,19 @@ function guardarPin(id){
 function eliminarExpediente(id,nombre){
   if(!confirm('¿ELIMINAR definitivamente el expediente de '+nombre+'?\n\nEsta acción es sólo para registros duplicados o creados por error y no se puede deshacer.'))return;
   if(!confirm('Confirma por segunda vez: eliminar '+nombre+'.'))return;
-  from('usuarios').eq('id',id).delete().then(function(){
-    var all=ex54Load(); delete all[id]; ex54Save(all);
-    showToast('Expediente eliminado'); renderAltasBajas();
+  from('usuarios').eq('id',id).delete().then(function(rows){
+    // C394: PostgREST puede devolver éxito con [] cuando RLS no permitió borrar nada.
+    // Verificamos contra la base antes de quitarlo de la pantalla/localStorage.
+    return from('usuarios').select('id,nombre').eq('id',id).get().then(function(restante){
+      if(restante&&restante.length){
+        throw new Error('Supabase no autorizó el DELETE del expediente. El registro sigue existiendo en la base de datos.');
+      }
+      var all=ex54Load(); delete all[id]; ex54Save(all);
+      showToast('✅ Expediente eliminado definitivamente');
+      return renderAltasBajas();
+    });
   }).catch(function(e){
-    alert('No se pudo eliminar el expediente porque tiene información relacionada que debe conservarse.\n\nSi es un registro con historial, utiliza Dar de baja.\n\nDetalle: '+(e.message||e));
+    alert('No se pudo eliminar el expediente.\n\nMootsil comprobó que el registro sigue existiendo; no se ocultará ni se marcará como eliminado.\n\nDetalle: '+(e.message||e));
   });
 }
 
