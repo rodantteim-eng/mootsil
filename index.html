@@ -12824,7 +12824,6 @@ function renderInversionistaDetalle(usuarioId){
           '<div class="ex54-field"><label>Contratos activos</label><input value="'+activos+'" disabled></div>'+
         '</div></div>'+
 
-        (isEdit?'<div class="ex54-sec"><h3>Cargos y asignaciones</h3><div class="ex55-mini" style="margin-bottom:8px;">Un expediente puede tener varios cargos simultáneos o por temporada. Cada cargo conserva su propio estatus y periodo.</div><div id="c398-asignaciones"><div class="loading">Cargando asignaciones...</div></div><div id="c398-asig-form" style="display:none;margin-top:10px;padding:12px;border:1px solid #dfe8e2;border-radius:12px;background:#fbfdfb;"><div class="ex54-grid"><div class="ex54-field"><label>Cargo</label><select id="c398-cargo">'+cargos.map(function(c){return '<option>'+c+'</option>';}).join('')+'</select></div><div class="ex54-field"><label>Tipo</label><select id="c398-tipo"><option>Base</option><option>Eventual</option><option>Temporada</option></select></div><div class="ex54-field"><label>Estatus</label><select id="c398-estado"><option value="activo">Activo</option><option value="incorporacion">En incorporación</option></select></div><div class="ex54-field"><label>Fecha de inicio</label><input type="date" id="c398-inicio" value="'+fechaHoyLocal()+'"></div><div class="ex54-field"><label>Fecha de finalización</label><input type="date" id="c398-fin"></div></div><div style="display:flex;gap:8px;margin-top:10px;"><button type="button" class="ex55-btn primary" onclick="c398GuardarAsignacion(\''+id+'\')">Guardar asignación</button><button type="button" class="ex55-btn" onclick="document.getElementById(\'c398-asig-form\').style.display=\'none\'">Cancelar</button></div></div><button type="button" class="ex55-btn primary" style="margin-top:8px;" onclick="document.getElementById(\'c398-asig-form\').style.display=\'block\'">+ Agregar cargo / asignación</button></div>':'')+
     '<div class="ex54-sec"><h3>Datos bancarios</h3><div class="ex54-grid">'+
           '<div class="ex54-field"><label>Banco</label><input value="'+ex54Esc(extra.banco||'')+'" disabled placeholder="Ej. Banamex"></div>'+
           '<div class="ex54-field span2"><label>Número de cuenta / CLABE</label><input value="'+ex54Esc(extra.cuenta||'')+'" disabled placeholder="Cuenta / CLABE"></div>'+
@@ -18996,7 +18995,7 @@ function renderAltasBajas(){
     function c397DupKey(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toLowerCase();}
     var c396NameCounts={}; users.forEach(function(z){var k=c397DupKey(z.nombre);c396NameCounts[k]=(c396NameCounts[k]||0)+1;});
     var c397HasDup=users.some(function(z){return c396NameCounts[c397DupKey(z.nombre)]>1;});
-    var html='<div class="ex54-head"><div><div class="ex54-eyebrow">Administración · Empleados · C399</div><div class="ex54-title">Expedientes</div><div class="ex54-sub">Información personal, laboral y condiciones de pago de cada colaborador.</div></div><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">'+(c397HasDup?'<button class="btn-sm" style="border-color:#c8b7df;background:#f7f2fb;color:#6c3c91" onclick="c397AbrirDuplicados()">Unificar duplicados</button>':'')+'<button class="em59-back" onclick="renderAdministracionMenu()">← Empleados</button><button class="btn-sm btn-completar" onclick="renderNuevoUsuario()">+ Nuevo expediente</button></div></div><div class="ex54-list">';
+    var html='<div class="ex54-head"><div><div class="ex54-eyebrow">Administración · Empleados · C400</div><div class="ex54-title">Expedientes</div><div class="ex54-sub">Información personal, laboral y condiciones de pago de cada colaborador.</div></div><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">'+(c397HasDup?'<button class="btn-sm" style="border-color:#c8b7df;background:#f7f2fb;color:#6c3c91" onclick="c397AbrirDuplicados()">Unificar duplicados</button>':'')+'<button class="em59-back" onclick="renderAdministracionMenu()">← Empleados</button><button class="btn-sm btn-completar" onclick="renderNuevoUsuario()">+ Nuevo expediente</button></div></div><div class="ex54-list">';
     html+=users.map(function(u){
       var ex=ex54Get(u.id),cargo=ex.cargo||(ROLES[u.rol]||u.rol),tipo=ex.tipo_colaborador||(u.rol==='labores_eventual'?'Eventual':'Base');
       // Cosecha es por periodo; no mostramos EVENTUAL como etiqueta dominante.
@@ -19291,6 +19290,7 @@ function ex54FormHtml(mode,id,base,extra){
       '<div class="ex54-field"><label>Hora extra ($/h)</label><input type="number" min="0" step="1" id="ex54-extra" value="'+ex54Esc(extra.tarifa_hora_extra==null?'':extra.tarifa_hora_extra)+'" placeholder="Ej. 70"></div>'+
       '<div class="ex54-field"><label>PIN (4 dígitos)'+(isEdit?' · opcional':'')+'</label><input type="number" min="0" max="9999" id="ex54-pin" placeholder="'+(isEdit?'Dejar vacío para conservar':'1234')+'"></div>'+
     '</div></div>'+
+    (isEdit?'<div class="ex54-sec"><h3>Cargos y asignaciones</h3><div class="ex55-mini" style="margin-bottom:8px;">Un expediente puede tener varios cargos simultáneos o por temporada. Cada cargo conserva su propio estatus y periodo.</div><div id="c398-asignaciones"><div class="loading">Cargando asignaciones...</div></div><div id="c398-asig-form" style="display:none;margin-top:10px;padding:12px;border:1px solid #dfe8e2;border-radius:12px;background:#fbfdfb;"><div class="ex54-grid"><div class="ex54-field"><label>Cargo</label><select id="c398-cargo">'+cargos.map(function(c){return '<option>'+c+'</option>';}).join('')+'</select></div><div class="ex54-field"><label>Tipo</label><select id="c398-tipo"><option>Base</option><option>Eventual</option><option>Temporada</option></select></div><div class="ex54-field"><label>Estatus</label><select id="c398-estado"><option value="activo">Activo</option><option value="incorporacion">En incorporación</option></select></div><div class="ex54-field"><label>Fecha de inicio</label><input type="date" id="c398-inicio" value="'+fechaHoyLocal()+'"></div></div><div style="display:flex;gap:8px;margin-top:10px;"><button type="button" class="ex55-btn primary" onclick="c398GuardarAsignacion(\''+id+'\')">Guardar asignación</button><button type="button" class="ex55-btn" onclick="document.getElementById(\'c398-asig-form\').style.display=\'none\'">Cancelar</button></div></div><button type="button" class="ex55-btn primary" style="margin-top:8px;" onclick="document.getElementById(\'c398-asig-form\').style.display=\'block\'">+ Agregar cargo / asignación</button></div>':'')+
     '<div class="ex54-sec"><h3>Datos bancarios</h3><div class="ex54-grid">'+
       '<div class="ex54-field"><label>Banco</label><input id="ex56-banco" value="'+ex54Esc(extra.banco||'')+'" placeholder="Ej. Banamex"></div>'+
       '<div class="ex54-field span2"><label>Número de tarjeta</label><input id="ex56-tarjeta" value="'+ex54Esc(extra.numero_tarjeta||'')+'" placeholder="Número de tarjeta para depósitos"></div>'+
@@ -19427,10 +19427,10 @@ function c398CargarAsignaciones(id){
     if(!rows.length){box.innerHTML='<div class="ex55-mini">Sin asignaciones registradas. Agrega el cargo actual para iniciar el historial.</div>';return;}
     box.innerHTML=rows.map(function(a){
       var st=c398FmtEstado(a.estado), periodo=(a.fecha_inicio||'Sin fecha')+' → '+(a.fecha_fin||((a.estado==='activo'||a.estado==='incorporacion')?'Actual':'—'));
-      var acts='';
-      if(a.estado==='incorporacion')acts='<button type="button" class="btn-sm btn-iniciar" onclick="c398CambiarEstado(\''+id+'\',\''+a.id+'\',\'activo\')">Activar</button>';
-      if(a.estado==='activo')acts='<button type="button" class="btn-sm ex55-action-baja" onclick="c398FinalizarAsignacion(\''+id+'\',\''+a.id+'\')">Finalizar</button>';
-      if(a.estado==='finalizado')acts='<button type="button" class="btn-sm btn-iniciar" onclick="c398ReabrirAsignacion(\''+id+'\',\''+a.id+'\')">Reactivar cargo</button>';
+      var acts='<select aria-label="Estatus del cargo" style="min-width:145px;padding:7px 9px;border:1px solid #d8e1dc;border-radius:9px;background:#fff;font-size:.75rem;font-weight:800;" onchange="c400CambiarEstadoSelect(\''+id+'\',\''+a.id+'\',this,\''+a.estado+'\')">'+
+        '<option value="incorporacion" '+(a.estado==='incorporacion'?'selected':'')+'>En incorporación</option>'+ 
+        '<option value="activo" '+(a.estado==='activo'?'selected':'')+'>Activo</option>'+ 
+        '<option value="finalizado" '+(a.estado==='finalizado'?'selected':'')+'>Finalizado</option></select>';
       return '<div class="ex55-subcard" style="display:grid;grid-template-columns:minmax(170px,1.2fr) minmax(120px,.8fr) minmax(190px,1.1fr) auto;gap:10px;align-items:center;">'+
         '<div><strong>'+ex54Esc(a.cargo)+'</strong><div class="ex55-mini">'+ex54Esc(a.tipo_colaborador||'Base')+'</div></div>'+
         '<div><strong style="color:'+st.c+'">'+st.t+'</strong></div><div class="ex55-mini">'+ex54Esc(periodo)+'</div><div>'+acts+'</div></div>';
@@ -19453,6 +19453,19 @@ function c398CambiarEstado(uid,aid,estado,fechaFin){
     ex57AddHist(uid,'Estatus de cargo','—',c398FmtEstado(estado).t); c398CargarAsignaciones(uid); showToast('✅ Asignación actualizada');
   }).catch(function(e){alert('No se pudo actualizar la asignación.\n\n'+(e.message||e));});
 }
+function c400CambiarEstadoSelect(uid,aid,sel,anterior){
+  var nuevo=sel.value;
+  if(nuevo===anterior)return;
+  if(nuevo==='finalizado'){
+    var f=prompt('Fecha de finalización (AAAA-MM-DD):',fechaHoyLocal());
+    if(f===null){sel.value=anterior;return;}
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(f)){alert('Captura una fecha válida.');sel.value=anterior;return;}
+    c398CambiarEstado(uid,aid,'finalizado',f).catch(function(){sel.value=anterior;});
+    return;
+  }
+  c398CambiarEstado(uid,aid,nuevo,null).catch(function(){sel.value=anterior;});
+}
+
 function c398FinalizarAsignacion(uid,aid){
   var f=prompt('Fecha de finalización (AAAA-MM-DD):',fechaHoyLocal()); if(f===null)return; if(!/^\d{4}-\d{2}-\d{2}$/.test(f)){alert('Captura una fecha válida.');return;} c398CambiarEstado(uid,aid,'finalizado',f);
 }
