@@ -18996,7 +18996,7 @@ function renderAltasBajas(){
     function c397DupKey(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toLowerCase();}
     var c396NameCounts={}; users.forEach(function(z){var k=c397DupKey(z.nombre);c396NameCounts[k]=(c396NameCounts[k]||0)+1;});
     var c397HasDup=users.some(function(z){return c396NameCounts[c397DupKey(z.nombre)]>1;});
-    var html='<div class="ex54-head"><div><div class="ex54-eyebrow">Administración · Empleados · C398</div><div class="ex54-title">Expedientes</div><div class="ex54-sub">Información personal, laboral y condiciones de pago de cada colaborador.</div></div><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">'+(c397HasDup?'<button class="btn-sm" style="border-color:#c8b7df;background:#f7f2fb;color:#6c3c91" onclick="c397AbrirDuplicados()">Unificar duplicados</button>':'')+'<button class="em59-back" onclick="renderAdministracionMenu()">← Empleados</button><button class="btn-sm btn-completar" onclick="renderNuevoUsuario()">+ Nuevo expediente</button></div></div><div class="ex54-list">';
+    var html='<div class="ex54-head"><div><div class="ex54-eyebrow">Administración · Empleados · C399</div><div class="ex54-title">Expedientes</div><div class="ex54-sub">Información personal, laboral y condiciones de pago de cada colaborador.</div></div><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">'+(c397HasDup?'<button class="btn-sm" style="border-color:#c8b7df;background:#f7f2fb;color:#6c3c91" onclick="c397AbrirDuplicados()">Unificar duplicados</button>':'')+'<button class="em59-back" onclick="renderAdministracionMenu()">← Empleados</button><button class="btn-sm btn-completar" onclick="renderNuevoUsuario()">+ Nuevo expediente</button></div></div><div class="ex54-list">';
     html+=users.map(function(u){
       var ex=ex54Get(u.id),cargo=ex.cargo||(ROLES[u.rol]||u.rol),tipo=ex.tipo_colaborador||(u.rol==='labores_eventual'?'Eventual':'Base');
       // Cosecha es por periodo; no mostramos EVENTUAL como etiqueta dominante.
@@ -19518,20 +19518,24 @@ function c397AbrirDuplicados(){
 
 function c396FusionarDuplicado(id,nombre){
   if(!usuario||['admin','dueño'].indexOf(usuario.rol)<0){alert('Sólo Administración autorizada puede unificar expedientes.');return;}
+  function dupKey(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toLowerCase();}
   from('usuarios').select('id,nombre,rol,activo,fecha_ingreso').order('fecha_ingreso',{ascending:true}).get().then(function(rows){
-    var same=(rows||[]).filter(function(x){return String(x.nombre||'').trim().toLowerCase()===String(nombre||'').trim().toLowerCase() && x.id!==id;});
-    if(!same.length)throw new Error('No se encontró otro expediente con el mismo nombre.');
+    var origen=(rows||[]).find(function(x){return x.id===id;});
+    if(!origen)throw new Error('No se encontró el expediente seleccionado.');
+    var k=dupKey(origen.nombre||nombre);
+    var same=(rows||[]).filter(function(x){return x.id!==id && dupKey(x.nombre)===k;});
+    if(!same.length)throw new Error('El duplicado dejó de estar disponible. Recarga Expedientes e inténtalo nuevamente.');
     var opciones=same.map(function(x,i){return (i+1)+'. '+x.nombre+' · '+(ROLES[x.rol]||x.rol)+' · '+(x.activo?'Activo':'Inactivo')+' · '+(x.fecha_ingreso||'sin fecha');}).join('\n');
-    var n=prompt('UNIFICAR EXPEDIENTES\n\nExpediente que desaparecerá de la lista:\n'+nombre+'\n\nElige el expediente MAESTRO que conservará toda la historia:\n\n'+opciones+'\n\nEscribe el número:','1');
+    var n=prompt('UNIFICAR EXPEDIENTES · C399\n\nEXPEDIENTE A INTEGRAR:\n'+origen.nombre+' · '+(ROLES[origen.rol]||origen.rol)+' · '+(origen.fecha_ingreso||'sin fecha')+'\n\nELIGE EL EXPEDIENTE MAESTRO QUE SE CONSERVARÁ:\n\n'+opciones+'\n\nPara Isaías conserva el expediente anterior de Labores Eventual (2026-07-12).\n\nEscribe el número:','1');
     if(n===null)return; var master=same[parseInt(n,10)-1]; if(!master)throw new Error('Selección no válida.');
-    if(!confirm('Se conservará UN SOLO expediente visible de '+nombre+'.\n\nEl historial anterior permanecerá ligado y el expediente maestro recibirá la asignación laboral más reciente.\n\n¿Continuar?'))return;
+    if(!confirm('CONFIRMAR UNIFICACIÓN\n\nSE CONSERVA:\n'+master.nombre+' · '+(ROLES[master.rol]||master.rol)+' · '+(master.fecha_ingreso||'sin fecha')+'\n\nSE INTEGRA:\n'+origen.nombre+' · '+(ROLES[origen.rol]||origen.rol)+' · '+(origen.fecha_ingreso||'sin fecha')+'\n\nLos cargos e historial quedarán ligados al expediente maestro.\n\n¿Continuar?'))return;
     return rpc('c396_admin_unificar_expedientes',{p_admin_id:usuario.id,p_admin_pin:String(pin||''),p_maestro_id:master.id,p_duplicado_id:id}).then(function(res){
       var r=Array.isArray(res)?res[0]:res; if(!r||r.ok!==true)throw new Error((r&&r.mensaje)||'Supabase no confirmó la unificación.');
       var all=ex54Load(),a=all[master.id]||{},b=all[id]||{}; all[master.id]=Object.assign({},a,b); delete all[id]; ex54Save(all);
       ex57AddHist(master.id,'Reincorporación / unificación','Expediente anterior conservado','Historial laboral consolidado');
       showToast('✅ Expedientes unificados · historial conservado'); return renderAltasBajas();
     });
-  }).catch(function(e){alert('No se pudo unificar el expediente.\n\n'+(e.message||e)+'\n\nEjecuta primero el SQL C396 en Supabase.');});
+  }).catch(function(e){alert('No se pudo unificar el expediente.\n\nDetalle: '+(e.message||e));});
 }
 
 function eliminarExpediente(id,nombre){
