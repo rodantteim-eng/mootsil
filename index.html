@@ -13092,13 +13092,91 @@ function abrirTesoreriaC324(){
   }
 }
 
+
+/* ============================================================
+   C401 · ADMINISTRACIÓN · VENTAS DE COSECHA
+   Venta -> Cuenta por cobrar/cobro -> Tesorería
+   ============================================================ */
+function vc401Esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function vc401Money(v,mon){var n=parseFloat(v)||0;return (mon||'MXN')+' $'+n.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function vc401Back(){renderAdministracionMenu();}
+function vc401Head(t,s){return '<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px"><div><div class="ad17-eyebrow">Administración · Ventas de Cosecha · C401</div><div class="ad17-title">'+t+'</div><div class="ad17-sub">'+s+'</div></div><button class="em59-back" onclick="vc401Back()">← Administración</button></div>';}
+function vc401Menu(){
+ var b=document.getElementById('enc-body');
+ b.innerHTML=vc401Head('Ventas de Cosecha','De la cosecha real al cliente, cobro y tesorería.')+
+ '<div class="ad17-grid">'+
+ '<div class="ad17-card primary" onclick="vc401NuevaVenta()"><div class="ic">➕</div><h3>Nueva venta</h3><p>Selecciona cosecha, cliente, cajas, precio, moneda y condición de pago.</p></div>'+
+ '<div class="ad17-card blue" onclick="vc401Ventas()"><div class="ic">📋</div><h3>Ventas</h3><p>Historial comercial con trazabilidad por cosecha, plantación y tabla.</p></div>'+
+ '<div class="ad17-card gold" onclick="vc401CuentasCobrar()"><div class="ic">💵</div><h3>Cuentas por cobrar</h3><p>Ventas a crédito, abonos y saldos pendientes.</p></div>'+
+ '<div class="ad17-card orange" onclick="vc401Clientes()"><div class="ic">👤</div><h3>Clientes</h3><p>Comercializadoras y compradores de la fruta.</p></div></div>';
+}
+function vc401CosechasTerminadas(){
+ var lb=cats.tiposLabor.find(function(l){return l.es_cosecha;});
+ if(!lb)return Promise.resolve([]);
+ return from('ordenes_trabajo').select('id,fecha_asignacion,estado,tabla_id,tabla:tablas(nombre,plantacion_id)').eq('tipo_labor_id',lb.id).eq('estado','completada').order('fecha_asignacion',{ascending:false}).get().then(function(rows){
+   var g={}; (rows||[]).forEach(function(o){var k=o.fecha_asignacion+'|'+o.tabla_id;if(!g[k])g[k]=[];g[k].push(o);});
+   return Object.keys(g).map(function(k){var a=g[k],o=a[0],p=cats.plantaciones.find(function(x){return o.tabla&&String(x.id)===String(o.tabla.plantacion_id);});return {clave:k,fecha:o.fecha_asignacion,tabla_id:o.tabla_id,tabla:o.tabla?o.tabla.nombre:'',plantacion:p?p.nombre:'',ordenes:a.map(function(x){return x.id;})};});
+ });
+}
+function vc401NuevaVenta(){
+ var b=document.getElementById('enc-body'); b.innerHTML=vc401Head('Nueva venta','La venta queda ligada a una cosecha terminada y conserva su trazabilidad.')+'<div class="form-card"><div class="loading">Cargando cosechas y clientes...</div></div>';
+ Promise.all([vc401CosechasTerminadas(),from('clientes_cosecha').select('*').eq('activo',true).order('nombre').get()]).then(function(rr){
+   var cos=rr[0]||[], cli=rr[1]||[];
+   b.innerHTML=vc401Head('Nueva venta','Cosecha → cliente → cajas/precio → contado o crédito.')+
+   '<div class="form-card" style="border-top:4px solid #23824d">'+
+   '<div class="form-group"><label>Cosecha terminada</label><select id="vc401-cosecha"><option value="">Seleccionar cosecha...</option>'+cos.map(function(c){return '<option value="'+vc401Esc(c.clave)+'" data-p="'+vc401Esc(c.plantacion)+'" data-t="'+vc401Esc(c.tabla)+'" data-f="'+vc401Esc(c.fecha)+'">'+vc401Esc(c.fecha+' · '+c.plantacion+' · '+c.tabla)+'</option>';}).join('')+'</select><p class="hint">Sólo aparecen cosechas terminadas. Las cajas reales se capturan aquí hasta integrar pesaje/empaque.</p></div>'+
+   '<div style="display:grid;grid-template-columns:2fr 1fr;gap:10px"><div class="form-group"><label>Cliente / comercializadora</label><select id="vc401-cliente"><option value="">Seleccionar cliente...</option>'+cli.map(function(c){return '<option value="'+c.id+'">'+vc401Esc(c.nombre)+'</option>';}).join('')+'</select></div><div class="form-group"><label>Fecha de venta</label><input id="vc401-fecha" type="date" value="'+fechaHoyLocal()+'"></div></div>'+
+   '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px"><div class="form-group"><label>Cajas vendidas</label><input id="vc401-cajas" type="number" min="1" step="1"></div><div class="form-group"><label>Precio por caja</label><input id="vc401-precio" type="number" min="0" step=".01"></div><div class="form-group"><label>Moneda</label><select id="vc401-moneda"><option>MXN</option><option>USD</option></select></div><div class="form-group"><label>Condición</label><select id="vc401-cond"><option value="contado">Contado</option><option value="credito">Crédito</option></select></div></div>'+
+   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div class="form-group"><label>Factura / referencia</label><input id="vc401-factura" placeholder="Opcional"></div><div class="form-group"><label>Observaciones</label><input id="vc401-notas" placeholder="Opcional"></div></div>'+
+   '<div class="resumen-card" style="margin:12px 0"><div class="resumen-row"><span class="resumen-key">Importe</span><span class="resumen-val" id="vc401-total">MXN $0.00</span></div></div>'+
+   '<button class="btn-primary" id="vc401-guardar">Registrar venta</button></div>';
+   function total(){var n=(parseFloat(document.getElementById('vc401-cajas').value)||0)*(parseFloat(document.getElementById('vc401-precio').value)||0),m=document.getElementById('vc401-moneda').value;document.getElementById('vc401-total').textContent=vc401Money(n,m);}
+   ['vc401-cajas','vc401-precio','vc401-moneda'].forEach(function(id){document.getElementById(id).addEventListener('input',total);document.getElementById(id).addEventListener('change',total);});
+   document.getElementById('vc401-guardar').onclick=function(){
+     var sel=document.getElementById('vc401-cosecha'),op=sel.options[sel.selectedIndex],cid=document.getElementById('vc401-cliente').value,cajas=parseInt(document.getElementById('vc401-cajas').value,10)||0,precio=parseFloat(document.getElementById('vc401-precio').value)||0;
+     if(!sel.value||!cid||cajas<=0||precio<=0){alert('Selecciona cosecha, cliente y captura cajas y precio.');return;}
+     var total=cajas*precio, cond=document.getElementById('vc401-cond').value;
+     var payload={fecha:document.getElementById('vc401-fecha').value,cliente_id:cid,cosecha_clave:sel.value,plantacion:op.dataset.p||'',tabla:op.dataset.t||'',fecha_cosecha:op.dataset.f||null,cajas:cajas,precio_unitario:precio,moneda:document.getElementById('vc401-moneda').value,total:total,condicion_pago:cond,estado_pago:cond==='contado'?'pendiente_cobro':'credito',factura:(document.getElementById('vc401-factura').value||'').trim()||null,notas:(document.getElementById('vc401-notas').value||'').trim()||null,creado_por:usuario.id};
+     var btn=this;btn.disabled=true;btn.textContent='Guardando...';
+     from('ventas_cosecha').insert(payload).then(function(){showToast('✅ Venta de cosecha registrada');vc401Ventas();}).catch(function(e){alert('No se pudo registrar la venta: '+e.message);btn.disabled=false;btn.textContent='Registrar venta';});
+   };
+ }).catch(function(e){b.innerHTML=vc401Head('Nueva venta','')+'<div class="empty">No se pudo abrir Ventas de Cosecha: '+vc401Esc(e.message)+'</div>';});
+}
+function vc401Ventas(){
+ var b=document.getElementById('enc-body');b.innerHTML=vc401Head('Ventas','Historial de comercialización y trazabilidad.')+'<div class="loading">Cargando ventas...</div>';
+ from('ventas_cosecha').select('*,cliente:clientes_cosecha(nombre)').order('fecha',{ascending:false}).get().then(function(rows){rows=rows||[];
+  var total=rows.reduce(function(s,x){return s+(parseFloat(x.total)||0);},0);
+  b.innerHTML=vc401Head('Ventas','Historial de comercialización y trazabilidad.')+
+  '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px"><div class="form-card"><strong>'+rows.length+'</strong><div class="hint">Ventas</div></div><div class="form-card"><strong>'+rows.reduce(function(s,x){return s+(parseInt(x.cajas,10)||0);},0)+'</strong><div class="hint">Cajas vendidas</div></div><div class="form-card"><strong>'+vc401Money(total,'MXN')+'</strong><div class="hint">Suma nominal*</div></div></div>'+
+  '<div class="form-card" style="overflow:auto"><table class="hc183-table"><thead><tr><th>Fecha</th><th>Cliente</th><th>Trazabilidad</th><th>Cajas</th><th>Precio</th><th>Total</th><th>Condición</th><th>Estado</th></tr></thead><tbody>'+
+  (rows.length?rows.map(function(x){return '<tr><td>'+vc401Esc(x.fecha)+'</td><td><strong>'+vc401Esc(x.cliente?x.cliente.nombre:'—')+'</strong></td><td>'+vc401Esc((x.plantacion||'')+' · '+(x.tabla||'')+' · '+(x.fecha_cosecha||''))+'</td><td>'+x.cajas+'</td><td>'+vc401Money(x.precio_unitario,x.moneda)+'</td><td><strong>'+vc401Money(x.total,x.moneda)+'</strong></td><td>'+vc401Esc(x.condicion_pago)+'</td><td>'+vc401Esc(x.estado_pago)+'</td></tr>';}).join(''):'<tr><td colspan="8">No hay ventas registradas.</td></tr>')+
+  '</tbody></table><div class="hint" style="margin-top:8px">*MXN y USD se muestran individualmente en cada venta; la suma nominal no convierte moneda.</div></div>';
+ }).catch(function(e){b.innerHTML=vc401Head('Ventas','')+'<div class="empty">Error: '+vc401Esc(e.message)+'</div>';});
+}
+function vc401CuentasCobrar(){
+ var b=document.getElementById('enc-body');b.innerHTML=vc401Head('Cuentas por cobrar','Ventas a crédito y saldos pendientes.')+'<div class="loading">Cargando...</div>';
+ Promise.all([from('ventas_cosecha').select('*,cliente:clientes_cosecha(nombre)').eq('condicion_pago','credito').order('fecha',{ascending:false}).get(),from('cobros_cosecha').select('*').get()]).then(function(rr){
+  var ventas=rr[0]||[], cobros=rr[1]||[];
+  b.innerHTML=vc401Head('Cuentas por cobrar','Registra abonos sin perder la venta original.')+'<div class="form-card" style="overflow:auto"><table class="hc183-table"><thead><tr><th>Cliente</th><th>Venta</th><th>Total</th><th>Cobrado</th><th>Saldo</th><th></th></tr></thead><tbody>'+
+  (ventas.length?ventas.map(function(v){var pag=cobros.filter(function(c){return String(c.venta_id)===String(v.id);}).reduce(function(s,c){return s+(parseFloat(c.monto)||0);},0),sal=Math.max(0,(parseFloat(v.total)||0)-pag);return '<tr><td>'+vc401Esc(v.cliente?v.cliente.nombre:'—')+'</td><td>'+vc401Esc(v.fecha+' · '+v.plantacion+' · '+v.tabla)+'</td><td>'+vc401Money(v.total,v.moneda)+'</td><td>'+vc401Money(pag,v.moneda)+'</td><td><strong>'+vc401Money(sal,v.moneda)+'</strong></td><td>'+(sal>0?'<button class="btn-sm" data-vc401-abono="'+v.id+'" data-saldo="'+sal+'">Registrar abono</button>':'Pagado')+'</td></tr>';}).join(''):'<tr><td colspan="6">No hay cuentas por cobrar.</td></tr>')+'</tbody></table></div>';
+  b.querySelectorAll('[data-vc401-abono]').forEach(function(btn){btn.onclick=function(){var monto=prompt('Monto del abono',this.dataset.saldo);if(monto===null)return;monto=parseFloat(monto)||0;if(monto<=0||monto>parseFloat(this.dataset.saldo)){alert('Monto inválido.');return;}from('cobros_cosecha').insert({venta_id:this.dataset.vc401Abono,fecha:fechaHoyLocal(),monto:monto,registrado_por:usuario.id}).then(function(){showToast('✅ Abono registrado');vc401CuentasCobrar();}).catch(function(e){alert(e.message);});};});
+ }).catch(function(e){b.innerHTML=vc401Head('Cuentas por cobrar','')+'<div class="empty">Error: '+vc401Esc(e.message)+'</div>';});
+}
+function vc401Clientes(){
+ var b=document.getElementById('enc-body');b.innerHTML=vc401Head('Clientes','Comercializadoras y compradores de la cosecha.')+
+ '<div class="form-card" style="border-top:4px solid #23824d;margin-bottom:12px"><div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px"><div class="form-group"><label>Nombre / razón social</label><input id="vc401-cn"></div><div class="form-group"><label>RFC</label><input id="vc401-rfc"></div><div class="form-group"><label>Teléfono</label><input id="vc401-tel"></div></div><button class="btn-primary" id="vc401-cg" style="width:auto">+ Agregar cliente</button></div><div id="vc401-cl"></div>';
+ function load(){from('clientes_cosecha').select('*').order('nombre').get().then(function(rows){document.getElementById('vc401-cl').innerHTML='<div class="form-card">'+((rows||[]).map(function(c){return '<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #edf1ee"><div><strong>'+vc401Esc(c.nombre)+'</strong><div class="hint">'+vc401Esc(c.rfc||'Sin RFC')+' · '+vc401Esc(c.telefono||'Sin teléfono')+'</div></div><span class="orden-badge '+(c.activo?'badge-completada':'badge-pendiente')+'">'+(c.activo?'Activo':'Inactivo')+'</span></div>';}).join('')||'<div class="empty">No hay clientes registrados.</div>')+'</div>';});}
+ document.getElementById('vc401-cg').onclick=function(){var n=(document.getElementById('vc401-cn').value||'').trim();if(!n){alert('Captura el nombre del cliente.');return;}from('clientes_cosecha').insert({nombre:n,rfc:(document.getElementById('vc401-rfc').value||'').trim()||null,telefono:(document.getElementById('vc401-tel').value||'').trim()||null,activo:true,creado_por:usuario.id}).then(function(){showToast('✅ Cliente agregado');vc401Clientes();}).catch(function(e){alert(e.message);});}; load();
+}
+
 function renderAdministracionMenu(){
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="ad17-shell"><div class="ad17-head"><div><div class="ad17-eyebrow">Administración · C382</div><div class="ad17-title">Control del Rancho</div><div class="ad17-sub">Finanzas, personal, compras y operación administrativa de Mootsil.</div></div></div><div class="ad17-grid">'+
+  body.innerHTML='<div class="ad17-shell"><div class="ad17-head"><div><div class="ad17-eyebrow">Administración · C401</div><div class="ad17-title">Control del Rancho</div><div class="ad17-sub">Finanzas, personal, compras y operación administrativa de Mootsil.</div></div></div><div class="ad17-grid">'+
     '<div class="ad17-card primary em60-card" data-admin="tesoreria"><div class="ic">🏦</div><h3>Tesorería</h3><p>Bancos, efectivo, ingresos, pagos, transferencias e historial permanente.</p><div class="em60-actions"><button type="button" data-cajago="ingresar">➕ Ingresar efectivo</button><button type="button" data-cajago="compras">🧾 Compras</button><button type="button" data-cajago="gastos">💳 Gastos</button></div></div>'+
     '<div class="ad17-card blue em60-card" data-admin="empleados"><div class="ic">👥</div><h3>Empleados</h3><p>Asistencia, solicitudes, contratación y expedientes del personal.</p><div class="em60-actions"><button type="button" data-empgo="asistencia">📋 Asistencia</button><button type="button" data-empgo="solicitudes">📨 Solicitudes</button><button type="button" data-empgo="postulantes">🧑‍🌾 Postulantes</button><button type="button" data-empgo="expedientes">👤 Expedientes</button></div></div>'+
     '<div class="ad17-card gold em60-card" data-admin="compensaciones"><div class="ic">💰</div><h3>Nómina y Compensaciones</h3><p>Nómina, bonos por objetivos y apoyos económicos al personal.</p><div class="em60-actions"><button type="button" data-compgo="nomina">💰 Nómina</button><button type="button" data-compgo="bonos">🎯 Bonos</button><button type="button" data-compgo="apoyos">⛽ Apoyos</button></div></div>'+
     '<div class="ad17-card orange em60-card" data-admin="gastos"><div class="ic">🧾</div><h3>Compras y Proveedores</h3><p>Compras, proveedores, cuentas por pagar, órdenes e historial.</p><div class="em60-actions"><button type="button" data-comprago="nuevo">🧾 Nueva compra</button><button type="button" data-comprago="historial">📜 Historial de compras</button><button type="button" data-comprago="proveedores">🏢 Proveedores</button><button type="button" data-comprago="cuentas">📆 Cuentas por pagar</button><button type="button" data-comprago="orden">🛒 Órdenes de compra</button></div></div>'+
+    '<div class="ad17-card em60-card" data-admin="ventas-cosecha" style="border-top-color:#23824d"><div class="ic">🫐</div><h3>Ventas de Cosecha</h3><p>Comercialización, clientes, cuentas por cobrar y trazabilidad de la fruta.</p><div class="em60-actions"><button type="button" data-vcgo="nuevo">➕ Nueva venta</button><button type="button" data-vcgo="ventas">📋 Ventas</button><button type="button" data-vcgo="cobrar">💵 Cuentas por cobrar</button><button type="button" data-vcgo="clientes">👤 Clientes</button></div></div>'+
     '<div class="ad17-card purple em60-card" data-admin="inversionistas"><div class="ic">💼</div><h3>Inversionistas y Dueños</h3><p>Perfiles patrimoniales, aportaciones, contratos, movimientos y devoluciones.</p><div class="em60-actions"><button type="button" data-invgo="inversionista">💼 Inversionistas</button><button type="button" data-invgo="dueño">👑 Dueños</button></div></div>'+
     '<div class="ad17-card em60-card config-accent" data-admin="configuracion"><div class="ic">⚙️</div><h3>Configuración y registros</h3><p>Opciones de uso poco frecuente e históricos que no deben saturar la operación diaria.</p><div class="em60-actions"><button type="button" data-c224go="avisos">🔔 Historial de avisos</button><button type="button" data-c224go="alarmas">🚨 Reportes de campo</button><button type="button" data-c224go="config">⚙️ Configuración</button></div></div>'+
   '</div></div>';
@@ -13126,6 +13204,10 @@ function renderAdministracionMenu(){
   body.querySelector('[data-comprago="proveedores"]').addEventListener('click',function(e){e.stopPropagation();renderProveedores();});
   body.querySelector('[data-comprago="cuentas"]').addEventListener('click',function(e){e.stopPropagation();abrirCuentasPorPagarDesdeAdministracion();});
   body.querySelector('[data-comprago="orden"]').addEventListener('click',function(e){e.stopPropagation();renderOrdenCompra();});
+  body.querySelector('[data-vcgo="nuevo"]').addEventListener('click',function(e){e.stopPropagation();vc401NuevaVenta();});
+  body.querySelector('[data-vcgo="ventas"]').addEventListener('click',function(e){e.stopPropagation();vc401Ventas();});
+  body.querySelector('[data-vcgo="cobrar"]').addEventListener('click',function(e){e.stopPropagation();vc401CuentasCobrar();});
+  body.querySelector('[data-vcgo="clientes"]').addEventListener('click',function(e){e.stopPropagation();vc401Clientes();});
   /* C182: las tarjetas principales son contenedores visuales; sólo Caja conserva acción principal. */
   body.querySelector('[data-invgo="inversionista"]').addEventListener('click',function(e){e.stopPropagation();renderInversionistasMenu('inversionista');});
   body.querySelector('[data-invgo="dueño"]').addEventListener('click',function(e){e.stopPropagation();renderInversionistasMenu('dueño');});
