@@ -15023,7 +15023,7 @@ function ca218SaldoCajaActual(cuenta, fecha){
 function renderGenerarNomina(fechaRef){
   fechaRef=fechaRef||new Date();
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo">💰 Nómina · C403</div><div class="loading">Calculando nómina preliminar...</div>';
+  body.innerHTML='<div class="seccion-titulo">💰 Nómina · C404</div><div class="loading">Calculando nómina preliminar...</div>';
 
   var lunes=inicioDeSemana(fechaRef);
   var domingo=new Date(lunes); domingo.setDate(lunes.getDate()+6);
@@ -15034,7 +15034,7 @@ function renderGenerarNomina(fechaRef){
 
   Promise.all([
     from('usuarios').select('id,nombre,rol,activo,sueldo_base').get(),
-    from('asistencia_registros').select('*').gte('fecha',semanaInicio).lte('fecha',semanaFin).get(),
+    from('asistencia_registros').select('*').gte('fecha',semanaInicio).lte('fecha',semanaFin).eq('modalidad','labores').get(),
     from('pagos_semana_estado').select('*').eq('semana_inicio',semanaInicio).get(),
     from('pagos_extra_estado').select('*').eq('semana_inicio',semanaInicio).get(),
     from('config_app').select('*').get(),
@@ -15117,8 +15117,8 @@ function renderGenerarNomina(fechaRef){
       var pendientes=[];
 
       operarios.forEach(function(o,idx){
-        var regsOp=registros.filter(function(x){return x.usuario_id===o.id;});
-        var permisosOp=permisosAprobados.filter(function(p){return p.usuario_id===o.id;});
+        var regsOp=registros.filter(function(x){return String(x.usuario_id)===String(o.id);});
+        var permisosOp=permisosAprobados.filter(function(p){return String(p.usuario_id)===String(o.id);});
         var resumen=calcularResumenAsistencia(regsOp,semanaInicio,permisosOp);
         var sueldoBase=parseFloat(o.sueldo_base||0);
 
