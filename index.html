@@ -15023,7 +15023,7 @@ function ca218SaldoCajaActual(cuenta, fecha){
 function renderGenerarNomina(fechaRef){
   fechaRef=fechaRef||new Date();
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo">💰 Nómina · C402</div><div class="loading">Calculando nómina preliminar...</div>';
+  body.innerHTML='<div class="seccion-titulo">💰 Nómina · C403</div><div class="loading">Calculando nómina preliminar...</div>';
 
   var lunes=inicioDeSemana(fechaRef);
   var domingo=new Date(lunes); domingo.setDate(lunes.getDate()+6);
@@ -15046,7 +15046,7 @@ function renderGenerarNomina(fechaRef){
     from('horas_extra_asignadas').select('operario_id,fecha,horas_max,estado').gte('fecha',semanaInicio).lte('fecha',semanaFin).eq('estado','aprobada').get(),
     from('nomina_ajustes').select('*').eq('semana_inicio',semanaInicio).get(),
     from('gastos').select('*').gte('fecha',semanaInicio).lte('fecha',semanaFin).get(),
-    from('usuario_asignaciones_laborales').select('usuario_id,estado,fecha_inicio,fecha_fin').eq('estado','activo').lte('fecha_inicio',semanaFin).get()
+    rpc('c403_nomina_asignaciones_activas',{p_fecha_inicio:semanaInicio,p_fecha_fin:semanaFin})
   ]).then(function(r){
     var todosUsuarios=r[0]||[], registros=r[1]||[], estados=r[2]||[], estadosExtra=r[3]||[];
     var ajustesSemana=r[11]||[];
