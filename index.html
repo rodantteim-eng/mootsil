@@ -15023,7 +15023,7 @@ function ca218SaldoCajaActual(cuenta, fecha){
 function renderGenerarNomina(fechaRef){
   fechaRef=fechaRef||new Date();
   var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo">💰 Nómina</div><div class="loading">Calculando nómina preliminar...</div>';
+  body.innerHTML='<div class="seccion-titulo">💰 Nómina · C402</div><div class="loading">Calculando nómina preliminar...</div>';
 
   var lunes=inicioDeSemana(fechaRef);
   var domingo=new Date(lunes); domingo.setDate(lunes.getDate()+6);
@@ -15045,7 +15045,8 @@ function renderGenerarNomina(fechaRef){
     from('prestamo_pagos').select('*').eq('semana_inicio',semanaInicio).get(),
     from('horas_extra_asignadas').select('operario_id,fecha,horas_max,estado').gte('fecha',semanaInicio).lte('fecha',semanaFin).eq('estado','aprobada').get(),
     from('nomina_ajustes').select('*').eq('semana_inicio',semanaInicio).get(),
-    from('gastos').select('*').gte('fecha',semanaInicio).lte('fecha',semanaFin).get()
+    from('gastos').select('*').gte('fecha',semanaInicio).lte('fecha',semanaFin).get(),
+    from('usuario_asignaciones_laborales').select('usuario_id,estado,fecha_inicio,fecha_fin').eq('estado','activo').lte('fecha_inicio',semanaFin).get()
   ]).then(function(r){
     var todosUsuarios=r[0]||[], registros=r[1]||[], estados=r[2]||[], estadosExtra=r[3]||[];
     var ajustesSemana=r[11]||[];
@@ -15055,10 +15056,20 @@ function renderGenerarNomina(fechaRef){
     var prestamosActivos=r[8]||[], pagosSemanaPrestamos=r[9]||[], horasExtraAsignadas=r[10]||[];
     var apoyosSemana=(r[12]||[]).filter(ap98EsApoyo);
 
-    // C079: usar exactamente el mismo universo de colaboradores que la pantalla Asistencia.
+    // C402: Nómina sólo incluye colaboradores con al menos una asignación laboral ACTIVA
+    // vigente durante la semana. "En incorporación" y "Finalizado" quedan fuera y no generan faltas.
     var rolesAsistencia=['operario','cosechador','galerista','labores_eventual'];
+    var asignacionesActivas=(r[13]||[]).filter(function(a){
+      return a.estado==='activo' &&
+             (!a.fecha_inicio || a.fecha_inicio<=semanaFin) &&
+             (!a.fecha_fin || a.fecha_fin>=semanaInicio);
+    });
+    var idsConAsignacionActiva={};
+    asignacionesActivas.forEach(function(a){ idsConAsignacionActiva[String(a.usuario_id)]=true; });
     var operarios=todosUsuarios.filter(function(o){
-      return o.activo!==false && rolesAsistencia.indexOf(o.rol)>=0;
+      return o.activo!==false &&
+             rolesAsistencia.indexOf(o.rol)>=0 &&
+             !!idsConAsignacionActiva[String(o.id)];
     });
 
     var ajustePorOp={}; ajustesSemana.forEach(function(a){ajustePorOp[a.operario_id]=a;});
