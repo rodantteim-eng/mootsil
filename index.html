@@ -3621,7 +3621,7 @@ function cargarCatalogos(){
     from('subtipos_labor').select('*').get(),
     from('usuarios').select('id,nombre,rol,activo').eq('rol','operario').eq('activo',true).get(),
     from('inventario_items').select('*').eq('activo',true).order('nombre').get(),
-    from('usuarios').select('id,nombre,rol').eq('rol','cosechador').get(),
+    from('usuarios').select('id,nombre,rol,activo').eq('rol','cosechador').eq('activo',true).get(),
     from('usuarios').select('id,nombre,rol,activo').eq('rol','labores_eventual').eq('activo',true).get(),
     from('proveedores').select('*').eq('activo',true).order('nombre').get()
   ]).then(function(r){
@@ -5632,7 +5632,7 @@ function guardarFiltrosAsignacion(){
     })) : Promise.resolve();
     return autorizarExtra.then(function(){
       return Promise.all(filtrosAsigOperarios.map(function(oid){
-        return from('notificaciones').insert({titulo:esExtra?'⏰ Limpieza de filtros (hora extra) asignada':'🧹 Limpieza de filtros asignada',cuerpo:usuario.nombre+' asignó limpieza de filtros a '+(cats.equipoDeCampo.find(function(o){return o.id===oid;})||{}).nombre+' en '+tablaIds.length+' tabla(s)'+(esExtra?' (hora extra)':''),icono:'🧹',leida:false,para_rol:'operario',para_usuario:oid});
+        return from('notificaciones').insert({titulo:esExtra?'⏰ Limpieza de filtros (hora extra) asignada':'🧹 Limpieza de filtros asignada',cuerpo:usuario.nombre+' asignó limpieza de filtros a '+(cats.equipoDeCampo.find(function(o){return o.id===oid;})||{}).nombre+' en '+tablaIds.length+' tabla(s)'+(esExtra?' (hora extra)':''),icono:'🧹',leida:false,para_usuario:oid});
       }));
     });
   }).then(function(){showToast('🧹 Limpieza de filtros asignada en '+tablaIds.length+' tabla(s). Puedes asignar otra labor.');volverAsignacionRiegoV1();}).catch(function(e){alert('Error: '+e.message);});
@@ -16051,7 +16051,14 @@ function cosechaReset(){
   cosecha={plantacionId:null,tablaId:null,asignaciones:{},operarios:[],fecha:fechaHoyLocal(),notas:null};
 }
 function cosEsc(v){return String(v==null?'':v).replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c];});}
-function cosNombreOperario(id){var o=(cats.cosechadores||[]).find(function(x){return String(x.id)===String(id);});return o?o.nombre:'Cosechador';}
+function cosNombreOperario(id){var todos=(cats.cosechadores||[]).concat(cats.operarios||[]).concat(cats.eventuales||[]),o=todos.find(function(x){return String(x.id)===String(id);});return o?o.nombre:'Colaborador';}
+function cosEsCosechador(id){return (cats.cosechadores||[]).some(function(x){return String(x.id)===String(id);});}
+function cosPersonalDisponible(){
+  var seen={},out=[];
+  (cats.cosechadores||[]).forEach(function(x){if(!seen[x.id]){seen[x.id]=1;out.push({id:x.id,nombre:x.nombre,grupo:'Cosecha'});}});
+  (cats.operarios||[]).concat(cats.eventuales||[]).forEach(function(x){if(!seen[x.id]){seen[x.id]=1;out.push({id:x.id,nombre:x.nombre,grupo:'Apoyo de Labores'});}});
+  return out;
+}
 function cosSurcosUsados(excepto){var out=[];Object.keys(cosecha.asignaciones||{}).forEach(function(id){if(String(id)!==String(excepto))out=out.concat(cosecha.asignaciones[id]||[]);});return out.map(Number);}
 function cosTotalAsignados(){return Object.keys(cosecha.asignaciones||{}).reduce(function(n,id){return n+(cosecha.asignaciones[id]||[]).length;},0);}
 
@@ -16095,61 +16102,72 @@ function renderCosechaTablero(){
   }).catch(function(e){body.innerHTML='<div class="seccion-titulo">🧺 Cosecha</div><div class="empty">Error al cargar cosecha: '+cosEsc(e.message)+'</div>';});
 }
 
-function renderAsigCosechaPlantaciones(){
+function renderAsigCosechaPlantaciones(){ renderCosechaProgramacion(); }
+function renderAsigCosechaTablas(){ renderCosechaProgramacion(); }
+function renderAsigCosechaDistribucion(){ renderCosechaProgramacion(); }
+function renderAsigCosechaFecha(){ renderCosechaProgramacion(); }
+function renderAsigCosechaNotas(){ renderCosechaProgramacion(); }
+
+function renderCosechaProgramacion(){
   var body=document.getElementById('enc-body');
-  var html='<div class="seccion-titulo">🧺 Cosecha · Programar</div><div class="form-card" style="margin-bottom:14px;border-top:4px solid #6f238d"><div style="font-weight:800;color:var(--verde);font-size:1rem">Nueva cosecha</div><div class="hint" style="margin-top:4px">Elige la plantación y después distribuirás los surcos entre cada cosechador. Cada persona recibirá únicamente sus propios surcos.</div></div><div class="riego-grid">';
-  cats.plantaciones.forEach(function(p){html+='<div class="riego-circle neutra" data-pid="'+p.id+'"><span>'+cosEsc(p.nombre)+'</span></div>';});
-  html+='</div>';
-  body.innerHTML=html;
-  body.querySelectorAll('[data-pid]').forEach(function(el){el.addEventListener('click',function(){cosecha.plantacionId=this.dataset.pid;cosecha.tablaId=null;cosecha.asignaciones={};cosecha.operarios=[];renderAsigCosechaTablas();});});
-}
+  if(!cosecha.fecha)cosecha.fecha=fechaHoyLocal();
+  var plantas=cats.plantaciones||[], p=plantas.find(function(x){return String(x.id)===String(cosecha.plantacionId);});
+  var tabs=p?(cats.tablas||[]).filter(function(t){return String(t.plantacion_id)===String(p.id);}):[];
+  var t=tabs.find(function(x){return String(x.id)===String(cosecha.tablaId);});
+  if(!cosecha.editorId)cosecha.editorId=null;
+  var color=p&&/jade/i.test(p.nombre||'')?'#6f238d':'#23824d';
+  var personal=cosPersonalDisponible(), cose=personal.filter(function(x){return x.grupo==='Cosecha';}), apoyo=personal.filter(function(x){return x.grupo!=='Cosecha';});
 
-function renderAsigCosechaTablas(){
-  var body=document.getElementById('enc-body');
-  var p=cats.plantaciones.find(function(x){return String(x.id)===String(cosecha.plantacionId);});
-  var tabs=cats.tablas.filter(function(t){return String(t.plantacion_id)===String(cosecha.plantacionId);});
-  var html='<div class="seccion-titulo">🧺 '+cosEsc(p?p.nombre:'')+' · Elige tabla</div><div class="riego-grid">';
-  tabs.forEach(function(t){html+='<div class="riego-circle neutra" data-tid="'+t.id+'"><span>'+cosEsc(t.nombre)+'</span><small style="display:block;font-size:.68rem;margin-top:4px">'+(t.cantidad_surcos||'—')+' surcos</small></div>';});
-  html+='</div><button class="btn-back" style="margin-top:1rem" onclick="renderAsigCosechaPlantaciones()">← Volver a plantación</button>';
-  body.innerHTML=html;
-  body.querySelectorAll('[data-tid]').forEach(function(el){el.addEventListener('click',function(){cosecha.tablaId=this.dataset.tid;cosecha.asignaciones={};cosecha.operarios=[];renderAsigCosechaDistribucion();});});
-}
+  function plantBtn(x){
+    var sel=String(x.id)===String(cosecha.plantacionId),jade=/jade/i.test(x.nombre||'');
+    return '<button type="button" data-c410-plant="'+x.id+'" style="border:1px solid '+(sel?(jade?'#6f238d':'#23824d'):'#dbe3de')+';border-top:4px solid '+(jade?'#6f238d':'#23824d')+';background:'+(sel?'#f7faf8':'#fff')+';border-radius:12px;padding:12px 18px;font-weight:850;min-width:120px;cursor:pointer">'+cosEsc(x.nombre)+'</button>';
+  }
+  function tabBtn(x){
+    var sel=String(x.id)===String(cosecha.tablaId);
+    return '<button type="button" data-c410-tab="'+x.id+'" style="border:1px solid '+(sel?color:'#dbe3de')+';border-top:4px solid '+color+';background:'+(sel?'#f7faf8':'#fff')+';border-radius:12px;padding:10px 14px;text-align:left;cursor:pointer"><strong>'+cosEsc(x.nombre)+'</strong><div class="hint">'+(x.cantidad_surcos||'—')+' surcos</div></button>';
+  }
+  function personaBtn(x){
+    var a=cosecha.asignaciones[x.id]||[], sel=String(cosecha.editorId)===String(x.id);
+    return '<button type="button" class="op-chip'+(a.length||sel?' sel':'')+'" data-c410-persona="'+x.id+'" style="text-align:left"><strong>'+cosEsc(x.nombre)+'</strong><span style="display:block;font-size:.68rem;margin-top:2px">'+(a.length?a.length+' surco(s): '+a.join(', '):'Sin asignar')+'</span></button>';
+  }
 
-function renderAsigCosechaDistribucion(){
-  var body=document.getElementById('enc-body');
-  var t=cats.tablas.find(function(x){return String(x.id)===String(cosecha.tablaId);});
-  var p=cats.plantaciones.find(function(x){return String(x.id)===String(cosecha.plantacionId);});
-  var n=(t&&t.cantidad_surcos)?t.cantidad_surcos:12;
-  var cards=(cats.cosechadores||[]).map(function(o){var sel=(cosecha.asignaciones[o.id]||[]);return '<button type="button" class="op-chip'+(sel.length?' sel':'')+'" data-cos-op="'+o.id+'" style="text-align:left"><strong>'+cosEsc(o.nombre)+'</strong><span style="display:block;font-size:.68rem;margin-top:2px">'+(sel.length?sel.length+' surco(s): '+sel.join(', '):'Sin asignar')+'</span></button>';}).join('');
-  body.innerHTML='<div class="seccion-titulo">🧺 Distribuir surcos</div><div class="form-card" style="margin-bottom:12px;border-top:4px solid '+((p&&/jade/i.test(p.nombre))?'#6f238d':'#23824d')+'"><strong>'+cosEsc(p?p.nombre:'')+' · '+cosEsc(t?t.nombre:'')+'</strong><div class="hint">'+n+' surcos disponibles · '+cosTotalAsignados()+' asignados. Selecciona un cosechador y marca sus surcos.</div></div><div class="form-card"><label style="font-weight:750">Cosechadores</label><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">'+(cards||'<span class="hint">No hay cosechadores activos registrados.</span>')+'</div><div id="cos-dist-editor" style="margin-top:14px"></div><button class="btn-primary" id="cos-dist-cont" style="margin-top:16px">Continuar →</button></div><button class="btn-back" style="margin-top:1rem" onclick="renderAsigCosechaTablas()">← Volver a tabla</button>';
-  body.querySelectorAll('[data-cos-op]').forEach(function(b){b.addEventListener('click',function(){cosEditarOperario(this.dataset.cosOp);});});
-  document.getElementById('cos-dist-cont').addEventListener('click',function(){
-    var ids=Object.keys(cosecha.asignaciones).filter(function(id){return (cosecha.asignaciones[id]||[]).length;});
-    if(!ids.length){alert('Asigna al menos un surco a un cosechador.');return;}
-    cosecha.operarios=ids; renderAsigCosechaFecha();
-  });
-}
+  var editor='';
+  if(t&&cosecha.editorId){
+    var oid=String(cosecha.editorId), n=Number(t.cantidad_surcos||0), usados=cosSurcosUsados(oid), propios=(cosecha.asignaciones[oid]||[]).map(Number), botones='';
+    for(var i=1;i<=n;i++){var ocupado=usados.indexOf(i)>-1,sel=propios.indexOf(i)>-1;botones+='<button type="button" class="surco-btn'+(sel?' sel':'')+'" data-c410-surco="'+i+'" '+(ocupado?'disabled style="opacity:.28" title="Ya asignado"':'')+'>'+i+'</button>';}
+    editor='<div style="margin-top:12px;padding:12px;border:1px solid #e0e7e2;border-radius:12px;background:#fafcfb"><div style="display:flex;justify-content:space-between;gap:10px"><strong>'+cosEsc(cosNombreOperario(oid))+'</strong><span class="hint">'+propios.length+' surco(s)</span></div><div class="hint" style="margin:4px 0 9px">Selecciona sus surcos. Los grises ya están asignados a otra persona.</div><div class="surcos-grid">'+botones+'</div></div>';
+  }
 
-function cosEditarOperario(oid){
-  var t=cats.tablas.find(function(x){return String(x.id)===String(cosecha.tablaId);});var n=(t&&t.cantidad_surcos)||12;
-  var usados=cosSurcosUsados(oid),propios=(cosecha.asignaciones[oid]||[]).map(Number),bot='';
-  for(var i=1;i<=n;i++){var ocupado=usados.indexOf(i)>-1,sel=propios.indexOf(i)>-1;bot+='<button type="button" class="surco-btn'+(sel?' sel':'')+'" data-cos-surco="'+i+'" '+(ocupado?'disabled title="Ya asignado a otro cosechador" style="opacity:.28"':'')+'>'+i+'</button>';}
-  var ed=document.getElementById('cos-dist-editor');
-  ed.innerHTML='<div style="border-top:1px solid #e2e8e4;padding-top:12px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><strong>'+cosEsc(cosNombreOperario(oid))+'</strong><span class="hint">'+propios.length+' surco(s)</span></div><div class="hint" style="margin:4px 0 9px">Toca los surcos que trabajará esta persona. Los grises ya pertenecen a otro cosechador.</div><div class="surcos-grid">'+bot+'</div></div>';
-  ed.querySelectorAll('[data-cos-surco]:not([disabled])').forEach(function(b){b.addEventListener('click',function(){var num=Number(this.dataset.cosSurco),a=(cosecha.asignaciones[oid]||[]).map(Number),ix=a.indexOf(num);if(ix>-1)a.splice(ix,1);else a.push(num);a.sort(function(x,y){return x-y;});if(a.length)cosecha.asignaciones[oid]=a;else delete cosecha.asignaciones[oid];renderAsigCosechaDistribucion();setTimeout(function(){cosEditarOperario(oid);},0);});});
-}
+  var resumen=Object.keys(cosecha.asignaciones||{}).filter(function(id){return (cosecha.asignaciones[id]||[]).length;}).map(function(id){
+    return '<div style="padding:7px 0;border-top:1px solid #edf1ee"><strong>'+cosEsc(cosNombreOperario(id))+'</strong><span class="hint" style="margin-left:8px">'+(cosEsCosechador(id)?'Cosecha':'Apoyo Labores')+' · Surcos '+cosEsc((cosecha.asignaciones[id]||[]).join(', '))+'</span></div>';
+  }).join('');
 
-function renderAsigCosechaFecha(){
-  var body=document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo">🧺 Fecha e indicaciones</div><div class="form-card"><div class="form-group"><label>Fecha de cosecha</label><input type="date" id="cos-fecha" value="'+cosEsc(cosecha.fecha)+'"></div><div class="form-group"><label>Indicaciones para los cosechadores (opcional)</label><textarea id="cos-notas" rows="3" placeholder="Ej. Seleccionar fruta negra, firme y sin humedad.">'+cosEsc(cosecha.notas||'')+'</textarea></div><button class="btn-primary" id="cos-fecha-continuar">Revisar programación →</button></div><button class="btn-back" style="margin-top:1rem" onclick="renderAsigCosechaDistribucion()">← Volver a distribución</button>';
-  document.getElementById('cos-fecha-continuar').addEventListener('click',function(){cosecha.fecha=document.getElementById('cos-fecha').value||cosecha.fecha;cosecha.notas=(document.getElementById('cos-notas').value||'').trim()||null;renderAsigCosechaNotas();});
-}
+  body.innerHTML='<div class="seccion-titulo">🧺 Cosecha · Programar</div>'+
+  '<div class="form-card" style="border-top:4px solid '+color+';margin-bottom:12px"><div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap"><div><div style="font-size:1.05rem;font-weight:900;color:var(--verde)">Nueva cosecha</div><div class="hint">Programa ubicación, personal y surcos desde una sola pantalla.</div></div><div style="min-width:210px"><label style="font-weight:750">Fecha de cosecha</label><input type="date" id="c410-fecha" value="'+cosEsc(cosecha.fecha)+'"></div></div></div>'+
+  '<div class="form-card" style="border-top:4px solid #d6a514;margin-bottom:12px"><strong>1 · Plantación</strong><div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:10px">'+plantas.map(plantBtn).join('')+'</div></div>'+
+  '<div class="form-card" style="border-top:4px solid '+color+';margin-bottom:12px"><strong>2 · Tabla</strong><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px;margin-top:10px">'+(p?tabs.map(tabBtn).join(''):'<span class="hint">Selecciona primero una plantación.</span>')+'</div></div>'+
+  '<div class="form-card" style="border-top:4px solid #2b78c5;margin-bottom:12px"><strong>3 · Personal y distribución de surcos</strong><div class="hint" style="margin-top:3px">'+(t?(Number(t.cantidad_surcos||0)+' surcos · '+cosTotalAsignados()+' asignados'):'Selecciona una tabla para distribuir los surcos.')+'</div>'+
+  (t?'<div style="margin-top:12px"><label style="font-weight:800;color:#183f2c">Cosecha</label><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:7px">'+(cose.map(personaBtn).join('')||'<span class="hint">Sin personal de Cosecha activo.</span>')+'</div></div>'+
+  '<div style="margin-top:14px"><label style="font-weight:800;color:#183f2c">Apoyo de Labores</label><div class="hint">Personal activo que puede cubrir faltas o eventualidades sin cambiar su cargo.</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:7px">'+(apoyo.map(personaBtn).join('')||'<span class="hint">Sin personal de Labores disponible.</span>')+'</div></div>'+editor:'')+'</div>'+
+  '<div class="form-card" style="border-top:4px solid #6f238d"><strong>4 · Indicaciones y programación</strong><div class="form-group" style="margin-top:10px"><label>Indicaciones para los cosechadores (opcional)</label><textarea id="c410-notas" rows="2" placeholder="Ej. Seleccionar fruta negra, firme y sin humedad.">'+cosEsc(cosecha.notas||'')+'</textarea></div>'+
+  (resumen?'<div style="margin:10px 0">'+resumen+'</div>':'<div class="hint" style="margin:10px 0">Aún no hay surcos asignados.</div>')+
+  '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="btn-back" id="c410-cancel">Cancelar</button><button class="btn-primary" id="cos-finalizar" style="width:auto;padding:10px 18px">✅ Programar cosecha</button></div></div>';
 
-function renderAsigCosechaNotas(){
-  var body=document.getElementById('enc-body'),t=cats.tablas.find(function(x){return String(x.id)===String(cosecha.tablaId);}),p=cats.plantaciones.find(function(x){return String(x.id)===String(cosecha.plantacionId);});
-  var filas=cosecha.operarios.map(function(id){return '<div class="resumen-row"><span class="resumen-key">'+cosEsc(cosNombreOperario(id))+'</span><span class="resumen-val">Surcos '+cosEsc((cosecha.asignaciones[id]||[]).join(', '))+'</span></div>';}).join('');
-  body.innerHTML='<div class="seccion-titulo">🧺 Revisar programación</div><div class="form-card"><div class="resumen-card" style="margin-bottom:1rem"><div class="resumen-row"><span class="resumen-key">Ubicación</span><span class="resumen-val">📍 '+cosEsc(p?p.nombre:'')+' · '+cosEsc(t?t.nombre:'')+'</span></div><div class="resumen-row"><span class="resumen-key">Fecha</span><span class="resumen-val">'+cosEsc(cosecha.fecha)+'</span></div>'+filas+(cosecha.notas?'<div class="resumen-row"><span class="resumen-key">Indicaciones</span><span class="resumen-val">'+cosEsc(cosecha.notas)+'</span></div>':'')+'</div><div class="hint" style="margin-bottom:12px">Se creará una orden independiente para cada cosechador con únicamente sus surcos.</div><button class="btn-primary" id="cos-finalizar">✅ Programar cosecha</button></div><button class="btn-back" style="margin-top:1rem" onclick="renderAsigCosechaFecha()">← Volver</button>';
-  document.getElementById('cos-finalizar').addEventListener('click',guardarCosecha);
+  body.querySelectorAll('[data-c410-plant]').forEach(function(b){b.onclick=function(){cosecha.plantacionId=this.dataset.c410Plant;cosecha.tablaId=null;cosecha.asignaciones={};cosecha.operarios=[];cosecha.editorId=null;renderCosechaProgramacion();};});
+  body.querySelectorAll('[data-c410-tab]').forEach(function(b){b.onclick=function(){cosecha.tablaId=this.dataset.c410Tab;cosecha.asignaciones={};cosecha.operarios=[];cosecha.editorId=null;renderCosechaProgramacion();};});
+  body.querySelectorAll('[data-c410-persona]').forEach(function(b){b.onclick=function(){cosecha.editorId=this.dataset.c410Persona;renderCosechaProgramacion();};});
+  body.querySelectorAll('[data-c410-surco]:not([disabled])').forEach(function(b){b.onclick=function(){var oid=String(cosecha.editorId),num=Number(this.dataset.c410Surco),a=(cosecha.asignaciones[oid]||[]).map(Number),ix=a.indexOf(num);if(ix>-1)a.splice(ix,1);else a.push(num);a.sort(function(x,y){return x-y;});if(a.length)cosecha.asignaciones[oid]=a;else delete cosecha.asignaciones[oid];renderCosechaProgramacion();};});
+  document.getElementById('c410-fecha').onchange=function(){cosecha.fecha=this.value||fechaHoyLocal();};
+  document.getElementById('c410-notas').oninput=function(){cosecha.notas=this.value;};
+  document.getElementById('c410-cancel').onclick=function(){cosechaReset();renderCosechaTablero();};
+  document.getElementById('cos-finalizar').onclick=function(){
+    cosecha.fecha=document.getElementById('c410-fecha').value||cosecha.fecha;
+    cosecha.notas=(document.getElementById('c410-notas').value||'').trim()||null;
+    if(!cosecha.plantacionId||!cosecha.tablaId){alert('Selecciona plantación y tabla.');return;}
+    var ids=Object.keys(cosecha.asignaciones||{}).filter(function(id){return (cosecha.asignaciones[id]||[]).length;});
+    if(!ids.length){alert('Asigna al menos un surco a una persona.');return;}
+    cosecha.operarios=ids; guardarCosecha();
+  };
 }
 
 function guardarCosecha(){
@@ -21342,7 +21360,7 @@ function c408ConfirmarPesaje(o,c){
 }
 </style>
 <script>
-window.MOOTSIL_BUILD='C409';
+window.MOOTSIL_BUILD='C410';
 /* Labores usa un reporte contextual, igual que Riego y Aplicaciones: conserva tarea, tabla,
    plantación y colaborador y vuelve a la labor activa al terminar. */
 function c366ReportarLaborIncidencia(){
