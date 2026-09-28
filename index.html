@@ -8064,7 +8064,13 @@ function renderFormulaForm(formulaId,desdeCatalogo){
         else if(unidad==='litros'&&cantidad<1) unidadEntrada='ml';
         return {row:formulaCompSeq,item_id:c.item_id,nombre:c.item?c.item.nombre:'',unidad:unidad,unidadEntrada:unidadEntrada,cantidad:cantidad,estadoFaltante:c.estado_faltante,sustituidoPorItemId:c.sustituido_por_item_id,sustitutoDeItemId:c.sustituto_de_item_id,faltanteDetectado:c.faltante_detectado,autorizadoPor:c.autorizado_por,autorizadoEn:c.autorizado_en};
       });
-      window._formulaNombreExistente=f.nombre; window._formulaNotasExistente=f.notas; window._formulaFechaExistente=f.fecha_programada;
+      // C405: al editar una fórmula, inicializar también el nombre BASE desde la fórmula cargada.
+      // Antes podía quedar en memoria el nombre de una edición/plantilla anterior y al guardar
+      // c295NombreFinal() reconstruía el título con ese valor viejo.
+      window._formulaNombreExistente=f.nombre;
+      window._formulaNombreBaseC295=c295NombreBaseCatalogo(f.nombre||'');
+      window._formulaNombreBloquesCatalogoC304=null;
+      window._formulaNotasExistente=f.notas; window._formulaFechaExistente=f.fecha_programada;
       window._formulaCreadorExistente=f.creador?f.creador.nombre:null;
       renderFormulaPasoNotas();
     });
