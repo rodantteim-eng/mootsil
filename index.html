@@ -1617,7 +1617,7 @@ function c231Icon(name, cls){
 <meta content="no-cache" http-equiv="Pragma"/>
 <meta content="0" http-equiv="Expires"/>
 <script>
-  window.MOOTSIL_BUILD='C406';
+  window.MOOTSIL_BUILD='C407';
 </script>
 <style id="c245-inicio-mobile-calibrado">
 /* C245 — Calibración responsive del Inicio aprobado.
@@ -8961,7 +8961,11 @@ function guardarFormula(){
       window._formulaTablaIdsC292=null;
       C299_CREACION_FALTANTE_AUTORIZADO=false;
       c291CerrarNuevaAplicacion();
-      renderAplicacionesEstatus();
+      if(formulaEditandoCatalogo && CATALOGO_TIPO_SEL){
+        cargarCatalogoLista(CATALOGO_TIPO_SEL.categoria,CATALOGO_TIPO_SEL.soloPlantillas);
+      }else{
+        renderAplicacionesEstatus();
+      }
     });
   }).catch(function(e){
     alert('Error: '+e.message);
@@ -21126,7 +21130,19 @@ function renderRiegoIncidenciaRapida(ordenId){
 function renderRiegoEjecucion(ordenId){
   pararRiegoTimer();var body=document.getElementById('op-body');var o=riegoOrdenes.find(function(x){return String(x.id)===String(ordenId);});if(!o){cargarTareas('porhacer');return;}ordenEjecutando=o;
   var p=(cats.plantaciones||[]).find(function(x){return o.tabla&&x.id===o.tabla.plantacion_id;});var plant=(p&&p.nombre)||'';var tabla=(o.tabla&&o.tabla.nombre)||'Tabla';var dur=Math.max(1,Number(o.duracion_minutos)||45);var total=riegoOrdenes.length;var done=riegoOrdenes.filter(function(x){return x.estado==='completada';}).length;
-  function minis(){return riegoOrdenes.map(function(x){var pp=(cats.plantaciones||[]).find(function(q){return x.tabla&&q.id===x.tabla.plantacion_id;});var cls=x.estado==='completada'?'done':(String(x.id)===String(o.id)&&x.estado==='en_proceso'?'active':'pending');var st=x.estado==='completada'?'✓ Completada':(x.estado==='en_proceso'?'💧 En proceso':'Pendiente');return '<div class="c338-mini '+cls+'"><strong>'+c225Esc(((pp&&pp.nombre)||'')+' · '+((x.tabla&&x.tabla.nombre)||'Tabla'))+'</strong>'+st+'<br>'+Math.max(1,Number(x.duracion_minutos)||45)+' min</div>';}).join('');}
+  function minis(){return riegoOrdenes.map(function(x){var pp=(cats.plantaciones||[]).find(function(q){return x.tabla&&q.id===x.tabla.plantacion_id;});var esActual=String(x.id)===String(o.id);var pausada=x.estado==='en_proceso'&&!!x.pausado_en;var cls=x.estado==='completada'?'done':(esActual?'active':'pending');var st=x.estado==='completada'?'✓ Completada':(pausada?'⏸ Pausada':(x.estado==='en_proceso'?'💧 En proceso':'Pendiente'));return '<button type="button" class="c338-mini '+cls+'" data-c407-riego-tabla="'+c225Esc(x.id)+'" style="cursor:pointer;border:0;text-align:center;width:100%;font:inherit"><strong>'+c225Esc(((pp&&pp.nombre)||'')+' · '+((x.tabla&&x.tabla.nombre)||'Tabla'))+'</strong>'+st+'<br>'+Math.max(1,Number(x.duracion_minutos)||45)+' min</button>';}).join('');}
+  setTimeout(function(){
+    var cont=document.getElementById('op-body');
+    if(!cont)return;
+    cont.querySelectorAll('[data-c407-riego-tabla]').forEach(function(b){
+      b.onclick=function(){
+        var id=this.dataset.c407RiegoTabla;
+        if(String(id)===String(o.id))return;
+        pararRiegoTimer();
+        renderRiegoEjecucion(id);
+      };
+    });
+  },0);
   if(o.estado==='completada'){
     var sig=c338Siguiente(o);body.innerHTML='<div class="c338-wrap"><div class="c338-top"><button class="c338-back" onclick="cargarTareas(\'proceso\')">←</button><div class="c338-title">Riego (Hidratación)</div><span class="c338-chip">COMPLETADA</span></div><div class="c338-card c338-finished"><div class="ok">✅</div><h3>'+c225Esc(plant+' · '+tabla)+'</h3><p>Riego de esta tabla cerrado y guardado.</p></div><div class="c338-card"><div class="c338-label">Tablas asignadas</div><div class="c338-tables">'+minis()+'</div></div><button class="c338-btn primary" style="width:100%" onclick="'+(sig?'renderRiegoEjecucion(\''+sig.id+'\')':'cargarTareas(\'terminadas\')')+'">'+(sig?'▶ Continuar con siguiente tabla':'✓ Ver tareas terminadas')+'</button></div>';return;
   }
