@@ -21126,44 +21126,32 @@ function renderRiegoEjecucion(ordenId){
 @media(max-width:560px){.c344-wrap{padding:10px 10px 24px}.c344-epp{grid-template-columns:1fr}.c344-actions{grid-template-columns:1fr}.c344-time{font-size:2.7rem}}
 </style>
 
-<script id="c408-inventario-por-pesaje">
-/* C408 — Inventario real por pesaje.
-   - Asignar una fórmula no descuenta stock.
-   - Confirmar el check de un producto sí descuenta la cantidad preparada.
-   - Faltante autorizado confirma omisión y descuenta 0.
-   - Se buscan órdenes hermanas de la misma fórmula/tabla/fecha para impedir doble salida
-     cuando una aplicación tiene más de un colaborador. */
+<script id="c409-inventario-por-pesaje">
+/* C409 — Confirmación atómica del pesaje en Supabase.
+   La escritura se hace por RPC para que el colaborador no dependa de permisos
+   directos de UPDATE/INSERT sobre las tablas de inventario. */
 function c408ConfirmarPesaje(o,c){
   var omitido=c&&c.estado_faltante==='autorizado'&&Number(c.faltante_detectado||0)>0;
   if(omitido)return Promise.resolve({omitido:true,ya:false,cantidad:0});
-  if(c&&c.estado_faltante==='sustituido')return Promise.resolve({omitido:true,ya:false,cantidad:0});
   if(!navigator.onLine)return Promise.reject(new Error('Necesitas conexión para confirmar el pesaje y actualizar Inventario.'));
   var cant=Math.max(0,Number(c&&c.cantidad_base||0)*Math.max(0,Number(o&&o.factor_escala||1)));
   if(!cant)return Promise.resolve({omitido:true,ya:false,cantidad:0});
-  var itemId=c.item_id, formulaId=o.formula_id||(o.formula&&o.formula.id), tablaId=o.tabla_id||(o.tabla&&o.tabla.id), fecha=o.fecha_asignacion;
   var nombre=(c.item&&c.item.nombre)||'Producto', formula=(o.formula&&o.formula.nombre)||'Fórmula';
-  var motivo='Pesaje confirmado: '+formula+' · '+nombre;
-  return from('ordenes_trabajo').select('id').eq('formula_id',formulaId).eq('tabla_id',tablaId).eq('fecha_asignacion',fecha).get().then(function(rows){
-    var ids=(rows||[]).map(function(x){return x.id;});
-    if(ids.indexOf(o.id)<0)ids.push(o.id);
-    if(!ids.length)ids=[o.id];
-    return from('movimientos_inventario').select('id,item_id,tipo,motivo,referencia_orden_id').eq('item_id',itemId).in('referencia_orden_id',ids).get().then(function(movs){
-      var ya=(movs||[]).some(function(m){return m.tipo==='salida'&&String(m.motivo||'').indexOf('Pesaje confirmado:')===0;});
-      if(ya)return {omitido:false,ya:true,cantidad:cant};
-      return from('inventario_items').select('*').eq('id',itemId).get().then(function(items){
-        var it=(items||[])[0];if(!it)throw new Error('No se encontró el producto en Inventario.');
-        var stock=Math.max(0,Number(it.stock_actual||0));
-        if(stock+0.0000001<cant)throw new Error('Inventario insuficiente para confirmar '+nombre+'. Disponible: '+numFmt(stock)+' '+(it.unidad||'')+'.');
-        var nuevo=stock-cant;
-        return from('movimientos_inventario').insert({item_id:itemId,tipo:'salida',cantidad:cant,motivo:motivo,referencia_orden_id:o.id,usuario_id:usuario.id,stock_anterior:stock,stock_posterior:nuevo}).then(function(){
-          return from('inventario_items').eq('id',itemId).update({stock_actual:nuevo});
-        }).then(function(){
-          if(c.item)c.item.stock_actual=nuevo;
-          var ci=(cats.inventario||[]).find(function(x){return String(x.id)===String(itemId);});if(ci)ci.stock_actual=nuevo;
-          return {omitido:false,ya:false,cantidad:cant,stock:nuevo};
-        });
-      });
-    });
+  return rpc('c409_confirmar_pesaje_inventario',{
+    p_orden_id:o.id,
+    p_item_id:c.item_id,
+    p_cantidad:cant,
+    p_usuario_id:usuario.id,
+    p_motivo:'Pesaje confirmado: '+formula+' · '+nombre
+  }).then(function(rows){
+    var r=Array.isArray(rows)?(rows[0]||{}):(rows||{});
+    var nuevo=Number(r.stock_posterior);
+    if(isFinite(nuevo)){
+      if(c.item)c.item.stock_actual=nuevo;
+      var ci=(cats.inventario||[]).find(function(x){return String(x.id)===String(c.item_id);});
+      if(ci)ci.stock_actual=nuevo;
+    }
+    return {omitido:false,ya:!!r.ya_registrado,cantidad:Number(r.cantidad||cant),stock:nuevo};
   });
 }
 </script>
@@ -21199,7 +21187,7 @@ function c408ConfirmarPesaje(o,c){
   function renderPreparar(o,st){
     stop();var body=document.getElementById('op-body'),c=ctx(o),comps=o.componentesFormula||[];var E=[['guantes','🧤 Guantes'],['cubrebocas','😷 Mascarilla'],['lentes','🥽 Lentes'],['mangalarga','👕 Manga larga']];
     var epp=E.map(function(x){return '<label><input type="checkbox" data-c345-epp="'+x[0]+'" '+(st.epp&&st.epp[x[0]]?'checked':'')+'><span>'+x[1]+'</span></label>';}).join('');
-    var prods=comps.map(function(z){var id=String(z.item_id),ok=(st.productos||[]).map(String).indexOf(id)>-1,omitido=z.estado_faltante==='autorizado'&&Number(z.faltante_detectado||0)>0;return '<label class="c344-check"><input type="checkbox" data-c345-prod="'+esc(id)+'" '+(ok?'checked':'')+'><div class="c344-prod"><b>'+esc(z.item&&z.item.nombre)+'</b><span>'+esc(fmtAmigable(z.cantidad_base*(o.factor_escala||1),z.item?z.item.unidad:''))+'</span>'+(omitido?'<span style="color:#b45309;font-weight:800;margin-top:4px">⚠️ NO DISPONIBLE · Autorizado sin este producto</span><span style="font-size:.72rem">Marca para confirmar que NO se agregará.</span>':'')+'</div></label>';}).join('');
+    var prods=comps.map(function(z){var id=String(z.item_id),ok=(st.productos||[]).map(String).indexOf(id)>-1,omitido=z.estado_faltante==='autorizado'&&Number(z.faltante_detectado||0)>0;var locked=!!(st.pesajes&&st.pesajes[id]);return '<label class="c344-check"><input type="checkbox" data-c345-prod="'+esc(id)+'" '+(ok?'checked':'')+' '+(locked?'disabled':'')+'><div class="c344-prod"><b>'+esc(z.item&&z.item.nombre)+'</b><span>'+esc(fmtAmigable(z.cantidad_base*(o.factor_escala||1),z.item?z.item.unidad:''))+'</span>'+(omitido?'<span style="color:#b45309;font-weight:800;margin-top:4px">⚠️ NO DISPONIBLE · Autorizado sin este producto</span><span style="font-size:.72rem">Marca para confirmar que NO se agregará.</span>':'')+'</div></label>';}).join('');
     body.innerHTML='<div class="c344-wrap">'+top(o,c,'preparar')+'<div class="c344-card"><div class="c344-section">Protección antes de preparar</div><div class="c344-epp">'+epp+'</div></div><div class="c344-card"><div class="c344-section">Productos de la mezcla</div>'+prods+'<div class="c344-info" style="margin-top:10px">La fórmula y cantidades vienen autorizadas desde el Tablero. Solo confirma lo que vas agregando.</div></div><div class="c344-actions"><button class="c344-btn danger" onclick="c345ReportarAplicIncidencia(\''+o.id+'\')">🚨 Reportar incidencia</button><button class="c344-btn primary" id="c345-ready">✓ Mezcla lista · continuar</button></div></div>';
     function valid(){var ae=E.every(function(x){return st.epp&&st.epp[x[0]];}),ap=comps.every(function(z){return (st.productos||[]).map(String).indexOf(String(z.item_id))>-1;}),b=document.getElementById('c345-ready');if(b)b.disabled=!(ae&&ap);}
     body.querySelectorAll('[data-c345-epp]').forEach(function(x){x.onchange=function(){st.epp=st.epp||{};st.epp[this.dataset.c345Epp]=this.checked;save(o,st);valid();};});
@@ -21312,7 +21300,7 @@ function c408ConfirmarPesaje(o,c){
   function head(o,fase){var c=context(o),arr=['preparar','aplicar','cierre'],i=arr.indexOf(fase);return '<div class="c349-head"><div><div class="c349-eyebrow">'+esc(etiquetaAplic(o))+'</div><div class="c349-title">'+esc(c.p+' · '+c.t)+'</div><div class="c349-sub">🧪 '+esc(c.f)+'</div></div><span class="c349-chip">EN CAMPO</span></div><div class="c349-progress">'+arr.map(function(x,n){return '<div class="c349-step '+(n<i?'done':n===i?'on':'')+'">'+['1 · Preparar','2 · Aplicar','3 · Cerrar'][n]+'</div>';}).join('')+'</div>';}
   function lock(btn,txt){if(!btn||btn.disabled)return false;btn.disabled=true;if(txt)btn.textContent=txt;return true;}
   function renderPrep(o,s){stop();var body=document.getElementById('op-body'), comps=o.componentesFormula||[];var epp=[['guantes','🧤 Guantes'],['cubrebocas','😷 Cubrebocas / mascarilla'],['lentes','🥽 Lentes de protección'],['mangalarga','👕 Ropa de manga larga']];
-    body.innerHTML='<div class="c349-wrap">'+head(o,'preparar')+'<div class="c349-card"><div class="c349-label">Protección</div>'+epp.map(function(x){return '<label class="c349-check"><input type="checkbox" data-c349-epp="'+x[0]+'" '+(s.epp[x[0]]?'checked':'')+'><span>'+x[1]+'</span></label>';}).join('')+'</div><div class="c349-card"><div class="c349-label">Preparar fórmula</div>'+comps.map(function(c){var on=s.productos.indexOf(String(c.item_id))>-1,omitido=c.estado_faltante==='autorizado'&&Number(c.faltante_detectado||0)>0;return '<label class="c349-check"><input type="checkbox" data-c349-prod="'+esc(c.item_id)+'" '+(on?'checked':'')+'><span class="c349-product"><span>🧪</span><span><strong>'+esc(c.item?c.item.nombre:'Producto')+'</strong><small>'+esc(unidadCampo(c.cantidad_base*(o.factor_escala||1),c.item?c.item.unidad:''))+'</small>'+(omitido?'<small style="color:#b45309;font-weight:800">⚠️ NO DISPONIBLE · Autorizado sin este producto</small><small>Marca para confirmar que NO se agregará.</small>':'')+'</span></span></label>';}).join('')+'<div class="c349-info" style="margin-top:10px">La fórmula y cantidades vienen autorizadas desde el Tablero. Confirma únicamente lo que preparas.</div></div><div class="c349-actions"><button class="c349-btn danger" id="c349-inc-prep">🚨 Reportar incidencia</button><button class="c349-btn primary" id="c349-ready">✓ Mezcla lista · iniciar aplicación</button></div></div>';
+    body.innerHTML='<div class="c349-wrap">'+head(o,'preparar')+'<div class="c349-card"><div class="c349-label">Protección</div>'+epp.map(function(x){return '<label class="c349-check"><input type="checkbox" data-c349-epp="'+x[0]+'" '+(s.epp[x[0]]?'checked':'')+'><span>'+x[1]+'</span></label>';}).join('')+'</div><div class="c349-card"><div class="c349-label">Preparar fórmula</div>'+comps.map(function(c){var on=s.productos.indexOf(String(c.item_id))>-1,omitido=c.estado_faltante==='autorizado'&&Number(c.faltante_detectado||0)>0;var locked=!!(s.pesajes&&s.pesajes[String(c.item_id)]);return '<label class="c349-check"><input type="checkbox" data-c349-prod="'+esc(c.item_id)+'" '+(on?'checked':'')+' '+(locked?'disabled':'')+'><span class="c349-product"><span>🧪</span><span><strong>'+esc(c.item?c.item.nombre:'Producto')+'</strong><small>'+esc(unidadCampo(c.cantidad_base*(o.factor_escala||1),c.item?c.item.unidad:''))+'</small>'+(omitido?'<small style="color:#b45309;font-weight:800">⚠️ NO DISPONIBLE · Autorizado sin este producto</small><small>Marca para confirmar que NO se agregará.</small>':'')+'</span></span></label>';}).join('')+'<div class="c349-info" style="margin-top:10px">La fórmula y cantidades vienen autorizadas desde el Tablero. Confirma únicamente lo que preparas.</div></div><div class="c349-actions"><button class="c349-btn danger" id="c349-inc-prep">🚨 Reportar incidencia</button><button class="c349-btn primary" id="c349-ready">✓ Mezcla lista · iniciar aplicación</button></div></div>';
     function valid(){var okE=epp.every(function(x){return !!s.epp[x[0]];}),okP=!comps.length||comps.every(function(c){return s.productos.indexOf(String(c.item_id))>-1;});var b=document.getElementById('c349-ready');if(b)b.disabled=!(okE&&okP);save(o,s);}body.querySelectorAll('[data-c349-epp]').forEach(function(ch){ch.onchange=function(){s.epp[this.dataset.c349Epp]=this.checked;valid();};});body.querySelectorAll('[data-c349-prod]').forEach(function(ch){ch.onchange=function(){var box=this,id=String(this.dataset.c349Prod),i=s.productos.indexOf(id);s.pesajes=s.pesajes||{};if(!box.checked){if(s.pesajes[id]){box.checked=true;showToast('✓ Este pesaje ya fue confirmado y descontado.');return;}if(i>=0)s.productos.splice(i,1);valid();return;}var comp=comps.find(function(c){return String(c.item_id)===id;});box.disabled=true;c408ConfirmarPesaje(o,comp).then(function(r){if(i<0)s.productos.push(id);s.pesajes[id]=true;box.disabled=false;valid();showToast(r.omitido?'✓ Producto omitido por autorización · inventario sin descuento':(r.ya?'✓ Pesaje ya registrado anteriormente':'✓ Pesaje confirmado · '+numFmt(r.cantidad)+' descontado de Inventario'));}).catch(function(e){box.checked=false;box.disabled=false;showToast('⚠️ '+e.message);valid();});};});document.getElementById('c349-inc-prep').onclick=function(){report(o,s);};document.getElementById('c349-ready').onclick=function(){if(!lock(this,'Iniciando...'))return;s.fase='aplicar';s.inicio=s.inicio||new Date().toISOString();s.fin=null;save(o,s);capturaEjec.epp=Object.assign({},s.epp);capturaEjec.insumosConfirmados=(s.productos||[]).slice();renderAplicar(o,s);};valid();
   }
   function renderAplicar(o,s){stop();var body=document.getElementById('op-body'),ini=inicio(o);body.innerHTML='<div class="c349-wrap">'+head(o,'aplicar')+'<div class="c349-card"><div class="c349-label">Aplicación en curso</div><div class="c349-timer"><small>Tiempo de aplicación</small><strong id="c349-clock">00:00</strong><span class="c349-start">Inicio desde surco '+ini+'</span></div><div class="c349-info">Aplica normalmente. Al detenerte, registra únicamente el último surco alcanzado; Mootsil marcará automáticamente los anteriores.</div></div><div class="c349-actions"><button class="c349-btn danger" id="c349-inc-run">🚨 Reportar incidencia</button><button class="c349-btn primary" id="c349-stop">Registrar avance / finalizar</button></div></div>';
@@ -21354,7 +21342,7 @@ function c408ConfirmarPesaje(o,c){
 }
 </style>
 <script>
-window.MOOTSIL_BUILD='C408';
+window.MOOTSIL_BUILD='C409';
 /* Labores usa un reporte contextual, igual que Riego y Aplicaciones: conserva tarea, tabla,
    plantación y colaborador y vuelve a la labor activa al terminar. */
 function c366ReportarLaborIncidencia(){
