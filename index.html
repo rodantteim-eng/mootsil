@@ -7274,39 +7274,9 @@ function c298GuardarPersonal(){
   var insertProm=Promise.all(nuevos.map(function(uid){return from('ordenes_trabajo').insert(Object.assign({},payload,{operario_id:uid}));}));
 
   Promise.all([Promise.all(ops),insertProm]).then(function(r){
-    if(!primeraAsignacion)return null;
-    var first=(r[1]&&r[1][0]&&r[1][0][0])?r[1][0][0].id:null;
-    return from('inventario_items').select('*').eq('activo',true).order('nombre').get().then(function(inventarioVivo){
-      cats.inventario=inventarioVivo||[];
-      var porId={};
-      (inventarioVivo||[]).forEach(function(it){porId[String(it.id)]=it;});
-
-      return Promise.all(C298_ASSIGN_COMPONENTS.map(function(c){
-        var it=porId[String(c.item_id)]||null;
-        var stockRaw=it?Number(it.stock_actual||0):0;
-        var stock=Math.max(0,stockRaw);
-        var cant=Number(c.cantidad_base||0);
-        var salidaReal=Math.min(stock,cant);
-        var nuevo=Math.max(0,stock-salidaReal);
-
-        if(salidaReal<=0){
-          return Promise.resolve(null);
-        }
-
-        return from('movimientos_inventario').insert({
-          item_id:c.item_id,
-          tipo:'salida',
-          cantidad:salidaReal,
-          motivo:'Aplicación asignada: '+(f.nombre||'')+(salidaReal<cant?' · salida limitada al stock disponible':''),
-          referencia_orden_id:first,
-          usuario_id:usuario.id,
-          stock_anterior:stock,
-          stock_posterior:nuevo
-        }).then(function(){
-          return from('inventario_items').eq('id',c.item_id).update({stock_actual:nuevo});
-        });
-      }));
-    });
+    // C408 — Asignar personal no descuenta inventario.
+    // El consumo real se registra al confirmar el pesaje en campo.
+    return null;
   }).then(function(){
     return from('inventario_items').select('*').eq('activo',true).order('nombre').get();
   }).then(function(rows){
@@ -7315,7 +7285,7 @@ function c298GuardarPersonal(){
       return from('notificaciones').insert({titulo:'🧪 Aplicación asignada',cuerpo:usuario.nombre+' asignó: '+(f.nombre||''),icono:'🧪',leida:false,para_rol:'operario',para_usuario:uid});
     }));
   }).then(function(){
-    showToast('✅ Personal asignado'+(primeraAsignacion?'. Inventario descontado una sola vez.':'.') );
+    showToast('✅ Personal asignado. El inventario se descontará al confirmar cada pesaje.');
     c296CerrarGestion();c314RefrescarAplicacionesAhora();
   }).catch(function(e){alert('Error al guardar asignación: '+e.message);});
 }
@@ -9321,7 +9291,7 @@ function renderAsigAplicNotas(){
   var esBombasNotas=aplic.modoCantidad==='bombas'&&aplic.bomba!=='inyeccion';
   var resumenComp=aplic.componentes.map(function(c){return (c.item?c.item.nombre:'')+' · '+fmtAmigable(c.cantidad_base*aplic.factor*tambosPlanNotas,c.item?c.item.unidad:'');}).join('<br>');
   var filaTambos=(aplic.bomba!=='inyeccion')?('<div class="resumen-row"><span class="resumen-key">'+(esBombasNotas?'Bombas planeadas':'Tambos planeados')+'</span><span class="resumen-val">'+(esBombasNotas?'🎒':'🛢️')+' '+tambosPlanNotas+'</span></div>'):'';
-  body.innerHTML='<div class="seccion-titulo">🧪 Confirmar aplicación</div><div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row"><span class="resumen-key">Fórmula</span><span class="resumen-val">'+aplic.formula.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Ubicación</span><span class="resumen-val">📍 '+(p?p.nombre:'')+' · '+(t?t.nombre:'')+'</span></div><div class="resumen-row"><span class="resumen-key">Equipo</span><span class="resumen-val">'+BOMBA_ICONOS[aplic.bomba]+' '+BOMBA_LABELS[aplic.bomba]+'</span></div><div class="resumen-row"><span class="resumen-key">'+(esBombasNotas?'Volumen por bomba':'Volumen por tambo')+'</span><span class="resumen-val">'+numFmt(aplic.volumen)+' L</span></div>'+filaTambos+'<div class="resumen-row"><span class="resumen-key">Modo</span><span class="resumen-val">'+(aplic.esExtra?('⏰ Hora Extra ('+numFmt(aplic.horasExtra)+' h autorizadas)'):'🧑‍🌾 Labores')+'</span></div><div class="resumen-row"><span class="resumen-key">Operarios</span><span class="resumen-val">'+opNombres+'</span></div><div class="resumen-row"><span class="resumen-key">Fecha</span><span class="resumen-val">'+aplic.fecha+'</span></div><div class="resumen-row"><span class="resumen-key">Componentes a usar (total)</span></div><div style="font-size:.82rem;padding:.35rem 0;">'+resumenComp+'</div></div><p class="hint" style="margin-bottom:1rem;">⚠️ Al confirmar, esta cantidad total se descuenta del inventario de inmediato. Si el operario necesita más de lo planeado, el sistema descontará el extra automáticamente cuando lo reporte; si al final usa menos, la diferencia se devuelve sola al inventario. Queda pendiente de validación por un ingeniero.</p><div class="form-group"><label>Notas (opcional)</label><input type="text" id="aplic-notas-input" placeholder="Instrucciones para el operario..."></div><button class="btn-primary" id="aplic-finalizar">✅ Asignar aplicación</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigAplicFecha()">← Volver a fecha</button>';
+  body.innerHTML='<div class="seccion-titulo">🧪 Confirmar aplicación</div><div class="form-card"><div class="resumen-card" style="margin-bottom:1rem;"><div class="resumen-row"><span class="resumen-key">Fórmula</span><span class="resumen-val">'+aplic.formula.nombre+'</span></div><div class="resumen-row"><span class="resumen-key">Ubicación</span><span class="resumen-val">📍 '+(p?p.nombre:'')+' · '+(t?t.nombre:'')+'</span></div><div class="resumen-row"><span class="resumen-key">Equipo</span><span class="resumen-val">'+BOMBA_ICONOS[aplic.bomba]+' '+BOMBA_LABELS[aplic.bomba]+'</span></div><div class="resumen-row"><span class="resumen-key">'+(esBombasNotas?'Volumen por bomba':'Volumen por tambo')+'</span><span class="resumen-val">'+numFmt(aplic.volumen)+' L</span></div>'+filaTambos+'<div class="resumen-row"><span class="resumen-key">Modo</span><span class="resumen-val">'+(aplic.esExtra?('⏰ Hora Extra ('+numFmt(aplic.horasExtra)+' h autorizadas)'):'🧑‍🌾 Labores')+'</span></div><div class="resumen-row"><span class="resumen-key">Operarios</span><span class="resumen-val">'+opNombres+'</span></div><div class="resumen-row"><span class="resumen-key">Fecha</span><span class="resumen-val">'+aplic.fecha+'</span></div><div class="resumen-row"><span class="resumen-key">Componentes a usar (total)</span></div><div style="font-size:.82rem;padding:.35rem 0;">'+resumenComp+'</div></div><p class="hint" style="margin-bottom:1rem;">La asignación valida la disponibilidad, pero no descuenta inventario. La salida real se registrará cuando el colaborador confirme cada producto durante la preparación. Queda pendiente de validación por un ingeniero.</p><div class="form-group"><label>Notas (opcional)</label><input type="text" id="aplic-notas-input" placeholder="Instrucciones para el operario..."></div><button class="btn-primary" id="aplic-finalizar">✅ Asignar aplicación</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderAsigAplicFecha()">← Volver a fecha</button>';
   document.getElementById('aplic-finalizar').addEventListener('click',guardarAplicacion);
 }
 
@@ -9345,15 +9315,9 @@ function guardarAplicacion(){
     var autorizarExtra = aplic.esExtra ? Promise.all(operariosUnicos.map(function(oid){
       return from('horas_extra_asignadas').insert({operario_id:oid,asignado_por:usuario.id,fecha:aplic.fecha,motivo:notas,tipo_labor_id:lbAplic.id,estado:'aprobada',horas_max:aplic.horasExtra});
     })) : Promise.resolve();
-    var unidadMovTxt=(aplic.modoCantidad==='bombas'&&aplic.bomba!=='inyeccion')?'bombas':'tambos';
-    var movs=aplic.componentes.map(function(c){
-      var cant=c.cantidad_base*aplic.factor*tambosPlan;
-      var nuevoStock=(c.item?c.item.stock_actual:0)-cant;
-      return from('movimientos_inventario').insert({item_id:c.item_id,tipo:'salida',cantidad:cant,motivo:'Aplicación: '+aplic.formula.nombre+(tambosPlan>1?' ('+tambosPlan+' '+unidadMovTxt+')':''),referencia_orden_id:primeraOrdenId,usuario_id:usuario.id,stock_anterior:c.item?c.item.stock_actual:0,stock_posterior:nuevoStock}).then(function(){
-        return from('inventario_items').eq('id',c.item_id).update({stock_actual:nuevoStock});
-      });
-    });
-    return autorizarExtra.then(function(){return Promise.all(movs);});
+    // C408 — La asignación valida disponibilidad, pero NO mueve stock.
+    // La salida real se registra cuando el colaborador confirma cada pesaje.
+    return autorizarExtra;
   }).then(function(){
     return from('inventario_items').select('*').eq('activo',true).order('nombre').get();
   }).then(function(rows){
@@ -9362,7 +9326,7 @@ function guardarAplicacion(){
       return from('notificaciones').insert({titulo:aplic.esExtra?'⏰ Aplicación (hora extra) asignada':'🧪 Aplicación asignada',cuerpo:usuario.nombre+' asignó a '+(cats.operarios.find(function(o){return o.id===oid;})||{}).nombre+': '+aplic.formula.nombre+(aplic.esExtra?' (hora extra)':''),icono:aplic.esExtra?'⏰':'🧪',leida:false,para_rol:'operario',para_usuario:oid});
     }));
   }).then(function(){
-    showToast('✅ Aplicación asignada'+(aplic.esExtra?' como hora extra':'')+'. Inventario descontado, pendiente de validar.');
+    showToast('✅ Aplicación asignada'+(aplic.esExtra?' como hora extra':'')+'. Inventario reservado para validación; el descuento será al confirmar el pesaje.');
     renderAplicacionesEstatus();
   }).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='✅ Asignar aplicación';});
 }
@@ -21162,6 +21126,47 @@ function renderRiegoEjecucion(ordenId){
 @media(max-width:560px){.c344-wrap{padding:10px 10px 24px}.c344-epp{grid-template-columns:1fr}.c344-actions{grid-template-columns:1fr}.c344-time{font-size:2.7rem}}
 </style>
 
+<script id="c408-inventario-por-pesaje">
+/* C408 — Inventario real por pesaje.
+   - Asignar una fórmula no descuenta stock.
+   - Confirmar el check de un producto sí descuenta la cantidad preparada.
+   - Faltante autorizado confirma omisión y descuenta 0.
+   - Se buscan órdenes hermanas de la misma fórmula/tabla/fecha para impedir doble salida
+     cuando una aplicación tiene más de un colaborador. */
+function c408ConfirmarPesaje(o,c){
+  var omitido=c&&c.estado_faltante==='autorizado'&&Number(c.faltante_detectado||0)>0;
+  if(omitido)return Promise.resolve({omitido:true,ya:false,cantidad:0});
+  if(c&&c.estado_faltante==='sustituido')return Promise.resolve({omitido:true,ya:false,cantidad:0});
+  if(!navigator.onLine)return Promise.reject(new Error('Necesitas conexión para confirmar el pesaje y actualizar Inventario.'));
+  var cant=Math.max(0,Number(c&&c.cantidad_base||0)*Math.max(0,Number(o&&o.factor_escala||1)));
+  if(!cant)return Promise.resolve({omitido:true,ya:false,cantidad:0});
+  var itemId=c.item_id, formulaId=o.formula_id||(o.formula&&o.formula.id), tablaId=o.tabla_id||(o.tabla&&o.tabla.id), fecha=o.fecha_asignacion;
+  var nombre=(c.item&&c.item.nombre)||'Producto', formula=(o.formula&&o.formula.nombre)||'Fórmula';
+  var motivo='Pesaje confirmado: '+formula+' · '+nombre;
+  return from('ordenes_trabajo').select('id').eq('formula_id',formulaId).eq('tabla_id',tablaId).eq('fecha_asignacion',fecha).get().then(function(rows){
+    var ids=(rows||[]).map(function(x){return x.id;});
+    if(ids.indexOf(o.id)<0)ids.push(o.id);
+    if(!ids.length)ids=[o.id];
+    return from('movimientos_inventario').select('id,item_id,tipo,motivo,referencia_orden_id').eq('item_id',itemId).in('referencia_orden_id',ids).get().then(function(movs){
+      var ya=(movs||[]).some(function(m){return m.tipo==='salida'&&String(m.motivo||'').indexOf('Pesaje confirmado:')===0;});
+      if(ya)return {omitido:false,ya:true,cantidad:cant};
+      return from('inventario_items').select('*').eq('id',itemId).get().then(function(items){
+        var it=(items||[])[0];if(!it)throw new Error('No se encontró el producto en Inventario.');
+        var stock=Math.max(0,Number(it.stock_actual||0));
+        if(stock+0.0000001<cant)throw new Error('Inventario insuficiente para confirmar '+nombre+'. Disponible: '+numFmt(stock)+' '+(it.unidad||'')+'.');
+        var nuevo=stock-cant;
+        return from('movimientos_inventario').insert({item_id:itemId,tipo:'salida',cantidad:cant,motivo:motivo,referencia_orden_id:o.id,usuario_id:usuario.id,stock_anterior:stock,stock_posterior:nuevo}).then(function(){
+          return from('inventario_items').eq('id',itemId).update({stock_actual:nuevo});
+        }).then(function(){
+          if(c.item)c.item.stock_actual=nuevo;
+          var ci=(cats.inventario||[]).find(function(x){return String(x.id)===String(itemId);});if(ci)ci.stock_actual=nuevo;
+          return {omitido:false,ya:false,cantidad:cant,stock:nuevo};
+        });
+      });
+    });
+  });
+}
+</script>
 <script id="c345-aplicacion-riego-etapas">
 (function(){
   var oldRender=window.renderEjecAplicacion;
@@ -21198,7 +21203,7 @@ function renderRiegoEjecucion(ordenId){
     body.innerHTML='<div class="c344-wrap">'+top(o,c,'preparar')+'<div class="c344-card"><div class="c344-section">Protección antes de preparar</div><div class="c344-epp">'+epp+'</div></div><div class="c344-card"><div class="c344-section">Productos de la mezcla</div>'+prods+'<div class="c344-info" style="margin-top:10px">La fórmula y cantidades vienen autorizadas desde el Tablero. Solo confirma lo que vas agregando.</div></div><div class="c344-actions"><button class="c344-btn danger" onclick="c345ReportarAplicIncidencia(\''+o.id+'\')">🚨 Reportar incidencia</button><button class="c344-btn primary" id="c345-ready">✓ Mezcla lista · continuar</button></div></div>';
     function valid(){var ae=E.every(function(x){return st.epp&&st.epp[x[0]];}),ap=comps.every(function(z){return (st.productos||[]).map(String).indexOf(String(z.item_id))>-1;}),b=document.getElementById('c345-ready');if(b)b.disabled=!(ae&&ap);}
     body.querySelectorAll('[data-c345-epp]').forEach(function(x){x.onchange=function(){st.epp=st.epp||{};st.epp[this.dataset.c345Epp]=this.checked;save(o,st);valid();};});
-    body.querySelectorAll('[data-c345-prod]').forEach(function(x){x.onchange=function(){var id=this.dataset.c345Prod;st.productos=st.productos||[];var i=st.productos.map(String).indexOf(String(id));if(this.checked&&i<0)st.productos.push(id);if(!this.checked&&i>=0)st.productos.splice(i,1);save(o,st);valid();};});
+    body.querySelectorAll('[data-c345-prod]').forEach(function(x){x.onchange=function(){var ch=this,id=this.dataset.c345Prod;st.productos=st.productos||[];st.pesajes=st.pesajes||{};var i=st.productos.map(String).indexOf(String(id));if(!ch.checked){if(st.pesajes[id]){ch.checked=true;showToast('✓ Este pesaje ya fue confirmado y descontado.');return;}if(i>=0)st.productos.splice(i,1);save(o,st);valid();return;}var comp=comps.find(function(z){return String(z.item_id)===String(id);});ch.disabled=true;c408ConfirmarPesaje(o,comp).then(function(r){if(i<0)st.productos.push(id);st.pesajes[id]=true;save(o,st);ch.disabled=false;valid();showToast(r.omitido?'✓ Producto omitido por autorización · inventario sin descuento':(r.ya?'✓ Pesaje ya registrado anteriormente':'✓ Pesaje confirmado · '+numFmt(r.cantidad)+' descontado de Inventario'));}).catch(function(e){ch.checked=false;ch.disabled=false;showToast('⚠️ '+e.message);valid();});};});
     document.getElementById('c345-ready').onclick=function(){var b=this;if(!c348Lock(b,'Continuando...'))return;st.fase='previo';save(o,st);capturaEjec.epp=Object.assign({},st.epp);capturaEjec.insumosConfirmados=(st.productos||[]).slice();if(o.estado==='pendiente'){marcarOrdenEnProceso(o.id);o.estado='en_proceso';}renderEtapa(o,st,'previo');};valid();
   }
   function renderEtapa(o,st,k){
@@ -21308,7 +21313,7 @@ function renderRiegoEjecucion(ordenId){
   function lock(btn,txt){if(!btn||btn.disabled)return false;btn.disabled=true;if(txt)btn.textContent=txt;return true;}
   function renderPrep(o,s){stop();var body=document.getElementById('op-body'), comps=o.componentesFormula||[];var epp=[['guantes','🧤 Guantes'],['cubrebocas','😷 Cubrebocas / mascarilla'],['lentes','🥽 Lentes de protección'],['mangalarga','👕 Ropa de manga larga']];
     body.innerHTML='<div class="c349-wrap">'+head(o,'preparar')+'<div class="c349-card"><div class="c349-label">Protección</div>'+epp.map(function(x){return '<label class="c349-check"><input type="checkbox" data-c349-epp="'+x[0]+'" '+(s.epp[x[0]]?'checked':'')+'><span>'+x[1]+'</span></label>';}).join('')+'</div><div class="c349-card"><div class="c349-label">Preparar fórmula</div>'+comps.map(function(c){var on=s.productos.indexOf(String(c.item_id))>-1,omitido=c.estado_faltante==='autorizado'&&Number(c.faltante_detectado||0)>0;return '<label class="c349-check"><input type="checkbox" data-c349-prod="'+esc(c.item_id)+'" '+(on?'checked':'')+'><span class="c349-product"><span>🧪</span><span><strong>'+esc(c.item?c.item.nombre:'Producto')+'</strong><small>'+esc(unidadCampo(c.cantidad_base*(o.factor_escala||1),c.item?c.item.unidad:''))+'</small>'+(omitido?'<small style="color:#b45309;font-weight:800">⚠️ NO DISPONIBLE · Autorizado sin este producto</small><small>Marca para confirmar que NO se agregará.</small>':'')+'</span></span></label>';}).join('')+'<div class="c349-info" style="margin-top:10px">La fórmula y cantidades vienen autorizadas desde el Tablero. Confirma únicamente lo que preparas.</div></div><div class="c349-actions"><button class="c349-btn danger" id="c349-inc-prep">🚨 Reportar incidencia</button><button class="c349-btn primary" id="c349-ready">✓ Mezcla lista · iniciar aplicación</button></div></div>';
-    function valid(){var okE=epp.every(function(x){return !!s.epp[x[0]];}),okP=!comps.length||comps.every(function(c){return s.productos.indexOf(String(c.item_id))>-1;});var b=document.getElementById('c349-ready');if(b)b.disabled=!(okE&&okP);save(o,s);}body.querySelectorAll('[data-c349-epp]').forEach(function(ch){ch.onchange=function(){s.epp[this.dataset.c349Epp]=this.checked;valid();};});body.querySelectorAll('[data-c349-prod]').forEach(function(ch){ch.onchange=function(){var id=String(this.dataset.c349Prod),i=s.productos.indexOf(id);if(this.checked&&i<0)s.productos.push(id);if(!this.checked&&i>=0)s.productos.splice(i,1);valid();};});document.getElementById('c349-inc-prep').onclick=function(){report(o,s);};document.getElementById('c349-ready').onclick=function(){if(!lock(this,'Iniciando...'))return;s.fase='aplicar';s.inicio=s.inicio||new Date().toISOString();s.fin=null;save(o,s);capturaEjec.epp=Object.assign({},s.epp);capturaEjec.insumosConfirmados=(s.productos||[]).slice();renderAplicar(o,s);};valid();
+    function valid(){var okE=epp.every(function(x){return !!s.epp[x[0]];}),okP=!comps.length||comps.every(function(c){return s.productos.indexOf(String(c.item_id))>-1;});var b=document.getElementById('c349-ready');if(b)b.disabled=!(okE&&okP);save(o,s);}body.querySelectorAll('[data-c349-epp]').forEach(function(ch){ch.onchange=function(){s.epp[this.dataset.c349Epp]=this.checked;valid();};});body.querySelectorAll('[data-c349-prod]').forEach(function(ch){ch.onchange=function(){var box=this,id=String(this.dataset.c349Prod),i=s.productos.indexOf(id);s.pesajes=s.pesajes||{};if(!box.checked){if(s.pesajes[id]){box.checked=true;showToast('✓ Este pesaje ya fue confirmado y descontado.');return;}if(i>=0)s.productos.splice(i,1);valid();return;}var comp=comps.find(function(c){return String(c.item_id)===id;});box.disabled=true;c408ConfirmarPesaje(o,comp).then(function(r){if(i<0)s.productos.push(id);s.pesajes[id]=true;box.disabled=false;valid();showToast(r.omitido?'✓ Producto omitido por autorización · inventario sin descuento':(r.ya?'✓ Pesaje ya registrado anteriormente':'✓ Pesaje confirmado · '+numFmt(r.cantidad)+' descontado de Inventario'));}).catch(function(e){box.checked=false;box.disabled=false;showToast('⚠️ '+e.message);valid();});};});document.getElementById('c349-inc-prep').onclick=function(){report(o,s);};document.getElementById('c349-ready').onclick=function(){if(!lock(this,'Iniciando...'))return;s.fase='aplicar';s.inicio=s.inicio||new Date().toISOString();s.fin=null;save(o,s);capturaEjec.epp=Object.assign({},s.epp);capturaEjec.insumosConfirmados=(s.productos||[]).slice();renderAplicar(o,s);};valid();
   }
   function renderAplicar(o,s){stop();var body=document.getElementById('op-body'),ini=inicio(o);body.innerHTML='<div class="c349-wrap">'+head(o,'aplicar')+'<div class="c349-card"><div class="c349-label">Aplicación en curso</div><div class="c349-timer"><small>Tiempo de aplicación</small><strong id="c349-clock">00:00</strong><span class="c349-start">Inicio desde surco '+ini+'</span></div><div class="c349-info">Aplica normalmente. Al detenerte, registra únicamente el último surco alcanzado; Mootsil marcará automáticamente los anteriores.</div></div><div class="c349-actions"><button class="c349-btn danger" id="c349-inc-run">🚨 Reportar incidencia</button><button class="c349-btn primary" id="c349-stop">Registrar avance / finalizar</button></div></div>';
     function tick(){var el=document.getElementById('c349-clock');if(!el)return;el.textContent=msFmt(Date.now()-new Date(s.inicio).getTime());}tick();timer=setInterval(tick,1000);document.getElementById('c349-inc-run').onclick=function(){report(o,s);};document.getElementById('c349-stop').onclick=function(){if(!confirm('¿Vas a registrar hasta qué surco llegaste?'))return;if(!lock(this,'Abriendo cierre...'))return;stop();s.fin=new Date().toISOString();s.fase='cierre';save(o,s);renderCierre(o,s);};
@@ -21349,7 +21354,7 @@ function renderRiegoEjecucion(ordenId){
 }
 </style>
 <script>
-window.MOOTSIL_BUILD='C398';
+window.MOOTSIL_BUILD='C408';
 /* Labores usa un reporte contextual, igual que Riego y Aplicaciones: conserva tarea, tabla,
    plantación y colaborador y vuelve a la labor activa al terminar. */
 function c366ReportarLaborIncidencia(){
