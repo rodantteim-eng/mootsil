@@ -4,7 +4,16 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
-<title>Mootsil · Tablero del Rancho · C224 · Navegación Simple y Pendientes Útiles</title>
+<title>Mootsil | Rancho Sagrado Corazón</title>
+<meta name="description" content="Acceso de colaboradores · Rancho Sagrado Corazón">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Mootsil">
+<meta property="og:title" content="Mootsil | Rancho Sagrado Corazón">
+<meta property="og:description" content="Acceso de colaboradores · Rancho Sagrado Corazón">
+<meta property="og:url" content="https://mootsil2.pages.dev/">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Mootsil | Rancho Sagrado Corazón">
+<meta name="twitter:description" content="Acceso de colaboradores · Rancho Sagrado Corazón">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
@@ -19051,7 +19060,7 @@ function renderAltasBajas(){
     function c397DupKey(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toLowerCase();}
     var c396NameCounts={}; users.forEach(function(z){var k=c397DupKey(z.nombre);c396NameCounts[k]=(c396NameCounts[k]||0)+1;});
     var c397HasDup=users.some(function(z){return c396NameCounts[c397DupKey(z.nombre)]>1;});
-    var html='<div class="ex54-head"><div><div class="ex54-eyebrow">Administración · Empleados · C415</div><div class="ex54-title">Expedientes</div><div class="ex54-sub">Información personal, laboral y condiciones de pago de cada colaborador.</div></div><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">'+(c397HasDup?'<button class="btn-sm" style="border-color:#c8b7df;background:#f7f2fb;color:#6c3c91" onclick="c397AbrirDuplicados()">Unificar duplicados</button>':'')+'<button class="em59-back" onclick="renderAdministracionMenu()">← Empleados</button><button class="btn-sm btn-completar" onclick="renderNuevoUsuario()">+ Nuevo expediente</button></div></div><div class="ex54-list">';
+    var html='<div class="ex54-head"><div><div class="ex54-eyebrow">Administración · Empleados · C416</div><div class="ex54-title">Expedientes</div><div class="ex54-sub">Información personal, laboral y condiciones de pago de cada colaborador.</div></div><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">'+(c397HasDup?'<button class="btn-sm" style="border-color:#c8b7df;background:#f7f2fb;color:#6c3c91" onclick="c397AbrirDuplicados()">Unificar duplicados</button>':'')+'<button class="em59-back" onclick="renderAdministracionMenu()">← Empleados</button><button class="btn-sm btn-completar" onclick="renderNuevoUsuario()">+ Nuevo expediente</button></div></div><div class="ex54-list">';
     html+=users.map(function(u){
       var ex=ex54Get(u.id),cargo=ex.cargo||(ROLES[u.rol]||u.rol),tipo=ex.tipo_colaborador||(u.rol==='labores_eventual'?'Eventual':'Base');
       // Cosecha es por periodo; no mostramos EVENTUAL como etiqueta dominante.
