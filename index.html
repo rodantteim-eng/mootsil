@@ -2,6 +2,9 @@
 
 <html lang="es">
 <head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
 <title>Mootsil | Rancho Sagrado Corazón</title>
@@ -16153,13 +16156,13 @@ function c412NumeroSemanaISO(fecha){var d=new Date((fecha||fechaHoyLocal())+'T12
 function formatearFechaCorta(fecha){try{return new Intl.DateTimeFormat('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date(fecha+'T12:00:00'));}catch(e){return fecha;}}
 function renderCosechaProgramacion(){
  var body=document.getElementById('enc-body');if(!cosecha.fecha)cosecha.fecha=fechaHoyLocal();if(!cosecha.destinos)cosecha.destinos=[];if(!cosecha.tipoJornada)cosecha.tipoJornada='Calentamiento de planta';if(!cosecha.personalCalentamiento)cosecha.personalCalentamiento=[];
- if(C417_CLIENTES_COSECHA===null){body.innerHTML='<div class="seccion-titulo">🧺 Cosecha · Programar</div><div class="loading">Cargando compradores...</div>';c417CargarClientesCosecha().then(renderCosechaProgramacion).catch(function(e){body.innerHTML='<div class="empty">No fue posible cargar compradores: '+cosEsc(e.message)+'</div>';});return;}
+ if(C417_CLIENTES_COSECHA===null){body.innerHTML='<div class="seccion-titulo">🧺 Cosecha · Programar <span style="font-size:.68rem;background:#17452e;color:#fff;border-radius:999px;padding:3px 8px;margin-left:6px">C422</span></div><div class="loading">Cargando compradores...</div>';c417CargarClientesCosecha().then(renderCosechaProgramacion).catch(function(e){body.innerHTML='<div class="empty">No fue posible cargar compradores: '+cosEsc(e.message)+'</div>';});return;}
  var plantas=cats.plantaciones||[],p=plantas.find(function(x){return String(x.id)===String(cosecha.plantacionId);}),tabs=p?(cats.tablas||[]).filter(function(t){return String(t.plantacion_id)===String(p.id);}):[],t=tabs.find(function(x){return String(x.id)===String(cosecha.tablaId);});
  var personal=cosPersonalDisponible(),pc=personal.filter(function(x){return x.grupo==='Cosecha';}),pa=personal.filter(function(x){return x.grupo!=='Cosecha';});
  function opts(arr,val,ph){return '<option value="">'+ph+'</option>'+arr.map(function(x){return '<option value="'+cosEsc(x.id)+'" '+(String(x.id)===String(val)?'selected':'')+'>'+cosEsc(x.nombre)+'</option>';}).join('');}
  function per(x){var cal=cosecha.tipoJornada==='Calentamiento de planta',aa=cosecha.asignaciones[x.id]||[],sel=cal?cosecha.personalCalentamiento.map(String).indexOf(String(x.id))>-1:String(cosecha.editorId)===String(x.id);return '<button type="button" data-c411-persona="'+x.id+'" class="'+(sel?'sel':'')+'">'+cosEsc(x.nombre)+(!cal&&aa.length?' · '+aa.length:'')+'</button>';}
  function dh(){
-  if(!cosecha.destinos.length)return '<div class="c411-mini">Sin destinos. Agrega Comercializadora o Proceso.</div>';
+  if(!cosecha.destinos.length)return '<div class="c411-mini">'+(cosecha.tipoJornada==='Calentamiento de planta'?'Sin destinos de proceso. Agrega Bote, Tara o Clamshell y selecciona su comprador.':'Sin destinos. Agrega Comercializadora o Proceso.')+'</div>';
   return cosecha.destinos.map(function(d,i){
    if(cosecha.tipoJornada==='Calentamiento de planta')d.tipo='Proceso';
    var pr=d.tipo==='Proceso', clientes=c417ClientesTipo(d.tipo);
