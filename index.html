@@ -5038,7 +5038,9 @@ var c253TablaId=null;
 var c253TablaIds=[]; // C360: permite asignar una misma labor a una o varias tablas
 
 function c253ListaPersonal(){
-  return c253TipoPersonal==='eventual' ? (cats.eventuales||[]) : (cats.operarios||[]);
+  if(c253TipoPersonal==='eventual')return (cats.eventuales||[]);
+  if(c253TipoPersonal==='cosecha')return (cats.cosechadores||[]).filter(function(x){return x.activo!==false&&x.estado!=='inactivo'&&x.estado!=='desactivado';});
+  return (cats.operarios||[]);
 }
 function c253SetTipo(tipo){
   c253TipoPersonal=tipo;
@@ -5055,6 +5057,7 @@ function c253RenderPersonal(){
   var tabs='<div class="c253-tabs">'+
     '<button type="button" class="'+(c253TipoPersonal==='base'?'sel':'')+'" onclick="c253SetTipo(&quot;base&quot;)">Base</button>'+
     '<button type="button" class="'+(c253TipoPersonal==='eventual'?'sel':'')+'" onclick="c253SetTipo(&quot;eventual&quot;)">Eventuales</button>'+
+    '<button type="button" class="'+(c253TipoPersonal==='cosecha'?'sel':'')+'" onclick="c253SetTipo(&quot;cosecha&quot;)">Apoyo Cosecha</button>'+
     '<button type="button" class="'+(c253TipoPersonal==='cuadrilla'?'sel':'')+'" onclick="c253SetTipo(&quot;cuadrilla&quot;)">Cuadrillas</button></div>';
   if(c253TipoPersonal==='cuadrilla'){
     wrap.innerHTML=tabs+'<div class="c253-disabled"><b>Cuadrillas</b><br>El módulo ya está preparado para mostrarlas aquí. Falta vincular el catálogo real de cuadrillas sin alterar los pagos de Base/Eventuales.</div>'+
@@ -5069,9 +5072,9 @@ function c253RenderPersonal(){
   wrap.innerHTML=tabs+'<div class="c253-search"><input id="c253-buscar" type="text" placeholder="Buscar colaborador..." oninput="c253RenderPersonal()"></div><div class="c253-results">'+res+'</div><div class="c253-picked">'+c253Picks()+'</div>';
 }
 function c253Picks(){
-  var todos=(cats.operarios||[]);
+  var todos=(cats.operarios||[]).concat(cats.eventuales||[]).concat(cats.cosechadores||[]);
   return c253Seleccionados.map(function(id){
-    var o=todos.find(function(x){return x.id===id;});
+    var o=todos.find(function(x){return String(x.id)===String(id);});
     return o?'<span>'+o.nombre+' ×</span>':'';
   }).join('');
 }
@@ -5634,7 +5637,7 @@ function guardarFiltrosAsignacion(){
     })) : Promise.resolve();
     return autorizarExtra.then(function(){
       return Promise.all(filtrosAsigOperarios.map(function(oid){
-        return from('notificaciones').insert({titulo:esExtra?'⏰ Limpieza de filtros (hora extra) asignada':'🧹 Limpieza de filtros asignada',cuerpo:usuario.nombre+' asignó limpieza de filtros a '+(cats.equipoDeCampo.find(function(o){return o.id===oid;})||{}).nombre+' en '+tablaIds.length+' tabla(s)'+(esExtra?' (hora extra)':''),icono:'🧹',leida:false,para_usuario:oid});
+        return from('notificaciones').insert({titulo:esExtra?'⏰ Limpieza de filtros (hora extra) asignada':'🧹 Limpieza de filtros asignada',cuerpo:usuario.nombre+' asignó limpieza de filtros a '+((cats.operarios||[]).concat(cats.eventuales||[]).concat(cats.cosechadores||[]).find(function(o){return String(o.id)===String(oid);})||{}).nombre+' en '+tablaIds.length+' tabla(s)'+(esExtra?' (hora extra)':''),icono:'🧹',leida:false,para_usuario:oid});
       }));
     });
   }).then(function(){showToast('🧹 Limpieza de filtros asignada en '+tablaIds.length+' tabla(s). Puedes asignar otra labor.');volverAsignacionRiegoV1();}).catch(function(e){alert('Error: '+e.message);});
@@ -5776,7 +5779,7 @@ function guardarOrden(){
       })) : Promise.resolve();
       return autorizarExtraRiego.then(function(){
         return Promise.all(opIds.map(function(oid){
-          return from('notificaciones').insert({titulo:esExtraRiego?'⏰ Riego (hora extra) asignado':'💧 Riego asignado',cuerpo:usuario.nombre+' asignó riego a '+(cats.equipoDeCampo.find(function(o){return o.id===oid;})||{}).nombre+' en '+filas.length+' tabla(s)'+(esExtraRiego?' (hora extra)':''),icono:esExtraRiego?'⏰':'💧',leida:false,para_rol:'operario',para_usuario:oid});
+          return from('notificaciones').insert({titulo:esExtraRiego?'⏰ Riego (hora extra) asignado':'💧 Riego asignado',cuerpo:usuario.nombre+' asignó riego a '+((cats.operarios||[]).concat(cats.eventuales||[]).concat(cats.cosechadores||[]).find(function(o){return String(o.id)===String(oid);})||{}).nombre+' en '+filas.length+' tabla(s)'+(esExtraRiego?' (hora extra)':''),icono:esExtraRiego?'⏰':'💧',leida:false,para_rol:'operario',para_usuario:oid});
         }));
       });
     }).then(function(){showToast((esExtraRiego?'⏰ Riego asignado como hora extra. ':'💧 Riego asignado. ')+'Puedes asignar otra labor.');renderFormAsignar();}).catch(function(e){alert('Error: '+e.message);});
@@ -5836,7 +5839,7 @@ function guardarOrden(){
     }
     var ubicTxt=noTablaGuardar?'':(tablasSel.length===1?(' en '+tablasSel[0].nombre):(' en '+tablasSel.length+' tablas'));
     Promise.all(opIds.map(function(oid){
-      return from('notificaciones').insert({titulo:esExtra?'⏰ Hora extra asignada':'📋 Nueva tarea asignada',cuerpo:usuario.nombre+' asignó a '+(cats.equipoDeCampo.find(function(o){return o.id===oid;})||{}).nombre+': '+(lb?lb.nombre:'')+ubicTxt+(esExtra?' (hora extra)':''),icono:esExtra?'⏰':'📋',leida:false,para_rol:'operario',para_usuario:oid});
+      return from('notificaciones').insert({titulo:esExtra?'⏰ Hora extra asignada':'📋 Nueva tarea asignada',cuerpo:usuario.nombre+' asignó a '+((cats.operarios||[]).concat(cats.eventuales||[]).concat(cats.cosechadores||[]).find(function(o){return String(o.id)===String(oid);})||{}).nombre+': '+(lb?lb.nombre:'')+ubicTxt+(esExtra?' (hora extra)':''),icono:esExtra?'⏰':'📋',leida:false,para_rol:'operario',para_usuario:oid});
     })).catch(function(e){console.warn('Notificación secundaria:',e.message);});
     showToast((esExtra?'⏰ Hora extra':'📋 Labor')+' guardada correctamente: '+(lb?lb.nombre:'')+(noTablaGuardar?'':(' · '+tablasSel.length+' tabla'+(tablasSel.length===1?'':'s'))));
     c269IrSemanaFecha(fec);
@@ -21314,7 +21317,7 @@ function c408ConfirmarPesaje(o,c){
 }
 </style>
 <script>
-window.MOOTSIL_BUILD='C413';
+window.MOOTSIL_BUILD='C414';
 /* Labores usa un reporte contextual, igual que Riego y Aplicaciones: conserva tarea, tabla,
    plantación y colaborador y vuelve a la labor activa al terminar. */
 function c366ReportarLaborIncidencia(){
