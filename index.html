@@ -5064,6 +5064,15 @@ function c253ListaPersonal(){
 }
 function c253SetTipo(tipo){
   c253TipoPersonal=tipo;
+  if(tipo==='cosecha'){
+    var wrap=document.getElementById('c253-personal');
+    if(wrap)wrap.innerHTML='<div class="c253-disabled"><b>Apoyo Cosecha</b><br>Cargando colaboradores activos de Cosecha...</div>';
+    from('usuarios').select('id,nombre,rol,activo').eq('rol','cosechador').eq('activo',true).get().then(function(rows){
+      cats.cosechadores=rows||[];
+      c253RenderPersonal();
+    }).catch(function(){c253RenderPersonal();});
+    return;
+  }
   c253RenderPersonal();
 }
 function c253TogglePersona(id){
@@ -5075,10 +5084,11 @@ function c253RenderPersonal(){
   var wrap=document.getElementById('c253-personal');
   if(!wrap)return;
   var tabs='<div class="c253-tabs">'+
-    '<button type="button" class="'+(c253TipoPersonal==='base'?'sel':'')+'" onclick="c253SetTipo(&quot;base&quot;)">Base</button>'+
-    '<button type="button" class="'+(c253TipoPersonal==='eventual'?'sel':'')+'" onclick="c253SetTipo(&quot;eventual&quot;)">Eventuales</button>'+
-    '<button type="button" class="'+(c253TipoPersonal==='cosecha'?'sel':'')+'" onclick="c253SetTipo(&quot;cosecha&quot;)">Apoyo Cosecha</button>'+
+    '<button type="button" class="'+(c253TipoPersonal==='base'?'sel':'')+'" onclick="c253SetTipo(&quot;base&quot;)">Labores Base</button>'+
+    '<button type="button" class="'+(c253TipoPersonal==='eventual'?'sel':'')+'" onclick="c253SetTipo(&quot;eventual&quot;)">Labores Eventuales</button>'+
+    '<button type="button" class="'+(c253TipoPersonal==='cosecha'?'sel':'')+'" onclick="c253SetTipo(&quot;cosecha&quot;)">Apoyo Cosecha <span style="opacity:.7">('+String((cats.cosechadores||[]).length)+')</span></button>'+
     '<button type="button" class="'+(c253TipoPersonal==='cuadrilla'?'sel':'')+'" onclick="c253SetTipo(&quot;cuadrilla&quot;)">Cuadrillas</button></div>';
+  if(c253TipoPersonal==='cosecha')tabs+='<div style="font-size:.72rem;color:#587066;margin:.25rem 0 .45rem">Colaboradores con cargo Cosecha disponibles temporalmente para una labor. Su cargo no cambia y la jornada cuenta para asistencia/nómina.</div>';
   if(c253TipoPersonal==='cuadrilla'){
     wrap.innerHTML=tabs+'<div class="c253-disabled"><b>Cuadrillas</b><br>El módulo ya está preparado para mostrarlas aquí. Falta vincular el catálogo real de cuadrillas sin alterar los pagos de Base/Eventuales.</div>'+
       '<div class="c253-picked">'+c253Picks()+'</div>';
