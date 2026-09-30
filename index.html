@@ -3542,28 +3542,72 @@ function setErr(m){document.getElementById('pin-error').textContent=m;}
 
 function verificarPin(){
   setErr('Verificando...');
-  rpc('c135_verificar_acceso',{p_pin:pin}).then(function(data){
-    if(!data||!data.length){setErr('PIN incorrecto.');pin='';dibujarPin();return;}
-    usuario={id:data[0].usuario_id,nombre:data[0].nombre,rol:data[0].rol,pinTemporal:!!data[0].pin_temporal};
+  var nip=pin;
+
+  function normalizarAcceso(data){
+    var r=Array.isArray(data)?data[0]:data;
+    if(!r)return null;
+    var id=r.usuario_id||r.id;
+    var nombre=r.nombre||r.usuario_nombre;
+    var rol=r.rol||r.usuario_rol;
+    if(!id||!nombre||!rol)return null;
+    return {id:id,nombre:nombre,rol:rol,pinTemporal:!!r.pin_temporal};
+  }
+
+  function completarEntrada(u){
+    usuario=u;
     setErr('Cargando...');
-    cargarCatalogos().then(function(){
+    return cargarCatalogos().then(function(){
       setErr('');
       try{localStorage.setItem('mootsil_sesion',JSON.stringify({usuario:usuario,cats:cats,ts:Date.now()}));}catch(e){}
-      if(usuario.pinTemporal){mostrar('screen-operario');document.getElementById('op-nombre').innerHTML='<span style="color:var(--amarillo);">'+ex54Esc(usuario.nombre)+'</span><span style="color:var(--blanco);"> · Primer acceso</span>';renderCambioPinInicial();}
-      else entrarSegunRol();
+      if(usuario.pinTemporal){
+        mostrar('screen-operario');
+        document.getElementById('op-nombre').innerHTML='<span style="color:var(--amarillo);">'+ex54Esc(usuario.nombre)+'</span><span style="color:var(--blanco);"> · Primer acceso</span>';
+        renderCambioPinInicial();
+      }else{
+        entrarSegunRol();
+      }
     });
-  }).catch(function(e){
-    setErr('Sin señal. No se pudo verificar tu PIN.');
-    pin='';dibujarPin();
-    var ses=null;
-    try{ses=JSON.parse(localStorage.getItem('mootsil_sesion')||'null');}catch(err){}
-    if(ses&&ses.usuario){
-      var el=document.getElementById('pin-error');
-      if(el) el.innerHTML='Sin señal. No se pudo verificar tu PIN.<br><span style="text-decoration:underline;cursor:pointer;font-weight:700;" onclick="intentarEntradaOffline()">Entrar como '+ses.usuario.nombre+' (última sesión)</span>';
-    }
+  }
+
+  // C432: c135 sigue siendo la vía principal. Si no reconoce el NIP,
+  // se valida contra la RPC histórica verificar_pin, que sigue siendo
+  // la utilizada por "Cambiar mi PIN". Esto evita bloquear asistencia.
+  rpc('c135_verificar_acceso',{p_pin:nip}).then(function(data){
+    var u=normalizarAcceso(data);
+    if(u)return completarEntrada(u);
+
+    return rpc('verificar_pin',{p_pin:nip}).then(function(oldData){
+      var u2=normalizarAcceso(oldData);
+      if(!u2){
+        setErr('NIP incorrecto.');
+        pin='';dibujarPin();
+        return;
+      }
+      return completarEntrada(u2);
+    });
+  }).catch(function(){
+    // Si la RPC nueva falla, intentar inmediatamente la validación estable.
+    return rpc('verificar_pin',{p_pin:nip}).then(function(oldData){
+      var u=normalizarAcceso(oldData);
+      if(!u){
+        setErr('NIP incorrecto.');
+        pin='';dibujarPin();
+        return;
+      }
+      return completarEntrada(u);
+    }).catch(function(){
+      setErr('Sin señal. No se pudo verificar tu NIP.');
+      pin='';dibujarPin();
+      var ses=null;
+      try{ses=JSON.parse(localStorage.getItem('mootsil_sesion')||'null');}catch(err){}
+      if(ses&&ses.usuario){
+        var el=document.getElementById('pin-error');
+        if(el)el.innerHTML='Sin señal. No se pudo verificar tu NIP.<br><span style="text-decoration:underline;cursor:pointer;font-weight:700;" onclick="intentarEntradaOffline()">Entrar como '+ses.usuario.nombre+' (última sesión)</span>';
+      }
+    });
   });
 }
-
 function entrarSegunRol(){
   if(usuario.rol==='operario'||usuario.rol==='cosechador'||usuario.rol==='galerista'||usuario.rol==='labores_eventual'){
     document.getElementById('op-nombre').innerHTML='<span style="color:var(--amarillo);">'+usuario.nombre+'</span><span style="color:var(--blanco);"> • </span><span style="color:var(--blanco);">'+(ROLES_COLABORADOR[usuario.rol]||'Colaborador')+'</span>';
