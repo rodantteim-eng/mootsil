@@ -5060,13 +5060,14 @@ var c253TablaIds=[]; // C360: permite asignar una misma labor a una o varias tab
 function c253ListaPersonal(){
   if(c253TipoPersonal==='eventual')return (cats.eventuales||[]);
   if(c253TipoPersonal==='cosecha')return (cats.cosechadores||[]).filter(function(x){return x.activo!==false&&x.estado!=='inactivo'&&x.estado!=='desactivado';});
+  if(c253TipoPersonal==='apoyo_cosecha')return [];
   return (cats.operarios||[]);
 }
 function c253SetTipo(tipo){
   c253TipoPersonal=tipo;
   if(tipo==='cosecha'){
     var wrap=document.getElementById('c253-personal');
-    if(wrap)wrap.innerHTML='<div class="c253-disabled"><b>Apoyo Cosecha</b><br>Cargando colaboradores activos de Cosecha...</div>';
+    if(wrap)wrap.innerHTML='<div class="c253-disabled"><b>Cosecha</b><br>Cargando colaboradores activos con cargo Cosecha...</div>';
     from('usuarios').select('id,nombre,rol,activo').eq('rol','cosechador').eq('activo',true).get().then(function(rows){
       cats.cosechadores=rows||[];
       c253RenderPersonal();
@@ -5086,12 +5087,11 @@ function c253RenderPersonal(){
   var tabs='<div class="c253-tabs">'+
     '<button type="button" class="'+(c253TipoPersonal==='base'?'sel':'')+'" onclick="c253SetTipo(&quot;base&quot;)">Labores Base</button>'+
     '<button type="button" class="'+(c253TipoPersonal==='eventual'?'sel':'')+'" onclick="c253SetTipo(&quot;eventual&quot;)">Labores Eventuales</button>'+
-    '<button type="button" class="'+(c253TipoPersonal==='cosecha'?'sel':'')+'" onclick="c253SetTipo(&quot;cosecha&quot;)">Apoyo Cosecha <span style="opacity:.7">('+String((cats.cosechadores||[]).length)+')</span></button>'+
-    '<button type="button" class="'+(c253TipoPersonal==='cuadrilla'?'sel':'')+'" onclick="c253SetTipo(&quot;cuadrilla&quot;)">Cuadrillas</button></div>';
-  if(c253TipoPersonal==='cosecha')tabs+='<div style="font-size:.72rem;color:#587066;margin:.25rem 0 .45rem">Colaboradores con cargo Cosecha disponibles temporalmente para una labor. Su cargo no cambia y la jornada cuenta para asistencia/nómina.</div>';
-  if(c253TipoPersonal==='cuadrilla'){
-    wrap.innerHTML=tabs+'<div class="c253-disabled"><b>Cuadrillas</b><br>El módulo ya está preparado para mostrarlas aquí. Falta vincular el catálogo real de cuadrillas sin alterar los pagos de Base/Eventuales.</div>'+
-      '<div class="c253-picked">'+c253Picks()+'</div>';
+    '<button type="button" class="'+(c253TipoPersonal==='cosecha'?'sel':'')+'" onclick="c253SetTipo(&quot;cosecha&quot;)">Cosecha <span style="opacity:.7">('+String((cats.cosechadores||[]).length)+')</span></button>'+
+    '<button type="button" class="'+(c253TipoPersonal==='apoyo_cosecha'?'sel':'')+'" onclick="c253SetTipo(&quot;apoyo_cosecha&quot;)">Apoyo a Cosecha</button></div>';
+  if(c253TipoPersonal==='cosecha')tabs+='<div style="font-size:.72rem;color:#587066;margin:.25rem 0 .45rem">Personal cuyo cargo es Cosecha. Puede asignarse temporalmente a Labores sin cambiar su cargo; la jornada cuenta para asistencia/nómina.</div>';
+  if(c253TipoPersonal==='apoyo_cosecha'){
+    wrap.innerHTML=tabs+'<div class="c253-disabled"><b>Apoyo a Cosecha · estado operativo</b><br>No es un cargo ni un grupo de personal. Se utilizará en Cosecha cuando un colaborador termine sus surcos y pase a apoyar a otro cosechador.</div>';
     return;
   }
   var q=((document.getElementById('c253-buscar')||{}).value||'').toLowerCase();
