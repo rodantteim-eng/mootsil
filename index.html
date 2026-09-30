@@ -16190,13 +16190,14 @@ body.querySelector('#c411-plant').onchange=function(){cosecha.plantacionId=this.
 };
 }
 function guardarCosecha(){
-  var btn=document.getElementById('cos-finalizar');btn.disabled=true;btn.textContent='Guardando...';
+  var btn=document.getElementById('c411-save')||document.getElementById('cos-finalizar');
+  if(btn){btn.disabled=true;btn.textContent='Guardando...';}
   var lbCosecha=cats.tiposLabor.find(function(l){return l.es_cosecha;});
-  if(!lbCosecha){alert('No se encontró el tipo de labor Cosecha en el catálogo.');btn.disabled=false;btn.textContent='✅ Programar cosecha';return;}
+  if(!lbCosecha){alert('No se encontró el tipo de labor Cosecha en el catálogo.');if(btn){btn.disabled=false;btn.textContent=cosecha.tipoJornada==='Calentamiento de planta'?'✅ Programar calentamiento':'✅ Programar cosecha';}return;}
   var ids=cosecha.operarios.filter(function(id){return (cosecha.asignaciones[id]||[]).length;});
   Promise.all(ids.map(function(oid){return from('ordenes_trabajo').insert({asignado_por:usuario.id,operario_id:oid,tabla_id:cosecha.tablaId,tipo_labor_id:lbCosecha.id,surcos_asignados:cosecha.asignaciones[oid],duracion:'dia',fecha_asignacion:cosecha.fecha,notas_encargado:cosecha.notas,estado:'pendiente'});})).then(function(){
-    return Promise.all(ids.map(function(oid){var sur=(cosecha.asignaciones[oid]||[]);return from('notificaciones').insert({titulo:'🧺 Cosecha asignada',cuerpo:'Cosecha programada · Surcos '+sur.join(', '),icono:'🧺',leida:false,para_rol:'operario',para_usuario:oid});}));
-  }).then(function(){showToast('✅ Cosecha programada para '+ids.length+' cosechador(es)');cosechaReset();renderCosechaTablero();}).catch(function(e){alert('Error: '+e.message);btn.disabled=false;btn.textContent='✅ Programar cosecha';});
+    return Promise.all(ids.map(function(oid){var sur=(cosecha.asignaciones[oid]||[]);return from('notificaciones').insert({titulo:cosecha.tipoJornada==='Calentamiento de planta'?'🧺 Calentamiento asignado':'🧺 Cosecha asignada',cuerpo:cosecha.tipoJornada==='Calentamiento de planta'?'Calentamiento de planta · Limpieza de fruta · Tabla completa':'Cosecha programada · Surcos '+sur.join(', '),icono:'🧺',leida:false,para_rol:'operario',para_usuario:oid});}));
+  }).then(function(){showToast(cosecha.tipoJornada==='Calentamiento de planta'?'✅ Calentamiento programado para '+ids.length+' colaborador(es)':'✅ Cosecha programada para '+ids.length+' cosechador(es)');cosechaReset();renderCosechaTablero();}).catch(function(e){alert('Error: '+e.message);if(btn){btn.disabled=false;btn.textContent=cosecha.tipoJornada==='Calentamiento de planta'?'✅ Programar calentamiento':'✅ Programar cosecha';}});
 }
 
 function renderAsignarExtra(lb){
