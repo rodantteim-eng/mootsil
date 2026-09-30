@@ -16119,6 +16119,30 @@ function c428PlanCosecha(o){
   try{return JSON.parse(n.slice('[PLAN_COSECHA]'.length));}catch(e){return null;}
 }
 function c428EsCalentamiento(o){var p=c428PlanCosecha(o);return !!(p&&p.tipo_jornada==='Calentamiento de planta');}
+
+function c430EmpaquesOperario(o){
+  var p=c428PlanCosecha(o)||{}, ds=p.destinos||[], out=[];
+  ds.forEach(function(d){
+    var pres=String(d.presentacion||'').trim(), det=String(d.detalle||'').trim();
+    if(!pres && d.clamshell_tamano) pres='Clamshell '+d.clamshell_tamano;
+    if(!pres && d.caja_presentacion) pres='Caja de clamshell';
+    var partes=[];
+    if(pres)partes.push(pres);
+    if(det)partes.push(det);
+    if(d.clamshell_marca)partes.push('Marca '+d.clamshell_marca);
+    if(d.clamshell_tamano && pres.toLowerCase().indexOf(String(d.clamshell_tamano).toLowerCase())<0)partes.push(d.clamshell_tamano);
+    if(d.caja_marca)partes.push('Caja '+d.caja_marca);
+    if(d.caja_presentacion)partes.push(d.caja_presentacion);
+    var txt=partes.filter(Boolean).join(' · ');
+    if(txt && out.indexOf(txt)<0)out.push(txt);
+  });
+  return out;
+}
+function c430IndicacionOperario(o){
+  var p=c428PlanCosecha(o);
+  if(p)return p.indicaciones||'Recorre con tu equipo toda la tabla realizando la limpieza de fruta.';
+  return o&&o.notas_encargado||'Sigue las indicaciones de tu encargado.';
+}
 function c429EsCalentamientoGrupo(g){
   if(!g||!g.length)return false;
   if(g.some(c428EsCalentamiento))return true;
@@ -18143,7 +18167,12 @@ function c329AbrirTarea(id){
     }
   }
 
-  if(t.notas_encargado)filas.push(['Indicaciones',t.notas_encargado]);
+  var plan430=c428PlanCosecha(t);
+  if(plan430){
+    if(c428EsCalentamiento(t))filas.push(['Actividad','Limpieza de fruta · Tabla completa']);
+    var emp430=c430EmpaquesOperario(t);if(emp430.length)filas.push(['Separación y empaque',emp430.join(' / ')]);
+    if(plan430.indicaciones)filas.push(['Indicaciones',plan430.indicaciones]);
+  }else if(t.notas_encargado)filas.push(['Indicaciones',t.notas_encargado]);
   if(t.formula&&t.formula.nombre)filas.push(['Fórmula',t.formula.nombre]);
 
   var formulaDetalle='';
@@ -18703,7 +18732,7 @@ function c225VerTarea(oid){
     var subt=o.subtipo&&o.subtipo.nombre?(' · '+o.subtipo.nombre):'';
     var lugar=o.tabla?((p?p.nombre+' · ':'')+o.tabla.nombre):'Actividad general';
     var herramienta=o.activo_rancho&&o.activo_rancho.nombre?o.activo_rancho.nombre:'';
-    var plan428=c428PlanCosecha(o),nota=plan428?(plan428.indicaciones||'Recorre con tu equipo toda la tabla realizando la limpieza de fruta.'):(o.notas_encargado||'Sigue las indicaciones de tu encargado.');
+    var plan428=c428PlanCosecha(o),nota=c430IndicacionOperario(o),emp430=c430EmpaquesOperario(o);
     var fecha=o.fecha_asignacion||fechaHoyLocal();
     body.innerHTML='<div class="c225-detail">'+
       '<button class="c225-back" onclick="ordenEjecutando=null;cargarTareas()">← Mis tareas</button>'+
@@ -18716,6 +18745,7 @@ function c225VerTarea(oid){
         '<div><small>Fecha</small><strong>'+c225Esc(fecha)+'</strong></div>'+
         (herramienta?'<div><small>Herramienta / equipo</small><strong>'+c225Esc(herramienta)+'</strong></div>':'')+
       '</div>'+
+      (emp430.length?'<div class="c225-instruction"><small>SEPARACIÓN Y EMPAQUE</small><strong>'+emp430.map(c225Esc).join('<br>')+'</strong></div>':'')+
       '<div class="c225-instruction"><small>INDICACIÓN</small><strong>'+c225Esc(nota)+'</strong></div>'+
       '<div class="c225-simple-note">Al comenzar, Mootsil te llevará directamente al registro de tu trabajo. Solo tendrás que indicar hasta dónde llegaste y cerrar tu participación.</div>'+
       '<button class="c225-start" id="c225-start" onclick="c225ComenzarTarea()">▶ Comenzar tarea</button>'+
@@ -18793,16 +18823,14 @@ function guardarEjecCintillas(){
 
 function renderEjecCalentamiento(){
   var body=document.getElementById('op-body'),o=ordenEjecutando,tabla=o.tabla||{},planta=(cats.plantaciones||[]).find(function(p){return String(p.id)===String(tabla.plantacion_id);});
-  var total=Number(tabla.cantidad_surcos||0),parcial=capturaEjec.cierreCompleto===false,opts='';
-  for(var i=1;i<=total;i++)opts+='<option value="'+i+'"'+(String(capturaEjec.ultimoSurco)===String(i)?' selected':'')+'>'+i+'</option>';
-  var plan=c428PlanCosecha(o)||{},dest=(plan.destinos||[]).map(function(d){return (d.tipo||'Destino')+' · '+(d.cliente||d.comercializadora||d.comprador||'')+(d.presentacion?' · '+d.presentacion:'')+(d.detalle?' · '+d.detalle:'');}).filter(Boolean).join('<br>');
-  body.innerHTML='<div class="step-label">🧺 CALENTAMIENTO DE PLANTA</div><div class="step-title">Limpieza de fruta</div><p class="hint" style="margin-bottom:1rem">📍 '+c225Esc((planta?planta.nombre+' · ':'')+(tabla.nombre||''))+' · Tabla completa'+(total?' · '+total+' surcos':'')+'</p>'+(dest?'<div class="form-card"><strong>Destino de la fruta</strong><div class="hint" style="margin-top:6px">'+dest+'</div></div>':'')+'<div class="form-card"><div style="font-weight:800;margin-bottom:.5rem">Recorrido de equipo</div><div class="hint" style="margin-bottom:.8rem">Recorre conjuntamente toda la tabla realizando la limpieza de fruta. No marques surcos uno por uno.</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="op-chip'+(capturaEjec.cierreCompleto===true?' sel':'')+'" onclick="capturaEjec.cierreCompleto=true;capturaEjec.ultimoSurco='+total+';renderEjecCalentamiento()">✅ Tabla completa recorrida</button><button class="op-chip'+(parcial?' sel':'')+'" onclick="capturaEjec.cierreCompleto=false;renderEjecCalentamiento()">⏳ Quedó pendiente</button></div>'+(parcial?'<div class="form-group" style="margin-top:1rem;margin-bottom:0"><label>¿Hasta qué surco llegó el equipo?</label><select onchange="capturaEjec.ultimoSurco=Number(this.value)"><option value="">Selecciona...</option>'+opts+'</select></div>':'')+'</div>'+(plan.indicaciones?'<div class="c225-instruction"><small>INDICACIÓN</small><strong>'+c225Esc(plan.indicaciones)+'</strong></div>':'')+'<div class="nav-row"><button class="btn-back" onclick="ordenEjecutando=null;cargarTareas()">← Salir</button><button class="btn-next" onclick="c428GuardarCalentamiento()" style="background:var(--tierra)">✅ Cerrar actividad</button></div>';
+  var total=Number(tabla.cantidad_surcos||0),plan=c428PlanCosecha(o)||{},empaques=c430EmpaquesOperario(o);
+  var empHtml=empaques.length?'<div class="form-card"><strong>Separación y empaque</strong><div class="hint" style="margin-top:6px">'+empaques.map(c225Esc).join('<br>')+'</div></div>':'';
+  body.innerHTML='<div class="step-label">🧺 CALENTAMIENTO DE PLANTA</div><div class="step-title">Limpieza de fruta</div><p class="hint" style="margin-bottom:1rem">📍 '+c225Esc((planta?planta.nombre+' · ':'')+(tabla.nombre||''))+' · Tabla completa'+(total?' · '+total+' surcos':'')+'</p>'+empHtml+'<div class="form-card"><div style="font-weight:800;margin-bottom:.5rem">Tu participación</div><div class="hint">Trabaja con el equipo en el recorrido de la tabla. No marques surcos ni cierres la tabla completa desde tu usuario.</div></div>'+(plan.indicaciones?'<div class="c225-instruction"><small>INDICACIÓN</small><strong>'+c225Esc(plan.indicaciones)+'</strong></div>':'')+'<div class="c336-info">El cierre general de la tabla corresponde al seguimiento del encargado. Aquí únicamente confirmas tu participación individual.</div><div class="nav-row"><button class="btn-back" onclick="ordenEjecutando=null;cargarTareas()">← Salir</button><button class="btn-next" onclick="c430TerminarParticipacionCalentamiento()" style="background:var(--tierra)">✅ Terminé mi participación</button></div>';
 }
-function c428GuardarCalentamiento(){
-  if(capturaEjec.cierreCompleto!==true&&capturaEjec.cierreCompleto!==false){alert('Confirma si el equipo terminó de recorrer la tabla.');return;}
-  if(capturaEjec.cierreCompleto===false&&!capturaEjec.ultimoSurco){alert('Indica hasta qué surco llegó el equipo.');return;}
-  var total=Number(ordenEjecutando&&ordenEjecutando.tabla&&ordenEjecutando.tabla.cantidad_surcos||0),hasta=capturaEjec.cierreCompleto?total:Number(capturaEjec.ultimoSurco);
-  capturaEjec.surcos=[];for(var i=1;i<=hasta;i++)capturaEjec.surcos.push(i);
+function c430TerminarParticipacionCalentamiento(){
+  if(!confirm('¿Confirmas que terminaste tu participación de hoy en esta actividad?\n\nEsto no marca la tabla completa como terminada por tu cuenta.'))return;
+  var total=Number(ordenEjecutando&&ordenEjecutando.tabla&&ordenEjecutando.tabla.cantidad_surcos||0);
+  capturaEjec.surcos=[];for(var i=1;i<=total;i++)capturaEjec.surcos.push(i);
   guardarEjec();
 }
 
