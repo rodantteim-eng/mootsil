@@ -19594,15 +19594,15 @@ function ex54FormHtml(mode,id,base,extra){
       '<div class="ex54-field span2"><label>Domicilio</label><input id="ex54-direccion" value="'+ex54Esc(extra.direccion||'')+'" placeholder="Calle, colonia, municipio"></div>'+
     '</div></div>'+
     '<div class="ex54-sec"><h3>Datos laborales y nómina</h3><div class="ex54-grid">'+
-      '<div class="ex54-field"><label>Tipo de colaborador</label><select id="ex58-tipo"><option'+(tipoColab==='Base'?' selected':'')+'>Base</option><option'+(tipoColab==='Eventual'?' selected':'')+'>Eventual</option></select></div>'+
-      '<div class="ex54-field"><label>Cargo principal / acceso</label><select id="ex54-cargo">'+cargos.map(function(c){return '<option'+(c===cargo?' selected':'')+'>'+c+'</option>';}).join('')+'</select></div>'+
+      (!isEdit?'<div class="ex54-field"><label>Tipo del cargo inicial</label><select id="ex58-tipo"><option'+(tipoColab==='Base'?' selected':'')+'>Base</option><option'+(tipoColab==='Eventual'?' selected':'')+'>Eventual</option></select></div>':'')+
+      (!isEdit?'<div class="ex54-field"><label>Cargo inicial</label><select id="ex54-cargo">'+cargos.map(function(c){return '<option'+(c===cargo?' selected':'')+'>'+c+'</option>';}).join('')+'</select></div>':'')+
       '<div class="ex54-field"><label>Fecha de ingreso</label><input type="date" id="ex54-ingreso" value="'+ex54Esc(base.fecha_ingreso||fechaHoyLocal())+'"></div>'+
-      '<div class="ex54-field"><label>Estatus</label><input value="'+(base.activo===false?'Inactivo':'Activo')+'" disabled></div>'+
+      '<div class="ex54-field"><label>Estatus del colaborador</label><select id="ex54-activo"><option value="true"'+(base.activo===false?'':' selected')+'>Activo</option><option value="false"'+(base.activo===false?' selected':'')+'>Inactivo</option></select></div>'+
       '<div class="ex54-field"><label>Sueldo base diario ($)</label><input type="number" min="0" step="1" id="ex54-sueldo" value="'+ex54Esc(base.sueldo_base==null?'':base.sueldo_base)+'" placeholder="Ej. 380"></div>'+
       '<div class="ex54-field"><label>Hora extra ($/h)</label><input type="number" min="0" step="1" id="ex54-extra" value="'+ex54Esc(extra.tarifa_hora_extra==null?'':extra.tarifa_hora_extra)+'" placeholder="Ej. 70"></div>'+
       '<div class="ex54-field"><label>PIN (4 dígitos)'+(isEdit?' · opcional':'')+'</label><input type="number" min="0" max="9999" id="ex54-pin" placeholder="'+(isEdit?'Dejar vacío para conservar':'1234')+'"></div>'+
     '</div></div>'+
-    (isEdit?'<div class="ex54-sec"><h3>Cargos y asignaciones</h3><div class="ex55-mini" style="margin-bottom:8px;">Un expediente puede tener varios cargos simultáneos o por temporada. Cada cargo conserva su propio estatus y periodo.</div><div id="c398-asignaciones"><div class="loading">Cargando asignaciones...</div></div><div id="c398-asig-form" style="display:none;margin-top:10px;padding:12px;border:1px solid #dfe8e2;border-radius:12px;background:#fbfdfb;"><div class="ex54-grid"><div class="ex54-field"><label>Cargo</label><select id="c398-cargo">'+cargos.map(function(c){return '<option>'+c+'</option>';}).join('')+'</select></div><div class="ex54-field"><label>Tipo</label><select id="c398-tipo"><option>Base</option><option>Eventual</option><option>Temporada</option></select></div><div class="ex54-field"><label>Estatus</label><select id="c398-estado"><option value="activo">Activo</option><option value="incorporacion">En incorporación</option></select></div><div class="ex54-field"><label>Fecha de inicio</label><input type="date" id="c398-inicio" value="'+fechaHoyLocal()+'"></div></div><div style="display:flex;gap:8px;margin-top:10px;"><button type="button" class="ex55-btn primary" onclick="c398GuardarAsignacion(\''+id+'\')">Guardar asignación</button><button type="button" class="ex55-btn" onclick="document.getElementById(\'c398-asig-form\').style.display=\'none\'">Cancelar</button></div></div><button type="button" class="ex55-btn primary" style="margin-top:8px;" onclick="document.getElementById(\'c398-asig-form\').style.display=\'block\'">+ Agregar cargo / asignación</button></div>':'')+
+    (isEdit?'<div class="ex54-sec"><h3>Cargos y asignaciones</h3><div class="ex55-mini" style="margin-bottom:8px;">Agrega uno o más cargos cuando corresponda. Cada cargo conserva su periodo y estatus, sin duplicar los datos laborales del colaborador.</div><div id="c398-asignaciones"><div class="loading">Cargando asignaciones...</div></div><div id="c398-asig-form" style="display:none;margin-top:10px;padding:12px;border:1px solid #dfe8e2;border-radius:12px;background:#fbfdfb;"><div class="ex54-grid"><div class="ex54-field"><label>Cargo</label><select id="c398-cargo">'+cargos.map(function(c){return '<option>'+c+'</option>';}).join('')+'</select></div><div class="ex54-field"><label>Tipo</label><select id="c398-tipo"><option>Base</option><option>Eventual</option><option>Temporada</option></select></div><div class="ex54-field"><label>Estatus</label><select id="c398-estado"><option value="activo">Activo</option><option value="incorporacion">En incorporación</option></select></div><div class="ex54-field"><label>Fecha de inicio</label><input type="date" id="c398-inicio" value="'+fechaHoyLocal()+'"></div></div><div style="display:flex;gap:8px;margin-top:10px;"><button type="button" class="ex55-btn primary" onclick="c398GuardarAsignacion(\''+id+'\')">Guardar asignación</button><button type="button" class="ex55-btn" onclick="document.getElementById(\'c398-asig-form\').style.display=\'none\'">Cancelar</button></div></div><button type="button" class="ex55-btn primary" style="margin-top:8px;" onclick="document.getElementById(\'c398-asig-form\').style.display=\'block\'">+ Agregar cargo / asignación</button></div>':'')+
     '<div class="ex54-sec"><h3>Datos bancarios</h3><div class="ex54-grid">'+
       '<div class="ex54-field"><label>Banco</label><input id="ex56-banco" value="'+ex54Esc(extra.banco||'')+'" placeholder="Ej. Banamex"></div>'+
       '<div class="ex54-field span2"><label>Número de tarjeta</label><input id="ex56-tarjeta" value="'+ex54Esc(extra.numero_tarjeta||'')+'" placeholder="Número de tarjeta para depósitos"></div>'+
@@ -19644,8 +19644,8 @@ function ex54Collect(){
   return {
     telefono:document.getElementById('ex54-telefono').value.trim(),
     direccion:document.getElementById('ex54-direccion').value.trim(),
-    cargo:document.getElementById('ex54-cargo').value,
-    tipo_colaborador:document.getElementById('ex58-tipo').value,
+    cargo:document.getElementById('ex54-cargo')?document.getElementById('ex54-cargo').value:'',
+    tipo_colaborador:document.getElementById('ex58-tipo')?document.getElementById('ex58-tipo').value:'',
     tarifa_hora_extra:parseFloat(document.getElementById('ex54-extra').value)||0,
     emergencia_nombre:document.getElementById('ex54-em-nombre').value.trim(),
     emergencia_parentesco:document.getElementById('ex54-em-parentesco').value.trim(),
@@ -19671,7 +19671,7 @@ function guardarNuevoUsuario(){
   var extra=ex54Collect(), rol=ex54CargoRol(extra.cargo,extra.tipo_colaborador);
   if(!nombre||pin.length!==4){alert('Captura nombre y PIN de 4 dígitos.');return;}
   var btn=document.getElementById('ex54-guardar');btn.disabled=true;btn.textContent='Guardando...';
-  from('usuarios').insert({nombre:nombre,rol:rol,fecha_ingreso:fechaIngreso,fecha_nacimiento:fechaNacimiento,sueldo_base:sueldoBase,activo:true}).then(function(data){
+  from('usuarios').insert({nombre:nombre,rol:rol,fecha_ingreso:fechaIngreso,fecha_nacimiento:fechaNacimiento,sueldo_base:sueldoBase,activo:document.getElementById('ex54-activo').value==='true'}).then(function(data){
     var uid=Array.isArray(data)?data[0].id:data.id;
     ex54Put(uid,extra);
     ex57AddHist(uid,'Alta','—','Activo');
@@ -19704,13 +19704,15 @@ function guardarEditarUsuario(id){
   var fechaNacimiento=document.getElementById('ex54-nacimiento').value||null;
   var sueldoBase=parseFloat(document.getElementById('ex54-sueldo').value)||null;
   var pinRaw=String(document.getElementById('ex54-pin').value||'');
-  var extra=ex54Collect(), rol=ex54CargoRol(extra.cargo,extra.tipo_colaborador);
+  var extra=ex54Collect(), activo=document.getElementById('ex54-activo').value==='true';
+  var anteriorExtra=ex54Get(id);
+  extra.cargo=anteriorExtra.cargo||'';
+  extra.tipo_colaborador=anteriorExtra.tipo_colaborador||'';
   if(!nombre){alert('El nombre es obligatorio.');return;}
-  var anteriorExtra=ex54Get(id), anteriorBase=null;
+  var anteriorBase=null;
   var btn=document.getElementById('ex54-guardar');btn.disabled=true;btn.textContent='Guardando...';
-  from('usuarios').select('rol,sueldo_base,activo').eq('id',id).get().then(function(rr){anteriorBase=(rr&&rr[0])||{};return from('usuarios').eq('id',id).update({nombre:nombre,rol:rol,fecha_ingreso:fechaIngreso,fecha_nacimiento:fechaNacimiento,sueldo_base:sueldoBase});}).then(function(){
-    if((anteriorExtra.tipo_colaborador||(anteriorBase.rol==='labores_eventual'?'Eventual':'Base'))!==extra.tipo_colaborador)ex57AddHist(id,'Tipo de colaborador',anteriorExtra.tipo_colaborador||(anteriorBase.rol==='labores_eventual'?'Eventual':'Base'),extra.tipo_colaborador);
-    if((anteriorExtra.cargo||ROLES[anteriorBase.rol]||'')!==extra.cargo)ex57AddHist(id,'Cargo',anteriorExtra.cargo||ROLES[anteriorBase.rol]||'—',extra.cargo);
+  from('usuarios').select('rol,sueldo_base,activo').eq('id',id).get().then(function(rr){anteriorBase=(rr&&rr[0])||{};return from('usuarios').eq('id',id).update({nombre:nombre,fecha_ingreso:fechaIngreso,fecha_nacimiento:fechaNacimiento,sueldo_base:sueldoBase,activo:activo});}).then(function(){
+    if((anteriorBase.activo!==false)!==activo)ex57AddHist(id,'Estatus del colaborador',anteriorBase.activo===false?'Inactivo':'Activo',activo?'Activo':'Inactivo');
     if((parseFloat(anteriorBase.sueldo_base)||0)!==(parseFloat(sueldoBase)||0))ex57AddHist(id,'Sueldo base diario','$'+(parseFloat(anteriorBase.sueldo_base)||0).toFixed(2),'$'+(parseFloat(sueldoBase)||0).toFixed(2));
     if((parseFloat(anteriorExtra.tarifa_hora_extra)||0)!==(parseFloat(extra.tarifa_hora_extra)||0))ex57AddHist(id,'Hora extra','$'+(parseFloat(anteriorExtra.tarifa_hora_extra)||0).toFixed(2)+'/h','$'+(parseFloat(extra.tarifa_hora_extra)||0).toFixed(2)+'/h');
     ex54Put(id,extra);
