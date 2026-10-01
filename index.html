@@ -16225,9 +16225,16 @@ function c431PresentacionesPlan(o){
   return out;
 }
 function c431GaleraInicio(){c431GaleraCargar();}
+function c434GaleraResumen(parc,pres){
+  return pres.map(function(p){
+    var xs=(parc||[]).filter(function(x){return x.presentacion===p.presentacion&&String(x.detalle||'')===String(p.detalle||'');});
+    var cant=xs.reduce(function(n,x){return n+(Number(x.cantidad)||0);},0),kg=xs.reduce(function(n,x){return n+(Number(x.kg)||0);},0);
+    return '<div style="display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid #edf1ee"><span>'+c225Esc(p.presentacion+(p.detalle?' · '+p.detalle:''))+'</span><strong>'+cant+(p.presentacion==='Tara'?' tara(s)':'')+(kg?' · '+kg.toFixed(2)+' kg':'')+'</strong></div>';
+  }).join('');
+}
 function c431GaleraCargar(){
   var body=document.getElementById('op-body');if(!body)return;
-  body.innerHTML='<div class="c328-tasks-head"><div><h2>Galera</h2><p>Recepción de cosecha y proceso</p></div></div><div class="loading">Cargando jornadas...</div>';
+  body.innerHTML='<div class="c328-tasks-head"><div><h2>Galera</h2><p>Recepción de fruta</p></div></div><div class="loading">Cargando jornadas...</div>';
   var hoy=fechaHoyLocal(),lb=cats.tiposLabor.find(function(l){return l.es_cosecha;});
   if(!lb){body.innerHTML='<div class="empty">No se encontró el catálogo de Cosecha.</div>';return;}
   Promise.all([
@@ -16236,31 +16243,27 @@ function c431GaleraCargar(){
   ]).then(function(r){
     var rows=r[0]||[],rec=r[1]||[],gr={};
     rows.forEach(function(o){var k=c431ClaveActividad(o.fecha_asignacion,o.tabla_id);if(!gr[k])gr[k]=[];gr[k].push(o);});
-    var ks=Object.keys(gr);
-    if(!ks.length){body.innerHTML='<div class="c328-tasks-head"><div><h2>Galera</h2><p>Recepción de cosecha y proceso</p></div></div><div class="empty">No hay jornadas de cosecha programadas para hoy.</div>';return;}
+    var ks=Object.keys(gr);window.C431_GALERA_GRUPOS=gr;window.C431_GALERA_REC=rec;
+    if(!ks.length){body.innerHTML='<div class="c328-tasks-head"><div><h2>Galera</h2><p>Recepción de fruta</p></div></div><div class="empty">No hay actividades de Cosecha programadas para hoy.</div>';return;}
     var html=ks.map(function(k){
-      var g=gr[k],o=g[0],rr=rec.find(function(x){return x.clave_actividad===k;}),tab=o.tabla||{},pl=(cats.plantaciones||[]).find(function(x){return String(x.id)===String(tab.plantacion_id);}),cal=c429EsCalentamientoGrupo(g),pres=c431PresentacionesPlan(o);
-      var parc=(rr&&rr.recepciones)||[],res=pres.map(function(p){
-        var xs=parc.filter(function(x){return x.presentacion===p.presentacion&&String(x.detalle||'')===String(p.detalle||'');});
-        var cant=xs.reduce(function(n,x){return n+(Number(x.cantidad)||0);},0),kg=xs.reduce(function(n,x){return n+(Number(x.kg)||0);},0);
-        return '<div class="hint">'+c225Esc(p.presentacion+(p.detalle?' · '+p.detalle:''))+' · <b>'+cant+(p.presentacion==='Tara'?' tara(s)':'')+(kg?' · '+kg.toFixed(2)+' kg':'')+'</b></div>';
-      }).join('');
-      return '<button type="button" class="form-card" style="width:100%;text-align:left;border-top:4px solid #e91e8c;margin-bottom:10px" onclick="c431AbrirGalera('+JSON.stringify(k).replace(/"/g,'&quot;')+')"><div style="display:flex;justify-content:space-between;gap:8px"><div><strong>'+(cal?'Calentamiento · Limpieza de fruta':'Cosecha')+'</strong><div class="hint">'+c225Esc((pl?pl.nombre+' · ':'')+(tab.nombre||''))+'</div></div><span class="orden-badge '+(rr&&rr.estado==='cerrada'?'badge-completada':'badge-en_proceso')+'">'+(rr&&rr.estado==='cerrada'?'CERRADA':'RECIBIENDO')+'</span></div><div style="margin-top:8px">'+(res||'<div class="hint">Sin recepciones registradas.</div>')+'</div></button>';
+      var g=gr[k],o=g[0],rr=rec.find(function(x){return x.clave_actividad===k;}),tab=o.tabla||{},pl=(cats.plantaciones||[]).find(function(x){return String(x.id)===String(tab.plantacion_id);}),cal=c429EsCalentamientoGrupo(g),pres=c431PresentacionesPlan(o),parc=(rr&&rr.recepciones)||[];
+      var finCampo=g.filter(function(x){return x.estado==='completada';}).length,campo=finCampo===g.length?'Campo ✓ terminado':'Campo '+finCampo+'/'+g.length,gal=rr&&rr.estado==='cerrada'?'Galera ✓ cerrada':rr?'Recibiendo':'Por recibir';
+      return '<button type="button" class="form-card" style="width:100%;text-align:left;border-top:4px solid #e91e8c;margin-bottom:12px;padding:14px" onclick="c431AbrirGalera('+JSON.stringify(k).replace(/"/g,'&quot;')+')"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><div style="font-size:.72rem;font-weight:800;color:#8b5b73;letter-spacing:.04em">'+(cal?'LIMPIEZA DE FRUTA':'COSECHA')+'</div><strong style="font-size:1.05rem">'+c225Esc((pl?pl.nombre+' · ':'')+(tab.nombre||''))+'</strong><div class="hint" style="margin-top:4px">'+campo+' · '+gal+'</div></div><span class="orden-badge '+(rr&&rr.estado==='cerrada'?'badge-completada':'badge-en_proceso')+'">'+(rr&&rr.estado==='cerrada'?'CERRADA':rr?'RECIBIENDO':'ABIERTA')+'</span></div><div style="margin-top:10px">'+(c434GaleraResumen(parc,pres)||'<div class="hint">Aún no hay fruta registrada.</div>')+'</div></button>';
     }).join('');
-    window.C431_GALERA_GRUPOS=gr;window.C431_GALERA_REC=rec;
-    body.innerHTML='<div class="c328-tasks-head"><div><h2>Galera</h2><p>Recepción en paralelo con Campo</p></div></div>'+html;
+    body.innerHTML='<div class="c328-tasks-head"><div><h2>Galera</h2><p>Recepción en paralelo con Campo</p></div></div><div class="c336-info" style="margin-bottom:12px">Selecciona la actividad conforme llegue fruta a Galera. Puedes registrar varias recepciones durante la jornada.</div>'+html;
   }).catch(function(e){body.innerHTML='<div class="empty">No fue posible cargar Galera: '+c225Esc(e.message)+'</div>';});
 }
 function c431AbrirGalera(k){
   var g=(window.C431_GALERA_GRUPOS||{})[k]||[];if(!g.length)return;
-  var o=g[0],tab=o.tabla||{},pl=(cats.plantaciones||[]).find(function(x){return String(x.id)===String(tab.plantacion_id);}),pres=c431PresentacionesPlan(o),rr=(window.C431_GALERA_REC||[]).find(function(x){return x.clave_actividad===k;})||null,parc=(rr&&rr.recepciones)||[],cerrada=rr&&rr.estado==='cerrada';
+  var o=g[0],tab=o.tabla||{},pl=(cats.plantaciones||[]).find(function(x){return String(x.id)===String(tab.plantacion_id);}),pres=c431PresentacionesPlan(o),rr=(window.C431_GALERA_REC||[]).find(function(x){return x.clave_actividad===k;})||null,parc=(rr&&rr.recepciones)||[],cerrada=rr&&rr.estado==='cerrada',cal=c429EsCalentamientoGrupo(g);
   C431_GALERA_ACTIVIDAD={clave:k,grupo:g,orden:o,registro:rr,recepciones:parc.slice()};
-  var body=document.getElementById('op-body');
+  var body=document.getElementById('op-body'),finCampo=g.filter(function(x){return x.estado==='completada';}).length;
   var cards=pres.map(function(p,i){
     var xs=parc.filter(function(x){return x.presentacion===p.presentacion&&String(x.detalle||'')===String(p.detalle||'');}),cant=xs.reduce(function(n,x){return n+(Number(x.cantidad)||0);},0),kg=xs.reduce(function(n,x){return n+(Number(x.kg)||0);},0),esT=p.presentacion==='Tara';
-    return '<div class="form-card"><strong>'+c225Esc(p.presentacion+(p.detalle?' · '+p.detalle:''))+'</strong><div class="hint" style="margin:5px 0 10px">Acumulado: '+cant+(esT?' tara(s)':' unidad(es)')+(kg?' · '+kg.toFixed(2)+' kg':'')+'</div>'+(cerrada?'':'<div style="display:grid;grid-template-columns:1fr '+(esT?'1fr ':'')+'auto;gap:8px"><input id="c431-cant-'+i+'" type="number" min="0" step="1" placeholder="'+(esT?'Taras':'Cantidad')+'">'+(esT?'<input id="c431-kg-'+i+'" type="number" min="0" step=".01" placeholder="Peso neto kg">':'')+'<button class="btn-primary" style="width:auto" onclick="c431AgregarParcial('+i+')">+ Registrar</button></div>')+'</div>';
+    return '<div class="form-card" style="border-top:4px solid '+(esT?'#6f238d':'#23824d')+'"><div style="display:flex;justify-content:space-between;gap:10px"><div><div style="font-size:.72rem;font-weight:800;color:#68746d">RECEPCIÓN</div><strong style="font-size:1.05rem">'+c225Esc(p.presentacion+(p.detalle?' · '+p.detalle:''))+'</strong></div><div style="text-align:right"><strong style="font-size:1.15rem">'+cant+'</strong><div class="hint">'+(esT?'taras':'unidades')+(kg?' · '+kg.toFixed(2)+' kg':'')+'</div></div></div>'+(cerrada?'':'<div style="display:grid;grid-template-columns:1fr '+(esT?'1fr ':'')+'auto;gap:8px;margin-top:12px"><input id="c431-cant-'+i+'" type="number" min="0" step="1" placeholder="'+(esT?'Taras':'Cantidad')+'">'+(esT?'<input id="c431-kg-'+i+'" type="number" min="0" step=".01" placeholder="Kg netos">':'')+'<button class="btn-primary" style="width:auto" onclick="c431AgregarParcial('+i+')">Registrar</button></div>')+'</div>';
   }).join('');
-  body.innerHTML='<div class="step-label">⚖️ GALERA · RECEPCIÓN</div><div class="step-title">'+(c429EsCalentamientoGrupo(g)?'Limpieza de fruta':'Cosecha')+'</div><p class="hint">📍 '+c225Esc((pl?pl.nombre+' · ':'')+(tab.nombre||''))+' · recepción en paralelo con Campo</p>'+cards+'<div class="c336-info">Registra cada llegada conforme entra a Galera. El cierre consolida la producción real y termina la jornada completa.</div><div class="nav-row"><button class="btn-back" onclick="c431GaleraCargar()">← Regresar</button>'+(cerrada?'<button class="btn-next" disabled>✓ Recepción cerrada</button>':'<button class="btn-next" onclick="c431CerrarGalera()" style="background:var(--tierra)">✓ Cerrar limpieza / cosecha</button>')+'</div>';
+  var hist=parc.length?'<div class="form-card"><strong>Movimientos recibidos</strong>'+parc.slice().reverse().map(function(x){var tm=x.registrado_en?new Date(x.registrado_en).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}):'';return '<div style="display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid #edf1ee"><span>'+c225Esc(x.presentacion+(x.detalle?' · '+x.detalle:''))+'<div class="hint">'+tm+'</div></span><strong>'+Number(x.cantidad||0)+(x.presentacion==='Tara'?' tara(s)':'')+(Number(x.kg)>0?' · '+Number(x.kg).toFixed(2)+' kg':'')+'</strong></div>';}).join('')+'</div>':'';
+  body.innerHTML='<div class="step-label">⚖️ GALERA · RECEPCIÓN</div><div class="step-title">'+(cal?'Limpieza de fruta':'Cosecha')+'</div><p class="hint">📍 '+c225Esc((pl?pl.nombre+' · ':'')+(tab.nombre||''))+'</p><div class="form-card" style="display:flex;justify-content:space-between;gap:10px"><div><strong>Campo</strong><div class="hint">'+finCampo+' de '+g.length+' participaciones terminadas</div></div><div style="text-align:right"><strong>Galera</strong><div class="hint">'+(cerrada?'Recepción cerrada':'Recibiendo en paralelo')+'</div></div></div>'+cards+hist+'<div class="c336-info">Cada registro corresponde a una llegada de fruta. Puedes continuar recibiendo aunque Campo siga trabajando.</div><div class="nav-row"><button class="btn-back" onclick="c431GaleraCargar()">← Regresar</button>'+(cerrada?'<button class="btn-next" disabled>✓ Recepción cerrada</button>':'<button class="btn-next" onclick="c431CerrarGalera()" style="background:var(--tierra)">✓ Cerrar '+(cal?'limpieza':'recepción')+'</button>')+'</div>';
 }
 function c431GuardarRecepcion(cerrar){
   var a=C431_GALERA_ACTIVIDAD;if(!a)return Promise.reject(new Error('Actividad no disponible'));
@@ -16278,7 +16281,9 @@ function c431AgregarParcial(i){
 }
 function c431CerrarGalera(){
   var a=C431_GALERA_ACTIVIDAD;if(!a||!a.recepciones.length){alert('Registra al menos una recepción antes de cerrar.');return;}
-  if(!confirm('¿Cerrar la recepción de Galera?\n\nLa producción quedará consolidada y la jornada completa pasará a Terminada.'))return;
+  var campoTerminado=(a.grupo||[]).length>0&&(a.grupo||[]).every(function(x){return x.estado==='completada';});
+  if(!campoTerminado){alert('Campo todavía tiene participaciones activas. Puedes seguir registrando recepciones, pero el cierre final de Galera se habilita cuando Campo termine.');return;}
+  if(!confirm('¿Cerrar la recepción de Galera?\n\nConfirma que ya no queda fruta pendiente por recibir. La actividad completa pasará a Terminada.'))return;
   c431GuardarRecepcion(true).then(function(){showToast('✓ Galera cerrada · producción consolidada');c431GaleraCargar();}).catch(function(e){alert('No se pudo cerrar: '+e.message);});
 }
 
