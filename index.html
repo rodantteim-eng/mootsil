@@ -2991,7 +2991,7 @@ function c231Icon(name, cls){
 <div class="screen" id="screen-operario">
 <div class="op-master-header">
 <div class="op-header-top">
-<div class="op-header-id"><h1>Mootsil | Labores</h1><div class="op-header-sub" id="op-nombre">Colaborador</div></div>
+<div class="op-header-id"><h1><span id="mootsil-app-title">Mootsil | Labores</span></h1><div class="op-header-sub" id="op-nombre">Colaborador</div></div>
 <div class="op-header-actions">
 <button class="op-btn-reportar" onclick="renderCentroReportes()" title="Reportar">
 <span class="op-btn-reportar-ic"><svg fill="none" stroke="#fff" stroke-linecap="round" stroke-width="1.8" viewbox="0 0 24 24"><path d="M12 4v1.2M6.5 6.5l.9.9M17.5 6.5l-.9.9M4 11.5h1.3M18.7 11.5h1.3"></path><path d="M7 17.5c0-3.9 2.2-7 5-7s5 3.1 5 7H7z" fill="#fff" stroke="none"></path><rect fill="#fff" height="2.3" rx="1" stroke="none" width="11.4" x="6.3" y="17.5"></rect></svg></span>
@@ -3552,6 +3552,15 @@ function c440GuardarRolAcceso(uid,rol){
     else localStorage.removeItem('mootsil_cargo_activo_'+String(uid));
   }catch(e){}
 }
+// C443 — encabezado según cargo operativo activo
+function c443ActualizarTituloApp(){
+  var el=document.getElementById('mootsil-app-title');
+  if(!el||!usuario)return;
+  var r=String(usuario.rol||'').toLowerCase();
+  if(r==='galerista')el.textContent='Mootsil | Galera';
+  else if(r==='auxiliar_galera')el.textContent='Mootsil | Auxiliar de Galera';
+  else el.textContent='Mootsil | Labores';
+}
 function verificarPin(){
   setErr('Verificando...');
   var nip=pin;
@@ -3570,6 +3579,7 @@ function verificarPin(){
     var rolCargo=c440RolAccesoGuardado(u.id);
     if(rolCargo)u.rol=rolCargo;
     usuario=u;
+    c443ActualizarTituloApp();
     setErr('Cargando...');
     return cargarCatalogos().then(function(){
       setErr('');
