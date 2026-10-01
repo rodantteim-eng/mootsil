@@ -3540,6 +3540,18 @@ function pinBorrar(){pin=pin.slice(0,-1);setErr('');dibujarPin();}
 function dibujarPin(){for(var i=0;i<4;i++){var el=document.getElementById('d'+i);if(i<pin.length){el.textContent='•';el.classList.add('filled');}else{el.textContent='';el.classList.remove('filled');}}}
 function setErr(m){document.getElementById('pin-error').textContent=m;}
 
+// C440 — acceso operativo por cargo activo.
+// La asignación es la fuente de verdad del acceso; el rol histórico de usuarios
+// queda sólo como compatibilidad. El override se guarda por colaborador.
+function c440RolAccesoGuardado(uid){
+  try{return localStorage.getItem('mootsil_cargo_activo_'+String(uid))||'';}catch(e){return '';}
+}
+function c440GuardarRolAcceso(uid,rol){
+  try{
+    if(rol)localStorage.setItem('mootsil_cargo_activo_'+String(uid),rol);
+    else localStorage.removeItem('mootsil_cargo_activo_'+String(uid));
+  }catch(e){}
+}
 function verificarPin(){
   setErr('Verificando...');
   var nip=pin;
@@ -3555,6 +3567,8 @@ function verificarPin(){
   }
 
   function completarEntrada(u){
+    var rolCargo=c440RolAccesoGuardado(u.id);
+    if(rolCargo)u.rol=rolCargo;
     usuario=u;
     setErr('Cargando...');
     return cargarCatalogos().then(function(){
@@ -19763,8 +19777,10 @@ function c398GuardarAsignacion(id){
     r=Array.isArray(r)?r[0]:r;
     if(!r||r.ok!==true)throw new Error((r&&r.mensaje)||'No se pudo guardar.');
     ex57AddHist(id,'Asignación de cargo','—',cargo+' · '+tipo+' · '+c398FmtEstado(estado).t);
+    var rolAcceso=ex54CargoRol(cargo,tipo);
+    if(estado==='activo')c440GuardarRolAcceso(id,rolAcceso);
     var aplicarAcceso=(estado==='activo')
-      ? from('usuarios').eq('id',id).update({rol:ex54CargoRol(cargo,tipo)})
+      ? from('usuarios').eq('id',id).update({rol:rolAcceso}).catch(function(){return null;})
       : Promise.resolve();
     return aplicarAcceso.then(function(){
       document.getElementById('c398-asig-form').style.display='none';
@@ -19782,7 +19798,9 @@ function c398CambiarEstado(uid,aid,estado,fechaFin){
         rows=Array.isArray(rows)?rows:[];
         var a=rows.find(function(x){return String(x.id)===String(aid);});
         if(!a)return;
-        return from('usuarios').eq('id',uid).update({rol:ex54CargoRol(a.cargo,a.tipo_colaborador||'Base')});
+        var rolAcceso=ex54CargoRol(a.cargo,a.tipo_colaborador||'Base');
+        c440GuardarRolAcceso(uid,rolAcceso);
+        return from('usuarios').eq('id',uid).update({rol:rolAcceso}).catch(function(){return null;});
       }).then(function(){c398CargarAsignaciones(uid);showToast('✅ Asignación activa · acceso actualizado');});
     }
     c398CargarAsignaciones(uid); showToast('✅ Asignación actualizada');
