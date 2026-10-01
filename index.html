@@ -19301,7 +19301,7 @@ function ex54CargoRol(cargo,tipo){
   if(cargo==='Labores'&&tipo==='Eventual')return 'labores_eventual';
   return cargo==='Ingeniero'?'ingeniero':
     cargo==='Galerista'?'galerista':
-    cargo==='Auxiliar de Galera'?'operario':
+    cargo==='Auxiliar de Galera'?'auxiliar_galera':
     cargo==='Encargado'?'encargado':
     cargo==='Contador'?'contador':'operario';
 }
@@ -19617,7 +19617,7 @@ function ex54FormHtml(mode,id,base,extra){
       '<div class="ex54-field"><label>Hora extra ($/h)</label><input type="number" min="0" step="1" id="ex54-extra" value="'+ex54Esc(extra.tarifa_hora_extra==null?'':extra.tarifa_hora_extra)+'" placeholder="Ej. 70"></div>'+
       '<div class="ex54-field"><label>PIN (4 dígitos)'+(isEdit?' · opcional':'')+'</label><input type="number" min="0" max="9999" id="ex54-pin" placeholder="'+(isEdit?'Dejar vacío para conservar':'1234')+'"></div>'+
     '</div></div>'+
-    (isEdit?'<div class="ex54-sec"><h3>Cargos y asignaciones</h3><div class="ex55-mini" style="margin-bottom:8px;">Un colaborador puede tener varios cargos. Activa o desactiva cada cargo de forma independiente; Finalizado conserva el historial del periodo.</div><div id="c398-asignaciones"><div class="loading">Cargando asignaciones...</div></div><div id="c398-asig-form" style="display:none;margin-top:10px;padding:12px;border:1px solid #dfe8e2;border-radius:12px;background:#fbfdfb;"><div class="ex54-grid"><div class="ex54-field"><label>Cargo</label><select id="c398-cargo">'+cargos.map(function(c){return '<option>'+c+'</option>';}).join('')+'</select></div><div class="ex54-field"><label>Tipo</label><select id="c398-tipo"><option>Base</option><option>Eventual</option><option>Temporada</option></select></div><div class="ex54-field"><label>Estatus</label><select id="c398-estado"><option value="activo">Activo</option><option value="inactivo">Inactivo</option><option value="incorporacion">En incorporación</option></select></div><div class="ex54-field"><label>Fecha de inicio</label><input type="date" id="c398-inicio" value="'+fechaHoyLocal()+'"></div></div><div style="display:flex;gap:8px;margin-top:10px;"><button type="button" class="ex55-btn primary" onclick="c398GuardarAsignacion(\''+id+'\')">Guardar asignación</button><button type="button" class="ex55-btn" onclick="document.getElementById(\'c398-asig-form\').style.display=\'none\'">Cancelar</button></div></div><button type="button" class="ex55-btn primary" style="margin-top:8px;" onclick="document.getElementById(\'c398-asig-form\').style.display=\'block\'">+ Agregar cargo / asignación</button></div>':'')+
+    (isEdit?'<div class="ex54-sec"><h3>Cargos y asignaciones</h3><div class="ex55-mini" style="margin-bottom:8px;">Un colaborador puede tener varios cargos. Cada cargo puede estar Activo o Inactivo de forma independiente; Finalizado conserva el historial del periodo.</div><div id="c398-asignaciones"><div class="loading">Cargando asignaciones...</div></div><div id="c398-asig-form" style="display:none;margin-top:10px;padding:12px;border:1px solid #dfe8e2;border-radius:12px;background:#fbfdfb;"><div class="ex54-grid"><div class="ex54-field"><label>Cargo</label><select id="c398-cargo">'+cargos.map(function(c){return '<option>'+c+'</option>';}).join('')+'</select></div><div class="ex54-field"><label>Tipo</label><select id="c398-tipo"><option>Base</option><option>Eventual</option><option>Temporada</option></select></div><div class="ex54-field"><label>Estatus</label><select id="c398-estado"><option value="activo">Activo</option><option value="inactivo">Inactivo</option><option value="incorporacion">En incorporación</option></select></div><div class="ex54-field"><label>Fecha de inicio</label><input type="date" id="c398-inicio" value="'+fechaHoyLocal()+'"></div></div><div style="display:flex;gap:8px;margin-top:10px;"><button type="button" class="ex55-btn primary" onclick="c398GuardarAsignacion(\''+id+'\')">Guardar asignación</button><button type="button" class="ex55-btn" onclick="document.getElementById(\'c398-asig-form\').style.display=\'none\'">Cancelar</button></div></div><button type="button" class="ex55-btn primary" style="margin-top:8px;" onclick="document.getElementById(\'c398-asig-form\').style.display=\'block\'">+ Agregar cargo / asignación</button></div>':'')+
     '<div class="ex54-sec"><h3>Datos bancarios</h3><div class="ex54-grid">'+
       '<div class="ex54-field"><label>Banco</label><input id="ex56-banco" value="'+ex54Esc(extra.banco||'')+'" placeholder="Ej. Banamex"></div>'+
       '<div class="ex54-field span2"><label>Número de tarjeta</label><input id="ex56-tarjeta" value="'+ex54Esc(extra.numero_tarjeta||'')+'" placeholder="Número de tarjeta para depósitos"></div>'+
@@ -19791,7 +19791,8 @@ function c398GuardarAsignacion(id){
 }
 function c398CambiarEstado(uid,aid,estado,fechaFin){
   return rpc('c398_admin_cambiar_asignacion',{p_admin_id:usuario.id,p_admin_pin:String(pin||''),p_asignacion_id:aid,p_estado:estado,p_fecha_fin:fechaFin||null}).then(function(r){
-    r=Array.isArray(r)?r[0]:r;if(!r||r.ok!==true)throw new Error((r&&r.mensaje)||'No se pudo actualizar.');
+    r=Array.isArray(r)?r[0]:r;
+    if(!r||r.ok!==true)throw new Error((r&&r.mensaje)||'No se pudo actualizar.');
     ex57AddHist(uid,'Estatus de cargo','—',c398FmtEstado(estado).t);
     if(estado==='activo'){
       return rpc('c398_admin_ver_asignaciones',{p_admin_id:usuario.id,p_admin_pin:String(pin||''),p_usuario_id:uid}).then(function(rows){
@@ -19801,10 +19802,26 @@ function c398CambiarEstado(uid,aid,estado,fechaFin){
         var rolAcceso=ex54CargoRol(a.cargo,a.tipo_colaborador||'Base');
         c440GuardarRolAcceso(uid,rolAcceso);
         return from('usuarios').eq('id',uid).update({rol:rolAcceso}).catch(function(){return null;});
-      }).then(function(){c398CargarAsignaciones(uid);showToast('✅ Asignación activa · acceso actualizado');});
+      }).then(function(){c398CargarAsignaciones(uid);showToast('✅ Cargo activo · acceso actualizado');});
     }
-    c398CargarAsignaciones(uid); showToast('✅ Asignación actualizada');
-  }).catch(function(e){alert('No se pudo actualizar la asignación.\n\n'+(e.message||e));});
+    if(estado==='inactivo'||estado==='finalizado'){
+      return rpc('c398_admin_ver_asignaciones',{p_admin_id:usuario.id,p_admin_pin:String(pin||''),p_usuario_id:uid}).then(function(rows){
+        rows=Array.isArray(rows)?rows:[];
+        var activas=rows.filter(function(a){return a.estado==='activo';});
+        if(activas.length===0)c440GuardarRolAcceso(uid,'');
+        else if(activas.length===1)c440GuardarRolAcceso(uid,ex54CargoRol(activas[0].cargo,activas[0].tipo_colaborador||'Base'));
+        c398CargarAsignaciones(uid);
+        showToast('✅ Asignación actualizada');
+        return true;
+      });
+    }
+    c398CargarAsignaciones(uid);
+    showToast('✅ Asignación actualizada');
+    return true;
+  }).catch(function(e){
+    alert('No se pudo actualizar la asignación.\n\n'+(e.message||e));
+    throw e;
+  });
 }
 function c400CambiarEstadoSelect(uid,aid,sel,anterior){
   var nuevo=sel.value;
