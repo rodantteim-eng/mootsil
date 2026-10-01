@@ -19763,9 +19763,14 @@ function c398GuardarAsignacion(id){
     r=Array.isArray(r)?r[0]:r;
     if(!r||r.ok!==true)throw new Error((r&&r.mensaje)||'No se pudo guardar.');
     ex57AddHist(id,'Asignación de cargo','—',cargo+' · '+tipo+' · '+c398FmtEstado(estado).t);
-    document.getElementById('c398-asig-form').style.display='none';
-    c398CargarAsignaciones(id);
-    showToast('✅ Cargo guardado');
+    var aplicarAcceso=(estado==='activo')
+      ? from('usuarios').eq('id',id).update({rol:ex54CargoRol(cargo,tipo)})
+      : Promise.resolve();
+    return aplicarAcceso.then(function(){
+      document.getElementById('c398-asig-form').style.display='none';
+      c398CargarAsignaciones(id);
+      showToast('✅ Cargo guardado'+(estado==='activo'?' · acceso actualizado':''));
+    });
   }).catch(function(e){alert('No se pudo guardar la asignación.\n\n'+(e.message||e));});
 }
 function c398CambiarEstado(uid,aid,estado,fechaFin){
