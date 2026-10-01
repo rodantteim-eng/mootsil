@@ -19756,7 +19756,8 @@ function c398CargarAsignaciones(id){
 }
 function c398GuardarAsignacion(id){
   var cargo=document.getElementById('c398-cargo').value, tipo=document.getElementById('c398-tipo').value,
-      estado=document.getElementById('c398-estado').value, ini=document.getElementById('c398-inicio').value||fechaHoyLocal(), fin=document.getElementById('c398-fin').value||null;
+      estado=document.getElementById('c398-estado').value, ini=document.getElementById('c398-inicio').value||fechaHoyLocal(),
+      fin=(document.getElementById('c398-fin')&&document.getElementById('c398-fin').value)||null;
   if(fin && fin<ini){alert('La fecha de finalización no puede ser anterior al inicio.');return;}
   rpc('c398_admin_agregar_asignacion',{p_admin_id:usuario.id,p_admin_pin:String(pin||''),p_usuario_id:id,p_cargo:cargo,p_tipo_colaborador:tipo,p_estado:estado,p_fecha_inicio:ini,p_fecha_fin:fin}).then(function(r){
     r=Array.isArray(r)?r[0]:r;
