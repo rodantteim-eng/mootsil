@@ -19287,6 +19287,7 @@ function ex54CargoRol(cargo,tipo){
   if(cargo==='Labores'&&tipo==='Eventual')return 'labores_eventual';
   return cargo==='Ingeniero'?'ingeniero':
     cargo==='Galerista'?'galerista':
+    cargo==='Auxiliar de Galera'?'operario':
     cargo==='Encargado'?'encargado':
     cargo==='Contador'?'contador':'operario';
 }
@@ -19758,13 +19759,30 @@ function c398GuardarAsignacion(id){
   rpc('c398_admin_agregar_asignacion',{p_admin_id:usuario.id,p_admin_pin:String(pin||''),p_usuario_id:id,p_cargo:cargo,p_tipo_colaborador:tipo,p_estado:estado,p_fecha_inicio:ini,p_fecha_fin:fin}).then(function(r){
     r=Array.isArray(r)?r[0]:r;if(!r||r.ok!==true)throw new Error((r&&r.mensaje)||'No se pudo guardar.');
     ex57AddHist(id,'Asignación de cargo','—',cargo+' · '+tipo+' · '+c398FmtEstado(estado).t);
-    document.getElementById('c398-asig-form').style.display='none'; c398CargarAsignaciones(id); showToast('✅ Cargo agregado al expediente');
+    var acceso=ex54CargoRol(cargo,tipo);
+    var sincronizar=(estado==='activo')
+      ? from('usuarios').eq('id',id).update({rol:acceso})
+      : Promise.resolve();
+    return sincronizar.then(function(){
+      document.getElementById('c398-asig-form').style.display='none';
+      c398CargarAsignaciones(id);
+      showToast('✅ Cargo agregado al expediente'+(estado==='activo'?' · acceso actualizado':''));
+    });
   }).catch(function(e){alert('No se pudo guardar la asignación.\n\n'+(e.message||e));});
 }
 function c398CambiarEstado(uid,aid,estado,fechaFin){
   return rpc('c398_admin_cambiar_asignacion',{p_admin_id:usuario.id,p_admin_pin:String(pin||''),p_asignacion_id:aid,p_estado:estado,p_fecha_fin:fechaFin||null}).then(function(r){
     r=Array.isArray(r)?r[0]:r;if(!r||r.ok!==true)throw new Error((r&&r.mensaje)||'No se pudo actualizar.');
-    ex57AddHist(uid,'Estatus de cargo','—',c398FmtEstado(estado).t); c398CargarAsignaciones(uid); showToast('✅ Asignación actualizada');
+    ex57AddHist(uid,'Estatus de cargo','—',c398FmtEstado(estado).t);
+    if(estado==='activo'){
+      return rpc('c398_admin_ver_asignaciones',{p_admin_id:usuario.id,p_admin_pin:String(pin||''),p_usuario_id:uid}).then(function(rows){
+        rows=Array.isArray(rows)?rows:[];
+        var a=rows.find(function(x){return String(x.id)===String(aid);});
+        if(!a)return;
+        return from('usuarios').eq('id',uid).update({rol:ex54CargoRol(a.cargo,a.tipo_colaborador||'Base')});
+      }).then(function(){c398CargarAsignaciones(uid);showToast('✅ Asignación activa · acceso actualizado');});
+    }
+    c398CargarAsignaciones(uid); showToast('✅ Asignación actualizada');
   }).catch(function(e){alert('No se pudo actualizar la asignación.\n\n'+(e.message||e));});
 }
 function c400CambiarEstadoSelect(uid,aid,sel,anterior){
