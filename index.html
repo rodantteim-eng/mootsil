@@ -13286,33 +13286,43 @@ function vc401Menu(){
 function vc401CosechasTerminadas(){
  var lb=cats.tiposLabor.find(function(l){return l.es_cosecha;});
  if(!lb)return Promise.resolve([]);
- return from('ordenes_trabajo').select('id,fecha_asignacion,estado,tabla_id,tabla:tablas(nombre,plantacion_id)').eq('tipo_labor_id',lb.id).eq('estado','completada').order('fecha_asignacion',{ascending:false}).get().then(function(rows){
-   var g={}; (rows||[]).forEach(function(o){var k=o.fecha_asignacion+'|'+o.tabla_id;if(!g[k])g[k]=[];g[k].push(o);});
-   return Object.keys(g).map(function(k){var a=g[k],o=a[0],p=cats.plantaciones.find(function(x){return o.tabla&&String(x.id)===String(o.tabla.plantacion_id);});return {clave:k,fecha:o.fecha_asignacion,tabla_id:o.tabla_id,tabla:o.tabla?o.tabla.nombre:'',plantacion:p?p.nombre:'',ordenes:a.map(function(x){return x.id;})};});
+ return Promise.all([
+   from('ordenes_trabajo').select('id,fecha_asignacion,estado,tabla_id,notas_encargado,tabla:tablas(nombre,plantacion_id)').eq('tipo_labor_id',lb.id).order('fecha_asignacion',{ascending:false}).get(),
+   from('cosecha_recepciones').select('*').eq('estado','cerrada').order('fecha',{ascending:false}).get()
+ ]).then(function(rr){
+   var rows=rr[0]||[], rec=rr[1]||[], g={};
+   rows.forEach(function(o){var k=o.fecha_asignacion+'|'+o.tabla_id;if(!g[k])g[k]=[];g[k].push(o);});
+   var out=[];
+   rec.forEach(function(r){
+     var a=g[r.clave_actividad]||[],o=a[0]; if(!o)return;
+     var p=cats.plantaciones.find(function(x){return o.tabla&&String(x.id)===String(o.tabla.plantacion_id);});
+     var plan=c428PlanCosecha(o)||{}, destinos=plan.destinos||[], mov=r.recepciones||[];
+     var keys={};
+     mov.forEach(function(x){var k=String(x.presentacion||'')+'|'+String(x.detalle||'');if(!keys[k])keys[k]={presentacion:x.presentacion||'',detalle:x.detalle||'',cantidad:0,kg:0};keys[k].cantidad+=Number(x.cantidad)||0;keys[k].kg+=Number(x.kg)||0;});
+     Object.keys(keys).forEach(function(k){var q=keys[k],d=destinos.find(function(z){return String(z.presentacion||'')===String(q.presentacion||'')&&(String(z.detalle||z.capacidad||'')===String(q.detalle||'')||!q.detalle);})||{};
+       out.push({clave:r.clave_actividad+'|'+k,cosecha_clave:r.clave_actividad,fecha:o.fecha_asignacion,tabla_id:o.tabla_id,tabla:o.tabla?o.tabla.nombre:'',plantacion:p?p.nombre:'',presentacion:q.presentacion,detalle:q.detalle,cantidad:q.cantidad,kg:q.kg,comprador:d.comprador_nombre||d.comprador||d.cliente||'',tipo:d.tipo||'',ordenes:a.map(function(x){return x.id;})});
+     });
+   });
+   return out;
  });
 }
 function vc401NuevaVenta(){
- var b=document.getElementById('enc-body'); b.innerHTML=vc401Head('Nueva venta','La venta queda ligada a una cosecha terminada y conserva su trazabilidad.')+'<div class="form-card"><div class="loading">Cargando cosechas y clientes...</div></div>';
+ var b=document.getElementById('enc-body'); b.innerHTML=vc401Head('Nueva venta','La venta parte de la producción consolidada y cerrada por Galera.')+'<div class="form-card"><div class="loading">Cargando producción disponible y clientes...</div></div>';
  Promise.all([vc401CosechasTerminadas(),from('clientes_cosecha').select('*').eq('activo',true).order('nombre').get()]).then(function(rr){
    var cos=rr[0]||[], cli=rr[1]||[];
-   b.innerHTML=vc401Head('Nueva venta','Cosecha → cliente → cajas/precio → contado o crédito.')+
+   b.innerHTML=vc401Head('Nueva venta','Galera cerrada → producción real → cliente → precio → cobro.')+
    '<div class="form-card" style="border-top:4px solid #23824d">'+
-   '<div class="form-group"><label>Cosecha terminada</label><select id="vc401-cosecha"><option value="">Seleccionar cosecha...</option>'+cos.map(function(c){return '<option value="'+vc401Esc(c.clave)+'" data-p="'+vc401Esc(c.plantacion)+'" data-t="'+vc401Esc(c.tabla)+'" data-f="'+vc401Esc(c.fecha)+'">'+vc401Esc(c.fecha+' · '+c.plantacion+' · '+c.tabla)+'</option>';}).join('')+'</select><p class="hint">Sólo aparecen cosechas terminadas. Las cajas reales se capturan aquí hasta integrar pesaje/empaque.</p></div>'+
-   '<div style="display:grid;grid-template-columns:2fr 1fr;gap:10px"><div class="form-group"><label>Cliente / comercializadora</label><select id="vc401-cliente"><option value="">Seleccionar cliente...</option>'+cli.map(function(c){return '<option value="'+c.id+'">'+vc401Esc(c.nombre)+'</option>';}).join('')+'</select></div><div class="form-group"><label>Fecha de venta</label><input id="vc401-fecha" type="date" value="'+fechaHoyLocal()+'"></div></div>'+
-   '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px"><div class="form-group"><label>Cajas vendidas</label><input id="vc401-cajas" type="number" min="1" step="1"></div><div class="form-group"><label>Precio por caja</label><input id="vc401-precio" type="number" min="0" step=".01"></div><div class="form-group"><label>Moneda</label><select id="vc401-moneda"><option>MXN</option><option>USD</option></select></div><div class="form-group"><label>Condición</label><select id="vc401-cond"><option value="contado">Contado</option><option value="credito">Crédito</option></select></div></div>'+
+   '<div class="form-group"><label>Producción disponible de Galera</label><select id="vc401-cosecha"><option value="">Seleccionar partida...</option>'+cos.map(function(c){var u=c.presentacion==='Tara'?(c.cantidad+' tara(s) · '+Number(c.kg||0).toFixed(2)+' kg'):(c.cantidad+' '+(c.presentacion||'unidades'));return '<option value="'+vc401Esc(c.clave)+'" data-cosecha="'+vc401Esc(c.cosecha_clave)+'" data-p="'+vc401Esc(c.plantacion)+'" data-t="'+vc401Esc(c.tabla)+'" data-f="'+vc401Esc(c.fecha)+'" data-pres="'+vc401Esc(c.presentacion)+'" data-det="'+vc401Esc(c.detalle)+'" data-cant="'+Number(c.cantidad||0)+'" data-kg="'+Number(c.kg||0)+'">'+vc401Esc(c.fecha+' · '+c.plantacion+' · '+c.tabla+' · '+c.presentacion+(c.detalle?' '+c.detalle:'')+' · '+u)+'</option>';}).join('')+'</select><p class="hint">Sólo aparece producción cuya recepción fue cerrada por Galera.</p></div>'+
+   '<div id="vc452-prod" class="resumen-card" style="margin:10px 0"><div class="hint">Selecciona una partida para ver la producción consolidada.</div></div>'+
+   '<div style="display:grid;grid-template-columns:2fr 1fr;gap:10px"><div class="form-group"><label>Cliente / comprador</label><select id="vc401-cliente"><option value="">Seleccionar cliente...</option>'+cli.map(function(c){return '<option value="'+c.id+'">'+vc401Esc(c.nombre)+'</option>';}).join('')+'</select></div><div class="form-group"><label>Fecha de venta</label><input id="vc401-fecha" type="date" value="'+fechaHoyLocal()+'"></div></div>'+
+   '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px"><div class="form-group"><label>Cantidad a vender</label><input id="vc401-cajas" type="number" min="0.01" step=".01"></div><div class="form-group"><label>Precio unitario</label><input id="vc401-precio" type="number" min="0" step=".01"></div><div class="form-group"><label>Moneda</label><select id="vc401-moneda"><option>MXN</option><option>USD</option></select></div><div class="form-group"><label>Condición</label><select id="vc401-cond"><option value="contado">Contado</option><option value="credito">Crédito</option></select></div></div>'+
    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div class="form-group"><label>Factura / referencia</label><input id="vc401-factura" placeholder="Opcional"></div><div class="form-group"><label>Observaciones</label><input id="vc401-notas" placeholder="Opcional"></div></div>'+
-   '<div class="resumen-card" style="margin:12px 0"><div class="resumen-row"><span class="resumen-key">Importe</span><span class="resumen-val" id="vc401-total">MXN $0.00</span></div></div>'+
-   '<button class="btn-primary" id="vc401-guardar">Registrar venta</button></div>';
+   '<div class="resumen-card" style="margin:12px 0"><div class="resumen-row"><span class="resumen-key">Importe</span><span class="resumen-val" id="vc401-total">MXN $0.00</span></div></div><button class="btn-primary" id="vc401-guardar">Registrar venta</button></div>';
+   var sel=document.getElementById('vc401-cosecha');
+   function prod(){var op=sel.options[sel.selectedIndex];if(!sel.value){document.getElementById('vc452-prod').innerHTML='<div class="hint">Selecciona una partida para ver la producción consolidada.</div>';return;}var pres=op.dataset.pres||'Producto',cant=Number(op.dataset.cant||0),kg=Number(op.dataset.kg||0),disp=pres==='Tara'?(cant+' tara(s) · '+kg.toFixed(2)+' kg'):(cant+' '+pres+(op.dataset.det?' · '+op.dataset.det:''));document.getElementById('vc452-prod').innerHTML='<div class="resumen-row"><span class="resumen-key">Producción de Galera</span><span class="resumen-val">'+vc401Esc(disp)+'</span></div>';document.getElementById('vc401-cajas').value=(pres==='Tara'&&kg>0)?kg:cant;total();}
    function total(){var n=(parseFloat(document.getElementById('vc401-cajas').value)||0)*(parseFloat(document.getElementById('vc401-precio').value)||0),m=document.getElementById('vc401-moneda').value;document.getElementById('vc401-total').textContent=vc401Money(n,m);}
-   ['vc401-cajas','vc401-precio','vc401-moneda'].forEach(function(id){document.getElementById(id).addEventListener('input',total);document.getElementById(id).addEventListener('change',total);});
-   document.getElementById('vc401-guardar').onclick=function(){
-     var sel=document.getElementById('vc401-cosecha'),op=sel.options[sel.selectedIndex],cid=document.getElementById('vc401-cliente').value,cajas=parseInt(document.getElementById('vc401-cajas').value,10)||0,precio=parseFloat(document.getElementById('vc401-precio').value)||0;
-     if(!sel.value||!cid||cajas<=0||precio<=0){alert('Selecciona cosecha, cliente y captura cajas y precio.');return;}
-     var total=cajas*precio, cond=document.getElementById('vc401-cond').value;
-     var payload={fecha:document.getElementById('vc401-fecha').value,cliente_id:cid,cosecha_clave:sel.value,plantacion:op.dataset.p||'',tabla:op.dataset.t||'',fecha_cosecha:op.dataset.f||null,cajas:cajas,precio_unitario:precio,moneda:document.getElementById('vc401-moneda').value,total:total,condicion_pago:cond,estado_pago:cond==='contado'?'pendiente_cobro':'credito',factura:(document.getElementById('vc401-factura').value||'').trim()||null,notas:(document.getElementById('vc401-notas').value||'').trim()||null,creado_por:usuario.id};
-     var btn=this;btn.disabled=true;btn.textContent='Guardando...';
-     from('ventas_cosecha').insert(payload).then(function(){showToast('✅ Venta de cosecha registrada');vc401Ventas();}).catch(function(e){alert('No se pudo registrar la venta: '+e.message);btn.disabled=false;btn.textContent='Registrar venta';});
-   };
+   sel.addEventListener('change',prod);['vc401-cajas','vc401-precio','vc401-moneda'].forEach(function(id){document.getElementById(id).addEventListener('input',total);document.getElementById(id).addEventListener('change',total);});
+   document.getElementById('vc401-guardar').onclick=function(){var op=sel.options[sel.selectedIndex],cid=document.getElementById('vc401-cliente').value,cant=parseFloat(document.getElementById('vc401-cajas').value)||0,precio=parseFloat(document.getElementById('vc401-precio').value)||0;if(!sel.value||!cid||cant<=0||precio<=0){alert('Selecciona producción, cliente y captura cantidad y precio.');return;}var pres=op.dataset.pres||'',disp=pres==='Tara'?(Number(op.dataset.kg||0)):(Number(op.dataset.cant||0));if(cant>disp){alert('La cantidad a vender no puede exceder la producción consolidada de Galera.');return;}var cond=document.getElementById('vc401-cond').value,total=cant*precio,payload={fecha:document.getElementById('vc401-fecha').value,cliente_id:cid,cosecha_clave:op.dataset.cosecha||sel.value,plantacion:op.dataset.p||'',tabla:op.dataset.t||'',fecha_cosecha:op.dataset.f||null,cajas:Math.round(cant),cantidad:cant,presentacion:pres,detalle_presentacion:op.dataset.det||null,kg_disponibles:Number(op.dataset.kg||0)||null,precio_unitario:precio,moneda:document.getElementById('vc401-moneda').value,total:total,condicion_pago:cond,estado_pago:cond==='contado'?'pendiente_cobro':'credito',factura:(document.getElementById('vc401-factura').value||'').trim()||null,notas:(document.getElementById('vc401-notas').value||'').trim()||null,creado_por:usuario.id};var btn=this;btn.disabled=true;btn.textContent='Guardando...';from('ventas_cosecha').insert(payload).then(function(){showToast('✅ Venta ligada a producción de Galera');vc401Ventas();}).catch(function(e){alert('No se pudo registrar la venta: '+e.message);btn.disabled=false;btn.textContent='Registrar venta';});};
  }).catch(function(e){b.innerHTML=vc401Head('Nueva venta','')+'<div class="empty">No se pudo abrir Ventas de Cosecha: '+vc401Esc(e.message)+'</div>';});
 }
 function vc401Ventas(){
@@ -16378,6 +16388,7 @@ function c431PresentacionesPlan(o){
   });
   return out;
 }
+function c452FechaDesde(dias){var d=new Date();d.setDate(d.getDate()-Number(dias||0));return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function c431GaleraInicio(){c431GaleraCargar();}
 function c434GaleraResumen(parc,pres){
   return pres.map(function(p){
@@ -16392,17 +16403,17 @@ function c431GaleraCargar(){
   var hoy=fechaHoyLocal(),lb=cats.tiposLabor.find(function(l){return l.es_cosecha;});
   if(!lb){body.innerHTML='<div class="empty">No se encontró el catálogo de Cosecha.</div>';return;}
   Promise.all([
-    from('ordenes_trabajo').select('id,fecha_asignacion,estado,tabla_id,notas_encargado,tabla:tablas(nombre,plantacion_id)').eq('tipo_labor_id',lb.id).eq('fecha_asignacion',hoy).get(),
-    from('cosecha_recepciones').select('*').eq('fecha',hoy).get()
+    from('ordenes_trabajo').select('id,fecha_asignacion,estado,tabla_id,notas_encargado,tabla:tablas(nombre,plantacion_id)').eq('tipo_labor_id',lb.id).gte('fecha_asignacion',c452FechaDesde(14)).lte('fecha_asignacion',hoy).order('fecha_asignacion',{ascending:false}).get(),
+    from('cosecha_recepciones').select('*').gte('fecha',c452FechaDesde(14)).lte('fecha',hoy).get()
   ]).then(function(r){
     var rows=r[0]||[],rec=r[1]||[],gr={};
     rows.forEach(function(o){var k=c431ClaveActividad(o.fecha_asignacion,o.tabla_id);if(!gr[k])gr[k]=[];gr[k].push(o);});
     var ks=Object.keys(gr);window.C431_GALERA_GRUPOS=gr;window.C431_GALERA_REC=rec;
-    if(!ks.length){body.innerHTML='<div class="c328-tasks-head"><div><h2>Galera</h2><p>Recepción de fruta</p></div></div><div class="empty">No hay actividades de Cosecha programadas para hoy.</div>';return;}
+    if(!ks.length){body.innerHTML='<div class="c328-tasks-head"><div><h2>Galera</h2><p>Recepción de fruta</p></div></div><div class="empty">No hay actividades de Cosecha de los últimos 14 días pendientes de recepción.</div>';return;}
     var html=ks.map(function(k){
       var g=gr[k],o=g[0],rr=rec.find(function(x){return x.clave_actividad===k;}),tab=o.tabla||{},pl=(cats.plantaciones||[]).find(function(x){return String(x.id)===String(tab.plantacion_id);}),cal=c429EsCalentamientoGrupo(g),pres=c431PresentacionesPlan(o),parc=(rr&&rr.recepciones)||[];
       var finCampo=g.filter(function(x){return x.estado==='completada';}).length,campo=finCampo===g.length?'Campo ✓ terminado':'Campo '+finCampo+'/'+g.length,gal=rr&&rr.estado==='cerrada'?'Galera ✓ cerrada':rr?'Recibiendo':'Por recibir';
-      return '<button type="button" class="form-card" style="width:100%;text-align:left;border-top:4px solid #e91e8c;margin-bottom:12px;padding:14px" onclick="c431AbrirGalera('+JSON.stringify(k).replace(/"/g,'&quot;')+')"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><div style="font-size:.72rem;font-weight:800;color:#8b5b73;letter-spacing:.04em">'+(cal?'LIMPIEZA DE FRUTA':'COSECHA')+'</div><strong style="font-size:1.05rem">'+c225Esc((pl?pl.nombre+' · ':'')+(tab.nombre||''))+'</strong><div class="hint" style="margin-top:4px">'+campo+' · '+gal+'</div></div><span class="orden-badge '+(rr&&rr.estado==='cerrada'?'badge-completada':'badge-en_proceso')+'">'+(rr&&rr.estado==='cerrada'?'CERRADA':rr?'RECIBIENDO':'ABIERTA')+'</span></div><div style="margin-top:10px">'+(c434GaleraResumen(parc,pres)||'<div class="hint">Aún no hay fruta registrada.</div>')+'</div></button>';
+      return '<button type="button" class="form-card" style="width:100%;text-align:left;border-top:4px solid #e91e8c;margin-bottom:12px;padding:14px" onclick="c431AbrirGalera('+JSON.stringify(k).replace(/"/g,'&quot;')+')"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><div style="font-size:.72rem;font-weight:800;color:#8b5b73;letter-spacing:.04em">'+(cal?'LIMPIEZA DE FRUTA':'COSECHA')+'</div><strong style="font-size:1.05rem">'+c225Esc(o.fecha_asignacion+' · '+(pl?pl.nombre+' · ':'')+(tab.nombre||''))+'</strong><div class="hint" style="margin-top:4px">'+campo+' · '+gal+'</div></div><span class="orden-badge '+(rr&&rr.estado==='cerrada'?'badge-completada':'badge-en_proceso')+'">'+(rr&&rr.estado==='cerrada'?'CERRADA':rr?'RECIBIENDO':'ABIERTA')+'</span></div><div style="margin-top:10px">'+(c434GaleraResumen(parc,pres)||'<div class="hint">Aún no hay fruta registrada.</div>')+'</div></button>';
     }).join('');
     body.innerHTML='<div class="c328-tasks-head"><div><h2>Galera</h2><p>Recepción en paralelo con Campo</p></div></div><div class="c336-info" style="margin-bottom:12px">Selecciona la actividad conforme llegue fruta a Galera. Puedes registrar varias recepciones durante la jornada.</div>'+html;
   }).catch(function(e){body.innerHTML='<div class="empty">No fue posible cargar Galera: '+c225Esc(e.message)+'</div>';});
@@ -21843,3 +21854,5 @@ function c366ReportarLaborIncidencia(){
   };
 })();
 </script>
+
+<!-- C452 GALERA -> VENTAS 2026-10-02 -->
