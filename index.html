@@ -16258,10 +16258,39 @@ function cosechaReset(){
 function cosEsc(v){return String(v==null?'':v).replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c];});}
 function cosNombreOperario(id){var todos=(cats.cosechadores||[]).concat(cats.operarios||[]).concat(cats.eventuales||[]),o=todos.find(function(x){return String(x.id)===String(id);});return o?o.nombre:'Colaborador';}
 function cosEsCosechador(id){return (cats.cosechadores||[]).some(function(x){return String(x.id)===String(id);});}
-function cosPersonalDisponible(){
+// C451 · Programación de Cosecha basada en todos los cargos activos del expediente.
+var C451_CARGOS_PERSONAL={};
+var C451_CARGOS_CARGADOS=false;
+var C451_CARGOS_CARGANDO=false;
+function c451PersonasUnicas(){
   var seen={},out=[];
-  (cats.cosechadores||[]).forEach(function(x){if(!seen[x.id]){seen[x.id]=1;out.push({id:x.id,nombre:x.nombre,grupo:'Cosecha'});}});
-  (cats.operarios||[]).concat(cats.eventuales||[]).forEach(function(x){if(!seen[x.id]){seen[x.id]=1;out.push({id:x.id,nombre:x.nombre,grupo:'Apoyo de Labores'});}});
+  (cats.cosechadores||[]).concat(cats.operarios||[]).concat(cats.eventuales||[]).forEach(function(x){
+    if(x&&x.id&&!seen[String(x.id)]){seen[String(x.id)]=1;out.push(x);}
+  });
+  return out;
+}
+function c451CargarCargosPersonal(){
+  if(C451_CARGOS_CARGADOS)return Promise.resolve();
+  if(C451_CARGOS_CARGANDO)return C451_CARGOS_CARGANDO;
+  var personas=c451PersonasUnicas();
+  C451_CARGOS_CARGANDO=Promise.all(personas.map(function(p){
+    return rpc('c398_admin_ver_asignaciones',{p_admin_id:usuario.id,p_admin_pin:String(pin||''),p_usuario_id:p.id})
+      .then(function(rows){
+        rows=Array.isArray(rows)?rows:[];
+        C451_CARGOS_PERSONAL[String(p.id)]=rows.filter(function(a){return String(a.estado||'').toLowerCase()==='activo';}).map(function(a){return String(a.cargo||'');});
+      }).catch(function(){C451_CARGOS_PERSONAL[String(p.id)]=[];});
+  })).then(function(){C451_CARGOS_CARGADOS=true;C451_CARGOS_CARGANDO=false;});
+  return C451_CARGOS_CARGANDO;
+}
+function cosPersonalDisponible(){
+  var out=[];
+  c451PersonasUnicas().forEach(function(x){
+    var cargos=C451_CARGOS_PERSONAL[String(x.id)]||[];
+    var esCosecha=cargos.some(function(c){return c.toLowerCase()==='cosecha';});
+    var esLabores=cargos.some(function(c){return c.toLowerCase()==='labores';});
+    if(esCosecha)out.push({id:x.id,nombre:x.nombre,grupo:'Cosecha'});
+    if(esLabores)out.push({id:x.id,nombre:x.nombre,grupo:'Apoyo de Labores'});
+  });
   return out;
 }
 function cosSurcosUsados(excepto){var out=[];Object.keys(cosecha.asignaciones||{}).forEach(function(id){if(String(id)!==String(excepto))out=out.concat(cosecha.asignaciones[id]||[]);});return out.map(Number);}
@@ -16465,7 +16494,9 @@ function c417ClientesTipo(tipo){
 function c412NumeroSemanaISO(fecha){var d=new Date((fecha||fechaHoyLocal())+'T12:00:00'),u=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())),day=u.getUTCDay()||7;u.setUTCDate(u.getUTCDate()+4-day);var y=new Date(Date.UTC(u.getUTCFullYear(),0,1));return Math.ceil((((u-y)/86400000)+1)/7);}
 function formatearFechaCorta(fecha){try{return new Intl.DateTimeFormat('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date(fecha+'T12:00:00'));}catch(e){return fecha;}}
 function renderCosechaProgramacion(){
- var body=document.getElementById('enc-body');if(!cosecha.fecha)cosecha.fecha=fechaHoyLocal();if(!cosecha.destinos)cosecha.destinos=[];if(!cosecha.tipoJornada)cosecha.tipoJornada='Calentamiento de planta';if(!cosecha.personalCalentamiento)cosecha.personalCalentamiento=[];
+ var body=document.getElementById('enc-body');
+ if(!C451_CARGOS_CARGADOS){body.innerHTML='<div class="seccion-titulo">🧺 Cosecha · Programar</div><div class="loading">Cargando cargos activos del personal...</div>';c451CargarCargosPersonal().then(renderCosechaProgramacion).catch(function(e){body.innerHTML='<div class="empty">No fue posible cargar los cargos activos: '+cosEsc(e.message||e)+'</div>';});return;}
+ if(!cosecha.fecha)cosecha.fecha=fechaHoyLocal();if(!cosecha.destinos)cosecha.destinos=[];if(!cosecha.tipoJornada)cosecha.tipoJornada='Calentamiento de planta';if(!cosecha.personalCalentamiento)cosecha.personalCalentamiento=[];
  if(C417_CLIENTES_COSECHA===null){body.innerHTML='<div class="seccion-titulo">🧺 Cosecha · Programar <span style="font-size:.68rem;background:#17452e;color:#fff;border-radius:999px;padding:3px 8px;margin-left:6px">C422</span></div><div class="loading">Cargando compradores...</div>';c417CargarClientesCosecha().then(renderCosechaProgramacion).catch(function(e){body.innerHTML='<div class="empty">No fue posible cargar compradores: '+cosEsc(e.message)+'</div>';});return;}
  var plantas=cats.plantaciones||[],p=plantas.find(function(x){return String(x.id)===String(cosecha.plantacionId);}),tabs=p?(cats.tablas||[]).filter(function(t){return String(t.plantacion_id)===String(p.id);}):[],t=tabs.find(function(x){return String(x.id)===String(cosecha.tablaId);});
  var personal=cosPersonalDisponible(),pc=personal.filter(function(x){return x.grupo==='Cosecha';}),pa=personal.filter(function(x){return x.grupo!=='Cosecha';});
