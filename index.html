@@ -18816,26 +18816,40 @@ function c336AbrirRegistrarAvance(){
   var p=cats.plantaciones.find(function(x){return x.id===o.tabla.plantacion_id;});
   var pr=c336ResumenProgreso(o);
   if(!pr.total.length){alert('Esta labor no tiene surcos configurados.');return;}
-  var inicio=pr.siguiente;
-  if(!inicio){alert('Todos los surcos están registrados. Si la labor realmente terminó, usa “Terminar labor”.');return;}
-  capturaEjec.surcoTocado=null; capturaEjec.surcos=[];
+  var pendientes=pr.total.filter(function(n){return pr.hechos.indexOf(n)===-1;});
+  if(!pendientes.length){alert('Todos los surcos están registrados. Si la labor realmente terminó, usa “Terminar labor”.');return;}
+  capturaEjec.surcos=[]; capturaEjec.surcoTocado=null;
+  var inicial=''; var final=''; var tablaCompleta=false;
+  function rangoSeleccionado(){
+    if(tablaCompleta)return pendientes.slice();
+    var a=Number(inicial), b=Number(final);
+    if(!Number.isFinite(a)||!Number.isFinite(b))return [];
+    var lo=Math.min(a,b), hi=Math.max(a,b);
+    return pr.total.filter(function(n){return n>=lo&&n<=hi&&pr.hechos.indexOf(n)===-1;});
+  }
   function pintar(){
-    var hasta=capturaEjec.surcoTocado?Number(capturaEjec.surcoTocado):null;
-    var rango=capturaEjec.surcoTocado?calcularRangoAutomatico(pr.total.map(String),String(inicio),String(capturaEjec.surcoTocado)):[];
-    capturaEjec.surcos=rango.map(Number);
-    var botones=pr.total.map(function(n){
-      if(pr.hechos.indexOf(n)>-1)return '<button class="c336-surco hecho" disabled>'+n+' ✓</button>';
-      var actual=rango.map(Number).indexOf(n)>-1;
-      return '<button class="c336-surco '+(actual?'actual':'')+'" data-c336-surco="'+n+'">'+n+'</button>';
-    }).join('');
+    capturaEjec.surcos=rangoSeleccionado();
+    var opciones='<option value="">Selecciona</option>'+pendientes.map(function(n){return '<option value="'+n+'">'+n+'</option>';}).join('');
+    var resumen='Selecciona el surco inicial y el surco final. Puedes registrar el avance en cualquier dirección.';
+    if(tablaCompleta) resumen='Se registrarán <strong>todos los surcos pendientes</strong> de esta tabla ('+capturaEjec.surcos.length+' surcos).';
+    else if(inicial&&final) resumen='Se registrará esta ejecución del <strong>surco '+inicial+' al '+final+'</strong> ('+capturaEjec.surcos.length+' surcos).';
     body.innerHTML='<div class="c336-wrap">'+
       '<div class="c336-top"><button class="c336-back" onclick="c336LaborActiva()">←</button><div class="c336-title">Registrar avance</div><span class="c336-chip">DESDE LABOR ACTIVA</span></div>'+
-      '<div class="c336-card"><div class="c336-section-title">¿Hasta dónde llegaste?</div><div style="font-size:.8rem;color:#596a61;">Selecciona únicamente el último surco trabajado. Mootsil registrará automáticamente desde el <strong>surco '+inicio+'</strong> hasta el que selecciones.</div></div>'+
-      '<div class="c336-card"><div class="c336-section-title">'+c225Esc((p?p.nombre:'')+' · '+o.tabla.nombre)+'</div><div class="c336-grid">'+botones+'</div></div>'+
-      (hasta?'<div class="c336-info">Se registrará esta ejecución del <strong>surco '+inicio+' al '+hasta+'</strong> ('+capturaEjec.surcos.length+' surcos).</div>':'<div class="c336-info">Aún no has seleccionado el último surco trabajado.</div>')+
-      '<div class="c336-save-row"><button class="c336-cancel" onclick="c336LaborActiva()">Cancelar</button><button class="c336-save" '+(hasta?'':'disabled')+' onclick="c336GuardarAvance()">Guardar avance</button></div>'+
+      '<div class="c336-card"><div class="c336-section-title">¿Qué tramo trabajaste?</div><div style="font-size:.8rem;color:#596a61;">Indica el <strong>surco inicial</strong> y el <strong>surco final</strong>. Mootsil respetará el sentido del trabajo, por ejemplo <strong>18 → 12</strong> o <strong>1 → 7</strong>.</div></div>'+
+      '<div class="c336-card"><div class="c336-section-title">'+c225Esc((p?p.nombre:'')+' · '+o.tabla.nombre)+'</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">'+
+          '<label style="font-size:.76rem;font-weight:800;color:#214b36;">Surco inicial<select id="c445-surco-inicial" '+(tablaCompleta?'disabled':'')+' style="display:block;width:100%;margin-top:6px;padding:12px;border:1px solid #ccd8d0;border-radius:10px;background:#fff;font:inherit;">'+opciones+'</select></label>'+
+          '<label style="font-size:.76rem;font-weight:800;color:#214b36;">Surco final<select id="c445-surco-final" '+(tablaCompleta?'disabled':'')+' style="display:block;width:100%;margin-top:6px;padding:12px;border:1px solid #ccd8d0;border-radius:10px;background:#fff;font:inherit;">'+opciones+'</select></label>'+
+        '</div>'+
+        '<label style="display:flex;align-items:center;gap:10px;margin-top:16px;padding:12px;border:1px solid #dbe5de;border-radius:10px;font-size:.82rem;font-weight:800;color:#214b36;cursor:pointer;"><input id="c445-tabla-completa" type="checkbox" '+(tablaCompleta?'checked':'')+' style="width:18px;height:18px;"> Tabla completa <span style="font-weight:500;color:#6a776f;">('+pendientes.length+' surcos pendientes)</span></label>'+
+      '</div>'+
+      '<div class="c336-info">'+resumen+'</div>'+
+      '<div class="c336-save-row"><button class="c336-cancel" onclick="c336LaborActiva()">Cancelar</button><button class="c336-save" '+(capturaEjec.surcos.length?'':'disabled')+' onclick="c336GuardarAvance()">Guardar avance</button></div>'+
     '</div>';
-    body.querySelectorAll('[data-c336-surco]').forEach(function(b){b.addEventListener('click',function(){capturaEjec.surcoTocado=this.dataset.c336Surco;pintar();});});
+    var si=body.querySelector('#c445-surco-inicial'), sf=body.querySelector('#c445-surco-final'), tc=body.querySelector('#c445-tabla-completa');
+    if(si){si.value=inicial;si.addEventListener('change',function(){inicial=this.value;pintar();});}
+    if(sf){sf.value=final;sf.addEventListener('change',function(){final=this.value;pintar();});}
+    if(tc)tc.addEventListener('change',function(){tablaCompleta=this.checked;if(tablaCompleta){inicial='';final='';}pintar();});
   }
   pintar();
 }
