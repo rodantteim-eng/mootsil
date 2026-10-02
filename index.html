@@ -4342,6 +4342,13 @@ function acPintarGrid(){
   var pendientes=totalAsignados.filter(function(n){return yaCompletados.indexOf(n)===-1;});
   var grid=document.getElementById('ac-surcos');
   if(!grid) return;
+  // C448: este contenedor heredaba .surcos-grid (display:grid), lo que comprimía
+  // los bloques internos del selector. Para conservar el diseño original de 6
+  // botones grandes por fila, el contenedor exterior se comporta como bloque.
+  grid.style.display='block';
+  grid.style.gridTemplateColumns='none';
+  grid.style.gap='0';
+  grid.style.width='100%';
 
   if(C446_TABLA_COMPLETA){
     ADMIN_COMPLETAR_SURCOS=pendientes.slice();
@@ -4378,10 +4385,10 @@ function acPintarGrid(){
     return '<button type="button" class="c447-surco" data-surco="'+n+'" '+(hecho?'disabled':'')+' style="padding:.68rem .35rem;border-radius:9px;border:1.5px solid '+(hecho?'#ccd5cf':borde)+';background:'+bg+';color:'+color+';font-weight:850;cursor:'+(hecho?'default':'pointer')+';opacity:'+(hecho?'.65':'1')+';">'+etiqueta+'</button>';
   }).join('');
 
-  grid.innerHTML='<div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;">'+botones+'</div>'+
-    '<div style="display:flex;gap:8px;align-items:stretch;margin-top:10px;flex-wrap:wrap;">'+
-      '<button type="button" id="c447-completa" style="flex:1;min-width:150px;padding:.7rem;border-radius:10px;border:1.5px solid var(--verde-mid);background:'+(C446_TABLA_COMPLETA?'var(--verde)':'var(--verde-tenue)')+';color:'+(C446_TABLA_COMPLETA?'white':'var(--verde)')+';font-weight:850;">✓ Tabla completa</button>'+
-      '<button type="button" id="c447-limpiar" style="padding:.7rem 1rem;border-radius:10px;border:1px solid #d7ddd9;background:white;color:#52645a;font-weight:800;">Limpiar selección</button>'+
+  grid.innerHTML='<div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;width:100%;">'+botones+'</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;width:100%;">'+
+      '<button type="button" id="c447-completa" style="width:100%;padding:.7rem;border-radius:10px;border:1.5px solid var(--verde-mid);background:'+(C446_TABLA_COMPLETA?'var(--verde)':'var(--verde-tenue)')+';color:'+(C446_TABLA_COMPLETA?'white':'var(--verde)')+';font-weight:850;">✓ Tabla completa</button>'+
+      '<button type="button" id="c447-limpiar" style="width:100%;padding:.7rem 1rem;border-radius:10px;border:1px solid #d7ddd9;background:white;color:#52645a;font-weight:800;">Limpiar selección</button>'+
     '</div>'+
     '<div style="margin-top:10px;padding:.65rem .75rem;border-radius:10px;background:#eef5ff;color:#315d83;font-size:.78rem;font-weight:650;">'+sentido+'</div>';
 
