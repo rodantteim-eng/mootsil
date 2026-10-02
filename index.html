@@ -4357,27 +4357,57 @@ function acPintarGrid(){
       }
       ADMIN_COMPLETAR_SURCOS=rango;
     }else ADMIN_COMPLETAR_SURCOS=[];
+  }else if(C446_SURCO_INICIO!=null){
+    ADMIN_COMPLETAR_SURCOS=[String(C446_SURCO_INICIO)];
   }else ADMIN_COMPLETAR_SURCOS=[];
 
-  var opciones=totalAsignados.map(function(n){return '<option value="'+n+'">'+n+'</option>';}).join('');
-  var sentido='';
-  if(C446_TABLA_COMPLETA) sentido='Tabla completa · '+ADMIN_COMPLETAR_SURCOS.length+' surcos pendientes';
-  else if(C446_SURCO_INICIO!=null&&C446_SURCO_FIN!=null) sentido='Se registrará del surco '+C446_SURCO_INICIO+' al '+C446_SURCO_FIN+' ('+ADMIN_COMPLETAR_SURCOS.length+' surcos nuevos).';
-  else sentido='Selecciona el surco inicial y el surco final.';
+  var sentido='Toca el primer surco para indicar dónde inició el avance.';
+  if(C446_TABLA_COMPLETA) sentido='Tabla completa · '+ADMIN_COMPLETAR_SURCOS.length+' surcos pendientes.';
+  else if(C446_SURCO_INICIO!=null&&C446_SURCO_FIN!=null) sentido='Avance seleccionado: '+C446_SURCO_INICIO+' → '+C446_SURCO_FIN+' · '+ADMIN_COMPLETAR_SURCOS.length+' surcos.';
+  else if(C446_SURCO_INICIO!=null) sentido='Inicio: surco '+C446_SURCO_INICIO+'. Ahora toca el surco donde terminó.';
 
-  grid.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">'+
-    '<label style="font-size:.75rem;font-weight:800;color:var(--verde);">SURCO INICIAL<select id="c446-inicio" style="width:100%;margin-top:5px;padding:.65rem;border:1px solid #d7ddd9;border-radius:10px;background:white;"><option value="">Seleccionar</option>'+opciones+'</select></label>'+
-    '<label style="font-size:.75rem;font-weight:800;color:var(--verde);">SURCO FINAL<select id="c446-fin" style="width:100%;margin-top:5px;padding:.65rem;border:1px solid #d7ddd9;border-radius:10px;background:white;"><option value="">Seleccionar</option>'+opciones+'</select></label></div>'+
-    '<button type="button" id="c446-completa" style="width:100%;padding:.7rem;border-radius:10px;border:1.5px solid var(--verde-mid);background:'+(C446_TABLA_COMPLETA?'var(--verde)':'var(--verde-tenue)')+';color:'+(C446_TABLA_COMPLETA?'white':'var(--verde)')+';font-weight:800;">✓ Tabla completa</button>'+
+  var botones=totalAsignados.map(function(n){
+    var hecho=yaCompletados.indexOf(n)!==-1;
+    var seleccionado=ADMIN_COMPLETAR_SURCOS.indexOf(n)!==-1;
+    var inicio=String(C446_SURCO_INICIO)===n && !C446_TABLA_COMPLETA;
+    var fin=String(C446_SURCO_FIN)===n && !C446_TABLA_COMPLETA;
+    var bg=hecho?'#dfe6e1':(seleccionado?'#7b2c96':'#fff4dc');
+    var color=hecho?'#77847c':(seleccionado?'#fff':'#8a5a08');
+    var borde=seleccionado?'#7b2c96':'#e89a17';
+    var etiqueta=n+(inicio?' · inicio':'')+(fin?' · fin':'');
+    return '<button type="button" class="c447-surco" data-surco="'+n+'" '+(hecho?'disabled':'')+' style="padding:.68rem .35rem;border-radius:9px;border:1.5px solid '+(hecho?'#ccd5cf':borde)+';background:'+bg+';color:'+color+';font-weight:850;cursor:'+(hecho?'default':'pointer')+';opacity:'+(hecho?'.65':'1')+';">'+etiqueta+'</button>';
+  }).join('');
+
+  grid.innerHTML='<div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;">'+botones+'</div>'+
+    '<div style="display:flex;gap:8px;align-items:stretch;margin-top:10px;flex-wrap:wrap;">'+
+      '<button type="button" id="c447-completa" style="flex:1;min-width:150px;padding:.7rem;border-radius:10px;border:1.5px solid var(--verde-mid);background:'+(C446_TABLA_COMPLETA?'var(--verde)':'var(--verde-tenue)')+';color:'+(C446_TABLA_COMPLETA?'white':'var(--verde)')+';font-weight:850;">✓ Tabla completa</button>'+
+      '<button type="button" id="c447-limpiar" style="padding:.7rem 1rem;border-radius:10px;border:1px solid #d7ddd9;background:white;color:#52645a;font-weight:800;">Limpiar selección</button>'+
+    '</div>'+
     '<div style="margin-top:10px;padding:.65rem .75rem;border-radius:10px;background:#eef5ff;color:#315d83;font-size:.78rem;font-weight:650;">'+sentido+'</div>';
-  var ini=document.getElementById('c446-inicio'), fin=document.getElementById('c446-fin'), completa=document.getElementById('c446-completa');
-  if(ini&&C446_SURCO_INICIO!=null) ini.value=String(C446_SURCO_INICIO);
-  if(fin&&C446_SURCO_FIN!=null) fin.value=String(C446_SURCO_FIN);
-  if(ini) ini.disabled=C446_TABLA_COMPLETA;
-  if(fin) fin.disabled=C446_TABLA_COMPLETA;
-  if(ini) ini.addEventListener('change',function(){C446_SURCO_INICIO=this.value||null;C446_TABLA_COMPLETA=false;acPintarGrid();});
-  if(fin) fin.addEventListener('change',function(){C446_SURCO_FIN=this.value||null;C446_TABLA_COMPLETA=false;acPintarGrid();});
-  if(completa) completa.addEventListener('click',function(){C446_TABLA_COMPLETA=!C446_TABLA_COMPLETA;if(C446_TABLA_COMPLETA){C446_SURCO_INICIO=null;C446_SURCO_FIN=null;}acPintarGrid();});
+
+  Array.prototype.forEach.call(grid.querySelectorAll('.c447-surco:not([disabled])'),function(btn){
+    btn.addEventListener('click',function(){
+      var n=this.getAttribute('data-surco');
+      C446_TABLA_COMPLETA=false;
+      if(C446_SURCO_INICIO==null || C446_SURCO_FIN!=null){
+        C446_SURCO_INICIO=n; C446_SURCO_FIN=null;
+      }else{
+        C446_SURCO_FIN=n;
+      }
+      acPintarGrid();
+    });
+  });
+  var completa=document.getElementById('c447-completa');
+  if(completa) completa.addEventListener('click',function(){
+    C446_TABLA_COMPLETA=!C446_TABLA_COMPLETA;
+    C446_SURCO_INICIO=null; C446_SURCO_FIN=null;
+    acPintarGrid();
+  });
+  var limpiar=document.getElementById('c447-limpiar');
+  if(limpiar) limpiar.addEventListener('click',function(){
+    C446_TABLA_COMPLETA=false; C446_SURCO_INICIO=null; C446_SURCO_FIN=null; ADMIN_COMPLETAR_SURCOS=[];
+    acPintarGrid();
+  });
 }
 function pintarAdminCompletar(){
   var body=document.getElementById(C260_ADMIN_BODY||'enc-body');
@@ -4420,10 +4450,10 @@ function pintarAdminCompletar(){
     var sugerido=Math.max(0,tambosPlan-tambosUsadosPrevios);
     html+='<div class="form-group"><label>'+unidad.cuantos+' '+unidad.plural+' se aplicaron en este avance</label><input type="number" id="ac-tambos" min="0" step="0.5" value="'+sugerido+'"><p class="hint">Fórmula: '+(o.formula?o.formula.nombre:'')+' · Planeados: '+tambosPlan+' · Usados hasta ahora: '+tambosUsadosPrevios+'</p></div>';
     if(tieneSurcosDef){
-      html+='<div class="form-group"><label>Surcos cubiertos en este avance</label><div class="surcos-grid" id="ac-surcos"></div><p class="hint">Selecciona el surco inicial y final en cualquier sentido, o usa Tabla completa.</p></div>';
+      html+='<div class="form-group"><label>Surcos cubiertos en este avance</label><div class="surcos-grid" id="ac-surcos"></div><p class="hint">Toca el surco donde inició y después el surco donde terminó; Mootsil marcará automáticamente todo el rango. También puedes usar Tabla completa.</p></div>';
     }
   } else if(!esSimple){
-    html+='<div class="form-group"><label>Surcos cubiertos en este avance</label><div class="surcos-grid" id="ac-surcos"></div><p class="hint">Selecciona el surco inicial y final en cualquier sentido, o usa Tabla completa.</p></div>';
+    html+='<div class="form-group"><label>Surcos cubiertos en este avance</label><div class="surcos-grid" id="ac-surcos"></div><p class="hint">Toca el surco donde inició y después el surco donde terminó; Mootsil marcará automáticamente todo el rango. También puedes usar Tabla completa.</p></div>';
     if(lb.requiere_cantidad_insumo){
       html+='<div class="form-group"><label>Cantidad usada ('+(lb.unidad_insumo||'')+')</label><input type="number" id="ac-cant" min="0" value="'+(o.cantidad_insumo_esperada!=null?o.cantidad_insumo_esperada:'')+'"></div>';
     }
@@ -4473,7 +4503,7 @@ function guardarAdminCompletar(){
   if(esAplic&&!tieneSurcosDef){ progresoCompleto = tambosUsadosNuevo>=tambosPlan; }
 
   if(!esSimple&&!nuevosSurcos.length&&!esAplic){
-    alert('Selecciona el surco inicial y final, o usa Tabla completa.');
+    alert('Selecciona el surco inicial y después el surco final, o usa Tabla completa.');
     return;
   }
 
