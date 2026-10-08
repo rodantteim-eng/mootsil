@@ -15318,7 +15318,9 @@ function renderGenerarNomina(fechaRef){
 
     // C402: Nómina sólo incluye colaboradores con al menos una asignación laboral ACTIVA
     // vigente durante la semana. "En incorporación" y "Finalizado" quedan fuera y no generan faltas.
-    var rolesAsistencia=['operario','cosechador','galerista','labores_eventual'];
+    // C471: La asignación laboral vigente, no el rol heredado de usuarios,
+    // determina la elegibilidad en nómina. El rol puede estar desactualizado
+    // tras cambios de cargo, mientras la asistencia usa la identidad del usuario.
     var asignacionesActivas=(r[13]||[]).filter(function(a){
       return a.estado==='activo' &&
              (!a.fecha_inicio || a.fecha_inicio<=semanaFin) &&
@@ -15328,7 +15330,6 @@ function renderGenerarNomina(fechaRef){
     asignacionesActivas.forEach(function(a){ idsConAsignacionActiva[String(a.usuario_id)]=true; });
     var operarios=todosUsuarios.filter(function(o){
       return o.activo!==false &&
-             rolesAsistencia.indexOf(o.rol)>=0 &&
              !!idsConAsignacionActiva[String(o.id)];
     });
 
