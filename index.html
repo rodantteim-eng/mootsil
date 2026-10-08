@@ -16281,24 +16281,35 @@ function cosEsCosechador(id){return (cats.cosechadores||[]).some(function(x){ret
 var C451_CARGOS_PERSONAL={};
 var C451_CARGOS_CARGADOS=false;
 var C451_CARGOS_CARGANDO=false;
+// C462: La lista de cosecha se obtiene de todos los expedientes activos,
+// no solo de los tres roles heredados del catálogo general.
+var C462_PERSONAL_ACTIVO=[];
 function c451PersonasUnicas(){
   var seen={},out=[];
-  (cats.cosechadores||[]).concat(cats.operarios||[]).concat(cats.eventuales||[]).forEach(function(x){
-    if(x&&x.id&&!seen[String(x.id)]){seen[String(x.id)]=1;out.push(x);}
+  C462_PERSONAL_ACTIVO.forEach(function(x){
+    if(x&&x.id&&x.activo===true&&x.nombre&&!seen[String(x.id)]){
+      seen[String(x.id)]=1;out.push(x);
+    }
   });
   return out;
 }
 function c451CargarCargosPersonal(){
   if(C451_CARGOS_CARGADOS)return Promise.resolve();
   if(C451_CARGOS_CARGANDO)return C451_CARGOS_CARGANDO;
-  var personas=c451PersonasUnicas();
-  C451_CARGOS_CARGANDO=Promise.all(personas.map(function(p){
-    return rpc('c398_admin_ver_asignaciones',{p_admin_id:usuario.id,p_admin_pin:String(pin||''),p_usuario_id:p.id})
-      .then(function(rows){
-        rows=Array.isArray(rows)?rows:[];
-        C451_CARGOS_PERSONAL[String(p.id)]=rows.filter(function(a){return String(a.estado||'').toLowerCase()==='activo';}).map(function(a){return String(a.cargo||'');});
-      }).catch(function(){C451_CARGOS_PERSONAL[String(p.id)]=[];});
-  })).then(function(){C451_CARGOS_CARGADOS=true;C451_CARGOS_CARGANDO=false;});
+  C451_CARGOS_CARGANDO=from('usuarios').select('id,nombre,rol,activo').eq('activo',true).order('nombre').get()
+    .then(function(rows){
+      C462_PERSONAL_ACTIVO=(rows||[]).filter(function(p){
+        return p&&p.id&&p.nombre&&['admin','dueño','dueno','inversionista'].indexOf(String(p.rol||'').toLowerCase())===-1;
+      });
+      return Promise.all(c451PersonasUnicas().map(function(p){
+        return rpc('c398_admin_ver_asignaciones',{p_admin_id:usuario.id,p_admin_pin:String(pin||''),p_usuario_id:p.id})
+          .then(function(rows){
+            rows=Array.isArray(rows)?rows:[];
+            C451_CARGOS_PERSONAL[String(p.id)]=rows.filter(function(a){return String(a.estado||'').toLowerCase()==='activo';}).map(function(a){return String(a.cargo||'');});
+          }).catch(function(){C451_CARGOS_PERSONAL[String(p.id)]=[];});
+      }));
+    }).then(function(){C451_CARGOS_CARGADOS=true;C451_CARGOS_CARGANDO=false;})
+    .catch(function(e){C451_CARGOS_CARGANDO=false;throw e;});
   return C451_CARGOS_CARGANDO;
 }
 function cosPersonalDisponible(){
