@@ -15293,7 +15293,7 @@ function renderGenerarNomina(fechaRef){
   var esSemanaActual = hoy>=semanaInicio && hoy<=semanaFin;
 
   Promise.all([
-    from('usuarios').select('id,nombre,rol,activo,sueldo_base').get(),
+    from('usuarios').select('id,nombre,rol,activo,sueldo_base,fecha_ingreso').get(),
     from('asistencia_registros').select('*').gte('fecha',semanaInicio).lte('fecha',semanaFin).eq('modalidad','labores').get(),
     from('pagos_semana_estado').select('*').eq('semana_inicio',semanaInicio).get(),
     from('pagos_extra_estado').select('*').eq('semana_inicio',semanaInicio).get(),
@@ -15328,9 +15328,25 @@ function renderGenerarNomina(fechaRef){
     });
     var idsConAsignacionActiva={};
     asignacionesActivas.forEach(function(a){ idsConAsignacionActiva[String(a.usuario_id)]=true; });
+    // C472: Nómina operativa de Labores. No confundir asignación activa
+    // con pertenencia a Labores: ingenieros y encargados quedan excluidos.
+    // El expediente puede tener cargo complementario local; el rol persistido
+    // en usuarios es la alternativa cuando la RPC aún no devuelve asignación.
     var operarios=todosUsuarios.filter(function(o){
-      return o.activo!==false &&
-             !!idsConAsignacionActiva[String(o.id)];
+      if(o.activo===false)return false;
+      if(o.fecha_ingreso && o.fecha_ingreso>semanaFin)return false;
+      var ex=ex54Get(o.id)||{};
+      var cargo=String(ex.cargo||'').trim().toLowerCase();
+      var rol=String(o.rol||'').trim().toLowerCase();
+      if(['ingeniero','encargado','contador','admin','dueño','inversionista','galerista','auxiliar de galera','cosecha'].indexOf(cargo)>=0)return false;
+      if(['ingeniero','encargado','contador','admin','dueño','inversionista','galerista','auxiliar_galera','cosechador'].indexOf(rol)>=0 && cargo!=='labores')return false;
+      var esLabores=cargo==='labores'||rol==='operario'||rol==='labores_eventual';
+      if(!esLabores)return false;
+      // El personal de base entra por vigencia; eventual requiere registro
+      // de asistencia o asignación válida en la semana.
+      var eventual=ex.tipo_colaborador==='Eventual'||rol==='labores_eventual';
+      if(eventual && !idsConAsignacionActiva[String(o.id)] && !registros.some(function(a){return String(a.usuario_id)===String(o.id);} ))return false;
+      return true;
     });
 
     var ajustePorOp={}; ajustesSemana.forEach(function(a){ajustePorOp[a.operario_id]=a;});
@@ -15378,7 +15394,7 @@ function renderGenerarNomina(fechaRef){
       var pendientes=[];
 
       operarios.forEach(function(o,idx){
-        var regsOp=registros.filter(function(x){return String(x.usuario_id)===String(o.id);});
+        var regsOp=registros.filter(function(x){return String(x.usuario_id)===String(o.id) && (!o.fecha_ingreso || x.fecha>=o.fecha_ingreso);});
         var permisosOp=permisosAprobados.filter(function(p){return String(p.usuario_id)===String(o.id);});
         var resumen=calcularResumenAsistencia(regsOp,semanaInicio,permisosOp);
         var sueldoBase=parseFloat(o.sueldo_base||0);
