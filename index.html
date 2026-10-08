@@ -12980,7 +12980,7 @@ function renderInversionistaDetalle(usuarioId){
       var docs=extra.documentos||[];
       var eventos=[];
       contratos.forEach(function(c){eventos.push({fecha:c.fecha_inicio,tipo:'Aportación de capital',descripcion:'Contrato '+(c.condiciones||'de inversión'),monto:c.monto_invertido,contrato:c.id,cuenta:'—',referencia:'—'});});
-      movs.forEach(function(m){eventos.push({fecha:m.fecha,tipo:m.tipo==='rendimiento'?'Abono a utilidad / ganancia':'Abono / devolución a capital',descripcion:m.concepto||'',monto:m.monto,contrato:m.inversion_id,cuenta:'—',referencia:m.concepto||'—'});});
+      movs.forEach(function(m){eventos.push({fecha:m.fecha,tipo:String(m.concepto||'').indexOf('[HISTORICO_SIN_CAJA]')===0?'Devolución histórica · sin Caja':m.tipo==='rendimiento'?'Abono a utilidad / ganancia':'Abono / devolución a capital',descripcion:m.concepto||'',monto:m.monto,contrato:m.inversion_id,cuenta:'—',referencia:m.concepto||'—'});});
       var cajaInv=(ca21Load().movimientos||[]).filter(function(m){return m.categoria==='Inversionistas'&&String(m.inversionista_id||'')===String(usuarioId);});
       cajaInv.forEach(function(m){
         var duplicado=eventos.some(function(e){return String(e.fecha)===String(m.fecha)&&Math.abs((parseFloat(e.monto)||0)-(parseFloat(m.monto)||0))<.01&&String(e.contrato||'')===String(m.contrato_id||'');});
@@ -13045,7 +13045,7 @@ function renderInversionistaDetalle(usuarioId){
 
         '<div class="ex54-sec"><h3>Notas administrativas</h3><div class="ex54-grid"><div class="ex54-field span3"><textarea disabled style="min-height:80px;">'+ex54Esc(extra.notas||'')+'</textarea></div></div></div>'+
 
-        '<div class="ex54-sec"><h3>Historial patrimonial</h3><div style="display:flex;flex-direction:column;gap:6px;">'+histRows+'</div></div>'+
+        '<div class="ex54-sec"><h3>Historial patrimonial</h3><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:7px 0 10px;"><span class="ex55-mini">Movimientos reales e históricos vinculados a cada contrato.</span><button type="button" class="ex55-btn primary" id="inv470-historico" '+(!contratos.length?'disabled title="Primero registra un contrato"':'')+'>+ Registrar devolución histórica</button></div><div style="display:flex;flex-direction:column;gap:6px;">'+histRows+'</div></div>'+
 
         '<div class="ex54-actions"><button class="btn-back" onclick="renderInversionistasMenu()">← Volver</button><button class="btn-next" id="inv124-editar-bottom">Editar expediente</button></div>'+
       '</div>';
@@ -13055,11 +13055,53 @@ function renderInversionistaDetalle(usuarioId){
       document.getElementById('inv124-editar').onclick=abrir;
       document.getElementById('inv124-editar-bottom').onclick=abrir;
       document.getElementById('inv-nuevo-btn').onclick=function(){renderNuevaInversion(usuarioId);};
+      var histBtn=document.getElementById('inv470-historico');if(histBtn&&!histBtn.disabled)histBtn.onclick=function(){inv470AbrirHistorico(usuarioId,contratos,porContrato);};
       body.querySelectorAll('[data-ver-inversion]').forEach(function(card){card.onclick=function(){renderInversionDetalle(this.dataset.verInversion);};});
     });
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
 }
 
+// C470: devolución histórica contable SIN segundo egreso en Caja/Bancos.
+// Usa la misma tabla patrimonial y un prefijo verificable; no crea caja_movimientos.
+function inv470AbrirHistorico(usuarioId,contratos,porContrato){
+  var elegibles=(contratos||[]).map(function(c){
+    var dev=(porContrato[c.id]||[]).filter(function(m){return m.tipo==='devolucion_capital';}).reduce(function(a,m){return a+(parseFloat(m.monto)||0);},0);
+    return {id:c.id,fecha:c.fecha_inicio||'',total:parseFloat(c.monto_invertido)||0,pendiente:Math.max(0,(parseFloat(c.monto_invertido)||0)-dev)};
+  }).filter(function(c){return c.pendiente>.005;});
+  if(!elegibles.length){alert('No hay capital pendiente en los contratos. No se puede duplicar una devolución.');return;}
+  var layer=document.createElement('div');layer.id='inv470-overlay';layer.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.54);z-index:99999;display:flex;align-items:center;justify-content:center;padding:18px;overflow:auto';
+  layer.innerHTML='<div style="background:#fff;border-radius:16px;padding:22px;max-width:570px;width:100%;box-shadow:0 20px 65px #0003">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center"><h3 style="margin:0;color:#17523c">Devolución histórica de capital</h3><button type="button" id="inv470-cerrar" class="ex55-btn">✕</button></div>'+
+    '<p style="font-size:.83rem;line-height:1.5;color:#4a5b50">Para pagos realizados ANTES de registrar el módulo. <strong>No genera salida de Caja ni modifica Bancos.</strong> No lo uses para pagos nuevos ni para pagos ya incluidos en el expediente.</p>'+
+    '<label style="display:block;margin-top:10px;font-weight:700">Contrato</label><select id="inv470-contrato" style="width:100%;padding:10px;border:1px solid #cad8cf;border-radius:8px">'+elegibles.map(function(c,i){return '<option value="'+ex54Esc(c.id)+'">Contrato '+(i+1)+' · '+ex54Esc(c.fecha)+' · pendiente $'+formatMonto(c.pendiente)+'</option>';}).join('')+'</select>'+
+    '<label style="display:block;margin-top:10px;font-weight:700">Monto devuelto anteriormente ($)</label><input id="inv470-monto" type="number" min="0.01" step="0.01" placeholder="0.00" style="width:100%;padding:10px;border:1px solid #cad8cf;border-radius:8px">'+
+    '<label style="display:block;margin-top:10px;font-weight:700">Fecha real del pago</label><input id="inv470-fecha" type="date" max="'+fechaHoyLocal()+'" style="width:100%;padding:10px;border:1px solid #cad8cf;border-radius:8px">'+
+    '<label style="display:block;margin-top:10px;font-weight:700">Referencia / explicación</label><input id="inv470-ref" maxlength="180" placeholder="Ej. Transferencia anterior a la implementación" style="width:100%;padding:10px;border:1px solid #cad8cf;border-radius:8px">'+
+    '<p id="inv470-error" style="color:#b91c1c;font-size:.8rem"></p><div style="display:flex;gap:10px;justify-content:flex-end"><button type="button" id="inv470-cancelar" class="ex55-btn">Cancelar</button><button type="button" id="inv470-guardar" class="ex55-btn primary">Guardar solo en expediente</button></div></div>';
+  document.body.appendChild(layer);
+  function cerrar(){layer.remove();}
+  layer.querySelector('#inv470-cerrar').onclick=cerrar;layer.querySelector('#inv470-cancelar').onclick=cerrar;
+  layer.querySelector('#inv470-guardar').onclick=function(){
+    var btn=this,id=layer.querySelector('#inv470-contrato').value,c=elegibles.filter(function(x){return String(x.id)===String(id);})[0];
+    var monto=Number(layer.querySelector('#inv470-monto').value),fecha=layer.querySelector('#inv470-fecha').value,ref=layer.querySelector('#inv470-ref').value.trim();
+    var err=layer.querySelector('#inv470-error');err.textContent='';
+    if(!c||!Number.isFinite(monto)||monto<=0||Math.round(monto*100)>Math.round(c.pendiente*100)){err.textContent='El importe debe ser mayor que cero y no exceder el capital pendiente ($'+formatMonto(c?c.pendiente:0)+').';return;}
+    if(!fecha||fecha>fechaHoyLocal()){err.textContent='Captura la fecha real del pago, no posterior a hoy.';return;}
+    if(!ref){err.textContent='Agrega una referencia para distinguir el movimiento histórico.';return;}
+    var concepto='[HISTORICO_SIN_CAJA] '+ref;
+    if(!confirm('¿Registrar devolución HISTÓRICA de $'+formatMonto(monto)+'?\n\nSe descontará del capital vigente del contrato, pero NO de Caja ni Bancos. Confirma que este pago NO se registró antes.'))return;
+    btn.disabled=true;btn.textContent='Verificando...';
+    from('inversion_movimientos').select('*').eq('inversion_id',id).get().then(function(actuales){
+      actuales=actuales||[];
+      var ya=actuales.some(function(m){return m.tipo==='devolucion_capital'&&String(m.fecha)===fecha&&Math.abs((parseFloat(m.monto)||0)-monto)<.005&&String(m.concepto||'')===concepto;});
+      var dev=actuales.filter(function(m){return m.tipo==='devolucion_capital';}).reduce(function(a,m){return a+(parseFloat(m.monto)||0);},0);
+      if(ya)throw Error('Este movimiento histórico ya existe. No se guardó otro.');
+      if(Math.round((dev+monto)*100)>Math.round(c.total*100))throw Error('El capital pendiente cambió. Actualiza el expediente antes de continuar.');
+      btn.textContent='Guardando...';
+      return from('inversion_movimientos').insert({inversion_id:id,tipo:'devolucion_capital',monto:monto,fecha:fecha,concepto:concepto,comprobante_url:null,registrado_por:usuario.id});
+    }).then(function(){cerrar();showToast('✅ Devolución histórica registrada SIN afectar Caja ni Bancos');renderInversionistaDetalle(usuarioId);}).catch(function(e){err.textContent='No se registró: '+e.message;btn.disabled=false;btn.textContent='Guardar solo en expediente';});
+  };
+}
 function renderNuevaInversion(usuarioId){
   var body=document.getElementById('enc-body');
   var hoy=fechaHoyLocal();
