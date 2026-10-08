@@ -13023,7 +13023,7 @@ function renderInversionistaDetalle(usuarioId){
           '<div class="ex54-field"><label>Capital vigente</label><input value="$'+formatMonto(vigente)+'" disabled></div>'+
           '<div class="ex54-field"><label>Utilidades pagadas</label><input value="$'+formatMonto(utilidades)+'" disabled></div>'+
           '<div class="ex54-field"><label>Contratos activos</label><input value="'+activos+'" disabled></div>'+
-        '</div>'+(!contratos.length?'<div id="inv468-primer" style="margin-top:14px;padding:16px;border:1px solid #c8e1d1;border-top:4px solid #20845a;border-radius:12px;background:#f6fbf7"><div style="font-size:1rem;font-weight:800;color:#14573a;margin-bottom:5px">Primer contrato de inversión</div><div class="ex55-mini" style="margin-bottom:12px">Registra aquí el capital inicial del inversionista. El registro no modifica por sí solo Caja ni Bancos.</div><div class="ex54-grid"><div class="ex54-field"><label>Capital aportado ($) *</label><input id="inv468-monto" inputmode="decimal" type="text" placeholder="0.00"></div><div class="ex54-field"><label>Fecha del primer contrato *</label><input id="inv468-fecha" type="date" value="'+fechaHoyLocal()+'"></div><div class="ex54-field"><label>Plazo en meses (opcional)</label><input id="inv468-plazo" type="number" min="1" step="1" placeholder="Ej. 12"></div><div class="ex54-field span2"><label>Condiciones del contrato (opcional)</label><input id="inv468-condiciones" type="text" placeholder="Condiciones acordadas"></div><div class="ex54-field span2"><label>Comprobante (opcional)</label><input id="inv468-comprobante" type="file" accept="image/*,.pdf"><div id="inv468-archivo-estado" class="ex55-mini"></div></div></div><div style="display:flex;justify-content:flex-end;margin-top:12px"><button type="button" class="btn-next" id="inv468-guardar">Guardar primer contrato</button></div></div>':'')+'</div>'+
+        '</div></div>'+
 
     '<div class="ex54-sec"><h3>Datos bancarios</h3><div class="ex54-grid">'+
           '<div class="ex54-field"><label>Banco</label><input value="'+ex54Esc(extra.banco||'')+'" disabled placeholder="Ej. Banamex"></div>'+
@@ -13039,8 +13039,8 @@ function renderInversionistaDetalle(usuarioId){
           '</div><div class="ex55-mini" style="margin-top:7px;">La administración documental completa se habilitará al persistir el expediente patrimonial en la etapa multiusuario.</div>'+
         '</div>'+
 
-        '<div class="ex54-sec"><h3>Contratos</h3>'+contratosRows+
-          '<div style="margin-top:8px;"><button type="button" class="ex55-btn primary" id="inv-nuevo-btn">'+(contratos.length?'+ Nuevo contrato':'Ir al primer contrato')+'</button></div>'+
+        '<div class="ex54-sec"><h3>Contratos de inversión</h3>'+contratosRows+
+          '<div style="margin-top:8px;"><button type="button" class="ex55-btn primary" id="inv-nuevo-btn">+ Nuevo contrato</button></div>'+
         '</div>'+
 
         '<div class="ex54-sec"><h3>Notas administrativas</h3><div class="ex54-grid"><div class="ex54-field span3"><textarea disabled style="min-height:80px;">'+ex54Esc(extra.notas||'')+'</textarea></div></div></div>'+
@@ -13054,33 +13054,7 @@ function renderInversionistaDetalle(usuarioId){
       var abrir=function(){inv124EditarInfo(usuarioId,iv?iv.nombre:tipo);};
       document.getElementById('inv124-editar').onclick=abrir;
       document.getElementById('inv124-editar-bottom').onclick=abrir;
-      document.getElementById('inv-nuevo-btn').onclick=function(){if(!contratos.length){var first=document.getElementById('inv468-monto');if(first){first.scrollIntoView({behavior:'smooth',block:'center'});first.focus();return;}}renderNuevaInversion(usuarioId);};
-      if(!contratos.length){
-        wireMontoInput('inv468-monto');
-        var fileEl=document.getElementById('inv468-comprobante');
-        var comprobanteUrl=null,subiendo=false;
-        fileEl.addEventListener('change',function(){
-          var f=this.files&&this.files[0];comprobanteUrl=null;if(!f)return;
-          subiendo=true;document.getElementById('inv468-archivo-estado').textContent='Subiendo comprobante...';
-          subirComprobanteInversion(f).then(function(url){comprobanteUrl=url;document.getElementById('inv468-archivo-estado').textContent='Comprobante adjuntado';}).catch(function(e){document.getElementById('inv468-archivo-estado').textContent='No se pudo subir: '+e.message;}).finally(function(){subiendo=false;});
-        });
-        document.getElementById('inv468-guardar').onclick=function(){
-          var btn=this,monto=parseMonto(document.getElementById('inv468-monto').value),fecha=document.getElementById('inv468-fecha').value;
-          var plazoInput=document.getElementById('inv468-plazo').value,plazo=plazoInput?parseInt(plazoInput,10):null;
-          var condiciones=(document.getElementById('inv468-condiciones').value||'').trim()||null;
-          if(!Number.isFinite(monto)||monto<=0){alert('Captura el capital aportado.');return;}
-          if(!fecha){alert('Selecciona la fecha del primer contrato.');return;}
-          if(plazoInput&&(!Number.isInteger(plazo)||plazo<=0)){alert('Captura un plazo válido.');return;}
-          if(subiendo){alert('Espera a que termine de subir el comprobante.');return;}
-          if(fileEl.files.length&&!comprobanteUrl){alert('El comprobante no se ha cargado. Retíralo o vuelve a seleccionarlo.');return;}
-          if(!confirm('¿Guardar el primer contrato por $'+formatMonto(monto)+'? Este registro no crea una entrada en Caja ni Bancos.'))return;
-          btn.disabled=true;btn.textContent='Guardando...';
-          from('inversiones').select('id').eq('inversionista_id',usuarioId).get().then(function(existing){
-            if(existing&&existing.length)throw new Error('Este inversionista ya tiene un contrato. Actualiza el expediente antes de registrar otro.');
-            return from('inversiones').insert({inversionista_id:usuarioId,monto_invertido:monto,fecha_inicio:fecha,plazo_meses:plazo,fecha_fin_estimada:plazo?sumarMesesFecha(fecha,plazo):null,condiciones:condiciones,comprobante_url:comprobanteUrl,estado:'activo',creado_por:usuario.id});
-          }).then(function(){showToast('Primer contrato registrado');renderInversionistaDetalle(usuarioId);}).catch(function(e){alert('No se pudo guardar: '+e.message);btn.disabled=false;btn.textContent='Guardar primer contrato';});
-        };
-      }
+      document.getElementById('inv-nuevo-btn').onclick=function(){renderNuevaInversion(usuarioId);};
       body.querySelectorAll('[data-ver-inversion]').forEach(function(card){card.onclick=function(){renderInversionDetalle(this.dataset.verInversion);};});
     });
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+e.message+'</div>';});
