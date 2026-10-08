@@ -2934,7 +2934,18 @@ function c231Icon(name, cls){
 </style>
 <style id="c411-cosecha-compacta">
 .c411-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:8px}.c411-card{background:#fff;border:1px solid #e2e8e4;border-radius:12px;padding:10px 12px;box-shadow:0 2px 7px rgba(20,60,40,.05)}.c411-card h4{margin:0 0 7px;color:#17452e;font-size:.82rem}.c411-head{grid-column:span 12;border-top:4px solid #d6a514}.c411-campo{grid-column:span 5;border-top:4px solid #23824d}.c411-dest{grid-column:span 7;border-top:4px solid #6f238d}.c411-personal{grid-column:span 5;border-top:4px solid #2b78c5}.c411-surcos{grid-column:span 7;border-top:4px solid #d6a514}.c411-row{display:flex;gap:7px;align-items:end;flex-wrap:wrap}.c411-row>label{flex:1;min-width:110px;font-size:.72rem;font-weight:800;color:#365646}.c411-row input,.c411-row select,.c411-row textarea{width:100%;margin-top:3px;padding:7px;border:1px solid #d6dfd9;border-radius:8px;background:#fff}.c411-choice{display:flex;gap:6px;flex-wrap:wrap}.c411-choice button{border:1px solid #d9e2dc;background:#fff;border-radius:9px;padding:7px 10px;font-weight:800;cursor:pointer}.c411-choice button.sel{background:#eef7f1;border-color:#23824d;color:#17452e}.c411-dline{border:1px solid #e4e9e6;border-radius:10px;padding:8px;margin-top:7px;background:#fbfcfb}.c411-mini{font-size:.68rem;color:#718078}@media(max-width:900px){.c411-campo,.c411-dest,.c411-personal,.c411-surcos{grid-column:span 12}}
-</style></head>
+</style>
+<style id="c460-cosecha-texto-superpuesto">
+/* C460: solo el saludo de Inicio de Cosecha. No cambia imagen, layout ni flujos.
+   La capa blanca oculta el texto antiguo incorporado en el fondo. */
+.c239-welcome.c460-cosecha-welcome { position:relative!important; isolation:isolate!important; }
+.c239-welcome.c460-cosecha-welcome::before {
+  content:""; position:absolute; inset:0; pointer-events:none; z-index:1;
+  background:linear-gradient(90deg,#fff 0%,#fff 39%,rgba(255,255,255,.97) 48%,rgba(255,255,255,.55) 57%,rgba(255,255,255,0) 70%);
+}
+.c239-welcome.c460-cosecha-welcome .c239-welcome-copy {position:relative!important;z-index:2!important;}
+</style>
+</head>
 <body>
 <div class="screen active" id="screen-login">
 <div class="login-logo"><img src="escudo-oficial-rancho.png" alt="Rancho Sagrado Corazón"><h1>Mootsil</h1><p>Rancho Sagrado Corazón</p></div>
@@ -4728,7 +4739,134 @@ function c290ImprimirReporteSemanal(){
   '.c256-plants{display:grid;grid-template-columns:1.15fr .85fr;gap:10px;padding:0 12px 12px}.c256-plant-card{border:1px solid #dfe7e2;border-radius:8px;overflow:hidden}.c256-plant-head{display:flex;justify-content:space-between;color:#fff;padding:6px 8px;font-size:10px;font-weight:800}.c256-plant-card.erandy .c256-plant-head{background:#165c43}.c256-plant-card.jade .c256-plant-head{background:#6d2789}.c256-table-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:7px}.c256-plant-card.jade .c256-table-grid{grid-template-columns:repeat(3,1fr)}.c256-tile{border:1px solid #e0e6e2;border-radius:6px;padding:6px}.c256-tile-title{font-size:10px;font-weight:800}.c256-tile-meta{font-size:8px;color:#7b8781}.c256-bar{height:5px;background:#edf1ee;border-radius:20px;overflow:hidden;margin-top:4px}.c256-bar i{display:block;height:100%;background:#258653}'+
   '.c255-hrow{display:grid;grid-template-columns:60px 1.35fr 1fr 1fr 90px;gap:8px;align-items:center;padding:7px 10px;border-bottom:1px solid #edf1ee;font-size:9px}.c255-hdate,.c255-hlabor{font-weight:800}.c255-hmeta{font-size:8px;color:#77847e}.c255-plant{display:inline-block;padding:2px 5px;border-radius:10px;font-weight:800}.c255-plant.erandy{background:#e7f2ec;color:#155c42}.c255-plant.jade{background:#f1e5f5;color:#702786}.c255-state{font-size:8px;font-weight:800;padding:3px 5px;border-radius:10px;text-align:center}.c255-state.pendiente{background:#fff1d7;color:#9a6200}.c255-state.en_proceso{background:#e3f2fa;color:#17658b}.c255-state.completada{background:#f1e5f5;color:#702786}.c255-state.cancelada{background:#f8e7e5;color:#a13d34}.c255-empty{padding:14px;text-align:center;color:#7a8781;font-size:10px}'+
   '</style></head><body><div class="rep-head"><div><div class="rep-title">Historial semanal de Labores</div><div class="rep-sub">Semana '+numeroSemanaISO(new Date(rg.ini+'T12:00:00'))+' · '+rg.ini+' al '+rg.fin+'</div></div><div class="rep-rancho">Rancho Sagrado Corazón · Zarzamora</div></div>'+
-  dc.outerHTML+(hc?hc.outerHTML:'')+'</body></html>');
+  dc.outerHTML+(hc?hc.outerHTML:'')+'
+<script id="c457-editar-compra-forzado">
+/* C457 · Garantiza que toda compra visible en Bancos y Efectivo tenga Editar.
+   No depende únicamente de compra_id ni de una coincidencia exacta de origen. */
+(function(){
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function compras(){try{return (ca21Load().movimientos||[]);}catch(e){return [];}}
+  function buscarMovimiento(tr){
+    var c=(tr.cells&&tr.cells[3]?tr.cells[3].innerText:'').trim();
+    var f=(tr.cells&&tr.cells[0]?tr.cells[0].innerText:'').trim();
+    var persona=(tr.cells&&tr.cells[5]?tr.cells[5].innerText:'').trim();
+    var out=compras().filter(function(m){
+      var mf=String(m.fecha_caja||m.fecha||'');
+      var concepto=String(m.concepto||'').trim();
+      var mp=String(m.persona||'').trim();
+      return mf && (c.indexOf(concepto)>=0 || concepto.indexOf(c)>=0) &&
+             (!persona || !mp || persona===mp);
+    });
+    if(out.length===1)return out[0];
+    var out2=compras().filter(function(m){
+      return String(m.origen||'').toLowerCase().indexOf('compr')>=0 &&
+             String(m.concepto||'').toLowerCase().indexOf('compra')>=0 &&
+             String(m.fecha_caja||m.fecha||'')===f;
+    });
+    return out2.length===1?out2[0]:null;
+  }
+  function inyectar(){
+    var tb=document.querySelector('.ca17-table tbody');
+    if(!tb)return;
+    Array.from(tb.rows||[]).forEach(function(tr){
+      if(!tr.cells||tr.cells.length<12)return;
+      var concepto=(tr.cells[3].innerText||'').trim().toLowerCase();
+      var categoria=(tr.cells[4].innerText||'').trim().toLowerCase();
+      var origen=(tr.cells[9].innerText||'').trim().toLowerCase();
+      var esCompra=origen.indexOf('compr')>=0 || categoria.indexOf('compra')>=0 || concepto.indexOf('compra')===0;
+      if(!esCompra)return;
+      var acciones=tr.cells[11];
+      if(acciones.querySelector('[data-c457-edit-compra]'))return;
+      var mov=buscarMovimiento(tr);
+      var b=document.createElement('button');
+      b.type='button';
+      b.className='ca21-action-btn';
+      b.textContent='Editar';
+      b.setAttribute('data-c457-edit-compra','1');
+      b.style.marginRight='6px';
+      b.onclick=function(){
+        if(typeof ca454AbrirEditarCompra!=='function'){alert('No está disponible el editor de compras.');return;}
+        if(mov){
+          ca454AbrirEditarCompra(mov.compra_id||'',mov.id,CAJA_FECHA_BASE);
+        }else{
+          alert('No se pudo identificar la compra de este movimiento.');
+        }
+      };
+      acciones.insertBefore(b,acciones.firstChild);
+    });
+  }
+  function programar(){setTimeout(inyectar,40);setTimeout(inyectar,250);setTimeout(inyectar,700);}
+  document.addEventListener('DOMContentLoaded',function(){programar();});
+  var host=document.getElementById('enc-body');
+  if(host&&window.MutationObserver){new MutationObserver(function(){programar();}).observe(host,{childList:true,subtree:true});}
+  var old=window.renderCajaMootsil;
+  if(typeof old==='function'){
+    window.renderCajaMootsil=function(){var r=old.apply(this,arguments);Promise.resolve(r).then(programar);return r;};
+  }
+})();
+</script>
+
+<script id="c458-forzar-editar-compras-historial">
+/* C458 · Refuerzo visual: toda fila cuyo Origen sea Compras debe mostrar Editar. */
+(function(){
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function forceEditButtons(){
+    try{
+      var tables=document.querySelectorAll('.ca17-table');
+      tables.forEach(function(table){
+        table.querySelectorAll('tbody tr').forEach(function(tr){
+          var cells=tr.querySelectorAll('td');
+          if(cells.length<12)return;
+          var origen=(cells[9].textContent||'').trim().toLowerCase();
+          if(origen!=='compras')return;
+          var actions=cells[11];
+          if(!actions)return;
+          if(actions.querySelector('[data-ca458-edit-compra]'))return;
+          var del=actions.querySelector('[data-ca21-del]');
+          var movId=del?del.getAttribute('data-ca21-del'):'';
+          var btn=document.createElement('button');
+          btn.type='button';
+          btn.className='ca21-action-btn';
+          btn.setAttribute('data-ca458-edit-compra','1');
+          btn.textContent='Editar';
+          btn.style.marginRight='5px';
+          btn.addEventListener('click',function(){
+            var mov=null;
+            try{
+              var d=ca21Load();
+              mov=(d.movimientos||[]).find(function(x){return String(x.id)===String(movId);});
+            }catch(e){}
+            var compraId=mov&&mov.compra_id?mov.compra_id:'';
+            var fecha=(mov&&(mov.fecha_caja||mov.fecha))||window.CAJA_FECHA_BASE||'';
+            if(typeof ca454AbrirEditarCompra==='function'){
+              ca454AbrirEditarCompra(compraId,movId,fecha);
+            }else if(typeof renderEditarCompra==='function'&&compraId){
+              renderEditarCompra(compraId);
+            }else{
+              alert('No está disponible el editor de compras.');
+            }
+          });
+          if(del) actions.insertBefore(btn,del);
+          else actions.appendChild(btn);
+        });
+      });
+    }catch(e){console.warn('C458 editar compra',e);}
+  }
+  function schedule(){setTimeout(forceEditButtons,0);setTimeout(forceEditButtons,250);setTimeout(forceEditButtons,800);}
+  var old=window.renderCajaMootsil;
+  if(typeof old==='function'){
+    window.renderCajaMootsil=function(){
+      var r=old.apply(this,arguments);
+      schedule();
+      Promise.resolve(r).then(schedule).catch(schedule);
+      return r;
+    };
+  }
+  document.addEventListener('DOMContentLoaded',schedule);
+  window.c458ForceEditButtons=forceEditButtons;
+})();
+</script>
+</body></html>');
   d.close();
 
   var printName='Labores - Semana '+numeroSemanaISO(new Date(rg.ini+'T12:00:00'))+' - Sagrado Corazon';
@@ -6364,7 +6502,68 @@ function renderInventario(grupoInicial){
     var fecha=new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
     var filas=lista.slice().sort(function(a,b){return (a.categoria||'').localeCompare(b.categoria||'')||a.nombre.localeCompare(b.nombre);}).map(function(it){var stock=Math.max(0,parseFloat(it.stock_actual)||0),min=parseFloat(it.stock_minimo)||0,bajo=stock<=min;return '<tr><td>'+it.nombre+'</td><td>'+(it.categoria||'Otros')+'</td><td>'+numFmt(stock)+' '+it.unidad+'</td><td>'+numFmt(min)+' '+it.unidad+'</td><td>'+(it.unidad_compra||'—')+(it.factor_compra?' · '+numFmt(it.factor_compra)+' '+it.unidad:'')+'</td><td>'+(bajo?'STOCK BAJO':'OK')+'</td></tr>';}).join('');
     var w=window.open('','_blank');if(!w){alert('Permite ventanas emergentes para imprimir el inventario.');return;}
-    w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Inventario - '+tituloPlano+'</title><style>body{font-family:Arial,sans-serif;color:#23352b;margin:28px}h1{font-size:20px;margin:0 0 4px}h2{font-size:14px;margin:0 0 16px;color:#52645a}.meta{font-size:11px;color:#66766d;margin-bottom:18px}table{width:100%;border-collapse:collapse;font-size:11px}th{background:#eef4ef;text-align:left;padding:7px;border-bottom:2px solid #58705f}td{padding:7px;border-bottom:1px solid #dfe6e1}th:nth-child(3),th:nth-child(4),td:nth-child(3),td:nth-child(4){text-align:right}@media print{body{margin:14mm}.no-print{display:none}}</style></head><body><h1>Inventario | Rancho Sagrado Corazón</h1><h2>'+tituloPlano+' · '+sub+'</h2><div class="meta">Fecha: '+fecha+' · Productos: '+lista.length+'</div><table><thead><tr><th>Producto</th><th>Subcategoría</th><th>Stock actual</th><th>Stock mínimo</th><th>Presentación</th><th>Estado</th></tr></thead><tbody>'+filas+'</tbody></table><script>window.onload=function(){window.print();};<\/script></body></html>');
+    w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Inventario - '+tituloPlano+'</title><style>body{font-family:Arial,sans-serif;color:#23352b;margin:28px}h1{font-size:20px;margin:0 0 4px}h2{font-size:14px;margin:0 0 16px;color:#52645a}.meta{font-size:11px;color:#66766d;margin-bottom:18px}table{width:100%;border-collapse:collapse;font-size:11px}th{background:#eef4ef;text-align:left;padding:7px;border-bottom:2px solid #58705f}td{padding:7px;border-bottom:1px solid #dfe6e1}th:nth-child(3),th:nth-child(4),td:nth-child(3),td:nth-child(4){text-align:right}@media print{body{margin:14mm}.no-print{display:none}}</style></head><body><h1>Inventario | Rancho Sagrado Corazón</h1><h2>'+tituloPlano+' · '+sub+'</h2><div class="meta">Fecha: '+fecha+' · Productos: '+lista.length+'</div><table><thead><tr><th>Producto</th><th>Subcategoría</th><th>Stock actual</th><th>Stock mínimo</th><th>Presentación</th><th>Estado</th></tr></thead><tbody>'+filas+'</tbody></table><script>window.onload=function(){window.print();};<\/script>
+<script id="c458-forzar-editar-compras-historial">
+/* C458 · Refuerzo visual: toda fila cuyo Origen sea Compras debe mostrar Editar. */
+(function(){
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function forceEditButtons(){
+    try{
+      var tables=document.querySelectorAll('.ca17-table');
+      tables.forEach(function(table){
+        table.querySelectorAll('tbody tr').forEach(function(tr){
+          var cells=tr.querySelectorAll('td');
+          if(cells.length<12)return;
+          var origen=(cells[9].textContent||'').trim().toLowerCase();
+          if(origen!=='compras')return;
+          var actions=cells[11];
+          if(!actions)return;
+          if(actions.querySelector('[data-ca458-edit-compra]'))return;
+          var del=actions.querySelector('[data-ca21-del]');
+          var movId=del?del.getAttribute('data-ca21-del'):'';
+          var btn=document.createElement('button');
+          btn.type='button';
+          btn.className='ca21-action-btn';
+          btn.setAttribute('data-ca458-edit-compra','1');
+          btn.textContent='Editar';
+          btn.style.marginRight='5px';
+          btn.addEventListener('click',function(){
+            var mov=null;
+            try{
+              var d=ca21Load();
+              mov=(d.movimientos||[]).find(function(x){return String(x.id)===String(movId);});
+            }catch(e){}
+            var compraId=mov&&mov.compra_id?mov.compra_id:'';
+            var fecha=(mov&&(mov.fecha_caja||mov.fecha))||window.CAJA_FECHA_BASE||'';
+            if(typeof ca454AbrirEditarCompra==='function'){
+              ca454AbrirEditarCompra(compraId,movId,fecha);
+            }else if(typeof renderEditarCompra==='function'&&compraId){
+              renderEditarCompra(compraId);
+            }else{
+              alert('No está disponible el editor de compras.');
+            }
+          });
+          if(del) actions.insertBefore(btn,del);
+          else actions.appendChild(btn);
+        });
+      });
+    }catch(e){console.warn('C458 editar compra',e);}
+  }
+  function schedule(){setTimeout(forceEditButtons,0);setTimeout(forceEditButtons,250);setTimeout(forceEditButtons,800);}
+  var old=window.renderCajaMootsil;
+  if(typeof old==='function'){
+    window.renderCajaMootsil=function(){
+      var r=old.apply(this,arguments);
+      schedule();
+      Promise.resolve(r).then(schedule).catch(schedule);
+      return r;
+    };
+  }
+  document.addEventListener('DOMContentLoaded',schedule);
+  window.c458ForceEditButtons=forceEditButtons;
+})();
+</script>
+</body></html>');
     w.document.close();
   });
 }
@@ -7648,7 +7847,68 @@ function c353Print(title,sub,bodyHtml,fileTitle){
   var old=document.getElementById('c353-print-frame');if(old)old.remove();
   var frame=document.createElement('iframe');frame.id='c353-print-frame';frame.style.cssText='position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0';document.body.appendChild(frame);
   var d=frame.contentDocument||frame.contentWindow.document;
-  d.open();d.write('<!doctype html><html><head><meta charset="utf-8"><title>'+c353Esc(fileTitle||title)+'</title><style>@page{size:landscape;margin:10mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#173d2e;margin:0}.head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #145c42;padding-bottom:8px;margin-bottom:12px}.title{font-size:20px;font-weight:800}.sub{font-size:10px;color:#66766e;margin-top:3px}.rancho{font-size:12px;font-weight:800;color:#145c42;text-align:right}.sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:7px;margin:10px 0}.k{border:1px solid #dce5df;border-radius:8px;padding:7px;border-bottom:4px solid #2f80c9}.k:nth-child(2){border-bottom-color:#7a2b91}.k:nth-child(3){border-bottom-color:#278a56}.k:nth-child(4){border-bottom-color:#e0a900}.k:nth-child(5){border-bottom-color:#c8463d}.k b{display:block;font-size:16px}.k span{font-size:9px;color:#6c7b73}table{width:100%;border-collapse:collapse;font-size:9px}th{background:#eef5f1;text-align:left;padding:6px;border:1px solid #dce5df}td{padding:6px;border:1px solid #e2e8e4;vertical-align:top}.done{color:#7a2b91;font-weight:800}.process{color:#278a56;font-weight:800}.pending{color:#a66f00;font-weight:800}.late,.cancel{color:#c8463d;font-weight:800}.foot{margin-top:8px;font-size:8px;color:#718078}</style></head><body><div class="head"><div><div class="title">'+c353Esc(title)+'</div><div class="sub">'+c353Esc(sub)+'</div></div><div class="rancho">Rancho Sagrado Corazón · Zarzamora<br><span class="sub">Impreso '+new Date().toLocaleString('es-MX')+'</span></div></div>'+bodyHtml+'<div class="foot">Historial generado desde Mootsil para control semanal.</div></body></html>');d.close();
+  d.open();d.write('<!doctype html><html><head><meta charset="utf-8"><title>'+c353Esc(fileTitle||title)+'</title><style>@page{size:landscape;margin:10mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#173d2e;margin:0}.head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #145c42;padding-bottom:8px;margin-bottom:12px}.title{font-size:20px;font-weight:800}.sub{font-size:10px;color:#66766e;margin-top:3px}.rancho{font-size:12px;font-weight:800;color:#145c42;text-align:right}.sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:7px;margin:10px 0}.k{border:1px solid #dce5df;border-radius:8px;padding:7px;border-bottom:4px solid #2f80c9}.k:nth-child(2){border-bottom-color:#7a2b91}.k:nth-child(3){border-bottom-color:#278a56}.k:nth-child(4){border-bottom-color:#e0a900}.k:nth-child(5){border-bottom-color:#c8463d}.k b{display:block;font-size:16px}.k span{font-size:9px;color:#6c7b73}table{width:100%;border-collapse:collapse;font-size:9px}th{background:#eef5f1;text-align:left;padding:6px;border:1px solid #dce5df}td{padding:6px;border:1px solid #e2e8e4;vertical-align:top}.done{color:#7a2b91;font-weight:800}.process{color:#278a56;font-weight:800}.pending{color:#a66f00;font-weight:800}.late,.cancel{color:#c8463d;font-weight:800}.foot{margin-top:8px;font-size:8px;color:#718078}</style></head><body><div class="head"><div><div class="title">'+c353Esc(title)+'</div><div class="sub">'+c353Esc(sub)+'</div></div><div class="rancho">Rancho Sagrado Corazón · Zarzamora<br><span class="sub">Impreso '+new Date().toLocaleString('es-MX')+'</span></div></div>'+bodyHtml+'<div class="foot">Historial generado desde Mootsil para control semanal.</div>
+<script id="c458-forzar-editar-compras-historial">
+/* C458 · Refuerzo visual: toda fila cuyo Origen sea Compras debe mostrar Editar. */
+(function(){
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function forceEditButtons(){
+    try{
+      var tables=document.querySelectorAll('.ca17-table');
+      tables.forEach(function(table){
+        table.querySelectorAll('tbody tr').forEach(function(tr){
+          var cells=tr.querySelectorAll('td');
+          if(cells.length<12)return;
+          var origen=(cells[9].textContent||'').trim().toLowerCase();
+          if(origen!=='compras')return;
+          var actions=cells[11];
+          if(!actions)return;
+          if(actions.querySelector('[data-ca458-edit-compra]'))return;
+          var del=actions.querySelector('[data-ca21-del]');
+          var movId=del?del.getAttribute('data-ca21-del'):'';
+          var btn=document.createElement('button');
+          btn.type='button';
+          btn.className='ca21-action-btn';
+          btn.setAttribute('data-ca458-edit-compra','1');
+          btn.textContent='Editar';
+          btn.style.marginRight='5px';
+          btn.addEventListener('click',function(){
+            var mov=null;
+            try{
+              var d=ca21Load();
+              mov=(d.movimientos||[]).find(function(x){return String(x.id)===String(movId);});
+            }catch(e){}
+            var compraId=mov&&mov.compra_id?mov.compra_id:'';
+            var fecha=(mov&&(mov.fecha_caja||mov.fecha))||window.CAJA_FECHA_BASE||'';
+            if(typeof ca454AbrirEditarCompra==='function'){
+              ca454AbrirEditarCompra(compraId,movId,fecha);
+            }else if(typeof renderEditarCompra==='function'&&compraId){
+              renderEditarCompra(compraId);
+            }else{
+              alert('No está disponible el editor de compras.');
+            }
+          });
+          if(del) actions.insertBefore(btn,del);
+          else actions.appendChild(btn);
+        });
+      });
+    }catch(e){console.warn('C458 editar compra',e);}
+  }
+  function schedule(){setTimeout(forceEditButtons,0);setTimeout(forceEditButtons,250);setTimeout(forceEditButtons,800);}
+  var old=window.renderCajaMootsil;
+  if(typeof old==='function'){
+    window.renderCajaMootsil=function(){
+      var r=old.apply(this,arguments);
+      schedule();
+      Promise.resolve(r).then(schedule).catch(schedule);
+      return r;
+    };
+  }
+  document.addEventListener('DOMContentLoaded',schedule);
+  window.c458ForceEditButtons=forceEditButtons;
+})();
+</script>
+</body></html>');d.close();
   var printName=String(fileTitle||title||'Reporte Mootsil');
   try{d.title=printName;}catch(_e){}
   setTimeout(function(){
@@ -11116,6 +11376,8 @@ function renderEditarCompra(compraId,volverFn){
       var fecha=document.getElementById('ec-fecha').value||compra.fecha;
       var numeroFactura=(document.getElementById('ec-factura').value||'').trim()||null;
       var proveedorId=document.getElementById('ec-proveedor').value||null;
+      var proveedorObj=(cats.proveedores||[]).find(function(p){return String(p.id)===String(proveedorId);});
+      var proveedorNombreNuevo=proveedorObj?proveedorObj.nombre:'Proveedor';
       var esCredito=formaPagoSel==='credito';
       var vencimiento=esCredito?(document.getElementById('ec-vencimiento').value||null):null;
       var cuentaPagoNueva=esCredito?null:(document.getElementById('ec-cuenta-pago').value||'efectivo');
@@ -11260,12 +11522,13 @@ function renderEditarCompra(compraId,volverFn){
         var mov=caja.movimientos.find(function(m){return String(m.compra_id||'')===String(compraId)&&m.origen==='Compras';});
         if(formaPagoSel!=='credito'){
           if(!mov){
-            mov={id:'compra-'+compraId,compra_id:compraId,fecha:fecha,hora:ca21Now(),tipo:'salida',cuenta:cuentaPagoNueva,monto:total,categoria:'Compra',concepto:'Compra'+(numeroFactura?' · Factura '+numeroFactura:''),persona:'Proveedor',forma:cuentaPagoNueva,origen:'Compras',estado:'Pagado',usuario:(usuario&&usuario.nombre)||'Usuario'};
+            mov={id:'compra-'+compraId,compra_id:compraId,fecha:fecha,hora:ca21Now(),tipo:'salida',cuenta:cuentaPagoNueva,monto:total,categoria:'Compra',concepto:'Compra'+(numeroFactura?' · Factura '+numeroFactura:''),persona:proveedorNombreNuevo,forma:cuentaPagoNueva,origen:'Compras',estado:'Pagado',usuario:(usuario&&usuario.nombre)||'Usuario'};
             caja.movimientos.push(mov);
           } else {
             var cuentaAnterior=mov.cuenta||'efectivo';
             mov.monto=total; mov.fecha=fecha; mov.cuenta=cuentaPagoNueva; mov.forma=cuentaPagoNueva;
             mov.concepto='Compra'+(numeroFactura?' · Factura '+numeroFactura:'');
+            mov.persona=proveedorNombreNuevo;
             if(cuentaAnterior!==cuentaPagoNueva){
               mov.correccion_cuenta={anterior:cuentaAnterior,nueva:cuentaPagoNueva,fecha:new Date().toISOString(),usuario:(usuario&&usuario.nombre)||'Usuario'};
             }
@@ -13945,7 +14208,68 @@ function ca327PrintSemana(fechaBase){
     cuentaResumen('efectivo','Efectivo',false)+cuentaResumen('banamex_pesos','Banamex Pesos',false)+cuentaResumen('santander_pesos','Santander Pesos',false)+cuentaResumen('banamex_dolares','Banamex Dólares',true)+
     '</tbody></table><h2>Movimientos de la semana</h2><table><thead><tr><th>Fecha</th><th>Hora</th><th>Concepto</th><th>Categoría</th><th>Beneficiario / Proveedor</th><th>Cuenta</th><th>Entrada</th><th>Salida</th></tr></thead><tbody>'+detalle+'</tbody></table>'+
     '<div class="foot">Reporte generado desde Mootsil · Tesorería. Los saldos son permanentes; la semana sólo delimita este reporte.</div>'+
-    '<script>window.onload=function(){window.print();}<\/script></body></html>';
+    '<script>window.onload=function(){window.print();}<\/script>
+<script id="c458-forzar-editar-compras-historial">
+/* C458 · Refuerzo visual: toda fila cuyo Origen sea Compras debe mostrar Editar. */
+(function(){
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function forceEditButtons(){
+    try{
+      var tables=document.querySelectorAll('.ca17-table');
+      tables.forEach(function(table){
+        table.querySelectorAll('tbody tr').forEach(function(tr){
+          var cells=tr.querySelectorAll('td');
+          if(cells.length<12)return;
+          var origen=(cells[9].textContent||'').trim().toLowerCase();
+          if(origen!=='compras')return;
+          var actions=cells[11];
+          if(!actions)return;
+          if(actions.querySelector('[data-ca458-edit-compra]'))return;
+          var del=actions.querySelector('[data-ca21-del]');
+          var movId=del?del.getAttribute('data-ca21-del'):'';
+          var btn=document.createElement('button');
+          btn.type='button';
+          btn.className='ca21-action-btn';
+          btn.setAttribute('data-ca458-edit-compra','1');
+          btn.textContent='Editar';
+          btn.style.marginRight='5px';
+          btn.addEventListener('click',function(){
+            var mov=null;
+            try{
+              var d=ca21Load();
+              mov=(d.movimientos||[]).find(function(x){return String(x.id)===String(movId);});
+            }catch(e){}
+            var compraId=mov&&mov.compra_id?mov.compra_id:'';
+            var fecha=(mov&&(mov.fecha_caja||mov.fecha))||window.CAJA_FECHA_BASE||'';
+            if(typeof ca454AbrirEditarCompra==='function'){
+              ca454AbrirEditarCompra(compraId,movId,fecha);
+            }else if(typeof renderEditarCompra==='function'&&compraId){
+              renderEditarCompra(compraId);
+            }else{
+              alert('No está disponible el editor de compras.');
+            }
+          });
+          if(del) actions.insertBefore(btn,del);
+          else actions.appendChild(btn);
+        });
+      });
+    }catch(e){console.warn('C458 editar compra',e);}
+  }
+  function schedule(){setTimeout(forceEditButtons,0);setTimeout(forceEditButtons,250);setTimeout(forceEditButtons,800);}
+  var old=window.renderCajaMootsil;
+  if(typeof old==='function'){
+    window.renderCajaMootsil=function(){
+      var r=old.apply(this,arguments);
+      schedule();
+      Promise.resolve(r).then(schedule).catch(schedule);
+      return r;
+    };
+  }
+  document.addEventListener('DOMContentLoaded',schedule);
+  window.c458ForceEditButtons=forceEditButtons;
+})();
+</script>
+</body></html>';
   var w=window.open('','_blank','width=1100,height=800');
   if(!w){alert('Permite ventanas emergentes para imprimir el reporte semanal.');return;}
   w.document.open();w.document.write(html);w.document.close();
@@ -13996,7 +14320,7 @@ function renderCajaMootsil(periodo,fechaBase){
     var pref=usd?'US$ ':'$';
     var ent=m.tipo==='entrada'?pref+formatMonto(m.monto):(m.tipo==='transferencia'?'⇄':'—');
     var sal=m.tipo==='salida'?pref+formatMonto(m.monto):(m.tipo==='transferencia'?'⇄':'—');
-    return '<tr><td>'+cajaFechaCorta(m.fecha_caja||m.fecha)+'</td><td>'+(m.hora||'—')+'</td><td>'+(m.tipo==='entrada'?'⬇️':m.tipo==='salida'?'⬆️':'⇄')+'</td><td><strong>'+(m.concepto||'Movimiento')+'</strong><div class="ca21-mini">'+(m.nota||'')+'</div></td><td><span class="ca17-tag">'+(m.categoria||'—')+'</span></td><td>'+(m.persona||'—')+'</td><td>'+forma+'</td><td class="ca17-money-in">'+ent+'</td><td class="ca17-money-out">'+sal+'</td><td><span class="ca17-tag">'+(m.origen||'Tesorería')+'</span></td><td><span class="ca17-tag">'+(m.estado||'Registrado')+'</span></td><td><button class="ca21-action-btn" data-ca21-del="'+m.id+'">Eliminar</button></td></tr>';
+    return '<tr><td>'+cajaFechaCorta(m.fecha_caja||m.fecha)+'</td><td>'+(m.hora||'—')+'</td><td>'+(m.tipo==='entrada'?'⬇️':m.tipo==='salida'?'⬆️':'⇄')+'</td><td><strong>'+(m.concepto||'Movimiento')+'</strong><div class="ca21-mini">'+(m.nota||'')+'</div></td><td><span class="ca17-tag">'+(m.categoria||'—')+'</span></td><td>'+(m.persona||'—')+'</td><td>'+forma+'</td><td class="ca17-money-in">'+ent+'</td><td class="ca17-money-out">'+sal+'</td><td><span class="ca17-tag">'+(m.origen||'Tesorería')+'</span></td><td><span class="ca17-tag">'+(m.estado||'Registrado')+'</span></td><td>'+(m.origen==='Compras'?'<button class="ca21-action-btn" data-ca21-edit-compra="'+(m.compra_id||'')+'" data-ca21-edit-mov="'+m.id+'">Editar</button> ':'')+'<button class="ca21-action-btn" data-ca21-del="'+m.id+'">Eliminar</button></td></tr>';
   }).join(''):'<tr><td colspan="12" style="text-align:center;color:#77837c;padding:24px">No hay movimientos en esta vista.</td></tr>';
 
   body.innerHTML='<div class="ca17-shell">'+
@@ -14051,6 +14375,7 @@ function renderCajaMootsil(periodo,fechaBase){
   var bInv=document.getElementById('ca22-inversionistas');if(bInv)bInv.addEventListener('click',function(){ca124OpenInversionistas(fechaHoyLocal());});
   var bFin=document.getElementById('ca25-financiamientos');if(bFin)bFin.addEventListener('click',renderFinanciamientosCaja);
   body.querySelectorAll('[data-ca323-account]').forEach(function(b){b.addEventListener('click',function(){ca323OpenCuentaHistorial(this.dataset.ca323Account);});});
+  body.querySelectorAll('[data-ca21-edit-compra]').forEach(function(b){b.addEventListener('click',function(){ca454AbrirEditarCompra(this.dataset.ca21EditCompra,this.dataset.ca21EditMov,CAJA_FECHA_BASE);});});
   body.querySelectorAll('[data-ca21-del]').forEach(function(b){b.addEventListener('click',function(){ca21DeleteMovimiento(this.dataset.ca21Del,CAJA_FECHA_BASE);});});
 }
 
@@ -15069,7 +15394,68 @@ function n215ImprimirNominaActual(){
     return '<tr><td><strong>'+n215Esc(a.nombre)+'</strong></td><td>'+n215Esc(a.tipo)+'</td><td class="num">'+Number(dias||0).toFixed(1)+'</td><td class="num">'+n215Money(r.sueldoBase)+'</td><td class="num">'+n215Money(a.totalSueldo)+'</td><td class="num">'+Number(a.horasExtra||0).toFixed(1)+' h<br><small>'+n215Money(a.totalExtra)+'</small></td><td class="num">'+n215Money(bonos)+'</td><td class="num">'+n215Money(apoyos)+'</td><td class="num">-'+n215Money(prestamos)+'</td><td class="num net">'+n215Money(a.granTotal)+'</td><td>'+(a.pagado?'Pagado':'Pendiente')+'</td></tr>';
   }).join('');
   var generado=new Date().toLocaleString('es-MX');
-  var doc='<!doctype html><html><head><meta charset="utf-8"><title>Nómina semana '+c.numSemana+'</title><style>@page{size:landscape;margin:7mm}*{box-sizing:border-box}html,body{width:100%;margin:0;padding:0}body{font-family:Arial,sans-serif;color:#173d2b;font-size:9px;overflow-x:hidden}h1{margin:0;font-size:18px}h2{margin:2px 0 9px;font-size:11px;font-weight:normal;color:#555}.meta{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #17613f;padding-bottom:6px;margin-bottom:7px}.brand{font-weight:bold}.totals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin:7px 0}.box{border:1px solid #ccc;border-radius:5px;padding:5px;min-width:0}.box small{display:block;color:#666;text-transform:uppercase;font-size:8px}.box b{font-size:11px}table{width:100%;max-width:100%;border-collapse:collapse;table-layout:fixed}th{background:#17613f;color:white;text-align:left;padding:4px 3px;font-size:7.5px;white-space:nowrap}td{border-bottom:1px solid #ddd;padding:4px 3px;vertical-align:top;font-size:7.8px;overflow-wrap:anywhere}th:nth-child(1),td:nth-child(1){width:13%}th:nth-child(2),td:nth-child(2){width:7%}th:nth-child(3),td:nth-child(3){width:5%}th:nth-child(4),td:nth-child(4){width:7%}th:nth-child(5),td:nth-child(5){width:8%}th:nth-child(6),td:nth-child(6){width:8%}th:nth-child(7),td:nth-child(7){width:7%}th:nth-child(8),td:nth-child(8){width:8%}th:nth-child(9),td:nth-child(9){width:8%}th:nth-child(10),td:nth-child(10){width:9%}th:nth-child(11),td:nth-child(11){width:8%}.num{text-align:right;white-space:nowrap}.net{font-weight:bold}.foot{display:flex;justify-content:flex-end;gap:16px;margin-top:8px;font-size:10px;font-weight:bold;white-space:nowrap}.note{margin-top:8px;color:#666;font-size:8px}.no-print{margin:8px 0;text-align:right}.no-print button{padding:7px 12px;border:0;border-radius:6px;background:#17613f;color:white;font-weight:bold;font-size:10px}@media print{body{zoom:.96}.no-print{display:none}}</style></head><body><div class="no-print"><button onclick="window.print()">Imprimir / Guardar PDF</button></div><div class="meta"><div><div class="brand">Rancho Sagrado Corazón · Mootsil</div><h1>Reporte semanal de nómina</h1><h2>Semana '+c.numSemana+' · '+n215Esc(c.semanaInicio)+' a '+n215Esc(c.semanaFin)+'</h2></div><div>Generado: '+n215Esc(generado)+'</div></div><div class="totals"><div class="box"><small>Sueldos</small><b>'+n215Money(c.totalSueldos)+'</b></div><div class="box"><small>Horas extra</small><b>+'+n215Money(c.totalExtra)+'</b></div><div class="box"><small>Bonos</small><b>+'+n215Money(c.totalBonos)+'</b></div><div class="box"><small>Apoyos</small><b>+'+n215Money(c.totalApoyos)+'</b></div><div class="box"><small>Préstamos</small><b>-'+n215Money(c.totalPrestamos)+'</b></div><div class="box"><small>Neto semana</small><b>'+n215Money(c.totalNeto)+'</b></div><div class="box"><small>Pagado</small><b>'+n215Money(c.totalPagado)+'</b></div><div class="box"><small>Pendiente</small><b>'+n215Money(c.totalPendiente)+'</b></div></div><table><thead><tr><th>Colaborador</th><th>Tipo</th><th>Días</th><th>Jornal</th><th>Sueldo</th><th>H.E.</th><th>Bonos</th><th>Apoyos</th><th>Préstamos</th><th>Neto</th><th>Estado</th></tr></thead><tbody>'+rows+'</tbody></table><div class="foot"><span>Pendiente: '+n215Money(c.totalPendiente)+'</span><span>Pagado: '+n215Money(c.totalPagado)+'</span><span>Neto: '+n215Money(c.totalNeto)+'</span></div><div class="note">Reporte informativo generado desde Nómina. La impresión no registra ni modifica pagos.</div></body></html>';
+  var doc='<!doctype html><html><head><meta charset="utf-8"><title>Nómina semana '+c.numSemana+'</title><style>@page{size:landscape;margin:7mm}*{box-sizing:border-box}html,body{width:100%;margin:0;padding:0}body{font-family:Arial,sans-serif;color:#173d2b;font-size:9px;overflow-x:hidden}h1{margin:0;font-size:18px}h2{margin:2px 0 9px;font-size:11px;font-weight:normal;color:#555}.meta{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #17613f;padding-bottom:6px;margin-bottom:7px}.brand{font-weight:bold}.totals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin:7px 0}.box{border:1px solid #ccc;border-radius:5px;padding:5px;min-width:0}.box small{display:block;color:#666;text-transform:uppercase;font-size:8px}.box b{font-size:11px}table{width:100%;max-width:100%;border-collapse:collapse;table-layout:fixed}th{background:#17613f;color:white;text-align:left;padding:4px 3px;font-size:7.5px;white-space:nowrap}td{border-bottom:1px solid #ddd;padding:4px 3px;vertical-align:top;font-size:7.8px;overflow-wrap:anywhere}th:nth-child(1),td:nth-child(1){width:13%}th:nth-child(2),td:nth-child(2){width:7%}th:nth-child(3),td:nth-child(3){width:5%}th:nth-child(4),td:nth-child(4){width:7%}th:nth-child(5),td:nth-child(5){width:8%}th:nth-child(6),td:nth-child(6){width:8%}th:nth-child(7),td:nth-child(7){width:7%}th:nth-child(8),td:nth-child(8){width:8%}th:nth-child(9),td:nth-child(9){width:8%}th:nth-child(10),td:nth-child(10){width:9%}th:nth-child(11),td:nth-child(11){width:8%}.num{text-align:right;white-space:nowrap}.net{font-weight:bold}.foot{display:flex;justify-content:flex-end;gap:16px;margin-top:8px;font-size:10px;font-weight:bold;white-space:nowrap}.note{margin-top:8px;color:#666;font-size:8px}.no-print{margin:8px 0;text-align:right}.no-print button{padding:7px 12px;border:0;border-radius:6px;background:#17613f;color:white;font-weight:bold;font-size:10px}@media print{body{zoom:.96}.no-print{display:none}}</style></head><body><div class="no-print"><button onclick="window.print()">Imprimir / Guardar PDF</button></div><div class="meta"><div><div class="brand">Rancho Sagrado Corazón · Mootsil</div><h1>Reporte semanal de nómina</h1><h2>Semana '+c.numSemana+' · '+n215Esc(c.semanaInicio)+' a '+n215Esc(c.semanaFin)+'</h2></div><div>Generado: '+n215Esc(generado)+'</div></div><div class="totals"><div class="box"><small>Sueldos</small><b>'+n215Money(c.totalSueldos)+'</b></div><div class="box"><small>Horas extra</small><b>+'+n215Money(c.totalExtra)+'</b></div><div class="box"><small>Bonos</small><b>+'+n215Money(c.totalBonos)+'</b></div><div class="box"><small>Apoyos</small><b>+'+n215Money(c.totalApoyos)+'</b></div><div class="box"><small>Préstamos</small><b>-'+n215Money(c.totalPrestamos)+'</b></div><div class="box"><small>Neto semana</small><b>'+n215Money(c.totalNeto)+'</b></div><div class="box"><small>Pagado</small><b>'+n215Money(c.totalPagado)+'</b></div><div class="box"><small>Pendiente</small><b>'+n215Money(c.totalPendiente)+'</b></div></div><table><thead><tr><th>Colaborador</th><th>Tipo</th><th>Días</th><th>Jornal</th><th>Sueldo</th><th>H.E.</th><th>Bonos</th><th>Apoyos</th><th>Préstamos</th><th>Neto</th><th>Estado</th></tr></thead><tbody>'+rows+'</tbody></table><div class="foot"><span>Pendiente: '+n215Money(c.totalPendiente)+'</span><span>Pagado: '+n215Money(c.totalPagado)+'</span><span>Neto: '+n215Money(c.totalNeto)+'</span></div><div class="note">Reporte informativo generado desde Nómina. La impresión no registra ni modifica pagos.</div>
+<script id="c458-forzar-editar-compras-historial">
+/* C458 · Refuerzo visual: toda fila cuyo Origen sea Compras debe mostrar Editar. */
+(function(){
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function forceEditButtons(){
+    try{
+      var tables=document.querySelectorAll('.ca17-table');
+      tables.forEach(function(table){
+        table.querySelectorAll('tbody tr').forEach(function(tr){
+          var cells=tr.querySelectorAll('td');
+          if(cells.length<12)return;
+          var origen=(cells[9].textContent||'').trim().toLowerCase();
+          if(origen!=='compras')return;
+          var actions=cells[11];
+          if(!actions)return;
+          if(actions.querySelector('[data-ca458-edit-compra]'))return;
+          var del=actions.querySelector('[data-ca21-del]');
+          var movId=del?del.getAttribute('data-ca21-del'):'';
+          var btn=document.createElement('button');
+          btn.type='button';
+          btn.className='ca21-action-btn';
+          btn.setAttribute('data-ca458-edit-compra','1');
+          btn.textContent='Editar';
+          btn.style.marginRight='5px';
+          btn.addEventListener('click',function(){
+            var mov=null;
+            try{
+              var d=ca21Load();
+              mov=(d.movimientos||[]).find(function(x){return String(x.id)===String(movId);});
+            }catch(e){}
+            var compraId=mov&&mov.compra_id?mov.compra_id:'';
+            var fecha=(mov&&(mov.fecha_caja||mov.fecha))||window.CAJA_FECHA_BASE||'';
+            if(typeof ca454AbrirEditarCompra==='function'){
+              ca454AbrirEditarCompra(compraId,movId,fecha);
+            }else if(typeof renderEditarCompra==='function'&&compraId){
+              renderEditarCompra(compraId);
+            }else{
+              alert('No está disponible el editor de compras.');
+            }
+          });
+          if(del) actions.insertBefore(btn,del);
+          else actions.appendChild(btn);
+        });
+      });
+    }catch(e){console.warn('C458 editar compra',e);}
+  }
+  function schedule(){setTimeout(forceEditButtons,0);setTimeout(forceEditButtons,250);setTimeout(forceEditButtons,800);}
+  var old=window.renderCajaMootsil;
+  if(typeof old==='function'){
+    window.renderCajaMootsil=function(){
+      var r=old.apply(this,arguments);
+      schedule();
+      Promise.resolve(r).then(schedule).catch(schedule);
+      return r;
+    };
+  }
+  document.addEventListener('DOMContentLoaded',schedule);
+  window.c458ForceEditButtons=forceEditButtons;
+})();
+</script>
+</body></html>';
   var w=window.open('','_blank');
   if(!w){alert('El navegador bloqueó la ventana de impresión. Permite ventanas emergentes para Mootsil e intenta de nuevo.');return;}
   w.document.open();w.document.write(doc);w.document.close();w.focus();
@@ -16951,7 +17337,7 @@ function pintarInicio(jornada,datosTareas,score,esCache){
     ? '<img src="'+usuario.avatarUrl+'" class="op-inicio-avatar" alt="Tu Mootsilito">'
     : '<div class="op-inicio-avatar-fallback">'+MOOTSILITO_FALLBACK_IC+'</div>';
 
-  var bienvenidaHtml='<div class="c239-welcome">'+
+  var bienvenidaHtml='<div class="c239-welcome'+(usuario&&usuario.rol==='cosechador'?' c460-cosecha-welcome':'')+'">'+
     '<div class="c239-welcome-copy"><h2>¡'+saludo+', '+usuario.nombre+'!</h2><p>Hoy seguimos creciendo juntos. 🌱</p></div>'+
     '<div class="c239-welcome-avatar">'+avatarHtml+'</div>'+
   '</div>';
@@ -21217,7 +21603,68 @@ C340
     w.document.open();
     w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+esc(title)+'</title><style>'+
       '@page{size:letter;margin:12mm}body{font-family:Arial,sans-serif;color:#173b2e;font-size:11px}h1{font-size:22px;margin:0}h2{font-size:15px;margin:18px 0 7px}.head{border-bottom:3px solid #17633f;padding-bottom:10px;margin-bottom:12px}.muted{color:#66756e}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.card{border:1px solid #cfd9d4;border-radius:8px;padding:9px}.card b{display:block;margin-bottom:4px}table{width:100%;border-collapse:collapse;margin-top:8px}th{background:#14583d;color:#fff;text-align:left;padding:6px;font-size:9px}td{border-bottom:1px solid #dde4e0;padding:6px;vertical-align:top}.num{text-align:right;white-space:nowrap}.foot{margin-top:18px;border-top:1px solid #ccd6d1;padding-top:8px;font-size:9px;color:#66756e}@media print{button{display:none}}'+
-      '</style></head><body>'+html+'<script>window.onload=function(){setTimeout(function(){window.print()},200)}<\/script></body></html>');
+      '</style></head><body>'+html+'<script>window.onload=function(){setTimeout(function(){window.print()},200)}<\/script>
+<script id="c458-forzar-editar-compras-historial">
+/* C458 · Refuerzo visual: toda fila cuyo Origen sea Compras debe mostrar Editar. */
+(function(){
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function forceEditButtons(){
+    try{
+      var tables=document.querySelectorAll('.ca17-table');
+      tables.forEach(function(table){
+        table.querySelectorAll('tbody tr').forEach(function(tr){
+          var cells=tr.querySelectorAll('td');
+          if(cells.length<12)return;
+          var origen=(cells[9].textContent||'').trim().toLowerCase();
+          if(origen!=='compras')return;
+          var actions=cells[11];
+          if(!actions)return;
+          if(actions.querySelector('[data-ca458-edit-compra]'))return;
+          var del=actions.querySelector('[data-ca21-del]');
+          var movId=del?del.getAttribute('data-ca21-del'):'';
+          var btn=document.createElement('button');
+          btn.type='button';
+          btn.className='ca21-action-btn';
+          btn.setAttribute('data-ca458-edit-compra','1');
+          btn.textContent='Editar';
+          btn.style.marginRight='5px';
+          btn.addEventListener('click',function(){
+            var mov=null;
+            try{
+              var d=ca21Load();
+              mov=(d.movimientos||[]).find(function(x){return String(x.id)===String(movId);});
+            }catch(e){}
+            var compraId=mov&&mov.compra_id?mov.compra_id:'';
+            var fecha=(mov&&(mov.fecha_caja||mov.fecha))||window.CAJA_FECHA_BASE||'';
+            if(typeof ca454AbrirEditarCompra==='function'){
+              ca454AbrirEditarCompra(compraId,movId,fecha);
+            }else if(typeof renderEditarCompra==='function'&&compraId){
+              renderEditarCompra(compraId);
+            }else{
+              alert('No está disponible el editor de compras.');
+            }
+          });
+          if(del) actions.insertBefore(btn,del);
+          else actions.appendChild(btn);
+        });
+      });
+    }catch(e){console.warn('C458 editar compra',e);}
+  }
+  function schedule(){setTimeout(forceEditButtons,0);setTimeout(forceEditButtons,250);setTimeout(forceEditButtons,800);}
+  var old=window.renderCajaMootsil;
+  if(typeof old==='function'){
+    window.renderCajaMootsil=function(){
+      var r=old.apply(this,arguments);
+      schedule();
+      Promise.resolve(r).then(schedule).catch(schedule);
+      return r;
+    };
+  }
+  document.addEventListener('DOMContentLoaded',schedule);
+  window.c458ForceEditButtons=forceEditButtons;
+})();
+</script>
+</body></html>');
     w.document.close();
   }
   function header(fecha,cut){
@@ -21282,7 +21729,7 @@ C340
     var forma=m.tipo==='transferencia'?(label(m.cuenta_origen)+' → '+label(m.cuenta_destino)):(m.forma||label(m.cuenta));
     var ent=(m.tipo==='entrada'||m.tipo==='transferencia')?money(m.monto):'—';
     var sal=(m.tipo==='salida'||m.tipo==='transferencia')?money(m.monto):'—';
-    var actions=m.db?'—':((m.origen==='Gasto operativo'?'<button class="ca21-action-btn" data-ca21-edit-gasto="'+esc(m.id)+'">Editar</button> ':'')+'<button class="ca21-action-btn" data-ca21-del="'+esc(m.id)+'">Eliminar</button>');
+    var actions=m.db?'—':((m.origen==='Compras'?'<button class="ca21-action-btn" data-ca21-edit-compra="'+esc(m.compra_id||'')+'" data-ca21-edit-mov="'+esc(m.id)+'">Editar</button> ':'')+(m.origen==='Gasto operativo'?'<button class="ca21-action-btn" data-ca21-edit-gasto="'+esc(m.id)+'">Editar</button> ':'')+'<button class="ca21-action-btn" data-ca21-del="'+esc(m.id)+'">Eliminar</button>');
     return '<tr><td>'+esc(m.fecha_historial||m.fecha||'—')+'</td><td>'+esc(m.hora||'—')+'</td><td>'+(m.tipo==='entrada'?'⬇️':m.tipo==='salida'?'⬆️':'⇄')+'</td><td><strong>'+esc(m.concepto||'—')+'</strong><div class="ca21-mini">'+esc(m.nota||'')+'</div></td><td><span class="ca17-tag">'+esc(m.categoria||'—')+'</span></td><td>'+esc(m.persona||'—')+'</td><td>'+esc(forma)+'</td><td class="ca17-money-in">'+ent+'</td><td class="ca17-money-out">'+sal+'</td><td><span class="ca17-tag">'+esc(m.origen||'Caja')+'</span></td><td><span class="ca17-tag">'+esc(m.estado||'Registrado')+'</span></td><td>'+actions+'</td></tr>';
   }
   function historyFor(fecha){
@@ -21310,6 +21757,7 @@ C340
     if(!tb)return;
     var data=historyFor(fecha);
     tb.innerHTML=data.length?data.map(row).join(''):'<tr><td colspan="12" style="text-align:center;color:#77837c;padding:24px">No hay movimientos registrados en esta fecha.</td></tr>';
+    tb.querySelectorAll('[data-ca21-edit-compra]').forEach(function(b){b.addEventListener('click',function(){ca454AbrirEditarCompra(this.dataset.ca21EditCompra,this.dataset.ca21EditMov,fecha);});});
     tb.querySelectorAll('[data-ca21-edit-gasto]').forEach(function(b){b.addEventListener('click',function(){if(typeof ga152EditarGasto==='function')ga152EditarGasto(this.dataset.ca21EditGasto);});});
     tb.querySelectorAll('[data-ca21-del]').forEach(function(b){b.addEventListener('click',function(){if(typeof ca21DeleteMovimiento==='function')ca21DeleteMovimiento(this.dataset.ca21Del,fecha);});});
   }
@@ -21363,7 +21811,7 @@ C340
     var forma=m.tipo==='transferencia'?(label(m.cuenta_origen)+' → '+label(m.cuenta_destino)):(m.forma||label(m.cuenta));
     var ent=(m.tipo==='entrada'||m.tipo==='transferencia')?money(m.monto):'—';
     var sal=(m.tipo==='salida'||m.tipo==='transferencia')?money(m.monto):'—';
-    var actions=m.db?'—':((m.origen==='Gasto operativo'?'<button class="ca21-action-btn" data-ca21-edit-gasto="'+esc(m.id)+'">Editar</button> ':'')+'<button class="ca21-action-btn" data-ca21-del="'+esc(m.id)+'">Eliminar</button>');
+    var actions=m.db?'—':((m.origen==='Compras'?'<button class="ca21-action-btn" data-ca21-edit-compra="'+esc(m.compra_id||'')+'" data-ca21-edit-mov="'+esc(m.id)+'">Editar</button> ':'')+(m.origen==='Gasto operativo'?'<button class="ca21-action-btn" data-ca21-edit-gasto="'+esc(m.id)+'">Editar</button> ':'')+'<button class="ca21-action-btn" data-ca21-del="'+esc(m.id)+'">Eliminar</button>');
     return '<tr><td>'+esc(m.fecha_historial||m.fecha||'—')+'</td><td>'+esc(m.hora||'—')+'</td><td>'+(m.tipo==='entrada'?'⬇️':m.tipo==='salida'?'⬆️':'⇄')+'</td><td><strong>'+esc(m.concepto||'—')+'</strong><div class="ca21-mini">'+esc(m.nota||'')+'</div></td><td><span class="ca17-tag">'+esc(m.categoria||'—')+'</span></td><td>'+esc(m.persona||'—')+'</td><td>'+esc(forma)+'</td><td class="ca17-money-in">'+ent+'</td><td class="ca17-money-out">'+sal+'</td><td><span class="ca17-tag">'+esc(m.origen||'Caja')+'</span></td><td><span class="ca17-tag">'+esc(m.estado||'Registrado')+'</span></td><td>'+actions+'</td></tr>';
   }
   window.ca176RenderHistoryOnly=function(fecha){
@@ -21371,6 +21819,7 @@ C340
     if(!tb)return;
     var data=build(fecha);
     tb.innerHTML=data.length?data.map(row).join(''):'<tr><td colspan="12" style="text-align:center;color:#77837c;padding:24px">No hay movimientos registrados en esta fecha.</td></tr>';
+    tb.querySelectorAll('[data-ca21-edit-compra]').forEach(function(b){b.addEventListener('click',function(){ca454AbrirEditarCompra(this.dataset.ca21EditCompra,this.dataset.ca21EditMov,fecha);});});
     tb.querySelectorAll('[data-ca21-edit-gasto]').forEach(function(b){b.addEventListener('click',function(){if(typeof ga152EditarGasto==='function')ga152EditarGasto(this.dataset.ca21EditGasto);});});
     tb.querySelectorAll('[data-ca21-del]').forEach(function(b){b.addEventListener('click',function(){if(typeof ca21DeleteMovimiento==='function')ca21DeleteMovimiento(this.dataset.ca21Del,fecha);});});
   };
@@ -21787,6 +22236,67 @@ function c408ConfirmarPesaje(o,c){
   window.renderEjecAplicacion=function(planta,tabla){var o=ordenEjecutando;if(!o||!foliar(o))return prevRender?prevRender(planta,tabla):undefined;capturaEjec.requiereLimpieza=true;var s=load(o);if(s.fase==='aplicar'&&s.inicio&&!s.fin)return renderAplicar(o,s);if(s.fase==='cierre'&&s.inicio)return renderCierre(o,s);return renderPrep(o,s);};
 })();
 </script>
+
+<script id="c458-forzar-editar-compras-historial">
+/* C458 · Refuerzo visual: toda fila cuyo Origen sea Compras debe mostrar Editar. */
+(function(){
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function forceEditButtons(){
+    try{
+      var tables=document.querySelectorAll('.ca17-table');
+      tables.forEach(function(table){
+        table.querySelectorAll('tbody tr').forEach(function(tr){
+          var cells=tr.querySelectorAll('td');
+          if(cells.length<12)return;
+          var origen=(cells[9].textContent||'').trim().toLowerCase();
+          if(origen!=='compras')return;
+          var actions=cells[11];
+          if(!actions)return;
+          if(actions.querySelector('[data-ca458-edit-compra]'))return;
+          var del=actions.querySelector('[data-ca21-del]');
+          var movId=del?del.getAttribute('data-ca21-del'):'';
+          var btn=document.createElement('button');
+          btn.type='button';
+          btn.className='ca21-action-btn';
+          btn.setAttribute('data-ca458-edit-compra','1');
+          btn.textContent='Editar';
+          btn.style.marginRight='5px';
+          btn.addEventListener('click',function(){
+            var mov=null;
+            try{
+              var d=ca21Load();
+              mov=(d.movimientos||[]).find(function(x){return String(x.id)===String(movId);});
+            }catch(e){}
+            var compraId=mov&&mov.compra_id?mov.compra_id:'';
+            var fecha=(mov&&(mov.fecha_caja||mov.fecha))||window.CAJA_FECHA_BASE||'';
+            if(typeof ca454AbrirEditarCompra==='function'){
+              ca454AbrirEditarCompra(compraId,movId,fecha);
+            }else if(typeof renderEditarCompra==='function'&&compraId){
+              renderEditarCompra(compraId);
+            }else{
+              alert('No está disponible el editor de compras.');
+            }
+          });
+          if(del) actions.insertBefore(btn,del);
+          else actions.appendChild(btn);
+        });
+      });
+    }catch(e){console.warn('C458 editar compra',e);}
+  }
+  function schedule(){setTimeout(forceEditButtons,0);setTimeout(forceEditButtons,250);setTimeout(forceEditButtons,800);}
+  var old=window.renderCajaMootsil;
+  if(typeof old==='function'){
+    window.renderCajaMootsil=function(){
+      var r=old.apply(this,arguments);
+      schedule();
+      Promise.resolve(r).then(schedule).catch(schedule);
+      return r;
+    };
+  }
+  document.addEventListener('DOMContentLoaded',schedule);
+  window.c458ForceEditButtons=forceEditButtons;
+})();
+</script>
 </body>
 </html>
 
@@ -21856,3 +22366,50 @@ function c366ReportarLaborIncidencia(){
 </script>
 
 <!-- C452 GALERA -> VENTAS 2026-10-02 -->
+
+<script id="c454-resolver-editar-compra-caja">
+/* C454 · El historial de Caja siempre muestra Editar para Compras.
+   Si un movimiento antiguo no trae compra_id, se resuelve contra compras por fecha/importe/factura/proveedor. */
+(function(){
+  function scoreCompra(c,m){
+    var s=0;
+    var mf=String(m.fecha_caja||m.fecha||'');
+    if(String(c.fecha||'')===mf)s+=6;
+    var mm=Number(m.monto||0), ct=Number(c.total||0);
+    if(isFinite(mm)&&isFinite(ct)&&Math.abs(mm-ct)<0.01)s+=8;
+    var concepto=String(m.concepto||'').toLowerCase();
+    var fac=String(c.numero_factura||'').toLowerCase();
+    if(fac&&concepto.indexOf(fac)>=0)s+=10;
+    var persona=String(m.persona||'').toLowerCase();
+    if(persona&&c.proveedor_id&&Array.isArray(cats.proveedores)){
+      var pr=cats.proveedores.find(function(x){return String(x.id)===String(c.proveedor_id);});
+      if(pr&&persona===String(pr.nombre||'').toLowerCase())s+=12;
+    }
+    return s;
+  }
+  window.ca454AbrirEditarCompra=function(compraId,movId,fecha){
+    if(typeof renderEditarCompra!=='function'){alert('No está disponible el editor de compras.');return;}
+    if(compraId){renderEditarCompra(compraId,function(){
+      if(typeof ca176RenderHistoryOnly==='function')ca176RenderHistoryOnly(fecha);
+      else if(typeof renderCajaMootsil==='function')renderCajaMootsil(CAJA_PERIODO,CAJA_FECHA_BASE);
+    });return;}
+    var d=ca21Load(), mov=(d.movimientos||[]).find(function(x){return String(x.id)===String(movId);});
+    if(!mov){alert('No se encontró el movimiento de compra.');return;}
+    from('compras').select('id,fecha,total,numero_factura,proveedor_id').get().then(function(rows){
+      var candidatos=(rows||[]).map(function(c){return {c:c,s:scoreCompra(c,mov)};}).filter(function(x){return x.s>=10;}).sort(function(a,b){return b.s-a.s;});
+      if(!candidatos.length){alert('No pude vincular este movimiento con una compra existente. La compra puede haber sido registrada con un esquema anterior.');return;}
+      if(candidatos.length>1&&candidatos[0].s===candidatos[1].s){
+        var lista=candidatos.slice(0,3).map(function(x){return (x.c.numero_factura?'Factura '+x.c.numero_factura:'Compra')+' · '+x.c.fecha+' · $'+Number(x.c.total||0).toLocaleString('es-MX',{minimumFractionDigits:2});}).join('\n');
+        alert('Hay más de una compra que coincide con este movimiento.\\n\\n'+lista+'\\n\\nPara evitar editar la compra equivocada, abre primero Compras y edita desde su registro.');
+        return;
+      }
+      renderEditarCompra(candidatos[0].c.id,function(){
+        if(typeof ca176RenderHistoryOnly==='function')ca176RenderHistoryOnly(fecha);
+        else if(typeof renderCajaMootsil==='function')renderCajaMootsil(CAJA_PERIODO,CAJA_FECHA_BASE);
+      });
+    }).catch(function(e){alert('No se pudo localizar la compra: '+(e.message||e));});
+  };
+})();
+</script>
+
+<script id="c453-editar-compra-caja">/* C453 · Editar compra desde Tesorería y mantener proveedor en movimiento de Caja. */</script>
