@@ -12666,6 +12666,7 @@ function em69AprobarPrestamo(x,volverFn){
     var cfg={};(rr[0]||[]).forEach(function(c){cfg[c.clave]=c.valor;});
     var activos=rr[1]||[];
     var montoMax=(cfg.prestamo_monto_max!==undefined&&cfg.prestamo_monto_max!==null&&cfg.prestamo_monto_max!=='')?parseFloat(cfg.prestamo_monto_max):null;
+    montoMax=c487LimitePrestamo(x.uid,montoMax);
     var monto=parseFloat(x.raw.monto_solicitado||0)||0;
     var bg=document.createElement('div');bg.className='em69-modal-bg';bg.id='em69-modal-bg';
     if(activos.length){
@@ -18171,6 +18172,8 @@ function c362PrestamosMes(uid){
   var fin=new Date(ahora.getFullYear(),ahora.getMonth()+1,1);
   return from('solicitudes_operario').select('id,estado,creado_en').eq('operario_id',uid).eq('tipo','prestamo').gte('creado_en',ini.toISOString()).lt('creado_en',fin.toISOString()).get().then(function(rows){return (rows||[]).length;});
 }
+// C487: excepción individual autorizada, identificada por ID de expediente (no por nombre).
+function c487LimitePrestamo(uid,limiteGeneral){return String(uid)==='f773a100-053a-4c17-b381-ce23cd09c05c'?2000:limiteGeneral;}
 function renderSolicitarPrestamo(){
   var body=document.getElementById('op-body');
   var validado=false, validando=false, enviando=false, usados=0, maxMes=1, montoMax=null, alTope=false;
@@ -18192,6 +18195,7 @@ function renderSolicitarPrestamo(){
       var cfg={};(r[0]||[]).forEach(function(c){cfg[c.clave]=c.valor;});
       maxMes=parseInt(cfg.prestamo_max_activos_mes,10)||1;
       montoMax=cfg.prestamo_monto_max!=null&&cfg.prestamo_monto_max!==''?parseFloat(cfg.prestamo_monto_max):null;
+      montoMax=c487LimitePrestamo(usuario.id,montoMax);
       usados=r[1]||0;alTope=usados>=maxMes;validado=true;
       if(alTope){aviso('Límite mensual alcanzado: '+usados+' de '+maxMes+' solicitudes. No se puede enviar otra este mes.',true);btn.disabled=true;btn.textContent='Límite mensual alcanzado';}
       else{aviso('Puedes enviar tu solicitud. Solicitudes del mes: '+usados+' de '+maxMes+'.',false);btn.disabled=false;btn.textContent='Enviar solicitud';}
