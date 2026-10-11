@@ -12666,7 +12666,7 @@ function em69AprobarPrestamo(x,volverFn){
     var cfg={};(rr[0]||[]).forEach(function(c){cfg[c.clave]=c.valor;});
     var activos=rr[1]||[];
     var montoMax=(cfg.prestamo_monto_max!==undefined&&cfg.prestamo_monto_max!==null&&cfg.prestamo_monto_max!=='')?parseFloat(cfg.prestamo_monto_max):null;
-    montoMax=c487LimitePrestamo(x.uid,montoMax);
+    // C488: límite ordinario informativo; excepciones requieren confirmación administrativa.
     var monto=parseFloat(x.raw.monto_solicitado||0)||0;
     var bg=document.createElement('div');bg.className='em69-modal-bg';bg.id='em69-modal-bg';
     if(activos.length){
@@ -12689,7 +12689,7 @@ function em69AprobarPrestamo(x,volverFn){
           cuenta=document.getElementById('em69-loan-cuenta').value,
           concepto=document.getElementById('em69-loan-concepto').value.trim();
       if(!m||m<=0||!pagos||pagos<1||!concepto){alert('Completa monto, pagos y concepto.');return;}
-      if(montoMax!=null&&m>montoMax){alert('El monto máximo autorizable es $'+montoMax.toFixed(2));return;}
+      if(montoMax!=null&&m>montoMax&&!confirm('El importe autorizado supera el límite ordinario de $'+montoMax.toFixed(2)+'. ¿Confirmas esta autorización excepcional?'))return;
       var caja=ca21Totals(fechaHoyLocal()),disponible=ca35CuentaSaldo(caja,cuenta);
       if(m>disponible){alert('Saldo insuficiente en '+ca35CuentaLabel(cuenta)+'. Disponible: $'+formatMonto(disponible));return;}
 
@@ -16076,7 +16076,7 @@ function cerrarRecibo(){
 
 function renderPrestamos(){
   var body=document.getElementById('no89-body')||document.getElementById('enc-body');
-  body.innerHTML='<div class="seccion-titulo">📝 Préstamos</div><div class="hint" style="margin-bottom:10px;">Los préstamos nacen de una solicitud del colaborador. Administración únicamente autoriza o rechaza.</div><div class="loading">Cargando solicitudes y préstamos...</div>';
+  body.innerHTML='<div class="seccion-titulo">📝 Préstamos</div><div class="hint" style="margin-bottom:10px;">Administración puede revisar solicitudes o registrar préstamos ya entregados sin duplicar movimientos de Caja.</div><div class="loading">Cargando solicitudes y préstamos...</div>';
 
   Promise.all([
     from('solicitudes_operario').select('*,operario:usuarios!operario_id(nombre,activo)').eq('tipo','prestamo').order('creado_en',{ascending:false}).get(),
@@ -16110,7 +16110,7 @@ function renderPrestamos(){
         return '<div class="orden-card" style="border-left-color:'+(p.estado==='activo'?'var(--tierra)':'var(--gris-3)')+';"><div style="display:flex;justify-content:space-between;gap:8px;"><strong>'+(p.operario?p.operario.nombre:'')+' · '+p.concepto+'</strong><span style="font-size:.68rem;font-weight:800;color:'+(p.estado==='activo'?'var(--tierra)':'var(--verde-mid)')+';">'+String(p.estado||'activo').toUpperCase()+'</span></div><div class="orden-meta">Total: $'+parseFloat(p.monto_total||0).toFixed(2)+' · Restante: $'+restante.toFixed(2)+'</div><div style="margin-top:.45rem;">'+filas+'</div></div>';
       }
 
-      var html='<div style="font-size:.68rem;font-weight:850;color:var(--verde);text-transform:uppercase;margin:4px 0 7px;">Solicitudes por revisar · '+pendientes.length+'</div>'+
+      var html='<button class="btn-primary" type="button" onclick="c488RegistroManualPrestamo()" style="margin-bottom:12px;">+ Registrar préstamo ya entregado</button><div style="font-size:.68rem;font-weight:850;color:var(--verde);text-transform:uppercase;margin:4px 0 7px;">Solicitudes por revisar · '+pendientes.length+'</div>'+
         (pendientes.length?pendientes.map(solicitudCard).join(''):'<div class="empty" style="padding:.8rem;">No hay solicitudes de préstamo pendientes.</div>')+
         '<div style="font-size:.68rem;font-weight:850;color:var(--verde);text-transform:uppercase;margin:16px 0 7px;">Préstamos autorizados / historial</div>'+
         (prestamos.length?prestamos.map(prestamoCard).join(''):'<div class="empty" style="padding:.8rem;">Aún no hay préstamos autorizados.</div>')+
@@ -16138,7 +16138,44 @@ function renderPrestamos(){
   }).catch(function(e){body.innerHTML='<div class="empty">Error al cargar préstamos: '+e.message+'</div>';});
 }
 
-/* C102: préstamo manual desde Administración retirado; el origen es la solicitud del colaborador. */
+/* C488: registro administrativo de préstamos ya entregados, sin nuevo egreso en Caja. */
+function c488RegistroManualPrestamo(){
+  if(!usuario||!usuario.id){alert('Inicia sesión en Administración.');return;}
+  var bg=document.createElement('div');bg.className='em69-modal-bg';bg.id='c488-modal';
+  bg.innerHTML='<div class="em69-modal"><div class="em69-modal-h"><strong>Registrar préstamo ya entregado</strong><button class="em59-back" id="c488-cerrar">✕</button></div><div class="em69-modal-b">'+
+  '<p class="hint">Solo registra el adeudo y sus descuentos. NO realiza una salida de Caja ni otro depósito.</p><div class="em69-grid">'+
+  '<div class="em69-field full"><label>Colaborador</label><select id="c488-persona"><option value="">Cargando...</option></select></div>'+
+  '<div class="em69-field"><label>Monto entregado ($)</label><input id="c488-monto" type="number" min="1" step=".01" value="2000"></div>'+
+  '<div class="em69-field"><label>Descuentos semanales</label><input id="c488-pagos" type="number" min="1" step="1" value="4"></div>'+
+  '<div class="em69-field"><label>Inicio de descuentos</label><input id="c488-inicio" type="date" value="2026-10-12"></div>'+
+  '<div class="em69-field"><label>Fecha de entrega</label><input id="c488-entrega" type="date" value="'+fechaHoyLocal()+'"></div>'+
+  '<div class="em69-field full"><label>Concepto</label><input id="c488-concepto" value="Préstamo personal excepcional · entregado previamente"></div></div>'+
+  '<div id="c488-msg" role="status" class="hint" style="margin-top:10px;"></div></div><div class="em69-modal-f"><button class="btn-sm" id="c488-cancelar">Cancelar</button><button class="btn-sm btn-completar" id="c488-guardar" disabled>Registrar sin salida de Caja</button></div></div>';
+  document.body.appendChild(bg);
+  function cerrar(){bg.remove();}bg.querySelector('#c488-cerrar').onclick=cerrar;bg.querySelector('#c488-cancelar').onclick=cerrar;
+  var sel=bg.querySelector('#c488-persona'),guardar=bg.querySelector('#c488-guardar');
+  from('usuarios').select('id,nombre').order('nombre',{ascending:true}).get().then(function(rows){
+    sel.innerHTML='<option value="">Seleccionar colaborador</option>'+(rows||[]).map(function(u){return '<option value="'+u.id+'">'+String(u.nombre||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</option>';}).join('');
+    guardar.disabled=false;
+  }).catch(function(e){bg.querySelector('#c488-msg').textContent='No se pudieron cargar los colaboradores: '+e.message;});
+  guardar.onclick=function(){
+    var uid=sel.value,m=Number(bg.querySelector('#c488-monto').value),n=Number(bg.querySelector('#c488-pagos').value),fecha=bg.querySelector('#c488-inicio').value,entrega=bg.querySelector('#c488-entrega').value,concepto=bg.querySelector('#c488-concepto').value.trim();
+    if(!uid||!Number.isFinite(m)||m<=0||!Number.isInteger(n)||n<1||!fecha||!entrega||!concepto){alert('Completa todos los campos correctamente.');return;}
+    if(m>500&&!confirm('Autorización excepcional: $'+m.toFixed(2)+' supera el monto ordinario de $500. ¿Continuar?'))return;
+    if(!confirm('Confirmar que $'+m.toFixed(2)+' YA fueron entregados el '+entrega+' y registrar '+n+' descuentos semanales desde '+fecha+'. No se generará salida de Caja.'))return;
+    guardar.disabled=true;guardar.textContent='Verificando...';
+    from('prestamos').select('id').eq('operario_id',uid).eq('estado','activo').get().then(function(activos){
+      if((activos||[]).length)throw new Error('Ya existe un préstamo activo para este colaborador.');
+      return from('prestamos').insert({operario_id:uid,concepto:concepto+' · Entregado '+entrega+' (registro manual sin salida de Caja)',monto_total:m,num_pagos:n,fecha_inicio:fecha,estado:'activo',creado_por:usuario.id});
+    }).then(function(){return from('prestamos').select('id').eq('operario_id',uid).eq('estado','activo').order('creado_en',{ascending:false}).limit(1).get();}).then(function(rows){
+      if(!rows||!rows[0])throw new Error('No se confirmó el préstamo; verifica el historial antes de reintentar.');
+      var id=rows[0].id,base=new Date(fecha+'T12:00:00'),lunes=inicioDeSemana(base),totalCent=Math.round(m*100),baseCent=Math.floor(totalCent/n),arr=[];
+      for(var i=0;i<n;i++){var d=new Date(lunes);d.setDate(d.getDate()+7*i);var cent=i===n-1?totalCent-baseCent*(n-1):baseCent;arr.push({prestamo_id:id,numero_pago:i+1,semana_inicio:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'),monto:cent/100,estado:'pendiente'});}
+      return Promise.all(arr.map(function(x){return from('prestamo_pagos').insert(x);}));
+    }).then(function(){showToast('Préstamo registrado sin salida de Caja');cerrar();renderPrestamos();}).catch(function(e){bg.querySelector('#c488-msg').textContent='No se completó: '+e.message+'. Revisa el historial antes de reintentar para evitar duplicados.';guardar.disabled=true;guardar.textContent='Revisar historial antes de reintentar';});
+  };
+}
+
 
 function bo91FmtFecha(f){if(!f)return '—';try{return new Date(f+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});}catch(e){return f;}}
 function bo92Meta(desc){var m=String(desc||'').match(/\[C092\](.*?)\[\/C092\]/);if(!m)return null;try{return JSON.parse(decodeURIComponent(m[1]));}catch(e){return null;}}
@@ -18195,11 +18232,11 @@ function renderSolicitarPrestamo(){
       var cfg={};(r[0]||[]).forEach(function(c){cfg[c.clave]=c.valor;});
       maxMes=parseInt(cfg.prestamo_max_activos_mes,10)||1;
       montoMax=cfg.prestamo_monto_max!=null&&cfg.prestamo_monto_max!==''?parseFloat(cfg.prestamo_monto_max):null;
-      montoMax=c487LimitePrestamo(usuario.id,montoMax);
+      // C488: todos tienen el mismo límite ordinario; se permite solicitar excepciones.
       usados=r[1]||0;alTope=usados>=maxMes;validado=true;
       if(alTope){aviso('Límite mensual alcanzado: '+usados+' de '+maxMes+' solicitudes. No se puede enviar otra este mes.',true);btn.disabled=true;btn.textContent='Límite mensual alcanzado';}
       else{aviso('Puedes enviar tu solicitud. Solicitudes del mes: '+usados+' de '+maxMes+'.',false);btn.disabled=false;btn.textContent='Enviar solicitud';}
-      if(montoMax!=null&&!isNaN(montoMax))ayuda.textContent='Monto máximo permitido: '+c359Money(montoMax)+'. La autorización no es automática.';
+      if(montoMax!=null&&!isNaN(montoMax))ayuda.textContent='Monto ordinario: '+c359Money(montoMax)+'. Puedes solicitar más; Administración revisará y decidirá el importe autorizado.';
     }).catch(function(e){
       aviso('No se pudo validar el límite mensual: '+(e.message||'error de conexión')+'. Conservamos los datos capturados; toca Reintentar validación.',true);
       btn.disabled=false;btn.textContent='Reintentar validación';
@@ -18213,7 +18250,7 @@ function renderSolicitarPrestamo(){
     var motivo=(document.getElementById('sp-motivo').value||'').trim();
     if(monto<=0){aviso('Escribe un monto mayor que cero.',true);return;}
     if(!motivo){aviso('Escribe el motivo del préstamo.',true);return;}
-    if(montoMax!=null&&!isNaN(montoMax)&&monto>montoMax){aviso('El monto máximo permitido es '+c359Money(montoMax)+'.',true);return;}
+    if(montoMax!=null&&!isNaN(montoMax)&&monto>montoMax){aviso('Solicitas más del monto ordinario de '+c359Money(montoMax)+'. Se enviará a revisión de Administración.',true);}
     enviando=true;btn.disabled=true;btn.textContent='Enviando solicitud...';
     c362PrestamosMes(usuario.id).then(function(actuales){
       if(actuales>=maxMes)throw new Error('Ya alcanzaste el máximo de solicitudes este mes.');
@@ -19750,7 +19787,7 @@ function renderConfig(){
     var html='<div class="seccion-titulo">📞 Números de emergencia</div><div class="form-card"><div class="form-group"><label>Policía</label><input type="tel" id="cfg-policia" value="'+(cfg.emergencia_policia||'911')+'"></div><div class="form-group"><label>Bomberos</label><input type="tel" id="cfg-bomberos" value="'+(cfg.emergencia_bomberos||'911')+'"></div><div class="form-group"><label>Ambulancia</label><input type="tel" id="cfg-ambulancia" value="'+(cfg.emergencia_ambulancia||'911')+'"></div><button class="btn-primary" id="cfg-guardar-emerg">Guardar números</button></div>';
     html+='<div class="seccion-titulo" style="margin-top:1.25rem;">⏰ Tarifa de hora extra</div><div class="form-card"><div class="form-group"><label>Pago por hora extra ($)</label><input type="number" id="cfg-tarifa-extra" min="0" step="1" value="'+(cfg.tarifa_hora_extra||70)+'"></div><button class="btn-primary" id="cfg-guardar-tarifa">Guardar tarifa</button></div>';
     html+='<div class="seccion-titulo" style="margin-top:1.25rem;">📍 Ubicación del rancho</div><div class="form-card"><p class="hint" style="margin-bottom:.75rem;">Párate dentro del rancho con tu celular y toca el botón. Mientras esto no esté definido, los colaboradores pueden registrar su entrada/salida desde cualquier lugar. En cuanto lo definas, la app bloqueará el registro de asistencia a quien esté fuera del radio permitido.</p>'+(cfg.rancho_lat?'<p class="hint" style="margin-bottom:.75rem;color:var(--verde-mid);font-weight:700;">✅ Ubicación guardada — el bloqueo por zona ya está activo</p>':'<p class="hint" style="margin-bottom:.75rem;color:var(--tierra);font-weight:700;">⚠️ Aún no se ha definido — el bloqueo por zona todavía NO está activo</p>')+'<button class="btn-primary" id="cfg-fijar-ubicacion">📍 Usar mi ubicación actual</button><div class="form-group" style="margin-top:.9rem;"><label>Radio permitido (metros)</label><input type="number" id="cfg-radio" value="'+(cfg.rancho_radio_metros||500)+'"><button class="btn-sm btn-completar" id="cfg-guardar-radio" style="margin-top:.5rem;">Guardar radio</button></div></div>';
-    html+='<div class="seccion-titulo" style="margin-top:1.25rem;">💰 Préstamos a colaboradores</div><div class="form-card"><div class="form-group"><label>Máximo de préstamos por colaborador al mes</label><input type="number" id="cfg-prestamo-max-mes" min="1" step="1" value="'+(cfg.prestamo_max_activos_mes||1)+'"></div><div class="form-group"><label>Monto máximo que se puede autorizar por préstamo ($)</label><input type="number" id="cfg-prestamo-monto-max" min="0" step="1" value="'+(cfg.prestamo_monto_max||'')+'"></div><p class="hint">Con esto, el colaborador verá en su app cuántos préstamos lleva usados este mes y no podrá solicitar más una vez que llegue al máximo. Administración tampoco podrá registrar un préstamo por encima del monto máximo.</p><button class="btn-primary" id="cfg-guardar-prestamo">Guardar límites de préstamos</button></div>';
+    html+='<div class="seccion-titulo" style="margin-top:1.25rem;">💰 Préstamos a colaboradores</div><div class="form-card"><div class="form-group"><label>Máximo de préstamos por colaborador al mes</label><input type="number" id="cfg-prestamo-max-mes" min="1" step="1" value="'+(cfg.prestamo_max_activos_mes||1)+'"></div><div class="form-group"><label>Monto ordinario de préstamo ($)</label><input type="number" id="cfg-prestamo-monto-max" min="0" step="1" value="'+(cfg.prestamo_monto_max||'')+'"></div><p class="hint">Con esto, el colaborador verá en su app cuántos préstamos lleva usados este mes y no podrá solicitar más una vez que llegue al máximo. Los importes superiores al monto ordinario pueden enviarse para revisión y autorizarse excepcionalmente.</p><button class="btn-primary" id="cfg-guardar-prestamo">Guardar límites de préstamos</button></div>';
     body.innerHTML=html;
     document.getElementById('cfg-guardar-tarifa').addEventListener('click',function(){
       var tarifa=document.getElementById('cfg-tarifa-extra').value||70;
