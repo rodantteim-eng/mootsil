@@ -18213,62 +18213,63 @@ function c362PrestamosMes(uid){
 // C487: excepción individual autorizada, identificada por ID de expediente (no por nombre).
 function c487LimitePrestamo(uid,limiteGeneral){return String(uid)==='f773a100-053a-4c17-b381-ce23cd09c05c'?2000:limiteGeneral;}
 function renderSolicitarPrestamo(){
+  // C490: el formulario NO depende de una consulta inicial para habilitar el envío.
   var body=document.getElementById('op-body');
-  var validado=false, validando=false, enviando=false, usados=0, maxMes=1, montoMax=null, alTope=false;
+  var enviando=false, montoOrdinario=500, usados=null, maxMes=1;
   body.innerHTML='<div class="seccion-titulo">💰 Solicitar préstamo</div>'+ 
-    '<div id="sp-estado" role="status" style="background:var(--verde-tenue);border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);padding:.75rem .9rem;margin-bottom:1rem;"><strong>Validando límite mensual...</strong></div>'+ 
-    '<div class="form-card"><p class="hint" id="sp-ayuda" style="margin-bottom:.75rem;">Tu solicitud será revisada por Administración.</p><div class="form-group"><label>¿Cuánto necesitas?</label><input type="number" id="sp-monto" min="0" step="any" placeholder="$0.00"></div><div class="form-group"><label>¿Para qué lo necesitas?</label><textarea id="sp-motivo" rows="4" placeholder="Cuéntanos brevemente el motivo..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="sp-enviar" type="button" disabled>Validando...</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderSolicitudesMenu()">← Volver a Solicitudes</button>';
-  var estado=document.getElementById('sp-estado'), ayuda=document.getElementById('sp-ayuda'), btn=document.getElementById('sp-enviar');
+    '<div id="sp-estado" role="status" aria-live="polite" style="display:none;background:var(--verde-tenue);border:1.5px solid var(--verde-mid);border-radius:var(--radio-sm);padding:.75rem .9rem;margin-bottom:1rem;"></div>'+ 
+    '<div class="form-card"><p class="hint" id="sp-ayuda" style="margin-bottom:.75rem;">Monto ordinario: $500 MXN. Administración valorará tu solicitud.</p><div class="form-group"><label>¿Cuánto necesitas?</label><input type="number" id="sp-monto" min="0.01" step="0.01" placeholder="$0.00"></div><div class="form-group"><label>¿Para qué lo necesitas?</label><textarea id="sp-motivo" rows="4" placeholder="Cuéntanos brevemente el motivo..." style="width:100%;padding:.6rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);font-size:.9rem;"></textarea></div><button class="btn-primary" id="sp-enviar" type="button">Enviar solicitud</button></div><button class="btn-back" style="margin-top:1rem;" onclick="renderSolicitudesMenu()">← Volver a Solicitudes</button>';
+  var estado=document.getElementById('sp-estado'), ayuda=document.getElementById('sp-ayuda'), btn=document.getElementById('sp-enviar'), montoInput=document.getElementById('sp-monto');
   function aviso(msg,warning){
+    estado.style.display=msg?'block':'none';
     estado.style.background=warning?'#fff8e6':'var(--verde-tenue)';
     estado.style.borderColor=warning?'#e0a800':'var(--verde-mid)';
-    estado.textContent=msg;
+    estado.textContent=msg||'';
   }
-  function validar(){
-    if(validando||enviando)return;
-    validando=true;validado=false;btn.disabled=true;btn.textContent='Validando...';
-    aviso('Validando límite mensual...',false);
-    var limite=new Promise(function(_,reject){setTimeout(function(){reject(new Error('La validación tardó demasiado.'));},10000);});
-    Promise.race([Promise.all([from('config_app').select('*').get(),c362PrestamosMes(usuario.id)]),limite]).then(function(r){
-      var cfg={};(r[0]||[]).forEach(function(c){cfg[c.clave]=c.valor;});
-      maxMes=parseInt(cfg.prestamo_max_activos_mes,10)||1;
-      montoMax=cfg.prestamo_monto_max!=null&&cfg.prestamo_monto_max!==''?parseFloat(cfg.prestamo_monto_max):null;
-      // C488: todos tienen el mismo límite ordinario; se permite solicitar excepciones.
-      usados=r[1]||0;alTope=usados>=maxMes;validado=true;
-      if(alTope){aviso('Límite mensual alcanzado: '+usados+' de '+maxMes+' solicitudes. No se puede enviar otra este mes.',true);btn.disabled=true;btn.textContent='Límite mensual alcanzado';}
-      else{aviso('Puedes enviar tu solicitud. Solicitudes del mes: '+usados+' de '+maxMes+'.',false);btn.disabled=false;btn.textContent='Enviar solicitud';}
-      if(montoMax!=null&&!isNaN(montoMax))ayuda.textContent='Monto ordinario: '+c359Money(montoMax)+'. Puedes solicitar más; Administración revisará y decidirá el importe autorizado.';
-    }).catch(function(e){
-      aviso('No se pudo validar el límite mensual: '+(e.message||'error de conexión')+'. Conservamos los datos capturados; toca Reintentar validación.',true);
-      btn.disabled=false;btn.textContent='Reintentar validación';
-    }).finally(function(){validando=false;});
+  function mensajeMonto(){
+    if(enviando)return;
+    var monto=Number(montoInput.value);
+    if(montoInput.value!==''&&Number.isFinite(monto)&&monto>montoOrdinario){
+      aviso('Solicitud sujeta a valoración. El monto solicitado supera el límite ordinario de '+c359Money(montoOrdinario)+'. Tu solicitud será enviada a Administración para su valoración. El importe autorizado puede ser menor al solicitado.',true);
+    }else aviso('',false);
   }
+  montoInput.addEventListener('input',mensajeMonto);
+  // La configuración se consulta en segundo plano; nunca inmoviliza el formulario.
+  from('config_app').select('clave,valor').get().then(function(rows){
+    (rows||[]).forEach(function(c){
+      if(c.clave==='prestamo_monto_max'&&Number(c.valor)>0)montoOrdinario=Number(c.valor);
+      if(c.clave==='prestamo_max_activos_mes'&&Number(c.valor)>0)maxMes=parseInt(c.valor,10)||1;
+    });
+    if(document.getElementById('sp-monto')!==montoInput)return;
+    ayuda.textContent='Monto ordinario: '+c359Money(montoOrdinario)+'. Administración valorará tu solicitud.';
+    mensajeMonto();
+  }).catch(function(e){console.warn('C490: configuración no disponible; se conserva límite informativo de $500',e);});
+  // Conteo de mes informativo: nunca bloquea el botón.
+  c362PrestamosMes(usuario.id).then(function(n){usados=n;}).catch(function(e){console.warn('C490: consulta mensual no disponible',e);});
   btn.addEventListener('click',function(){
-    if(enviando||validando)return;
-    if(!validado){validar();return;}
-    if(alTope)return;
-    var monto=parseFloat(document.getElementById('sp-monto').value)||0;
+    if(enviando)return;
+    var monto=Number(montoInput.value);
     var motivo=(document.getElementById('sp-motivo').value||'').trim();
-    if(monto<=0){aviso('Escribe un monto mayor que cero.',true);return;}
-    if(!motivo){aviso('Escribe el motivo del préstamo.',true);return;}
-    if(montoMax!=null&&!isNaN(montoMax)&&monto>montoMax){aviso('Solicitas más del monto ordinario de '+c359Money(montoMax)+'. Se enviará a revisión de Administración.',true);}
+    if(!Number.isFinite(monto)||monto<=0){aviso('Escribe un monto mayor que cero.',true);montoInput.focus();return;}
+    if(!motivo){aviso('Escribe el motivo del préstamo.',true);document.getElementById('sp-motivo').focus();return;}
     enviando=true;btn.disabled=true;btn.textContent='Enviando solicitud...';
-    c362PrestamosMes(usuario.id).then(function(actuales){
-      if(actuales>=maxMes)throw new Error('Ya alcanzaste el máximo de solicitudes este mes.');
+    // Evita reenvíos de una solicitud pendiente del mismo importe y motivo.
+    from('solicitudes_operario').select('id,monto_solicitado,mensaje,estado').eq('operario_id',usuario.id).eq('tipo','prestamo').eq('estado','pendiente').get().then(function(rows){
+      var duplicada=(rows||[]).some(function(s){return Math.abs(Number(s.monto_solicitado)-monto)<0.01&&(s.mensaje||'').trim()===motivo;});
+      if(duplicada)throw new Error('Ya tienes una solicitud pendiente con el mismo importe y motivo. Consúltala en Mis solicitudes antes de volver a enviarla.');
       return from('solicitudes_operario').insert({operario_id:usuario.id,tipo:'prestamo',monto_solicitado:monto,mensaje:motivo,estado:'pendiente'});
     }).then(function(){
-      // La solicitud ya quedó guardada. La notificación es secundaria y no debe convertirla en error de envío.
-      aviso('Solicitud enviada y registrada. Pendiente de autorización.',false);
+      aviso('Solicitud recibida y registrada. Pendiente de autorización.',false);
       btn.textContent='Solicitud enviada';
-      return from('notificaciones').insert({titulo:'💰 Solicitud de préstamo',cuerpo:usuario.nombre+' solicita '+c359Money(monto)+': '+motivo,icono:'💰',leida:false,para_rol:'encargado'}).catch(function(e){console.warn('C486: notificación no enviada; solicitud guardada',e);});
-    }).then(function(){showToast('✅ Solicitud enviada y pendiente de autorización');renderMisSolicitudes();}).catch(function(e){
-      aviso('No se pudo confirmar el envío: '+(e.message||'error de conexión')+'. Antes de reintentar, revisa Mis solicitudes para evitar duplicados.',true);
-      btn.textContent='Revisar Mis solicitudes';btn.disabled=false;
-      validado=false;
-      btn.onclick=function(){renderMisSolicitudes();};
+      // No bloquear la confirmación por un fallo de notificación.
+      from('notificaciones').insert({titulo:'💰 Solicitud de préstamo',cuerpo:usuario.nombre+' solicita '+c359Money(monto)+': '+motivo,icono:'💰',leida:false,para_rol:'encargado'}).catch(function(e){console.warn('C490: aviso no enviado',e);});
+      showToast('✅ Solicitud enviada y pendiente de autorización');
+      renderMisSolicitudes();
+    }).catch(function(e){
+      aviso('No se pudo confirmar el envío: '+(e.message||'error de conexión')+' Revisa Mis solicitudes antes de reintentar para evitar duplicados.',true);
+      btn.textContent='Enviar solicitud';btn.disabled=false;
     }).finally(function(){enviando=false;});
   });
-  validar();
 }
 
 function renderSolicitudOtro(contexto){
