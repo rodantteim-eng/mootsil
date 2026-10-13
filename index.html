@@ -19098,10 +19098,40 @@ function c329EstadoTarea(t,hoy){
   if(t.fecha_asignacion===hoy)return {label:'HOY',css:'hoy'};
   return {label:'PROGRAMADA',css:'programada'};
 }
+// C510: cosecha formal — el cosechador consulta; Galera confirma los surcos.
+function c510EsCosechaFormal(o){return !!(c428PlanCosecha(o)&&!c428EsCalentamiento(o));}
+function c510VerCosecha(o){
+  var body=document.getElementById('op-body');if(!body)return;
+  var tabla=o.tabla||{},planta=(cats.plantaciones||[]).find(function(p){return String(p.id)===String(tabla.plantacion_id);});
+  var propios=(Array.isArray(o.surcos_asignados)?o.surcos_asignados:[]).map(Number).filter(Number.isFinite).sort(function(a,b){return a-b;});
+  var hechos=(Array.isArray(o.surcos_completados)?o.surcos_completados:[]).map(Number).filter(Number.isFinite);
+  var completados=propios.filter(function(n){return hechos.indexOf(n)!==-1;});
+  var faltan=propios.filter(function(n){return hechos.indexOf(n)===-1;});
+  var plan=c428PlanCosecha(o)||{},emp=c430EmpaquesOperario(o),lugar=[planta&&planta.nombre,tabla.nombre].filter(Boolean).join(' · ');
+  var terminado=!!propios.length&&!faltan.length;
+  body.innerHTML='<div class="c225-detail">'+
+    '<button class="c225-back" onclick="ordenEjecutando=null;cargarTareas()">← Mis tareas</button>'+
+    '<div class="c225-eyebrow">🧺 COSECHA · '+c225Esc(o.estado==='completada'?'PARTICIPACIÓN CERRADA':o.estado==='en_proceso'?'EN PROCESO':'PROGRAMADA')+'</div>'+
+    '<h2>'+c225Esc(lugar)+'</h2>'+
+    '<div class="c225-detail-card"><div><small>Fecha</small><strong>'+c225Esc(o.fecha_asignacion||'')+'</strong></div><div><small>Mis surcos</small><strong>'+c225Esc(propios.join(', ')||'Sin asignación')+'</strong></div><div><small>Confirmados por Galera</small><strong>'+completados.length+' / '+propios.length+'</strong></div><div><small>Pendientes de confirmar</small><strong>'+c225Esc(faltan.join(', ')||'Ninguno')+'</strong></div></div>'+
+    (emp.length?'<div class="c225-instruction"><small>SEPARACIÓN Y EMPAQUE</small><strong>'+emp.map(c225Esc).join('<br>')+'</strong></div>':'')+
+    (plan.indicaciones?'<div class="c225-instruction"><small>INDICACIONES DEL INGENIERO</small><strong>'+c225Esc(plan.indicaciones)+'</strong></div>':'')+
+    '<div class="c336-info" style="margin:12px 0">'+(terminado?'✓ Todos tus surcos están confirmados por Galera. Espera indicaciones del encargado para cualquier apoyo.':'Cuando termines un surco, preséntate en Galera para que registren su finalización. Desde esta aplicación no puedes marcar surcos como terminados.')+'</div>'+
+    '<button class="c225-start" onclick="c510ActualizarCosecha()">↻ Actualizar confirmaciones de Galera</button>'+
+    '<p class="hint" style="margin-top:12px">La producción y el cierre de la cosecha completa se controlan en Galera. No se muestran cantidades ni pagos estimados.</p></div>';
+}
+function c510ActualizarCosecha(){
+  var o=ordenEjecutando;if(!o||!c510EsCosechaFormal(o))return;
+  if(!navigator.onLine){showToast('Sin conexión. Conéctate para consultar Galera.');return;}
+  from('ordenes_trabajo').select('id,estado,surcos_asignados,surcos_completados,fecha_asignacion').eq('id',o.id).single().then(function(r){
+    if(!r)return;Object.assign(o,r);c510VerCosecha(o);
+  }).catch(function(e){alert('No se pudo consultar el avance registrado por Galera: '+e.message);});
+}
 function c335IniciarDesdeModal(id){
   var t=(window.C329_TAREAS||[]).find(function(x){return String(x.id)===String(id);});
   if(!t)return;
   c329CerrarTarea();
+  if(c510EsCosechaFormal(t)){ordenEjecutando=t;c510VerCosecha(t);c510ActualizarCosecha();return;}
   if(t.estado==='pendiente' && c329TipoTarea(t).label!=='RIEGO'){
     marcarOrdenEnProceso(t.id);
     t.estado='en_proceso';
@@ -19710,6 +19740,7 @@ function prepararEjecucion(o,esOffline){
   if(o.activo_rancho_id){renderEjecMantenimiento();return;}
   if(!o.tabla_id){renderEjecGeneral();return;}
   if(c428EsCalentamiento(o)){renderEjecCalentamiento();return;}
+  if(c510EsCosechaFormal(o)){c510VerCosecha(o);return;}
   if(o.tipo_labor&&o.tipo_labor.requiere_formula&&o.formula_id){
     if(esOffline){
       // o.formula y o.componentesFormula ya vienen del caché de tareas (buscarOrdenEnCacheTareas)
