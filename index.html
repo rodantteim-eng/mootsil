@@ -18984,7 +18984,7 @@ function cargarTareas(subtab){
   }).catch(function(err){
     var cache=null;
     try{cache=JSON.parse(localStorage.getItem('mootsil_tareas_cache_'+usuario.id)||'null');}catch(e){}
-    if(cache){ window.C348_EJECUCION_POR_ORDEN=cache.ejecucionPorOrden||{}; pintarTareas(cache.todas,cache.hoyOrdenes,true,cache.completadas||[],cache.evidenciaPorOrden||{},cache.componentesPorFormula||{},cache.horasExtraPorClave||{}); }
+    if(cache){ window.C348_EJECUCION_POR_ORDEN=cache.ejecucionPorOrden||{}; pintarTareas(cache.todas,cache.hoyOrdenes,true,cache.completadas||[],cache.evidenciaPorOrden||{},cache.componentesPorFormula||{},cache.horasExtraPorClave||{}); var tc=document.getElementById('tareas-contenido');if(tc){var aviso=document.createElement('div');aviso.style.cssText='padding:10px;margin-bottom:10px;border:1px solid #c17b2e;background:#fff8e9;border-radius:10px;font-size:.8rem';aviso.textContent='No se pudo actualizar la lista desde Supabase: '+(err&&err.message||'error de conexión')+'. Estos datos pueden estar incompletos.';tc.prepend(aviso);} }
     else{
       var cont=document.getElementById('tareas-contenido');
       if(cont) cont.innerHTML='<div class="empty">📡 Sin señal y sin tareas guardadas.<br/>Conéctate al menos una vez para descargarlas.</div>';
@@ -18995,7 +18995,7 @@ function cargarTareas(subtab){
 function barraSubtabsTareas(){
   var tabs=[['programadas','Programadas'],['porhacer','Hoy'],['proceso','En proceso'],['terminadas','Terminadas'],['retrasadas','Retrasadas']];
   if(!tabs.some(function(x){return x[0]===SUBTAB_TAREAS_ACTUAL;})) SUBTAB_TAREAS_ACTUAL='porhacer';
-  return '<div class="c328-tasks-head"><div><h2>Mis tareas</h2><p>Actividades asignadas</p></div></div>'+
+  return '<div class="c328-tasks-head"><div><h2>Mis tareas</h2><p>Actividades asignadas</p></div><button type="button" onclick="cargarTareas()" style="border:1px solid #cadbd1;background:#fff;border-radius:9px;padding:8px 12px;color:#064c34;font-weight:700;cursor:pointer">↻ Actualizar</button></div>'+
     '<div class="c329-flow-tabs">'+tabs.map(function(t){
       return '<button type="button" class="'+(SUBTAB_TAREAS_ACTUAL===t[0]?'active':'')+'" onclick="cargarTareas(\''+t[0]+'\')">'+t[1]+'</button>';
     }).join('')+'</div>';
