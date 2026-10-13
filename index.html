@@ -19011,9 +19011,8 @@ function c329TipoTarea(t){
   var formula=((t&&t.formula&&t.formula.nombre)||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   var txt=[tipo,via,formula,(t&&t.bomba_usada)||''].join(' ');
 
-  if(/cosecha|recoleccion|corte de fruta/.test(txt))
-    return {icon:'🫐',label:'COSECHA',css:'cosecha'};
-
+  // C507: una orden con fórmula es una aplicación; el nombre de la fórmula
+  // puede mencionar cosecha sin convertir la actividad en una cosecha.
   if(t&&t.formula_id){
     if(/drench/.test(txt))
       return {icon:'🎒',label:'APLICACIÓN DRENCH',css:'drench'};
@@ -19023,6 +19022,9 @@ function c329TipoTarea(t){
       return {icon:'🚰',label:'APLICACIÓN RIEGO',css:'aplicacion-riego'};
     return {icon:'🍃',label:'APLICACIÓN FOLIAR',css:'foliar'};
   }
+
+  if(c428PlanCosecha(t)||/cosecha|recoleccion|corte de fruta/.test(tipo))
+    return {icon:'🫐',label:'COSECHA',css:'cosecha'};
 
   if(c340EsRiegoHidratacion(t)||/hidratacion|riego/.test(tipo))
     return {icon:'💧',label:'RIEGO',css:'riego'};
@@ -19241,13 +19243,46 @@ function pintarTareas(todas,hoyOrdenes,esCache,completadas,evidenciaPorOrden,com
       (duplicados506[clave]=duplicados506[clave]||[]).push(t);
     });
     var conflictos506=Object.keys(duplicados506).filter(function(k){return duplicados506[k].length>1;});
+    // C507: una ficha por cosecha/tabla/fecha en Programadas. Las órdenes
+    // originales siguen intactas. Si hay varias, se muestra un resumen
+    // no accionable para evitar iniciar solamente una parte del grupo.
+    var grupos507={};
+    programadas.forEach(function(t){
+      if(!c428PlanCosecha(t))return;
+      var k=String(t.fecha_asignacion)+'|'+String(t.tabla_id);
+      (grupos507[k]=grupos507[k]||[]).push(t);
+    });
     var mapa={programadas:programadas,porhacer:hoyPend,proceso:proceso,terminadas:terminadas,retrasadas:retrasadas};
     var lista=mapa[SUBTAB_TAREAS_ACTUAL]||hoyPend;
+    if(SUBTAB_TAREAS_ACTUAL==='programadas'){
+      var vistos507={};
+      lista=lista.filter(function(t){
+        if(!c428PlanCosecha(t))return true;
+        var k=String(t.fecha_asignacion)+'|'+String(t.tabla_id);
+        if(vistos507[k])return false;
+        vistos507[k]=true;return true;
+      });
+    }
     var nombres={programadas:'Programadas',porhacer:'Hoy · Pendientes',proceso:'En proceso',terminadas:'Terminadas',retrasadas:'Retrasadas'};
     var html='<div class="c328-day-summary"><div><b>'+nombres[SUBTAB_TAREAS_ACTUAL]+'</b><span>'+lista.length+' actividad'+(lista.length===1?'':'es')+'</span></div></div>';
-    if(conflictos506.length && SUBTAB_TAREAS_ACTUAL==='programadas') html+='<div style="padding:11px 13px;border:1px solid #d7a04b;border-radius:10px;background:#fff8e9;color:#77500a;margin:10px 0;font-size:.82rem"><b>Atención: cosechas repetidas en la programación.</b> Hay '+conflictos506.length+' tabla(s) con varias órdenes para la misma fecha. Se muestran todas para no ocultar surcos ni modificar asignaciones. Revisar en Administración antes de iniciar.</div>';
+    if(conflictos506.length && SUBTAB_TAREAS_ACTUAL==='programadas') html+='<div style="padding:11px 13px;border:1px solid #d7a04b;border-radius:10px;background:#fff8e9;color:#77500a;margin:10px 0;font-size:.82rem"><b>Atención: cosechas repetidas en la programación.</b> Hay '+conflictos506.length+' tabla(s) con varias órdenes para la misma fecha. Se agrupan visualmente por tabla y se conservan todos los surcos. Las fichas con varias órdenes quedan bloqueadas hasta conciliarlas en Administración.</div>';
     if(!lista.length) html+='<div class="empty">No tienes actividades en este estado.</div>';
-    else html+=lista.map(function(t){return construirTarjetaTarea(t,hoy,horasExtraPorClave);}).join('');
+    else html+=lista.map(function(t){
+      if(SUBTAB_TAREAS_ACTUAL==='programadas'&&c428PlanCosecha(t)){
+        var k=String(t.fecha_asignacion)+'|'+String(t.tabla_id);
+        var ordenes=grupos507[k]||[t];
+        if(ordenes.length>1){
+          var surcos=Array.from(new Set(ordenes.reduce(function(a,o){return a.concat(o.surcos_asignados||[]);},[]).map(Number).filter(Number.isFinite))).sort(function(a,b){return a-b;});
+          var pl=t.tabla?(cats.plantaciones||[]).find(function(p){return p.id===t.tabla.plantacion_id;}):null;
+          var lugar=[pl&&pl.nombre,t.tabla&&t.tabla.nombre].filter(Boolean).join(' · ');
+          return '<div class="c329-simple-card programada" style="cursor:default;border-left:4px solid #c68b22">'+
+            '<div class="c329-type cosecha"><span class="c333-type-icon">🫐</span><span class="c333-type-text">COSECHA</span></div>'+
+            '<div class="c329-simple-main"><b>Cosecha · '+c225Esc(lugar)+'</b><span>'+surcos.length+' surcos distintos: '+c225Esc(surcos.join(', '))+'</span>'+
+            '<span style="color:#916015;font-weight:700">'+ordenes.length+' órdenes existentes · Pendiente de conciliación en Administración</span></div></div>';
+        }
+      }
+      return construirTarjetaTarea(t,hoy,horasExtraPorClave);
+    }).join('');
 
     var prefijo=esCache?'<p class="hint" style="text-align:center;margin-bottom:.75rem;">📡 Sin señal — mostrando tus tareas guardadas.</p>':'';
     cont.innerHTML=prefijo+html;
