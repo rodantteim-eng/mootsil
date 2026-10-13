@@ -16797,7 +16797,7 @@ function renderCosechaTablero(){
     var c464ReceptionCount=gal431.reduce(function(n,r){return n+((Array.isArray(r.recepciones)?r.recepciones:[]).length);},0);
     var c464Dashboard='<div class="c464-wrap">'+(c485Avisos?'<section class="c485-alerts"><h3>⚠ Participaciones sin iniciar</h3>'+c485Avisos+'</section>':'')+'<div class="c464-kpis"><div class="c482-kpi-total"><strong>'+Object.keys(grupos).length+'</strong><span>Actividades semanales</span></div><div><strong>'+programadas+'</strong><span>Programadas</span></div><div><strong>'+proceso+'</strong><span>En proceso</span></div><div><strong>'+terminadas+'</strong><span>Terminadas</span></div><div><strong>'+pendientes+'</strong><span>Pendientes</span></div><div><strong>'+c464ReceptionCount+'</strong><span>Registros de recepción en Galera</span></div></div><h3 class="c482-section-title">🌱 Tablas en cosecha hoy <small>Avance basado en participaciones registradas, no en cajas estimadas</small></h3><div class="c464-plants">'+c464TablaCards+'</div><div class="c464-sections"><section><h3>▤ Detalle por tabla</h3><div id="c464-detail" class="c464-detail">Selecciona una tabla de Erandy o Jade para consultar sus jornadas, personal, surcos, destinos y recepciones de Galera.</div></section><section><h3>♙ Detalle por cosechador · semana</h3><div class="c464-scroll"><table><thead><tr><th>Colaborador</th><th>Tablas</th><th>Participaciones terminadas</th><th>Cajas cosechadas</th><th>Cajas pesadas</th></tr></thead><tbody>'+(c464WorkerRows||'<tr><td colspan="5">Sin participaciones registradas</td></tr>')+'</tbody></table></div><p class="hint">Las cajas individuales aparecerán cuando existan registros vinculados al cosechador. No se estiman a partir de surcos.</p></section></div></div>';
     window.C464_DATA={rows:rows,gal:gal431,grupos:grupos,fecha:hoy};
-    var c465Head='<div class="c465-top"><div><div class="c482-eyebrow">RANCHO SAGRADO CORAZÓN · OPERACIÓN</div><h2>🍇 Cosecha · Tablero</h2><p>Semana '+numeroSemanaISO(new Date(rg.ini+'T12:00:00'))+' · '+cosFechaCorta(rg.ini)+' al '+cosFechaCorta(rg.fin)+'</p></div><div class="c465-actions"><button class="btn-sm" id="cos-prev">← Semana anterior</button><button class="btn-sm" id="cos-now">Esta semana</button><button class="btn-sm" id="cos-next">Semana siguiente →</button><button class="btn-sm" id="c475-open-main">🌱 Asignación permanente de surcos</button><button class="btn-primary" id="cos-nueva">+ Programar cosecha</button></div></div>';
+    var c465Head='<div class="c465-top"><div><div class="c482-eyebrow">RANCHO SAGRADO CORAZÓN · OPERACIÓN</div><h2>🍇 Cosecha · Tablero</h2><p>Semana '+numeroSemanaISO(new Date(rg.ini+'T12:00:00'))+' · '+cosFechaCorta(rg.ini)+' al '+cosFechaCorta(rg.fin)+'</p></div><div class="c465-actions"><button class="btn-sm" id="cos-prev">← Semana anterior</button><button class="btn-sm" id="cos-now">Esta semana</button><button class="btn-sm" id="cos-next">Semana siguiente →</button><button class="btn-sm" id="c475-open-main">🌱 Asignación permanente de surcos</button><button class="btn-sm" type="button" onclick="c497AbrirGalera()">🏠 Galera</button><button class="btn-primary" id="cos-nueva">+ Programar cosecha</button></div></div>';
     var c465Listado='<section class="c465-listado"><h3>Programación de la semana</h3>'+(lista||'<div class="c465-empty">No hay cosechas programadas para la semana seleccionada.</div>')+'</section>';
     body.innerHTML='<div class="c465-root">'+c465Head+c464Dashboard+c465Listado+'</div>';
     document.getElementById('cos-nueva').onclick=function(){cosechaReset();c466AbrirProgramacion();};
@@ -22511,4 +22511,45 @@ function c366ReportarLaborIncidencia(){
 })();
 </script>
 
-<script id="c453-editar-compra-caja">/* C453 · Editar compra desde Tesorería y mantener proveedor en movimiento de Caja. */</script>
+<script id="c453-editar-compra-caja">/* C453 · Editar compra desde Tesorería y mantener proveedor en movimiento de Caja. */
+/* C497A — Vista de Galera: lectura segura de titulares permanentes.
+   No registra surcos terminados ni reasigna apoyos hasta contar con
+   transacciones operativas autorizadas y una jornada activa confirmada. */
+function c497AbrirGalera(){
+ var prev=document.getElementById('c497-galera');if(prev)prev.remove();
+ var tablas=(cats.tablas||[]).slice().sort(function(a,b){
+  var pa=/jade/i.test(c491Plantacion(a))?1:0,pb=/jade/i.test(c491Plantacion(b))?1:0;
+  return pa-pb||Number((a.nombre||'').match(/\d+/)?.[0]||0)-Number((b.nombre||'').match(/\d+/)?.[0]||0);
+ });
+ var layer=document.createElement('div');layer.id='c497-galera';
+ layer.style.cssText='position:fixed;inset:0;z-index:100002;background:#082a1dcc;padding:16px;display:flex;justify-content:center;align-items:center';
+ layer.innerHTML='<section role="dialog" aria-modal="true" aria-label="Galera" style="width:min(1140px,100%);height:min(90vh,850px);overflow:auto;background:#f7faf8;border-radius:20px;padding:20px;box-shadow:0 18px 70px #071f184d">'+
+ '<div style="display:flex;justify-content:space-between;align-items:start;gap:12px"><div><h2 style="margin:0;color:#0d4934">🏠 Galera · Vista de surcos</h2><p style="margin:5px 0 12px;color:#60786c">Consulta de titulares permanentes por tabla. Esta vista todavía no registra terminaciones.</p></div><button id="c497-close" type="button" style="padding:9px 14px;border:1px solid #d7e5db;border-radius:10px;background:white">✕ Cerrar</button></div>'+
+ '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0 16px"><label for="c497-table" style="font-weight:700">Plantación y tabla</label><select id="c497-table" style="padding:11px;min-width:220px;max-width:100%;border:1px solid #c9dfd0;border-radius:10px;background:white">'+tablas.map(function(t){return '<option value="'+cosEsc(t.id)+'">'+cosEsc(c491Plantacion(t)+' · '+t.nombre)+'</option>';}).join('')+'</select><span style="color:#6c7d71;font-size:13px">Solo consulta · Sin cambios en producción</span></div>'+
+ '<div id="c497-body" aria-live="polite"></div></section>';
+ document.body.appendChild(layer);
+ layer.querySelector('#c497-close').onclick=function(){layer.remove();};
+ layer.addEventListener('click',function(e){if(e.target===layer)layer.remove();});
+ var select=layer.querySelector('#c497-table'),out=layer.querySelector('#c497-body');
+ function render(){
+  var t=tablas.find(function(x){return String(x.id)===select.value;});if(!t)return;
+  out.innerHTML='<div style="padding:20px;color:#526b5c">Cargando asignaciones permanentes…</div>';
+  rpc('c475_listar_titulares',{p_tabla_id:String(t.id)}).then(function(rows){
+   if(!layer.isConnected||String(t.id)!==select.value)return;
+   var people=cosPersonalDisponible().concat(c451PersonasUnicas().filter(function(x){return x&&x.id&&x.nombre;}).map(function(x){return {id:x.id,nombre:x.nombre};}));
+   var names={};people.forEach(function(x){names[String(x.id)]=x.nombre;});
+   var count=Number((t.nombre||'').match(/\d+/)?.[0]||0),plant=c491Plantacion(t),total=(/jade/i.test(plant)?{1:41,2:41,3:18}:{1:35,2:41,3:38,4:41})[count]||0;
+   var owner={};(rows||[]).forEach(function(x){owner[Number(x.surco)]=names[String(x.usuario_id)]||'Titular no disponible';});
+   var assigned=Object.keys(owner).length;
+   out.innerHTML='<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px">'+
+    '<div style="padding:12px 16px;background:#e8f5ed;border-radius:12px"><b>'+assigned+'</b> titulares por surco</div>'+
+    '<div style="padding:12px 16px;background:#fff3e2;border-radius:12px"><b>'+Math.max(0,total-assigned)+'</b> sin titular</div>'+
+    '<div style="padding:12px 16px;background:#f0edf8;border-radius:12px"><b>—</b> terminados (sin seguimiento activo)</div></div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:10px">'+Array.from({length:total},function(_,i){var n=i+1,name=owner[n]||'Sin asignar';return '<article style="padding:12px;border:1px solid '+(owner[n]?'#d6e6dc':'#e9d5a8')+';border-radius:12px;background:white;min-height:86px"><div style="display:flex;justify-content:space-between;gap:8px"><b>Surco '+n+'</b><span style="color:#718277;font-size:12px">Pendiente*</span></div><div style="margin-top:7px;font-size:14px">'+cosEsc(name)+'</div></article>';}).join('')+'</div>'+
+    '<p style="font-size:12px;color:#697a70;margin-top:15px">*Pendiente es un estado visual provisional, no un registro de cosecha. Los surcos sin titular no se asignan automáticamente en esta fase.</p>';
+  }).catch(function(e){if(layer.isConnected)out.textContent='No se pudieron cargar los titulares: '+e.message;});
+ }
+ select.onchange=render;render();
+}
+
+</script>
