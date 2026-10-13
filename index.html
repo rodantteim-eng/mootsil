@@ -16769,7 +16769,20 @@ function c467Abrir(){
  C467_STATE={fecha:fechaHoyLocal(),tablas:{},activa:null,destinos:[],notas:'',numero:1,editor:null,guardando:false,c475Loaded:{},c475Loading:{},c475Owners:{},c475Error:'',c478Coberturas:{}};
  c467Render();
 }
-function c467Tabla(id){var st=C467_STATE;if(!st.tablas[id])st.tablas[id]={asignaciones:{}};return st.tablas[id];}
+function c467Tabla(id){
+ var st=C467_STATE;id=String(id);
+ if(!st.tablas[id]){
+  var a={};
+  if(st.c475Loaded[id]) (st.c475Owners[id]||[]).forEach(function(r){
+   var uid=String(r.usuario_id),n=Number(r.surco);
+   if(!a[uid])a[uid]=[];
+   if(Number.isInteger(n)&&!a[uid].includes(n))a[uid].push(n);
+  });
+  Object.keys(a).forEach(function(uid){a[uid].sort(function(x,y){return x-y;});});
+  st.tablas[id]={asignaciones:a};
+ }
+ return st.tablas[id];
+}
 // C475: titularidad persistente por tabla. Una cobertura modifica solo la programación del día.
 function c475CargarTitulares(tablaId){
  var st=C467_STATE;if(!st)return Promise.resolve();
@@ -16777,8 +16790,8 @@ function c475CargarTitulares(tablaId){
  if(st.c475Loading[tablaId])return st.c475Loading[tablaId];
  st.c475Loading[tablaId]=rpc('c475_listar_titulares',{p_tabla_id:tablaId}).then(function(rows){
   if(C467_STATE!==st)return;
-  if(!st.tablas[tablaId])return;
   st.c475Loaded[tablaId]=true;st.c475Owners[tablaId]=rows||[];
+  if(!st.tablas[tablaId])return;
   var a=c467Tabla(tablaId).asignaciones;
   (rows||[]).forEach(function(r){var id=String(r.usuario_id),n=Number(r.surco);if(!a[id])a[id]=[];if(!a[id].includes(n))a[id].push(n);});
   Object.keys(a).forEach(function(id){a[id].sort(function(x,y){return x-y;});});
@@ -16860,7 +16873,14 @@ function c467Render(){
  var plantas=cats.plantaciones||[],tabs=cats.tablas||[],personal=cosPersonalDisponible(),active=st.activa&&tabs.find(function(t){return String(t.id)===String(st.activa);}),as=active?c467Tabla(st.activa).asignaciones:{},n=active?Number(active.cantidad_surcos||0):0;
  function esc(x){return cosEsc(x==null?'':String(x));}
  function selectedCount(){return Object.keys(st.tablas).length;}
- var titulares=personal.filter(function(x){return (as[x.id]||[]).length>0;});
+ // C496C: la titularidad depende del registro de surcos, nunca del cargo laboral.
+ var directorio={};
+ c451PersonasUnicas().forEach(function(x){if(x&&x.id)directorio[String(x.id)]=x;});
+ var titulares=Object.keys(as).filter(function(id){return (as[id]||[]).length>0;}).map(function(id){
+  var ficha=personal.find(function(x){return String(x.id)===String(id);});
+  var base=directorio[String(id)];
+  return ficha||{id:id,nombre:(base&&base.nombre)||'Titular no identificado',grupo:'Asignación permanente'};
+ }).sort(function(a,b){return String(a.nombre).localeCompare(String(b.nombre),'es');});
  function perCard(x){var aa=as[x.id]||[],sel=String(st.editor)===String(x.id);return '<button type="button" class="c467-person '+(sel?'sel':'')+'" data-c467-person="'+esc(x.id)+'"><span class="c467-avatar">'+esc((x.nombre||'?').trim().charAt(0))+'</span><span><b>'+esc(x.nombre)+'</b><small>'+esc(x.grupo||'Colaborador')+' · '+aa.length+' surcos</small></span></button>';}
  var clients=function(d){return '<option value="">Seleccionar cliente</option>'+c417ClientesTipo(d.tipo).map(function(c){return '<option value="'+esc(c.id)+'" '+(String(c.id)===String(d.clienteId||'')?'selected':'')+'>'+esc(c.nombre)+'</option>';}).join('');};
  var dest=st.destinos.map(function(d,i){return '<div class="c467-dest" data-c467-d="'+i+'"><div class="c467-flex"><label>Destino<select data-k="tipo"><option '+(d.tipo==='Comercializadora'?'selected':'')+'>Comercializadora</option><option '+(d.tipo==='Proceso'?'selected':'')+'>Proceso</option></select></label><label>Cliente<select data-k="clienteId">'+clients(d)+'</select></label><button type="button" class="c485-trash" title="Eliminar destino" aria-label="Eliminar destino" data-c467-del="'+i+'">♲</button></div><div class="c467-flex">'+(d.tipo==='Proceso'?'<label>Presentación<select data-k="presentacion"><option '+(d.presentacion==='Bote'?'selected':'')+'>Bote</option><option '+(d.presentacion==='Tara'?'selected':'')+'>Tara</option></select></label><label>Detalle<input data-k="detalle" value="'+esc(d.detalle||'')+'" placeholder="Litros o kilos"></label>':'<label>Marca clamshell<input data-k="clamMarca" value="'+esc(d.clamMarca||'')+'"></label><label>Tamaño clamshell<input data-k="clamTam" value="'+esc(d.clamTam||'')+'"></label><label>Marca caja<input data-k="cajaMarca" value="'+esc(d.cajaMarca||'')+'"></label><label>Presentación caja<input data-k="cajaTam" value="'+esc(d.cajaTam||'')+'"></label>')+'<label>Trazabilidad<input data-k="trazabilidad" value="'+esc(d.trazabilidad||'')+'" placeholder="Lote del día"></label></div></div>';}).join('');
