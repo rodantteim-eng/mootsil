@@ -22533,20 +22533,20 @@ function c366ReportarLaborIncidencia(){
 </script>
 
 <script id="c453-editar-compra-caja">/* C453 · Editar compra desde Tesorería y mantener proveedor en movimiento de Caja. */
-/* C498 — Galera visual y selección de surcos. La confirmación real requiere
+/* C499 — Galera: presentaciones operativas sin clientes. La confirmación real requiere
    una operación transaccional de servidor, aún no disponible en C497F. */
 function c497AbrirGalera(){
  var old=document.getElementById('c497-galera');if(old)old.remove();
  var layer=document.createElement('div');layer.id='c497-galera';
  layer.style.cssText='position:fixed;inset:0;z-index:100002;background:#082a1dcc;padding:14px;display:flex;justify-content:center;align-items:center';
  layer.innerHTML='<section role="dialog" aria-modal="true" aria-label="Galera" style="width:min(1370px,100%);max-height:94vh;overflow:auto;background:#f8faf9;border-radius:20px;padding:22px;box-shadow:0 18px 70px #071f184d">'+
- '<div style="display:flex;justify-content:space-between;align-items:start;gap:12px;border-bottom:1px solid #dce9e1;padding-bottom:12px"><div><h2 style="margin:0;color:#0d4934">🏠 Galera · Control de cosecha</h2><p style="margin:5px 0;color:#60786c">Consulta de surcos y responsables. Registro de terminación pendiente de habilitar en el servidor.</p></div><button id="c497-close" type="button" style="padding:9px 14px;border:1px solid #d7e5db;border-radius:10px;background:white;cursor:pointer">✕ Cerrar</button></div>'+
+ '<div style="display:flex;justify-content:space-between;align-items:start;gap:12px;border-bottom:1px solid #dce9e1;padding-bottom:12px"><div><h2 style="margin:0;color:#0d4934">🏠 Galera · Control de cosecha</h2><p style="margin:5px 0;color:#60786c">Consulta de surcos, responsables y presentaciones. Registro de terminación pendiente de habilitar en el servidor.</p></div><button id="c497-close" type="button" style="padding:9px 14px;border:1px solid #d7e5db;border-radius:10px;background:white;cursor:pointer">✕ Cerrar</button></div>'+
  '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:15px 0"><label for="c497-date" style="font-weight:700">Fecha</label><input id="c497-date" type="date" style="padding:11px;border:1px solid #c9dfd0;border-radius:10px"><span style="color:#6c7d71;font-size:13px">Tablas con cosecha programada</span></div>'+
  '<div id="c497-tabs" role="group" aria-label="Tablas con cosecha programada" style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px"></div><div id="c497-body" aria-live="polite"></div></section>';
  document.body.appendChild(layer);
  layer.querySelector('#c497-close').onclick=function(){layer.remove();};
  layer.addEventListener('click',function(e){if(e.target===layer)layer.remove();});
- var tabs=layer.querySelector('#c497-tabs'),out=layer.querySelector('#c497-body'),date=layer.querySelector('#c497-date'),selectedId='',tablas=[],generation=0;
+ var tabs=layer.querySelector('#c497-tabs'),out=layer.querySelector('#c497-body'),date=layer.querySelector('#c497-date'),selectedId='',tablas=[],generation=0,programaciones={};
  date.value=fechaHoyLocal();
  function refresh(){
   var wanted=date.value,token=++generation;selectedId='';tabs.textContent='Cargando tablas programadas…';out.textContent='Consultando cosechas programadas…';
@@ -22554,7 +22554,20 @@ function c497AbrirGalera(){
   if(!lb){out.textContent='No se pudo identificar el tipo de labor Cosecha.';return;}
   from('ordenes_trabajo').select('tabla_id,notas_encargado,estado').eq('tipo_labor_id',lb.id).eq('fecha_asignacion',wanted).get().then(function(orders){
    if(!layer.isConnected||date.value!==wanted||token!==generation)return;
-   var ids={};(orders||[]).forEach(function(o){if(o.tabla_id&&String(o.notas_encargado||'').indexOf('[PLAN_COSECHA]')===0&&o.estado!=='cancelada')ids[String(o.tabla_id)]=true;});
+   var ids={};programaciones={};(orders||[]).forEach(function(o){
+    if(!o.tabla_id||String(o.notas_encargado||'').indexOf('[PLAN_COSECHA]')!==0||o.estado==='cancelada')return;
+    var id=String(o.tabla_id);ids[id]=true;
+    if(!programaciones[id])programaciones[id]=[];
+    try{
+      var plan=JSON.parse(String(o.notas_encargado).slice('[PLAN_COSECHA]'.length));
+      (Array.isArray(plan.destinos)?plan.destinos:[]).forEach(function(d){
+        if(!d||!['Proceso','Comercializadora'].includes(d.tipo))return;
+        var clean={tipo:d.tipo,empaqueId:d.empaqueId||'',clamMarca:d.clamMarca||'',clamTam:d.clamTam||'',cajaMarca:d.cajaMarca||'',cajaTam:d.cajaTam||'',presentacion:d.presentacion||'',detalle:d.detalle||''};
+        var key=JSON.stringify(clean);
+        if(!programaciones[id].some(function(x){return JSON.stringify(x)===key;}))programaciones[id].push(clean);
+      });
+    }catch(err){}
+   });
    tablas=(cats.tablas||[]).filter(function(t){return ids[String(t.id)];}).sort(function(a,b){var pa=/jade/i.test(c491Plantacion(a))?1:0,pb=/jade/i.test(c491Plantacion(b))?1:0;return pa-pb||Number((a.nombre||'').match(/\d+/)?.[0]||0)-Number((b.nombre||'').match(/\d+/)?.[0]||0);});
    if(!tablas.length){tabs.innerHTML='';out.innerHTML='<div style="padding:24px;background:white;border-radius:12px">No hay cosechas programadas para esta fecha.</div>';return;}
    selectedId=String(tablas[0].id);renderTabs();render();
@@ -22576,10 +22589,24 @@ function c497AbrirGalera(){
    var assigned=Object.keys(owner).length,accent=/jade/i.test(plant)?'#8731a6':'#07875b';
    var selectedDay=new Date(date.value+'T12:00:00'),fechaTexto=isNaN(selectedDay.getTime())?date.value:selectedDay.toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
    var wk=(typeof cosSemanaISO==='function'?cosSemanaISO(date.value):'');
+   var destinos=(programaciones[String(t.id)]||[]);
+   function showParts(a){return a.filter(function(x){return String(x||'').trim();}).map(function(x){return cosEsc(String(x));}).join(' · ');}
+   var empCards=destinos.map(function(d){
+     var proc=d.tipo==='Proceso';
+     var detail=proc?showParts([d.presentacion,d.detalle]):showParts([d.clamMarca,d.clamTam,d.cajaMarca,d.cajaTam]);
+     return '<div style="min-width:190px;flex:1;padding:11px 14px;border:1px solid '+(proc?'#d8c2e5':'#e8d4a5')+';border-radius:11px;background:white">'+
+       '<div style="font-size:12px;font-weight:800;color:'+(proc?'#8133a1':'#936510')+'">'+(proc?'Proceso':'Comercializadora')+'</div>'+
+       '<div style="font-size:14px;font-weight:650;color:#183e2e;margin-top:5px">'+(detail||'Presentación no especificada')+'</div></div>';
+   }).join('');
+   var empaqueBlock='<section aria-label="Presentaciones de cosecha" style="background:#fdfefd;border:1px solid #dce9e1;border-radius:13px;padding:12px 14px;margin-bottom:15px">'+
+      '<div style="font-size:14px;font-weight:800;color:#164b38;margin-bottom:9px">📦 Presentaciones de cosecha</div>'+
+      (empCards?'<div style="display:flex;gap:10px;flex-wrap:wrap">'+empCards+'</div>':
+       '<div style="font-size:13px;color:#6c7d71">No hay presentaciones disponibles en esta programación.</div>')+
+      '</section>';
    var stat=function(n,label,color,ico){return '<div style="min-width:170px;flex:1;background:white;border:1px solid #e0e8e2;border-top:4px solid '+color+';border-radius:13px;padding:14px 16px;box-shadow:0 3px 12px #153f2910;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:25px;font-weight:900;color:#124c39">'+n+'</div><div style="font-size:13px">'+label+'</div></div><span style="font-size:25px;color:'+color+'">'+ico+'</span></div>';};
    out.innerHTML='<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:15px">'+
     '<div style="flex:2;min-width:270px;background:white;border:1px solid #dce9e1;border-top:4px solid '+accent+';border-radius:14px;padding:15px 18px;box-shadow:0 3px 12px #153f2910"><div style="color:#64796c;font-size:12px;font-weight:700;margin-bottom:4px">'+cosEsc((wk?'Semana '+wk+' · ':'')+fechaTexto)+'</div><div style="font-size:22px;font-weight:850;color:#124c39">Cosecha programada · '+cosEsc(plant+' · '+t.nombre)+'</div><div style="font-size:12px;color:#657b6d;margin-top:5px">Consecutivo pendiente de vinculación con el registro oficial</div></div>'+
-    stat(assigned,'Surcos con titular','#e4aa19','♙')+stat(Math.max(0,total-assigned),'Surcos sin asignar','#e32a32','♙')+stat('—','Terminados · registro no habilitado','#07875b','✓')+'</div>'+
+    stat(assigned,'Surcos con titular','#e4aa19','♙')+stat(Math.max(0,total-assigned),'Surcos sin asignar','#e32a32','♙')+stat('—','Terminados · registro no habilitado','#07875b','✓')+'</div>'+empaqueBlock+
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:10px">'+Array.from({length:total},function(_,i){var n=i+1,r=owner[n],name=r?r.name:'Sin asignar',edge=r?'#e4aa19':'#e32a32',label=r?'● Pendiente':'● Pendiente de apoyo';return '<button type="button" data-c498-surco="'+n+'" style="text-align:left;padding:13px 14px;border:1.7px solid '+edge+';border-radius:13px;background:white;min-height:91px;box-shadow:0 2px 8px #103c2610;cursor:pointer;color:#19231f"><div style="display:flex;justify-content:space-between;gap:8px"><b style="font-size:16px">Surco '+n+'</b><span aria-hidden="true" style="color:'+(r?'#81948a':'#e32a32')+';font-size:19px">'+(r?'♙':'♙+')+'</span></div><div style="margin-top:4px;font-size:14px">'+cosEsc(name)+'</div><div style="font-size:12px;color:'+(r?'#708076':'#e32a32')+';margin-top:6px">'+label+'</div></button>';}).join('')+'</div>'+
     '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-top:15px;padding:13px;border:1px solid #e0e8e2;border-radius:12px;background:white;font-size:12px"><span>🟡 Con titular · pendiente</span><span>🔴 Sin asignar</span><span>🟣 En apoyo (cuando se registre cobertura)</span><span>🟢 Terminado (cuando exista registro)</span></div>'+
     '<div style="padding:12px 14px;margin-top:10px;background:#fff8e9;border:1px solid #e7c981;border-radius:11px;font-size:13px;color:#775414">⚠️ Para evitar registros ficticios, esta versión no marca surcos como terminados hasta disponer de una operación segura y persistente en Supabase. No se han modificado datos de cosecha.</div>';
