@@ -3657,7 +3657,9 @@ function c444TareaPerteneceRol(t,rol){
   var tp=c329TipoTarea(t);
   if(rol==='cosechador')return tp.label==='COSECHA';
   if(rol==='galerista'||rol==='auxiliar_galera')return false;
-  return tp.label!=='COSECHA';
+  // C502: los colaboradores de Labores también ven cosechas asignadas a su propio usuario.
+  // La consulta ya está limitada por operario_id=usuario.id; no se muestran tareas ajenas.
+  return true;
 }
 function c444CargoCards(todas){
   var cargos=window.C444_CARGOS_ACTIVOS||[];
@@ -10312,7 +10314,7 @@ function renderNuevaCompra(){
       return (parseFloat(f.cantidad)||0)*fac;
     }
     var it=cats.inventario.find(function(x){return x.id===f.itemId;});
-    var factor=(f.modoCaptura==='paquete'&&tienePaqueteItem(it))?parseFloat(it.factor_compra):1;
+    var factor=(f.modoCaptura==='paquete'&&tienePaqueteItem(it))?(parseFloat(f.factorCompra)||parseFloat(it.factor_compra)):1;
     return (parseFloat(f.cantidad)||0)*factor;
   }
 
@@ -10378,9 +10380,11 @@ function renderNuevaCompra(){
     var conPaquete=tienePaqueteItem(it);
     var modoTogglesHtml=conPaquete?('<div class="form-group" style="margin-bottom:.4rem;"><label>¿Cómo lo vas a contar?</label><div class="nc31-cat-tabs"><button type="button" class="nc31-cat-tab nc-modo-btn'+(f.modoCaptura==='base'?' sel':'')+'" data-row="'+f.row+'" data-modo="base">Por '+it.unidad+'</button><button type="button" class="nc31-cat-tab nc-modo-btn'+(f.modoCaptura==='paquete'?' sel':'')+'" data-row="'+f.row+'" data-modo="paquete">Por '+it.unidad_compra+'</button></div></div>'):'';
     var nuevoProd=f.nuevoProducto||{nombre:'',categoria:'',unidad:(grupoCat==='insumos'?'kg':'pza'),unidad_compra:(grupoCat==='insumos'?'Saco':'Pieza'),factor_compra:1};
+    var factorCompraActual=conPaquete?(parseFloat(f.factorCompra)||parseFloat(it.factor_compra)):1;
+    var contenidoCompraHtml=conPaquete&&f.modoCaptura==='paquete'?('<div class="form-group" style="margin-bottom:.5rem;"><label>Contenido por '+it.unidad_compra+' ('+it.unidad+')</label><input type="number" class="nc-factor-compra" data-row="'+f.row+'" min="0.001" step="any" value="'+factorCompraActual+'" style="width:100%;padding:.5rem;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);"><p class="hint">Editable solo para esta compra. No cambia la presentación del catálogo.</p></div>'):'';
     var cantLbl=esNuevo?(nuevoProd.unidad_compra||'presentaciones'):((conPaquete&&f.modoCaptura==='paquete')?it.unidad_compra:(it?it.unidad:''));
     var cantEjemplo=esNuevo?('Captura cuántos '+(nuevoProd.unidad_compra||'presentaciones')+' compraste.'):(conPaquete&&f.modoCaptura==='paquete'?('Ej: si compraste 7 '+it.unidad_compra.toLowerCase()+'s, escribe 7.'):'');
-    var equivTxt=esNuevo&&parseFloat(f.cantidad)>0?('= '+numFmt((parseFloat(f.cantidad)||0)*(parseFloat(nuevoProd.factor_compra)||1))+' '+nuevoProd.unidad+' en total'):((conPaquete&&f.modoCaptura==='paquete'&&parseFloat(f.cantidad)>0)?('= '+numFmt(parseFloat(f.cantidad)*parseFloat(it.factor_compra))+' '+it.unidad+' en total'):'');
+    var equivTxt=esNuevo&&parseFloat(f.cantidad)>0?('= '+numFmt((parseFloat(f.cantidad)||0)*(parseFloat(nuevoProd.factor_compra)||1))+' '+nuevoProd.unidad+' en total'):((conPaquete&&f.modoCaptura==='paquete'&&parseFloat(f.cantidad)>0)?('= '+numFmt(parseFloat(f.cantidad)*factorCompraActual)+' '+it.unidad+' en total'):'');
     var esActivo=!!CATEGORIA_GASTO_A_ACTIVO[f.categoria];
     var buscadorProductoHtml=grupoCat?('<div class="form-group" style="margin-bottom:.5rem;"><label>Producto</label><div class="fcomp-item-wrap" data-row="'+f.row+'" style="position:relative;"><input type="text" class="fcomp-item-buscar nc-item-buscar" data-row="'+f.row+'" autocomplete="off" placeholder="Buscar producto..." value="'+(f.itemNombre?f.itemNombre.replace(/"/g,'&quot;'):'')+'"><div class="fcomp-item-resultados nc-item-resultados" data-row="'+f.row+'" style="display:none;position:absolute;left:0;right:0;top:100%;z-index:30;background:#fff;border:1.5px solid var(--gris-2);border-radius:var(--radio-sm);max-height:220px;overflow-y:auto;box-shadow:0 6px 16px rgba(0,0,0,.15);"></div></div></div>'):'';
     var noInventarioHtml=grupoCat?('<div style="margin:-.15rem 0 .55rem;"><button type="button" class="nc199-noinv'+(f.noInventario?' sel':'')+'" data-row="'+f.row+'" style="border:1px solid '+(f.noInventario?'#157a47':'#d9e2dc')+';background:'+(f.noInventario?'#edf8f1':'#fff')+';color:#174f3c;border-radius:9px;padding:8px 10px;font-size:.68rem;font-weight:800;cursor:pointer;">'+(f.noInventario?'✓ ':'')+'No subir a inventario</button><span class="hint" style="margin-left:7px;">IEPS, impuestos, fletes u otros conceptos sin stock.</span></div>'):'';
@@ -10402,7 +10406,7 @@ var nuevoProductoHtml=esNuevo?('<div class="form-group" style="margin-bottom:.5r
       existenteMetaHtml+
       nuevoProductoHtml+
       activoHtml+
-      ((tieneItem||esNuevo||f.ordenOrigen)?(modoTogglesHtml+'<div class="form-group" style="margin-bottom:.2rem;"><label>Cantidad '+(f.ordenOrigen?'recibida':'que entra a inventario')+' ('+(cantLbl||f.unidadOrden||'unidad')+')</label><input type="number" class="nc-cantidad" data-row="'+f.row+'" min="0" step="any" value="'+(f.cantidad||'')+'" placeholder="0">'+(f.ordenOrigen&&!f.itemId?'<p class="hint" style="margin:.3rem 0;color:#9a6415;font-weight:700;">⚠ Vincula este producto con Inventario para que la recepción aumente existencias.</p>':(cantEjemplo?'<p class="hint" style="margin:.3rem 0 0;">'+cantEjemplo+'</p>':''))+'</div><p class="hint nc-equiv" data-row="'+f.row+'" style="margin:0 0 .5rem;font-weight:700;color:var(--verde-mid);">'+equivTxt+'</p>'):'')+
+      ((tieneItem||esNuevo||f.ordenOrigen)?(modoTogglesHtml+contenidoCompraHtml+'<div class="form-group" style="margin-bottom:.2rem;"><label>Cantidad '+(f.ordenOrigen?'recibida':'que entra a inventario')+' ('+(cantLbl||f.unidadOrden||'unidad')+')</label><input type="number" class="nc-cantidad" data-row="'+f.row+'" min="0" step="any" value="'+(f.cantidad||'')+'" placeholder="0">'+(f.ordenOrigen&&!f.itemId?'<p class="hint" style="margin:.3rem 0;color:#9a6415;font-weight:700;">⚠ Vincula este producto con Inventario para que la recepción aumente existencias.</p>':(cantEjemplo?'<p class="hint" style="margin:.3rem 0 0;">'+cantEjemplo+'</p>':''))+'</div><p class="hint nc-equiv" data-row="'+f.row+'" style="margin:0 0 .5rem;font-weight:700;color:var(--verde-mid);">'+equivTxt+'</p>'):'')+
       (f.ordenOrigen&&f.precioUnitario!=null?'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><div class="form-group" style="margin-bottom:.5rem;"><label>Precio unitario adjudicado</label><input type="text" value="$'+formatMonto(f.precioUnitario)+'" disabled style="background:#f5f7f6;font-weight:700;"></div><div class="form-group" style="margin-bottom:.5rem;"><label>Importe de la partida ($)</label><input type="number" class="nc-monto" data-row="'+f.row+'" min="0" step="any" value="'+(f.monto||'')+'" placeholder="0.00"></div></div>':'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><div class="form-group" style="margin-bottom:.5rem;"><label>Precio unitario ($)</label><input type="number" class="nc199-precio-unitario" data-row="'+f.row+'" min="0" step="any" value="'+(f.precioUnitario||'')+'" placeholder="0.00"></div><div class="form-group" style="margin-bottom:.5rem;"><label>Importe total ($)</label><input type="number" class="nc-monto" data-row="'+f.row+'" min="0" step="any" value="'+(f.monto||'')+'" placeholder="0.00"></div></div>')+
       '<div class="form-group" style="margin-bottom:0;"><label>Concepto / descripción (opcional)</label><input type="text" class="nc-concepto" data-row="'+f.row+'" value="'+(f.concepto?f.concepto.replace(/"/g,'&quot;'):'')+'" placeholder="Ej. Sulfato de amonio 25kg"></div>'+
       (filas.length>1?'<button type="button" class="nc-quitar" data-row="'+f.row+'" style="border:none;background:none;color:var(--rojo);font-size:.78rem;font-weight:600;cursor:pointer;margin-top:.5rem;">🗑️ Quitar producto</button>':'')+
@@ -10420,6 +10424,7 @@ var nuevoProductoHtml=esNuevo?('<div class="form-group" style="margin-bottom:.5r
     x=el('.nc199-precio-unitario'); if(x) f.precioUnitario=x.value;
     x=el('.nc-concepto'); if(x) f.concepto=x.value;
     x=el('.nc-cantidad'); if(x) f.cantidad=x.value;
+    x=el('.nc-factor-compra'); if(x) f.factorCompra=x.value;
     x=el('.nc-activo-nombre'); if(x) f.activoNombre=x.value;
     if(f.nuevoProducto){
       x=el('.nc-nuevo-nombre'); if(x){f.nuevoProducto.nombre=x.value;f.itemNombre=x.value;}
@@ -10442,7 +10447,7 @@ var nuevoProductoHtml=esNuevo?('<div class="form-group" style="margin-bottom:.5r
       var nombre=f.itemNombre||(np&&np.nombre)||f.concepto||'Producto sin nombre';
       var subcat=(np&&np.categoria)||(it&&it.categoria)||'';
       var presentacion=(np&&np.unidad_compra)||(it&&it.unidad_compra)||((it&&it.unidad)||'');
-      var factor=(np&&parseFloat(np.factor_compra))||(it&&parseFloat(it.factor_compra))||1;
+      var factor=(np&&parseFloat(np.factor_compra))||(f.modoCaptura==='paquete'&&parseFloat(f.factorCompra))||(it&&parseFloat(it.factor_compra))||1;
       var unidadBase=(np&&np.unidad)||(it&&it.unidad)||'';
       var cant=parseFloat(f.cantidad)||0;
       var totalBase=cant*factor;
@@ -10519,6 +10524,16 @@ var nuevoProductoHtml=esNuevo?('<div class="form-group" style="margin-bottom:.5r
         calcularTotal();
       });
     });
+    cont.querySelectorAll('.nc-factor-compra').forEach(function(inp){
+      inp.addEventListener('input',function(){
+        var f=filas.find(function(x){return x.row==this.dataset.row;});
+        if(!f)return;
+        f.factorCompra=this.value;
+        var eq=cont.querySelector('.nc-equiv[data-row="'+f.row+'"]');
+        var it=cats.inventario.find(function(x){return x.id===f.itemId;});
+        if(eq&&it)eq.textContent=(parseFloat(f.cantidad)>0&&parseFloat(f.factorCompra)>0)?'= '+numFmt(parseFloat(f.cantidad)*parseFloat(f.factorCompra))+' '+it.unidad+' en total':'';
+      });
+    });
     cont.querySelectorAll('.nc-cantidad').forEach(function(inp){
       inp.addEventListener('input',function(){
         var rid=this.dataset.row, val=this.value;
@@ -10539,7 +10554,7 @@ var nuevoProductoHtml=esNuevo?('<div class="form-group" style="margin-bottom:.5r
           if(f.itemId==='_nuevo'&&f.nuevoProducto&&parseFloat(val)>0){
             eq.textContent='= '+numFmt(parseFloat(val)*(parseFloat(f.nuevoProducto.factor_compra)||1))+' '+f.nuevoProducto.unidad+' en total';
           } else if(it&&f.modoCaptura==='paquete'&&parseFloat(val)>0){
-            eq.textContent='= '+numFmt(parseFloat(val)*parseFloat(it.factor_compra))+' '+it.unidad+' en total';
+            eq.textContent='= '+numFmt(parseFloat(val)*(parseFloat(f.factorCompra)||parseFloat(it.factor_compra)))+' '+it.unidad+' en total';
           } else {
             eq.textContent='';
           }
@@ -10761,6 +10776,8 @@ var nuevoProductoHtml=esNuevo?('<div class="form-group" style="margin-bottom:.5r
       } else if(lf.ordenOrigen&&!lf.itemId&&!lf.noInventario){
         alert('Vincula "'+lf.itemNombre+'" con un producto de Inventario para registrar la cantidad recibida.');
         return;
+      } else if(lf.itemId&&!lf.noInventario&&lf.modoCaptura==='paquete'&&!(parseFloat(lf.factorCompra)||parseFloat((cats.inventario.find(function(x){return x.id===lf.itemId;})||{}).factor_compra)>0)){
+        alert('Indica un contenido válido para la presentación de '+lf.itemNombre+'.');return;
       } else if(lf.itemId&&!lf.noInventario&&!(cantidadBaseDe(lf)>0)){
         alert('Captura la cantidad que entra a inventario para "'+lf.itemNombre+'", o quita el producto de inventario si no aplica.');
         return;
@@ -10829,7 +10846,7 @@ var nuevoProductoHtml=esNuevo?('<div class="form-group" style="margin-bottom:.5r
           var stockAntes=it.stock_actual;
           var cant=cantidadBaseDe(f);
           var nuevoStock=stockAntes+cant;
-          var motivoPaquete=(f.modoCaptura==='paquete'&&tienePaqueteItem(it))?(numFmt(parseFloat(f.cantidad)||0)+' '+it.unidad_compra+(it.unidad_compra.slice(-1)!=='s'&&parseFloat(f.cantidad)!=1?'s':'')+' de '+numFmt(it.factor_compra)+' '+it.unidad+' c/u'):null;
+          var motivoPaquete=(f.modoCaptura==='paquete'&&tienePaqueteItem(it))?(numFmt(parseFloat(f.cantidad)||0)+' '+it.unidad_compra+(it.unidad_compra.slice(-1)!=='s'&&parseFloat(f.cantidad)!=1?'s':'')+' de '+numFmt(parseFloat(f.factorCompra)||parseFloat(it.factor_compra))+' '+it.unidad+' c/u'):null;
           var motivo='Compra'+(motivoPaquete?(' · '+motivoPaquete):'')+(f.concepto?' · '+f.concepto:'');
           return from('movimientos_inventario').insert({item_id:it.id,tipo:'entrada',cantidad:cant,motivo:motivo,usuario_id:usuario.id,stock_anterior:stockAntes,stock_posterior:nuevoStock}).then(function(){
             return from('inventario_items').eq('id',it.id).update({stock_actual:nuevoStock});
@@ -19098,6 +19115,8 @@ function c329AbrirTarea(id){
 
   var plan430=c428PlanCosecha(t);
   if(plan430){
+    var surcos502=(Array.isArray(t.surcos_asignados)?t.surcos_asignados:[]).map(Number).filter(Number.isFinite).sort(function(a,b){return a-b;});
+    if(surcos502.length)filas.push(['Mis surcos asignados',surcos502.join(', ')]);
     if(c428EsCalentamiento(t))filas.push(['Actividad','Limpieza de fruta · Tabla completa']);
     var emp430=c430EmpaquesOperario(t);if(emp430.length)filas.push(['Separación y empaque',emp430.join(' / ')]);
     if(plan430.indicaciones)filas.push(['Indicaciones',plan430.indicaciones]);
@@ -19127,12 +19146,13 @@ function c329AbrirTarea(id){
   }
 
   var accion='';
-  if(t.estado==='pendiente'){
+  if(t.estado==='pendiente' && !(plan430 && t.fecha_asignacion>fechaHoyLocal())){
     accion='<button class="c329-modal-close" style="background:var(--verde);color:#fff;border-color:var(--verde);" type="button" onclick="c335IniciarDesdeModal(\''+String(t.id).replace(/'/g,"\\'")+'\')">▶ Iniciar tarea</button>';
   }else if(t.estado==='en_proceso'){
     accion='<button class="c329-modal-close" style="background:var(--verde);color:#fff;border-color:var(--verde);" type="button" onclick="c335IniciarDesdeModal(\''+String(t.id).replace(/'/g,"\\'")+'\')">▶ Continuar tarea</button>';
   }
 
+  if(plan430 && t.estado==='pendiente' && t.fecha_asignacion>fechaHoyLocal()) accion='<p class="hint">Cosecha programada. Podrás iniciarla el día asignado.</p>';
   modal.innerHTML='<div class="c329-modal-card"><div class="c329-modal-head"><small>'+c225Esc((tp.icon?tp.icon+' ':'')+tp.label)+'</small><h3>'+c225Esc(c329TituloSimple(t))+'</h3></div><div class="c329-modal-body">'+filas.map(function(r){return '<div class="c329-modal-row"><strong>'+r[0]+':</strong> '+c225Esc(r[1]||'—')+'</div>';}).join('')+formulaDetalle+ejecDetalle+'</div>'+accion+'<button class="c329-modal-close" type="button" onclick="c329CerrarTarea()">Cerrar</button></div>';
   modal.classList.add('open');
 }
