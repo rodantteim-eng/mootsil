@@ -22533,68 +22533,58 @@ function c366ReportarLaborIncidencia(){
 </script>
 
 <script id="c453-editar-compra-caja">/* C453 · Editar compra desde Tesorería y mantener proveedor en movimiento de Caja. */
-/* C497A — Vista de Galera: lectura segura de titulares permanentes.
-   No registra surcos terminados ni reasigna apoyos hasta contar con
-   transacciones operativas autorizadas y una jornada activa confirmada. */
+/* C498 — Galera visual y selección de surcos. La confirmación real requiere
+   una operación transaccional de servidor, aún no disponible en C497F. */
 function c497AbrirGalera(){
  var old=document.getElementById('c497-galera');if(old)old.remove();
  var layer=document.createElement('div');layer.id='c497-galera';
- layer.style.cssText='position:fixed;inset:0;z-index:100002;background:#082a1dcc;padding:16px;display:flex;justify-content:center;align-items:center';
- layer.innerHTML='<section role="dialog" aria-modal="true" aria-label="Galera" style="width:min(1220px,100%);height:min(92vh,900px);overflow:auto;background:#f7faf8;border-radius:20px;padding:20px;box-shadow:0 18px 70px #071f184d">'+
- '<div style="display:flex;justify-content:space-between;align-items:start;gap:12px"><div><h2 style="margin:0;color:#0d4934">🏠 Galera · Control de cosecha</h2><p style="margin:5px 0 12px;color:#60786c">Consulta de la jornada programada y sus responsables. El registro de terminaciones se habilitará posteriormente.</p></div><button id="c497-close" type="button" style="padding:9px 14px;border:1px solid #d7e5db;border-radius:10px;background:white">✕ Cerrar</button></div>'+
- '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0 16px"><label for="c497-date" style="font-weight:700">Fecha</label><input id="c497-date" type="date" style="padding:11px;border:1px solid #c9dfd0;border-radius:10px"><span style="color:#6c7d71;font-size:13px">Vista de supervisión · Solo consulta</span></div>'+
+ layer.style.cssText='position:fixed;inset:0;z-index:100002;background:#082a1dcc;padding:14px;display:flex;justify-content:center;align-items:center';
+ layer.innerHTML='<section role="dialog" aria-modal="true" aria-label="Galera" style="width:min(1370px,100%);max-height:94vh;overflow:auto;background:#f8faf9;border-radius:20px;padding:22px;box-shadow:0 18px 70px #071f184d">'+
+ '<div style="display:flex;justify-content:space-between;align-items:start;gap:12px;border-bottom:1px solid #dce9e1;padding-bottom:12px"><div><h2 style="margin:0;color:#0d4934">🏠 Galera · Control de cosecha</h2><p style="margin:5px 0;color:#60786c">Consulta de surcos y responsables. Registro de terminación pendiente de habilitar en el servidor.</p></div><button id="c497-close" type="button" style="padding:9px 14px;border:1px solid #d7e5db;border-radius:10px;background:white;cursor:pointer">✕ Cerrar</button></div>'+
+ '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:15px 0"><label for="c497-date" style="font-weight:700">Fecha</label><input id="c497-date" type="date" style="padding:11px;border:1px solid #c9dfd0;border-radius:10px"><span style="color:#6c7d71;font-size:13px">Tablas con cosecha programada</span></div>'+
  '<div id="c497-tabs" role="group" aria-label="Tablas con cosecha programada" style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px"></div><div id="c497-body" aria-live="polite"></div></section>';
  document.body.appendChild(layer);
  layer.querySelector('#c497-close').onclick=function(){layer.remove();};
  layer.addEventListener('click',function(e){if(e.target===layer)layer.remove();});
- var tabs=layer.querySelector('#c497-tabs'),out=layer.querySelector('#c497-body'),date=layer.querySelector('#c497-date'),selectedId='';
+ var tabs=layer.querySelector('#c497-tabs'),out=layer.querySelector('#c497-body'),date=layer.querySelector('#c497-date'),selectedId='',tablas=[],generation=0;
  date.value=fechaHoyLocal();
- var tablas=[];
  function refresh(){
-  var wanted=date.value;selectedId='';tabs.textContent='Cargando tablas programadas…';
-  out.textContent='Consultando cosechas programadas…';
+  var wanted=date.value,token=++generation;selectedId='';tabs.textContent='Cargando tablas programadas…';out.textContent='Consultando cosechas programadas…';
   var lb=(cats.tiposLabor||[]).find(function(l){return l.es_cosecha;});
   if(!lb){out.textContent='No se pudo identificar el tipo de labor Cosecha.';return;}
   from('ordenes_trabajo').select('tabla_id,notas_encargado,estado').eq('tipo_labor_id',lb.id).eq('fecha_asignacion',wanted).get().then(function(orders){
-   if(!layer.isConnected||date.value!==wanted)return;
+   if(!layer.isConnected||date.value!==wanted||token!==generation)return;
    var ids={};(orders||[]).forEach(function(o){if(o.tabla_id&&String(o.notas_encargado||'').indexOf('[PLAN_COSECHA]')===0&&o.estado!=='cancelada')ids[String(o.tabla_id)]=true;});
    tablas=(cats.tablas||[]).filter(function(t){return ids[String(t.id)];}).sort(function(a,b){var pa=/jade/i.test(c491Plantacion(a))?1:0,pb=/jade/i.test(c491Plantacion(b))?1:0;return pa-pb||Number((a.nombre||'').match(/\d+/)?.[0]||0)-Number((b.nombre||'').match(/\d+/)?.[0]||0);});
    if(!tablas.length){tabs.innerHTML='';out.innerHTML='<div style="padding:24px;background:white;border-radius:12px">No hay cosechas programadas para esta fecha.</div>';return;}
-   selectedId=String(tablas[0].id);
-   renderTabs();
-   render();
-  }).catch(function(e){if(layer.isConnected)out.textContent='No se pudieron consultar las cosechas programadas: '+e.message;});
+   selectedId=String(tablas[0].id);renderTabs();render();
+  }).catch(function(e){if(layer.isConnected&&token===generation)out.textContent='No se pudieron consultar las cosechas programadas: '+e.message;});
  }
  function renderTabs(){
-  tabs.innerHTML=tablas.map(function(t){var id=String(t.id),jade=/jade/i.test(c491Plantacion(t)),accent=jade?'#8731a6':'#07875b',active=id===selectedId;return '<button type="button" data-c497-tab="'+cosEsc(id)+'" aria-pressed="'+active+'" style="padding:10px 15px;border:2px solid '+(active?accent:'#d9e6de')+';border-radius:11px;background:white;color:#174c39;font-weight:700;cursor:pointer;box-shadow:'+(active?'0 3px 11px #143b261a':'none')+'">'+cosEsc(c491Plantacion(t)+' · '+t.nombre)+(active?' ✓':'')+'</button>';}).join('');
+  tabs.innerHTML=tablas.map(function(t){var id=String(t.id),jade=/jade/i.test(c491Plantacion(t)),accent=jade?'#8731a6':'#07875b',active=id===selectedId;return '<button type="button" data-c497-tab="'+cosEsc(id)+'" aria-pressed="'+active+'" style="padding:11px 15px;border:2px solid '+(active?accent:'#d9e6de')+';border-radius:11px;background:'+(active?accent:jade?'#fbf4ff':'white')+';color:'+(active?'white':jade?'#743094':'#174c39')+';font-weight:750;cursor:pointer;box-shadow:'+(active?'0 3px 11px #143b261a':'none')+'">'+cosEsc(c491Plantacion(t)+' · '+t.nombre)+(active?' ✓':'')+'</button>';}).join('');
   tabs.querySelectorAll('button[data-c497-tab]').forEach(function(btn){btn.onclick=function(){if(selectedId===btn.getAttribute('data-c497-tab'))return;selectedId=btn.getAttribute('data-c497-tab');renderTabs();render();};});
  }
  function render(){
   var t=tablas.find(function(x){return String(x.id)===selectedId;});if(!t)return;
-  out.innerHTML='<div style="padding:20px;color:#526b5c">Cargando titulares y nombres…</div>';
+  var token=++generation;out.innerHTML='<div style="padding:20px;color:#526b5c">Cargando titulares y nombres…</div>';
   Promise.all([rpc('c475_listar_titulares',{p_tabla_id:String(t.id)}),from('usuarios').select('id,nombre').get()]).then(function(res){
-   if(!layer.isConnected||String(t.id)!==selectedId)return;
+   if(!layer.isConnected||String(t.id)!==selectedId||token!==generation)return;
    var rows=res[0]||[],people=res[1]||[],names={};
    people.concat(c451PersonasUnicas()).forEach(function(x){if(x&&x.id&&x.nombre)names[String(x.id)]=x.nombre;});
    var num=Number((t.nombre||'').match(/\d+/)?.[0]||0),plant=c491Plantacion(t),total=(/jade/i.test(plant)?{1:41,2:41,3:18}:{1:35,2:41,3:38,4:41})[num]||0;
    var owner={};rows.forEach(function(x){owner[Number(x.surco)]={name:names[String(x.usuario_id)]||'Nombre pendiente de consulta',id:x.usuario_id};});
-   var assigned=Object.keys(owner).length;
-   var accent=/jade/i.test(plant)?'#8731a6':'#07875b';
-   var selectedDay=new Date(date.value+'T12:00:00');
-   var fechaTexto=isNaN(selectedDay.getTime())?date.value:selectedDay.toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+   var assigned=Object.keys(owner).length,accent=/jade/i.test(plant)?'#8731a6':'#07875b';
+   var selectedDay=new Date(date.value+'T12:00:00'),fechaTexto=isNaN(selectedDay.getTime())?date.value:selectedDay.toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
    var wk=(typeof cosSemanaISO==='function'?cosSemanaISO(date.value):'');
-   var weekLabel=wk?'Semana '+wk+' · ':'';
-   out.innerHTML='<div style="background:white;border:1px solid #dce9e1;border-top:4px solid '+accent+';border-radius:14px;padding:14px 17px;margin-bottom:13px;box-shadow:0 3px 12px #153f2910">'+
-    '<div style="color:#64796c;font-size:12px;font-weight:700;margin-bottom:4px">'+cosEsc(weekLabel+fechaTexto)+'</div>'+
-    '<div style="font-size:20px;font-weight:800;color:#124c39">Cosecha programada · '+cosEsc(plant+' · '+t.nombre)+'</div>'+
-    '<div style="font-size:12px;color:#657b6d;margin-top:5px">El consecutivo de cosecha se mostrará cuando esté vinculado al registro oficial.</div></div>'+
-    '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px">'+
-    '<div style="padding:12px 16px;background:white;border:1px solid #e0e8e2;border-radius:12px;border-top:4px solid #e4aa19;box-shadow:0 3px 12px #153f2910"><b>'+assigned+'</b> surcos con titular</div>'+
-    '<div style="padding:12px 16px;background:white;border:1px solid #e0e8e2;border-radius:12px;border-top:4px solid #dc3030;box-shadow:0 3px 12px #153f2910"><b>'+Math.max(0,total-assigned)+'</b> surcos sin titular</div>'+
-    '<div style="padding:12px 16px;background:white;border:1px solid #e0e8e2;border-radius:12px;border-top:4px solid #07875b;box-shadow:0 3px 12px #153f2910"><b>—</b> terminados (seguimiento aún no habilitado)</div></div>'+
-    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:9px">'+Array.from({length:total},function(_,i){var n=i+1,r=owner[n],name=r?r.name:'Sin asignar',edge=r?'#e4aa19':'#dc3030',label=r?'Pendiente':'Pendiente de apoyo';return '<article style="padding:11px 12px;border:1.5px solid '+edge+';border-radius:12px;background:white;min-height:72px;box-shadow:0 2px 8px #103c2610"><div style="display:flex;justify-content:space-between;gap:8px"><b>Surco '+n+'</b><span style="color:'+(r?'#718277':'#c52c2c')+';font-size:12px">'+label+'</span></div><div style="margin-top:7px;font-size:14px">'+cosEsc(name)+'</div></article>';}).join('')+'</div>'+
-    '<p style="font-size:12px;color:#697a70;margin-top:15px">Colores: amarillo = titular pendiente; rojo = sin asignar. El registro de terminaciones y apoyos aún no está habilitado.</p>';
-  }).catch(function(e){if(layer.isConnected)out.textContent='No se pudieron cargar los titulares o sus nombres: '+e.message;});
+   var stat=function(n,label,color,ico){return '<div style="min-width:170px;flex:1;background:white;border:1px solid #e0e8e2;border-top:4px solid '+color+';border-radius:13px;padding:14px 16px;box-shadow:0 3px 12px #153f2910;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:25px;font-weight:900;color:#124c39">'+n+'</div><div style="font-size:13px">'+label+'</div></div><span style="font-size:25px;color:'+color+'">'+ico+'</span></div>';};
+   out.innerHTML='<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:15px">'+
+    '<div style="flex:2;min-width:270px;background:white;border:1px solid #dce9e1;border-top:4px solid '+accent+';border-radius:14px;padding:15px 18px;box-shadow:0 3px 12px #153f2910"><div style="color:#64796c;font-size:12px;font-weight:700;margin-bottom:4px">'+cosEsc((wk?'Semana '+wk+' · ':'')+fechaTexto)+'</div><div style="font-size:22px;font-weight:850;color:#124c39">Cosecha programada · '+cosEsc(plant+' · '+t.nombre)+'</div><div style="font-size:12px;color:#657b6d;margin-top:5px">Consecutivo pendiente de vinculación con el registro oficial</div></div>'+
+    stat(assigned,'Surcos con titular','#e4aa19','♙')+stat(Math.max(0,total-assigned),'Surcos sin asignar','#e32a32','♙')+stat('—','Terminados · registro no habilitado','#07875b','✓')+'</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:10px">'+Array.from({length:total},function(_,i){var n=i+1,r=owner[n],name=r?r.name:'Sin asignar',edge=r?'#e4aa19':'#e32a32',label=r?'● Pendiente':'● Pendiente de apoyo';return '<button type="button" data-c498-surco="'+n+'" style="text-align:left;padding:13px 14px;border:1.7px solid '+edge+';border-radius:13px;background:white;min-height:91px;box-shadow:0 2px 8px #103c2610;cursor:pointer;color:#19231f"><div style="display:flex;justify-content:space-between;gap:8px"><b style="font-size:16px">Surco '+n+'</b><span aria-hidden="true" style="color:'+(r?'#81948a':'#e32a32')+';font-size:19px">'+(r?'♙':'♙+')+'</span></div><div style="margin-top:4px;font-size:14px">'+cosEsc(name)+'</div><div style="font-size:12px;color:'+(r?'#708076':'#e32a32')+';margin-top:6px">'+label+'</div></button>';}).join('')+'</div>'+
+    '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-top:15px;padding:13px;border:1px solid #e0e8e2;border-radius:12px;background:white;font-size:12px"><span>🟡 Con titular · pendiente</span><span>🔴 Sin asignar</span><span>🟣 En apoyo (cuando se registre cobertura)</span><span>🟢 Terminado (cuando exista registro)</span></div>'+
+    '<div style="padding:12px 14px;margin-top:10px;background:#fff8e9;border:1px solid #e7c981;border-radius:11px;font-size:13px;color:#775414">⚠️ Para evitar registros ficticios, esta versión no marca surcos como terminados hasta disponer de una operación segura y persistente en Supabase. No se han modificado datos de cosecha.</div>';
+   out.querySelectorAll('[data-c498-surco]').forEach(function(btn){btn.onclick=function(){var n=Number(this.getAttribute('data-c498-surco')),r=owner[n];alert('Surco '+n+' · '+(r?r.name:'Sin asignar')+'\n\nEl registro de terminación desde la tablet de Galera está pendiente de habilitar en Supabase. No se modificó el estado del surco.');};});
+  }).catch(function(e){if(layer.isConnected&&token===generation)out.textContent='No se pudieron cargar los titulares o sus nombres: '+e.message;});
  }
  date.onchange=refresh;refresh();
 }
