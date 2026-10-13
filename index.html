@@ -10526,7 +10526,8 @@ var nuevoProductoHtml=esNuevo?('<div class="form-group" style="margin-bottom:.5r
     });
     cont.querySelectorAll('.nc-factor-compra').forEach(function(inp){
       inp.addEventListener('input',function(){
-        var f=filas.find(function(x){return x.row==this.dataset.row;});
+        var rid=this.dataset.row;
+        var f=filas.find(function(x){return String(x.row)===String(rid);});
         if(!f)return;
         f.factorCompra=this.value;
         var eq=cont.querySelector('.nc-equiv[data-row="'+f.row+'"]');
