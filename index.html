@@ -22540,9 +22540,9 @@ function c497AbrirGalera(){
  var old=document.getElementById('c497-galera');if(old)old.remove();
  var layer=document.createElement('div');layer.id='c497-galera';
  layer.style.cssText='position:fixed;inset:0;z-index:100002;background:#082a1dcc;padding:16px;display:flex;justify-content:center;align-items:center';
- layer.innerHTML='<section role="dialog" aria-modal="true" aria-label="Galera" style="width:min(1140px,100%);height:min(90vh,850px);overflow:auto;background:#f7faf8;border-radius:20px;padding:20px;box-shadow:0 18px 70px #071f184d">'+
- '<div style="display:flex;justify-content:space-between;align-items:start;gap:12px"><div><h2 style="margin:0;color:#0d4934">🏠 Galera · Vista de surcos</h2><p style="margin:5px 0 12px;color:#60786c">Solo tablas con cosecha programada. Consulta de responsables; sin registro de terminaciones todavía.</p></div><button id="c497-close" type="button" style="padding:9px 14px;border:1px solid #d7e5db;border-radius:10px;background:white">✕ Cerrar</button></div>'+
- '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0 16px"><label for="c497-date" style="font-weight:700">Fecha</label><input id="c497-date" type="date" style="padding:11px;border:1px solid #c9dfd0;border-radius:10px"><label for="c497-table" style="font-weight:700">Cosecha programada</label><select id="c497-table" style="padding:11px;min-width:220px;max-width:100%;border:1px solid #c9dfd0;border-radius:10px;background:white"></select><span style="color:#6c7d71;font-size:13px">Solo consulta</span></div>'+
+ layer.innerHTML='<section role="dialog" aria-modal="true" aria-label="Galera" style="width:min(1220px,100%);height:min(92vh,900px);overflow:auto;background:#f7faf8;border-radius:20px;padding:20px;box-shadow:0 18px 70px #071f184d">'+
+ '<div style="display:flex;justify-content:space-between;align-items:start;gap:12px"><div><h2 style="margin:0;color:#0d4934">🏠 Galera · Control de cosecha</h2><p style="margin:5px 0 12px;color:#60786c">Consulta de la jornada programada y sus responsables. El registro de terminaciones se habilitará posteriormente.</p></div><button id="c497-close" type="button" style="padding:9px 14px;border:1px solid #d7e5db;border-radius:10px;background:white">✕ Cerrar</button></div>'+
+ '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0 16px"><label for="c497-date" style="font-weight:700">Fecha</label><input id="c497-date" type="date" style="padding:11px;border:1px solid #c9dfd0;border-radius:10px"><label for="c497-table" style="font-weight:700">Cosecha programada</label><select id="c497-table" style="padding:11px;min-width:220px;max-width:100%;border:1px solid #c9dfd0;border-radius:10px;background:white"></select><span style="color:#6c7d71;font-size:13px">Vista de supervisión · Solo consulta</span></div>'+
  '<div id="c497-body" aria-live="polite"></div></section>';
  document.body.appendChild(layer);
  layer.querySelector('#c497-close').onclick=function(){layer.remove();};
@@ -22575,11 +22575,20 @@ function c497AbrirGalera(){
    var num=Number((t.nombre||'').match(/\d+/)?.[0]||0),plant=c491Plantacion(t),total=(/jade/i.test(plant)?{1:41,2:41,3:18}:{1:35,2:41,3:38,4:41})[num]||0;
    var owner={};rows.forEach(function(x){owner[Number(x.surco)]={name:names[String(x.usuario_id)]||'Nombre pendiente de consulta',id:x.usuario_id};});
    var assigned=Object.keys(owner).length;
-   out.innerHTML='<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px">'+
-    '<div style="padding:12px 16px;background:#e8f5ed;border-radius:12px"><b>'+assigned+'</b> surcos con titular</div>'+
-    '<div style="padding:12px 16px;background:#fff3e2;border-radius:12px"><b>'+Math.max(0,total-assigned)+'</b> surcos sin titular</div>'+
-    '<div style="padding:12px 16px;background:#f0edf8;border-radius:12px"><b>—</b> terminados (seguimiento aún no habilitado)</div></div>'+
-    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:10px">'+Array.from({length:total},function(_,i){var n=i+1,r=owner[n],name=r?r.name:'Sin asignar';return '<article style="padding:12px;border:1px solid '+(r?'#d6e6dc':'#e9d5a8')+';border-radius:12px;background:white;min-height:86px"><div style="display:flex;justify-content:space-between;gap:8px"><b>Surco '+n+'</b><span style="color:#718277;font-size:12px">Sin seguimiento</span></div><div style="margin-top:7px;font-size:14px">'+cosEsc(name)+'</div></article>';}).join('')+'</div>'+
+   var accent=/jade/i.test(plant)?'#8731a6':'#07875b';
+   var selectedDay=new Date(date.value+'T12:00:00');
+   var fechaTexto=isNaN(selectedDay.getTime())?date.value:selectedDay.toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+   var wk=(typeof cosSemanaISO==='function'?cosSemanaISO(date.value):'');
+   var weekLabel=wk?'Semana '+wk+' · ':'';
+   out.innerHTML='<div style="background:white;border:1px solid #dce9e1;border-top:4px solid '+accent+';border-radius:14px;padding:14px 17px;margin-bottom:13px;box-shadow:0 3px 12px #153f2910">'+
+    '<div style="color:#64796c;font-size:12px;font-weight:700;margin-bottom:4px">'+cosEsc(weekLabel+fechaTexto)+'</div>'+
+    '<div style="font-size:20px;font-weight:800;color:#124c39">Cosecha programada · '+cosEsc(plant+' · '+t.nombre)+'</div>'+
+    '<div style="font-size:12px;color:#657b6d;margin-top:5px">El consecutivo de cosecha se mostrará cuando esté vinculado al registro oficial.</div></div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px">'+
+    '<div style="padding:12px 16px;background:#e8f5ed;border-radius:12px;border-top:4px solid #07875b;box-shadow:0 3px 12px #153f2910"><b>'+assigned+'</b> surcos con titular</div>'+
+    '<div style="padding:12px 16px;background:#fff3e2;border-radius:12px;border-top:4px solid #d7a021;box-shadow:0 3px 12px #153f2910"><b>'+Math.max(0,total-assigned)+'</b> surcos sin titular</div>'+
+    '<div style="padding:12px 16px;background:#f0edf8;border-radius:12px;border-top:4px solid #8c56b2;box-shadow:0 3px 12px #153f2910"><b>—</b> terminados (seguimiento aún no habilitado)</div></div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:9px">'+Array.from({length:total},function(_,i){var n=i+1,r=owner[n],name=r?r.name:'Sin asignar';return '<article style="padding:11px 12px;border:1px solid '+(r?'#d6e6dc':'#e9d5a8')+';border-radius:12px;background:white;min-height:72px;box-shadow:0 2px 8px #103c2610"><div style="display:flex;justify-content:space-between;gap:8px"><b>Surco '+n+'</b><span style="color:#718277;font-size:12px">Sin seguimiento</span></div><div style="margin-top:7px;font-size:14px">'+cosEsc(name)+'</div></article>';}).join('')+'</div>'+
     '<p style="font-size:12px;color:#697a70;margin-top:15px">La vista muestra titulares permanentes. No permite marcar terminaciones ni asignar apoyos todavía.</p>';
   }).catch(function(e){if(layer.isConnected)out.textContent='No se pudieron cargar los titulares o sus nombres: '+e.message;});
  }
