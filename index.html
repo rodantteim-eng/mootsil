@@ -13471,10 +13471,49 @@ var C496D_PRESENTACIONES=null;
 function c496dCargarPresentaciones(){return from('cliente_empaques').select('*').eq('activo',true).order('nombre').get().then(function(rows){C496D_PRESENTACIONES=rows||[];return C496D_PRESENTACIONES;});}
 function c496dCatalogoCliente(cliente){
  var b=document.getElementById('enc-body');if(!b)return;
- b.innerHTML=vc401Head('Presentaciones · '+vc401Esc(cliente.nombre),'Administración · Catálogo del cliente. Los empaques se reutilizan al programar cosechas.')+'<div class="c496d-catalog"><div class="c496d-catalog-grid"><label>Nombre de presentación<input id="c496d-nombre" placeholder="Ej. Dole 6 oz · 12 clams"></label><label>Tipo<select id="c496d-tipo"><option>Comercializadora</option><option>Proceso</option></select></label><label>Marca clamshell<input id="c496d-clam-marca"></label><label>Tamaño clamshell<input id="c496d-clam-tam" placeholder="6 oz"></label><label>Marca caja<input id="c496d-caja-marca"></label><label>Presentación caja<input id="c496d-caja-tam" placeholder="12 clams"></label><label>Presentación proceso<input id="c496d-presentacion" placeholder="Bote / Tara"></label><label>Detalle proceso<input id="c496d-detalle" placeholder="1 litro / kg"></label></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button id="c496d-guardar">+ Guardar presentación</button><button id="c496d-volver">Volver a clientes</button></div></div><div id="c496d-listado" class="c496d-catalog"></div>';
+ b.innerHTML=vc401Head('Presentaciones · '+vc401Esc(cliente.nombre),'Administración · Catálogo del cliente. Los empaques se reutilizan al programar cosechas.')+
+ '<div class="c496d-catalog"><div class="c496d-catalog-grid">'+
+ '<label>Nombre de presentación<input id="c496d-nombre" placeholder="Ej. Dole 6 oz · 12 clams"></label>'+
+ '<label>Tipo<select id="c496d-tipo"><option>Comercializadora</option><option>Proceso</option></select></label>'+
+ '<label data-c496e-grupo="Comercializadora">Marca clamshell<input id="c496d-clam-marca" placeholder="Ej. Dole"></label>'+
+ '<label data-c496e-grupo="Comercializadora">Tamaño clamshell<input id="c496d-clam-tam" placeholder="6 oz"></label>'+
+ '<label data-c496e-grupo="Comercializadora">Marca caja<input id="c496d-caja-marca" placeholder="Ej. Dole"></label>'+
+ '<label data-c496e-grupo="Comercializadora">Presentación caja<input id="c496d-caja-tam" placeholder="12 clams"></label>'+
+ '<label data-c496e-grupo="Proceso">Tipo de envase<select id="c496d-presentacion"><option value="">Seleccionar</option><option value="Bote">Bote</option><option value="Tara">Tara</option></select></label>'+
+ '<label data-c496e-grupo="Proceso">Capacidad (litros o kg)<input id="c496d-detalle" placeholder="Ej. 1 litro o 1 kg"></label>'+
+ '</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button id="c496d-guardar">+ Guardar presentación</button><button id="c496d-volver">Volver a clientes</button></div></div><div id="c496d-listado" class="c496d-catalog"></div>';
+ var tipoSelect=b.querySelector('#c496d-tipo');
+ var tipoCliente=cliente.tipo_comprador||'Ambos';
+ if(tipoCliente==='Comercializadora'||tipoCliente==='Proceso'){
+   tipoSelect.value=tipoCliente;
+   tipoSelect.disabled=true;
+ }
+ function c496eMostrarCampos(){
+   var tipo=tipoSelect.value;
+   b.querySelectorAll('[data-c496e-grupo]').forEach(function(el){
+     var activo=el.getAttribute('data-c496e-grupo')===tipo;
+     el.style.display=activo?'':'none';
+     el.querySelectorAll('input,select').forEach(function(campo){campo.disabled=!activo;});
+   });
+ }
+ tipoSelect.addEventListener('change',c496eMostrarCampos);
+ c496eMostrarCampos();
  b.querySelector('#c496d-volver').onclick=vc401Clientes;
  function lista(){c496dCargarPresentaciones().then(function(rows){var el=b.querySelector('#c496d-listado');if(!el)return;var own=rows.filter(function(r){return String(r.cliente_id)===String(cliente.id);});el.innerHTML='<b>Presentaciones activas · '+own.length+'</b>'+(own.length?own.map(function(r){return '<div style="padding:11px 0;border-bottom:1px solid #e5eee7;display:flex;justify-content:space-between;gap:12px"><span><b>'+vc401Esc(r.nombre)+'</b><small style="display:block;color:#65796c">'+vc401Esc(r.tipo)+' · '+vc401Esc(r.tipo==='Proceso'?(r.presentacion+' '+(r.detalle||'')):(r.clam_marca+' '+r.clam_tam+' · '+r.caja_marca+' '+r.caja_tam))+'</small></span><button data-c496d-baja="'+vc401Esc(r.id)+'">Desactivar</button></div>';}).join(''):'<p>Sin presentaciones registradas.</p>');el.querySelectorAll('[data-c496d-baja]').forEach(function(bt){bt.onclick=function(){if(!confirm('¿Desactivar esta presentación? No se eliminarán cosechas anteriores.'))return;from('cliente_empaques').eq('id',bt.dataset.c496dBaja).update({activo:false}).then(lista).catch(function(e){alert(e.message);});};});}).catch(function(e){b.querySelector('#c496d-listado').textContent='No se pudo consultar el catálogo. Se requiere la migración SQL y permisos: '+e.message;});}
- b.querySelector('#c496d-guardar').onclick=function(){var g=function(id){return (b.querySelector('#c496d-'+id).value||'').trim();};if(!g('nombre')){alert('Captura el nombre de la presentación.');return;}var row={cliente_id:cliente.id,nombre:g('nombre'),tipo:g('tipo'),clam_marca:g('clam-marca'),clam_tam:g('clam-tam'),caja_marca:g('caja-marca'),caja_tam:g('caja-tam'),presentacion:g('presentacion'),detalle:g('detalle'),activo:true};if(row.tipo==='Comercializadora'&&(!row.clam_marca||!row.clam_tam||!row.caja_marca||!row.caja_tam)){alert('Completa los datos de empaque.');return;}if(row.tipo==='Proceso'&&(!row.presentacion||!row.detalle)){alert('Completa presentación y detalle de proceso.');return;}from('cliente_empaques').insert(row).then(function(){showToast('Presentación registrada');c496dCatalogoCliente(cliente);}).catch(function(e){alert('No se guardó: '+e.message);});};lista();
+ b.querySelector('#c496d-guardar').onclick=function(){
+  var g=function(id){var el=b.querySelector('#c496d-'+id);return el?(el.value||'').trim():'';};
+  var tipo=g('tipo'),nombre=g('nombre');
+  if(!nombre){alert('Captura el nombre de la presentación.');return;}
+  var row={cliente_id:cliente.id,nombre:nombre,tipo:tipo,clam_marca:'',clam_tam:'',caja_marca:'',caja_tam:'',presentacion:'',detalle:'',activo:true};
+  if(tipo==='Comercializadora'){
+   row.clam_marca=g('clam-marca');row.clam_tam=g('clam-tam');row.caja_marca=g('caja-marca');row.caja_tam=g('caja-tam');
+   if(!row.clam_marca||!row.clam_tam||!row.caja_marca||!row.caja_tam){alert('Completa los datos de clamshell y caja.');return;}
+  }else if(tipo==='Proceso'){
+   row.presentacion=g('presentacion');row.detalle=g('detalle');
+   if(!row.presentacion||!row.detalle){alert('Selecciona Bote o Tara y captura su capacidad.');return;}
+  }else{alert('Selecciona un tipo válido.');return;}
+  from('cliente_empaques').insert(row).then(function(){showToast('Presentación registrada');c496dCatalogoCliente(cliente);}).catch(function(e){alert('No se guardó: '+e.message);});
+ };lista();
 }
 function vc401Clientes(){
  var b=document.getElementById('enc-body');b.innerHTML=vc401Head('Clientes','Administración · Comercializadoras, compradores y sus presentaciones de empaque.')+
