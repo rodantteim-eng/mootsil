@@ -18946,9 +18946,14 @@ function obtenerDatosTareasOperario(){
     from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_cantidad_insumo,unidad_insumo,requiere_tiempo,requiere_formula),subtipo:subtipos_labor(nombre,requiere_tiempo),activo_rancho:activos_rancho(nombre,imagen_url),formula:formulas_aplicacion(nombre,via,categoria)').eq('operario_id',usuario.id).in('estado',['pendiente','en_proceso']).order('fecha_asignacion',{ascending:true}).get(),
     from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id),tipo_labor:tipos_labor(nombre,requiere_tiempo),subtipo:subtipos_labor(nombre,requiere_tiempo),activo_rancho:activos_rancho(nombre,imagen_url)').eq('operario_id',usuario.id).eq('fecha_asignacion',hoy).order('creado_en',{ascending:false}).get(),
     from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_tiempo,requiere_formula),subtipo:subtipos_labor(nombre,requiere_tiempo),activo_rancho:activos_rancho(nombre,imagen_url),formula:formulas_aplicacion(nombre,via,categoria)').eq('operario_id',usuario.id).eq('estado','completada').order('fecha_asignacion',{ascending:false}).limit(60).get(),
-    from('horas_extra_asignadas').select('fecha,tipo_labor_id,horas_max,creado_en').eq('operario_id',usuario.id).eq('estado','aprobada').get()
+    from('horas_extra_asignadas').select('fecha,tipo_labor_id,horas_max,creado_en').eq('operario_id',usuario.id).eq('estado','aprobada').get(),
+    // C506: consulta independiente para detectar órdenes pendientes que no llegaron en la carga general.
+    from('ordenes_trabajo').select('*,tabla:tablas(nombre,plantacion_id,cantidad_surcos),tipo_labor:tipos_labor(nombre,requiere_cantidad_insumo,unidad_insumo,requiere_tiempo,requiere_formula),subtipo:subtipos_labor(nombre,requiere_tiempo),activo_rancho:activos_rancho(nombre,imagen_url),formula:formulas_aplicacion(nombre,via,categoria)').eq('operario_id',usuario.id).eq('estado','pendiente').eq('fecha_asignacion',hoy).get()
   ]).then(function(res){
     var todas=res[0]||[], hoyOrdenes=res[1]||[], completadas=res[2]||[];
+    // C506: unión por ID, sin alterar estados ni crear órdenes nuevas.
+    var idsTareas506=new Set(todas.map(function(o){return String(o.id);}));
+    (res[4]||[]).forEach(function(o){if(!idsTareas506.has(String(o.id))){todas.push(o);idsTareas506.add(String(o.id));}});
     var horasExtraPorClave={};
     (res[3]||[]).forEach(function(h){
       var k=h.fecha+'|'+h.tipo_labor_id;
@@ -19228,10 +19233,19 @@ function pintarTareas(todas,hoyOrdenes,esCache,completadas,evidenciaPorOrden,com
     var retrasadas=abiertas.filter(function(t){return t.estado!=='en_proceso'&&t.estado!=='completada'&&t.fecha_asignacion<hoy;});
     var terminadas=cerradas.filter(function(t){return t.estado==='completada';});
 
+    // C506: detectar órdenes de cosecha repetidas sin ocultarlas ni fusionar
+    // surcos distintos: la información debe reconciliarse en Administración.
+    var duplicados506={};
+    abiertas.filter(function(t){return !!c428PlanCosecha(t);}).forEach(function(t){
+      var clave=t.fecha_asignacion+'|'+t.tabla_id;
+      (duplicados506[clave]=duplicados506[clave]||[]).push(t);
+    });
+    var conflictos506=Object.keys(duplicados506).filter(function(k){return duplicados506[k].length>1;});
     var mapa={programadas:programadas,porhacer:hoyPend,proceso:proceso,terminadas:terminadas,retrasadas:retrasadas};
     var lista=mapa[SUBTAB_TAREAS_ACTUAL]||hoyPend;
     var nombres={programadas:'Programadas',porhacer:'Hoy · Pendientes',proceso:'En proceso',terminadas:'Terminadas',retrasadas:'Retrasadas'};
     var html='<div class="c328-day-summary"><div><b>'+nombres[SUBTAB_TAREAS_ACTUAL]+'</b><span>'+lista.length+' actividad'+(lista.length===1?'':'es')+'</span></div></div>';
+    if(conflictos506.length && SUBTAB_TAREAS_ACTUAL==='programadas') html+='<div style="padding:11px 13px;border:1px solid #d7a04b;border-radius:10px;background:#fff8e9;color:#77500a;margin:10px 0;font-size:.82rem"><b>Atención: cosechas repetidas en la programación.</b> Hay '+conflictos506.length+' tabla(s) con varias órdenes para la misma fecha. Se muestran todas para no ocultar surcos ni modificar asignaciones. Revisar en Administración antes de iniciar.</div>';
     if(!lista.length) html+='<div class="empty">No tienes actividades en este estado.</div>';
     else html+=lista.map(function(t){return construirTarjetaTarea(t,hoy,horasExtraPorClave);}).join('');
 
