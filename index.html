@@ -19218,6 +19218,48 @@ function c520PedirPinSurco(n,nombre){
   inp.onkeydown=function(e){if(e.key==='Enter')ok.click();};inp.focus();
  });
 }
+// C522: avance secuencial por cosechador y jornada; no modifica titulares permanentes.
+var C522_SIGUIENTE={};
+function c522OrdenarTablas(a,b){
+ function k(o){var t=(cats.tablas||[]).find(function(x){return String(x.id)===String(o.tabla_id);})||o.tabla||{};
+ var p=(cats.plantaciones||[]).find(function(x){return String(x.id)===String(t.plantacion_id);})||{};
+ return String(p.nombre||'')+'|'+String(t.nombre||'');}
+ return k(a).localeCompare(k(b),'es',{numeric:true});
+}
+function c522Completa(o){
+ var propios=(o.surcos_asignados||[]).map(Number),hechos=(o.surcos_completados||[]).map(Number);
+ return propios.length>0&&propios.every(function(n){return hechos.includes(n);});
+}
+async function c522ConsultarSecuencia(o){
+ if(!navigator.onLine)return null;
+ var all=await from('ordenes_trabajo').select('id,operario_id,tabla_id,fecha_asignacion,estado,notas_encargado,formula_id,surcos_asignados,surcos_completados').eq('operario_id',o.operario_id).eq('fecha_asignacion',o.fecha_asignacion).get();
+ var rows=(Array.isArray(all)?all:all&&all.data||[]).filter(function(x){return x.notas_encargado&&x.notas_encargado.indexOf('[PLAN_COSECHA]')===0&&!x.formula_id&&x.estado!=='cancelada';}).sort(c522OrdenarTablas);
+ var ix=rows.findIndex(function(x){return String(x.id)===String(o.id);});
+ return {rows:rows,index:ix,next:ix>=0?rows[ix+1]||null:null,blocker:ix>0?rows.slice(0,ix).find(function(x){return !c522Completa(x);}):null};
+}
+async function c522IrSiguiente(ordenId){
+ var o=ordenEjecutando;if(!o||String(o.id)!==String(ordenId))return;
+ try{
+  var sec=await c522ConsultarSecuencia(o);
+  if(!sec||!sec.next){alert('No hay otra tabla programada para esta jornada.');return;}
+  if(!c522Completa(sec.rows[sec.index])){alert('Primero deben confirmarse todos tus surcos de esta tabla.');return;}
+  if(sec.blocker){alert('Tienes surcos pendientes en una tabla anterior.');return;}
+  var siguiente=(window.C329_TAREAS||[]).find(function(x){return String(x.id)===String(sec.next.id);});
+  if(!siguiente){alert('La siguiente tabla está programada, pero aún no aparece en Mis tareas. Actualiza tus tareas.');return;}
+  ordenEjecutando=siguiente;c510VerCosecha(siguiente);c510ActualizarCosecha();
+ }catch(e){alert('No se pudo verificar la siguiente tabla: '+(e&&e.message||e));}
+}
+async function c522ActualizarDesbloqueo(o){
+ var btn=document.getElementById('c522-siguiente');if(!btn)return;
+ if(!c522Completa(o)){btn.hidden=true;return;}
+ try{
+  var sec=await c522ConsultarSecuencia(o);
+  if(!document.getElementById('c522-siguiente')||!ordenEjecutando||String(ordenEjecutando.id)!==String(o.id))return;
+  btn=document.getElementById('c522-siguiente');
+  if(sec&&sec.next&&!sec.blocker){btn.hidden=false;btn.textContent='Continuar a la siguiente tabla →';}
+  else btn.hidden=true;
+ }catch(e){btn.hidden=true;}
+}
 // C510: cosecha formal — el cosechador consulta; Galera confirma los surcos.
 function c510EsCosechaFormal(o){return !!(c428PlanCosecha(o)&&!c428EsCalentamiento(o));}
 function c510VerCosecha(o){
@@ -19247,8 +19289,10 @@ function c510VerCosecha(o){
     (plan.indicaciones?'<div class="c225-instruction"><small>INDICACIONES DEL INGENIERO</small><strong>'+c225Esc(plan.indicaciones)+'</strong></div>':'')+
     '<div class="c336-info" style="margin:12px 0">'+(terminado?'✓ Todos tus surcos están confirmados por Galera. Espera indicaciones del encargado para cualquier apoyo.':'Cuando termines un surco, toca su tarjeta e introduce tu PIN para registrarlo oficialmente. También puedes hacerlo desde Galera.')+'</div>'+
     (o.estado==='pendiente'?'<button class="c225-start" style="margin-bottom:10px" onclick="c514IniciarCosecha()">▶ Iniciar mi participación</button>':'')+
+    '<button id="c522-siguiente" hidden class="c225-start" style="margin-bottom:10px" data-orden-id="'+c225Esc(String(o.id))+'" onclick="c522IrSiguiente(this.dataset.ordenId)">Continuar a la siguiente tabla →</button>'+ 
     '<button class="c225-start" onclick="c510ActualizarCosecha()">↻ Actualizar confirmaciones de Galera</button>'+
     '<p class="hint" style="margin-top:12px">La producción y el cierre de la cosecha completa se controlan en Galera. No se muestran cantidades ni pagos estimados.</p></div>';
+  if(terminado)c522ActualizarDesbloqueo(o);
 }
 // C514 — Inicio explícito de participación; transición visual automática al siguiente surco pendiente.
 async function c514IniciarCosecha(){
@@ -19256,6 +19300,10 @@ async function c514IniciarCosecha(){
  if(!o||!c510EsCosechaFormal(o)||o.estado!=='pendiente')return;
  if(o.fecha_asignacion>fechaHoyLocal()){alert('La cosecha sólo puede iniciarse a partir de la fecha programada.');return;}
  if(!navigator.onLine){alert('Para iniciar esta participación necesitas conexión. No se modificó la orden.');return;}
+ try{
+  var sec=await c522ConsultarSecuencia(o);
+  if(sec&&sec.blocker){alert('Primero termina los surcos asignados de tu tabla anterior. Galera debe confirmarlos.');return;}
+ }catch(e){alert('No se pudo verificar el avance de tus tablas. Intenta nuevamente con internet.');return;}
  if(!confirm('¿Iniciar tu participación en esta cosecha? El primer surco pendiente aparecerá en amarillo.'))return;
  try{
   await from('ordenes_trabajo').eq('id',o.id).eq('estado','pendiente').update({estado:'en_proceso'});
