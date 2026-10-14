@@ -19181,11 +19181,26 @@ function c515SeleccionarSurco(ordenId,n){
  c516SurcoLocalGuardar(o,n);
  c510VerCosecha(o);
 }
-function c515DetalleSurco(ordenId,n){
- var o=ordenEjecutando;if(!o||String(o.id)!==String(ordenId))return;
- if((o.surcos_completados||[]).map(Number).includes(Number(n)))return;
+async function c515DetalleSurco(ordenId,n){
+ var o=ordenEjecutando;
+ if(!o||String(o.id)!==String(ordenId))return;
+ var propios=(o.surcos_asignados||[]).map(Number);
+ if(!propios.includes(Number(n))){alert('Este surco no está asignado a tu cosecha.');return;}
+ if((o.surcos_completados||[]).map(Number).includes(Number(n))){return;}
  if(o.estado!=='en_proceso'){alert('Primero inicia tu participación.');return;}
- c515SeleccionarSurco(ordenId,n);
+ // C521: un toque abre la confirmación real; nunca se marca verde antes de la respuesta del servidor.
+ if(!navigator.onLine){alert('Sin internet: no se puede confirmar oficialmente. Conserva el registro manual.');return;}
+ var nip=await c520PedirPinSurco(n,'Surco '+n+' · confirmación desde tu celular');
+ if(nip===null)return;
+ try{
+  var ack=await rpc('c519_confirmar_surco',{p_orden_id:o.id,p_surco:Number(n),p_pin:nip});
+  if(!ack||ack.ok!==true)throw new Error('El servidor no confirmó el registro');
+  o.surcos_completados=ack.surcos_completados||[];
+  C515_SURCO_ACTIVO[String(o.id)]=null;
+  c516SurcoLocalLimpiar(o);
+  c510VerCosecha(o);
+ }catch(e){alert('No se registró el surco '+n+': '+(e&&e.message||e));}
+ finally{nip=null;}
 }
 // C520: un solo diálogo para confirmar oficialmente desde Galera.
 function c520PedirPinSurco(n,nombre){
@@ -19226,11 +19241,11 @@ function c510VerCosecha(o){
     '<h2>'+c225Esc(lugar)+'</h2>'+
     '<div style="margin:12px 0 8px;font-weight:800;color:#214b35">MIS SURCOS · '+completados.length+' / '+propios.length+' TERMINADOS</div>'+
     '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-bottom:10px">'+tarjetas+'</div>'+
-    '<div style="font-size:12px;color:#65786d;margin-bottom:12px">Rojo: pendiente · Amarillo: surco activo · Verde: confirmado en Supabase. Para terminar, toca el surco e introduce tu PIN.</div>'+
+    '<div style="font-size:12px;color:#65786d;margin-bottom:12px">Rojo: pendiente · Amarillo: surco activo · Verde: confirmado en Supabase. Toca el surco para confirmar su terminación con tu PIN. Solo se pondrá verde si Supabase lo guarda.</div>'+
     '<div class="c225-detail-card"><div><small>Fecha</small><strong>'+c225Esc(o.fecha_asignacion||'')+'</strong></div><div><small>Mis surcos</small><strong>'+c225Esc(propios.join(', ')||'Sin asignación')+'</strong></div><div><small>Confirmados por Galera</small><strong>'+completados.length+' / '+propios.length+'</strong></div><div><small>Pendientes de confirmar</small><strong>'+c225Esc(faltan.join(', ')||'Ninguno')+'</strong></div></div>'+
     (emp.length?'<div class="c225-instruction"><small>SEPARACIÓN Y EMPAQUE</small><strong>'+emp.map(c225Esc).join('<br>')+'</strong></div>':'')+
     (plan.indicaciones?'<div class="c225-instruction"><small>INDICACIONES DEL INGENIERO</small><strong>'+c225Esc(plan.indicaciones)+'</strong></div>':'')+
-    '<div class="c336-info" style="margin:12px 0">'+(terminado?'✓ Todos tus surcos están confirmados por Galera. Espera indicaciones del encargado para cualquier apoyo.':'Cuando termines un surco, toca su tarjeta e introduce tu PIN para confirmar. También puedes registrarlo desde Galera.')+'</div>'+
+    '<div class="c336-info" style="margin:12px 0">'+(terminado?'✓ Todos tus surcos están confirmados por Galera. Espera indicaciones del encargado para cualquier apoyo.':'Cuando termines un surco, toca su tarjeta e introduce tu PIN para registrarlo oficialmente. También puedes hacerlo desde Galera.')+'</div>'+
     (o.estado==='pendiente'?'<button class="c225-start" style="margin-bottom:10px" onclick="c514IniciarCosecha()">▶ Iniciar mi participación</button>':'')+
     '<button class="c225-start" onclick="c510ActualizarCosecha()">↻ Actualizar confirmaciones de Galera</button>'+
     '<p class="hint" style="margin-top:12px">La producción y el cierre de la cosecha completa se controlan en Galera. No se muestran cantidades ni pagos estimados.</p></div>';
