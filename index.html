@@ -19163,12 +19163,17 @@ function c510VerCosecha(o){
   var hechos=(Array.isArray(o.surcos_completados)?o.surcos_completados:[]).map(Number).filter(Number.isFinite);
   var completados=propios.filter(function(n){return hechos.indexOf(n)!==-1;});
   var faltan=propios.filter(function(n){return hechos.indexOf(n)===-1;});
+  var enProceso=null; // Sin registro individual de inicio: no inventar qué surco está en proceso.
+  var tarjetas=propios.map(function(n){var fin=completados.indexOf(n)!==-1,proc=!fin&&n===enProceso;var estado=fin?'Terminado':proc?'En proceso':'Pendiente';var fondo=fin?'#e1f4e7':proc?'#fff3d1':'#fce5e5';var borde=fin?'#37945c':proc?'#d9a22e':'#d54a4a';var tinta=fin?'#145e35':proc?'#815400':'#a82d2d';return '<div style="border:1.5px solid '+borde+';background:'+fondo+';color:'+tinta+';border-radius:12px;text-align:center;padding:13px 6px;min-width:0"><div style="font-size:27px;font-weight:800">'+n+'</div><div style="font-size:11px;font-weight:700">'+estado+'</div></div>';}).join('');
   var plan=c428PlanCosecha(o)||{},emp=c430EmpaquesOperario(o),lugar=[planta&&planta.nombre,tabla.nombre].filter(Boolean).join(' · ');
   var terminado=!!propios.length&&!faltan.length;
   body.innerHTML='<div class="c225-detail">'+
     '<button class="c225-back" onclick="ordenEjecutando=null;cargarTareas()">← Mis tareas</button>'+
     '<div class="c225-eyebrow">🧺 COSECHA · '+c225Esc(o.estado==='completada'?'PARTICIPACIÓN CERRADA':o.estado==='en_proceso'?'EN PROCESO':'PROGRAMADA')+'</div>'+
     '<h2>'+c225Esc(lugar)+'</h2>'+
+    '<div style="margin:12px 0 8px;font-weight:800;color:#214b35">MIS SURCOS · '+completados.length+' / '+propios.length+' TERMINADOS</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-bottom:10px">'+tarjetas+'</div>'+
+    '<div style="font-size:12px;color:#65786d;margin-bottom:12px">Rojo: pendiente · Amarillo: en proceso · Verde: confirmado por Galera</div>'+
     '<div class="c225-detail-card"><div><small>Fecha</small><strong>'+c225Esc(o.fecha_asignacion||'')+'</strong></div><div><small>Mis surcos</small><strong>'+c225Esc(propios.join(', ')||'Sin asignación')+'</strong></div><div><small>Confirmados por Galera</small><strong>'+completados.length+' / '+propios.length+'</strong></div><div><small>Pendientes de confirmar</small><strong>'+c225Esc(faltan.join(', ')||'Ninguno')+'</strong></div></div>'+
     (emp.length?'<div class="c225-instruction"><small>SEPARACIÓN Y EMPAQUE</small><strong>'+emp.map(c225Esc).join('<br>')+'</strong></div>':'')+
     (plan.indicaciones?'<div class="c225-instruction"><small>INDICACIONES DEL INGENIERO</small><strong>'+c225Esc(plan.indicaciones)+'</strong></div>':'')+
