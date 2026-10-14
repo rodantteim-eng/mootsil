@@ -19181,24 +19181,27 @@ function c515SeleccionarSurco(ordenId,n){
  c516SurcoLocalGuardar(o,n);
  c510VerCosecha(o);
 }
-async function c515DetalleSurco(ordenId,n){
+function c515DetalleSurco(ordenId,n){
  var o=ordenEjecutando;if(!o||String(o.id)!==String(ordenId))return;
- if((o.surcos_completados||[]).map(Number).includes(Number(n))){alert('Surco '+n+': ya confirmado oficialmente.');return;}
+ if((o.surcos_completados||[]).map(Number).includes(Number(n)))return;
  if(o.estado!=='en_proceso'){alert('Primero inicia tu participación.');return;}
- if(!navigator.onLine){alert('Sin conexión: registra el surco en tu control manual. No se marcará como terminado hasta guardarlo en Supabase.');return;}
- var pinConfirm=prompt('Confirmar terminación oficial del surco '+n+'\nIntroduce tu PIN personal:');
- if(pinConfirm===null)return;
- if(!/^\d{4}$/.test(pinConfirm)){alert('El PIN debe tener cuatro números.');return;}
- if(!confirm('¿Confirmar la terminación del surco '+n+'?'))return;
- try{
-  var respuesta=await rpc('c519_confirmar_surco',{p_orden_id:o.id,p_surco:Number(n),p_pin:pinConfirm});
-  if(!respuesta||respuesta.ok!==true)throw new Error('No se recibió confirmación válida del servidor');
-  var actual=await from('ordenes_trabajo').select('id,estado,surcos_asignados,surcos_completados,fecha_asignacion').eq('id',o.id).single();
-  if(actual)Object.assign(o,actual);else o.surcos_completados=respuesta.surcos_completados;
-  c516SurcoLocalLimpiar(o);delete C515_SURCO_ACTIVO[String(o.id)];
-  c510VerCosecha(o);alert('Surco '+n+' confirmado oficialmente.');
- }catch(e){alert('No se confirmó el surco: '+(e.message||e));}
- finally{pinConfirm=null;}
+ c515SeleccionarSurco(ordenId,n);
+}
+// C520: un solo diálogo para confirmar oficialmente desde Galera.
+function c520PedirPinSurco(n,nombre){
+ return new Promise(function(resolve){
+  var bg=document.createElement('div');bg.style.cssText='position:fixed;inset:0;z-index:2147483640;background:#091d17aa;display:flex;align-items:center;justify-content:center;padding:16px';
+  bg.innerHTML='<div role="dialog" aria-modal="true" style="background:white;border-radius:17px;max-width:410px;width:100%;padding:24px;box-shadow:0 15px 50px #0005"><h3 style="margin:0 0 9px;color:#164c37">Confirmar surco '+n+'</h3><p id="c520-nombre" style="font-size:14px;margin-bottom:16px"></p><label style="font-size:13px;font-weight:700" for="c520-pin">PIN personal del cosechador</label><input id="c520-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" style="box-sizing:border-box;width:100%;padding:13px;border:1px solid #aac7b4;border-radius:9px;margin:8px 0 10px;font-size:19px"><div id="c520-error" role="alert" style="color:#b12727;font-size:12px;min-height:18px"></div><div style="display:flex;justify-content:flex-end;gap:9px;margin-top:12px"><button type="button" id="c520-cancel" style="padding:12px;border-radius:9px;border:1px solid #ddd;background:#f5f5f5">Cancelar</button><button type="button" id="c520-ok" style="padding:12px;border-radius:9px;border:0;background:#07875b;color:white;font-weight:800">Confirmar terminación</button></div></div>';
+  bg.querySelector('#c520-nombre').textContent=nombre;
+  document.body.appendChild(bg);
+  var inp=bg.querySelector('#c520-pin'),ok=bg.querySelector('#c520-ok'),cancel=bg.querySelector('#c520-cancel'),err=bg.querySelector('#c520-error');
+  function close(v){document.removeEventListener('keydown',esc);bg.remove();resolve(v);}
+  function esc(e){if(e.key==='Escape')close(null);}
+  document.addEventListener('keydown',esc);
+  cancel.onclick=function(){close(null);};
+  ok.onclick=function(){if(!/^\d{4}$/.test(inp.value)){err.textContent='Introduce los cuatro números del PIN.';inp.focus();return;}close(inp.value);};
+  inp.onkeydown=function(e){if(e.key==='Enter')ok.click();};inp.focus();
+ });
 }
 // C510: cosecha formal — el cosechador consulta; Galera confirma los surcos.
 function c510EsCosechaFormal(o){return !!(c428PlanCosecha(o)&&!c428EsCalentamiento(o));}
@@ -22873,15 +22876,13 @@ function c497AbrirGalera(){
      if(!navigator.onLine){alert('Sin conexión. No se puede validar el PIN de forma segura. Conserva el registro manual.');return;}
      var ord=c518Orders.find(function(o){return String(o.operario_id)===String(r.id)&&(o.surcos_asignados||[]).map(Number).includes(n);});
      if(!ord){alert('No se encontró una orden de cosecha válida para este titular y surco.');return;}
-     var nip=prompt('Confirmar surco '+n+' · '+r.name+'\nIntroduce el PIN personal del cosechador:');
+     var nip=await c520PedirPinSurco(n,r.name);
      if(nip===null)return;
-     if(!/^\d{4}$/.test(nip)){alert('El PIN debe contener cuatro números.');return;}
-     if(!confirm('¿Confirmar oficialmente el surco '+n+'?'))return;
      b.disabled=true;
      try{var ack=await rpc('c519_confirmar_surco',{p_orden_id:ord.id,p_surco:n,p_pin:nip});if(!ack||ack.ok!==true)throw new Error('Sin confirmación válida');
        c518Hechos[n]=true;ord.surcos_completados=ack.surcos_completados;b.style.background='#e1f4e7';b.style.borderColor='#37945c';b.title='Terminado oficialmente';
        c518Info.textContent='Registro oficial · '+Object.keys(c518Hechos).length+' surcos confirmados en Supabase.';
-       alert('Surco '+n+' confirmado y guardado en Supabase.');
+       var label=b.querySelector('div:last-child');if(label){label.textContent='● Terminado';label.style.color='#176b3c';}
      }catch(err){alert('NO SE GUARDÓ el surco: '+(err.message||err)+'\nComprueba la conexión con Supabase.');}
      finally{b.disabled=false;nip=null;}
    };});
