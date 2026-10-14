@@ -19154,6 +19154,25 @@ function c511PintarVistaPrevia(){
  '<div style="display:flex;flex-wrap:wrap;gap:9px;margin-top:15px">'+(st.stage===0?'<button type="button" onclick="c511PasoVistaPrevia(1)">▶ Simular inicio</button>':st.stage===1?'<button type="button" onclick="c511PasoVistaPrevia(2)">Ver confirmación de Galera</button>':st.stage===2?'<button type="button" onclick="c511SimularGalera()">✓ Simular confirmación en Galera (sólo vista previa)</button>':st.stage===3?'<button type="button" onclick="c511PasoVistaPrevia(4)">Ver cierre de participación</button>':'<button type="button" onclick="c511PasoVistaPrevia(0)">↻ Reiniciar simulación</button>')+'</div><p style="color:#647568;font-size:12px;margin-top:14px">No se ejecuta ninguna operación de escritura en Supabase. Los conteos mostrados aquí son exclusivamente de esta simulación.</p></div>';
  var layer=document.getElementById('c511-preview');if(!layer){layer=document.createElement('div');layer.id='c511-preview';layer.style.cssText='position:fixed;inset:0;z-index:999999;background:#071c16b8;display:flex;justify-content:center;align-items:center;padding:12px;overflow:auto';document.body.appendChild(layer);}layer.innerHTML='<div style="background:white;border-radius:13px;width:min(700px,100%);max-height:95vh;overflow:auto;box-shadow:0 15px 60px #0005">'+h+'</div>';
 }
+// C515: selección local del surco en trabajo. No constituye confirmación oficial.
+var C515_SURCO_ACTIVO={};
+function c515SeleccionarSurco(ordenId,n){
+ var o=ordenEjecutando;
+ if(!o||String(o.id)!==String(ordenId))return;
+ var propios=(o.surcos_asignados||[]).map(Number),terminados=(o.surcos_completados||[]).map(Number);
+ if(!propios.includes(Number(n)))return;
+ if(terminados.includes(Number(n))){alert('Este surco ya aparece confirmado por Galera.');return;}
+ if(o.estado!=='en_proceso'){alert('Primero inicia tu participación en esta cosecha.');return;}
+ C515_SURCO_ACTIVO[String(o.id)]=Number(n);
+ c510VerCosecha(o);
+}
+function c515DetalleSurco(ordenId,n){
+ var o=ordenEjecutando;if(!o||String(o.id)!==String(ordenId))return;
+ var fin=(o.surcos_completados||[]).map(Number).includes(Number(n));
+ if(fin){alert('Surco '+n+': confirmado por Galera.');return;}
+ if(o.estado!=='en_proceso'){alert('Primero inicia tu participación.');return;}
+ if(confirm('¿Trabajar ahora en el surco '+n+'?\n\nEsta selección sólo cambia el indicador en este dispositivo; no registra la terminación.'))c515SeleccionarSurco(ordenId,n);
+}
 // C510: cosecha formal — el cosechador consulta; Galera confirma los surcos.
 function c510EsCosechaFormal(o){return !!(c428PlanCosecha(o)&&!c428EsCalentamiento(o));}
 function c510VerCosecha(o){
@@ -19163,8 +19182,9 @@ function c510VerCosecha(o){
   var hechos=(Array.isArray(o.surcos_completados)?o.surcos_completados:[]).map(Number).filter(Number.isFinite);
   var completados=propios.filter(function(n){return hechos.indexOf(n)!==-1;});
   var faltan=propios.filter(function(n){return hechos.indexOf(n)===-1;});
-  var enProceso=(o.estado==='en_proceso' && faltan.length)?faltan[0]:null; // C514: siguiente pendiente activo al iniciar y después de cada confirmación de Galera.
-  var tarjetas=propios.map(function(n){var fin=completados.indexOf(n)!==-1,proc=!fin&&n===enProceso;var estado=fin?'Terminado':proc?'En proceso':'Pendiente';var fondo=fin?'#e1f4e7':proc?'#fff3d1':'#fce5e5';var borde=fin?'#37945c':proc?'#d9a22e':'#d54a4a';var tinta=fin?'#145e35':proc?'#815400':'#a82d2d';return '<div style="border:1.5px solid '+borde+';background:'+fondo+';color:'+tinta+';border-radius:12px;text-align:center;padding:13px 6px;min-width:0"><div style="font-size:27px;font-weight:800">'+n+'</div><div style="font-size:11px;font-weight:700">'+estado+'</div></div>';}).join('');
+  var elegido=C515_SURCO_ACTIVO[String(o.id)];
+  var enProceso=(o.estado==='en_proceso' && faltan.length)?(faltan.includes(elegido)?elegido:faltan[0]):null; // C515: selección local o siguiente pendiente.
+  var tarjetas=propios.map(function(n){var fin=completados.indexOf(n)!==-1,proc=!fin&&n===enProceso;var estado=fin?'Terminado':proc?'En proceso':'Pendiente';var fondo=fin?'#e1f4e7':proc?'#fff3d1':'#fce5e5';var borde=fin?'#37945c':proc?'#d9a22e':'#d54a4a';var tinta=fin?'#145e35':proc?'#815400':'#a82d2d';return '<button type="button" onclick="c515DetalleSurco(\''+c225Esc(String(o.id))+'\','+n+')" style="border:1.5px solid '+borde+';background:'+fondo+';color:'+tinta+';border-radius:12px;text-align:center;padding:13px 6px;min-width:0;cursor:pointer"><div style="font-size:27px;font-weight:800">'+n+'</div><div style="font-size:11px;font-weight:700">'+estado+'</div></button>';}).join('');
   var plan=c428PlanCosecha(o)||{},emp=c430EmpaquesOperario(o),lugar=[planta&&planta.nombre,tabla.nombre].filter(Boolean).join(' · ');
   var terminado=!!propios.length&&!faltan.length;
   body.innerHTML='<div class="c225-detail">'+
@@ -19173,7 +19193,7 @@ function c510VerCosecha(o){
     '<h2>'+c225Esc(lugar)+'</h2>'+
     '<div style="margin:12px 0 8px;font-weight:800;color:#214b35">MIS SURCOS · '+completados.length+' / '+propios.length+' TERMINADOS</div>'+
     '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-bottom:10px">'+tarjetas+'</div>'+
-    '<div style="font-size:12px;color:#65786d;margin-bottom:12px">Rojo: pendiente · Amarillo: siguiente surco en trabajo · Verde: confirmado por Galera</div>'+
+    '<div style="font-size:12px;color:#65786d;margin-bottom:12px">Rojo: pendiente · Amarillo: surco seleccionado en este dispositivo · Verde: confirmado por Galera. Toca un surco para seleccionarlo.</div>'+
     '<div class="c225-detail-card"><div><small>Fecha</small><strong>'+c225Esc(o.fecha_asignacion||'')+'</strong></div><div><small>Mis surcos</small><strong>'+c225Esc(propios.join(', ')||'Sin asignación')+'</strong></div><div><small>Confirmados por Galera</small><strong>'+completados.length+' / '+propios.length+'</strong></div><div><small>Pendientes de confirmar</small><strong>'+c225Esc(faltan.join(', ')||'Ninguno')+'</strong></div></div>'+
     (emp.length?'<div class="c225-instruction"><small>SEPARACIÓN Y EMPAQUE</small><strong>'+emp.map(c225Esc).join('<br>')+'</strong></div>':'')+
     (plan.indicaciones?'<div class="c225-instruction"><small>INDICACIONES DEL INGENIERO</small><strong>'+c225Esc(plan.indicaciones)+'</strong></div>':'')+
