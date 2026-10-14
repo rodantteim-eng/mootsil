@@ -19231,34 +19231,46 @@ function c522Completa(o){
  return propios.length>0&&propios.every(function(n){return hechos.includes(n);});
 }
 async function c522ConsultarSecuencia(o){
- if(!navigator.onLine)return null;
+ if(!navigator.onLine)throw new Error('Necesitas internet para consultar las tablas programadas.');
  var all=await from('ordenes_trabajo').select('id,operario_id,tabla_id,fecha_asignacion,estado,notas_encargado,formula_id,surcos_asignados,surcos_completados').eq('operario_id',o.operario_id).eq('fecha_asignacion',o.fecha_asignacion).get();
- var rows=(Array.isArray(all)?all:all&&all.data||[]).filter(function(x){return x.notas_encargado&&x.notas_encargado.indexOf('[PLAN_COSECHA]')===0&&!x.formula_id&&x.estado!=='cancelada';}).sort(c522OrdenarTablas);
+ var rows=(Array.isArray(all)?all:all&&all.data||[]).filter(function(x){return c510EsCosechaFormal(x)&&!x.formula_id&&x.estado!=='cancelada';}).sort(c522OrdenarTablas);
+ // No excluir la orden actual aunque una lista cacheada o una política RLS omita el registro.
+ if(!rows.some(function(x){return String(x.id)===String(o.id);}))rows.push(o);
+ rows.sort(c522OrdenarTablas);
  var ix=rows.findIndex(function(x){return String(x.id)===String(o.id);});
- return {rows:rows,index:ix,next:ix>=0?rows[ix+1]||null:null,blocker:ix>0?rows.slice(0,ix).find(function(x){return !c522Completa(x);}):null};
+ // El recorrido es circular entre las tablas realmente programadas de la jornada.
+ var next=null;
+ for(var step=1;step<rows.length;step++){
+  var candidate=rows[(ix+step)%rows.length];
+  if(!c522Completa(candidate)){next=candidate;break;}
+ }
+ return {rows:rows,index:ix,next:next,blocker:ix>0?rows.slice(0,ix).find(function(x){return !c522Completa(x);}):null};
 }
 async function c522IrSiguiente(ordenId){
  var o=ordenEjecutando;if(!o||String(o.id)!==String(ordenId))return;
+ var btn=document.getElementById('c522-siguiente');if(btn){btn.disabled=true;btn.textContent='Consultando siguiente tabla…';}
  try{
+  await c510ActualizarCosecha(true);
+  o=ordenEjecutando;
+  if(!c522Completa(o)){alert('Galera todavía no ha confirmado todos tus surcos de esta tabla.');return;}
   var sec=await c522ConsultarSecuencia(o);
-  if(!sec||!sec.next){alert('No hay otra tabla programada para esta jornada.');return;}
-  if(!c522Completa(sec.rows[sec.index])){alert('Primero deben confirmarse todos tus surcos de esta tabla.');return;}
-  if(sec.blocker){alert('Tienes surcos pendientes en una tabla anterior.');return;}
+  if(!sec.next){alert('Todos tus surcos programados para hoy están confirmados o no existe otra tabla asignada. Solicita al encargado una nueva asignación.');return;}
   var siguiente=(window.C329_TAREAS||[]).find(function(x){return String(x.id)===String(sec.next.id);});
-  if(!siguiente){alert('La siguiente tabla está programada, pero aún no aparece en Mis tareas. Actualiza tus tareas.');return;}
-  ordenEjecutando=siguiente;c510VerCosecha(siguiente);c510ActualizarCosecha();
- }catch(e){alert('No se pudo verificar la siguiente tabla: '+(e&&e.message||e));}
+  if(!siguiente){
+   siguiente=sec.next;
+   // La lista local puede no incluir la siguiente orden; completar solo datos de presentación desde el catálogo existente.
+   siguiente.tabla=(cats.tablas||[]).find(function(x){return String(x.id)===String(siguiente.tabla_id);})||{};
+   (window.C329_TAREAS=window.C329_TAREAS||[]).push(siguiente);
+  }else Object.assign(siguiente,sec.next);
+  ordenEjecutando=siguiente;c510VerCosecha(siguiente);
+  await c510ActualizarCosecha(true);
+ }catch(e){alert('No se pudo abrir la siguiente tabla: '+(e&&e.message||e));}
+ finally{var x=document.getElementById('c522-siguiente');if(x){x.disabled=false;x.textContent='Continuar a la siguiente tabla →';}}
 }
-async function c522ActualizarDesbloqueo(o){
+function c522ActualizarDesbloqueo(o){
  var btn=document.getElementById('c522-siguiente');if(!btn)return;
- if(!c522Completa(o)){btn.hidden=true;return;}
- try{
-  var sec=await c522ConsultarSecuencia(o);
-  if(!document.getElementById('c522-siguiente')||!ordenEjecutando||String(ordenEjecutando.id)!==String(o.id))return;
-  btn=document.getElementById('c522-siguiente');
-  if(sec&&sec.next&&!sec.blocker){btn.hidden=false;btn.textContent='Continuar a la siguiente tabla →';}
-  else btn.hidden=true;
- }catch(e){btn.hidden=true;}
+ // No ocultar la acción por errores de red ni por una consulta adicional.
+ btn.hidden=!c522Completa(o);
 }
 // C510: cosecha formal — el cosechador consulta; Galera confirma los surcos.
 function c510EsCosechaFormal(o){return !!(c428PlanCosecha(o)&&!c428EsCalentamiento(o));}
@@ -19291,8 +19303,9 @@ function c510VerCosecha(o){
     (o.estado==='pendiente'?'<button class="c225-start" style="margin-bottom:10px" onclick="c514IniciarCosecha()">▶ Iniciar mi participación</button>':'')+
     '<button id="c522-siguiente" hidden class="c225-start" style="margin-bottom:10px" data-orden-id="'+c225Esc(String(o.id))+'" onclick="c522IrSiguiente(this.dataset.ordenId)">Continuar a la siguiente tabla →</button>'+ 
     '<button class="c225-start" onclick="c510ActualizarCosecha()">↻ Actualizar confirmaciones de Galera</button>'+
+    '<div id="c523-estado-sync" role="status" style="font-size:12px;color:#40644e;margin:8px 0">Toca Actualizar para consultar el avance en Supabase.</div>'+
     '<p class="hint" style="margin-top:12px">La producción y el cierre de la cosecha completa se controlan en Galera. No se muestran cantidades ni pagos estimados.</p></div>';
-  if(terminado)c522ActualizarDesbloqueo(o);
+  c522ActualizarDesbloqueo(o);
 }
 // C514 — Inicio explícito de participación; transición visual automática al siguiente surco pendiente.
 async function c514IniciarCosecha(){
@@ -19312,12 +19325,22 @@ async function c514IniciarCosecha(){
   c510VerCosecha(o);
  }catch(e){alert('No se pudo iniciar la cosecha: '+(e&&e.message||e));}
 }
-function c510ActualizarCosecha(){
-  var o=ordenEjecutando;if(!o||!c510EsCosechaFormal(o))return;
-  if(!navigator.onLine){showToast('Sin conexión. Conéctate para consultar Galera.');return;}
-  from('ordenes_trabajo').select('id,estado,surcos_asignados,surcos_completados,fecha_asignacion').eq('id',o.id).single().then(function(r){
-    if(!r)return;Object.assign(o,r);c510VerCosecha(o);
-  }).catch(function(e){alert('No se pudo consultar el avance registrado por Galera: '+e.message);});
+async function c510ActualizarCosecha(silencioso){
+ var o=ordenEjecutando;if(!o||!c510EsCosechaFormal(o))return;
+ var status=document.getElementById('c523-estado-sync');
+ if(status&&!silencioso)status.textContent='Consultando confirmaciones de Galera…';
+ if(!navigator.onLine){if(status)status.textContent='Sin conexión: no se pudo actualizar.';if(silencioso)throw new Error('Sin conexión');return;}
+ try{
+  var r=await from('ordenes_trabajo').select('id,estado,surcos_asignados,surcos_completados,fecha_asignacion').eq('id',o.id).single();
+  if(!r)throw new Error('No se encontró la orden en Supabase');
+  var anteriores=(o.surcos_completados||[]).length;
+  Object.assign(o,r);
+  var cache=(window.C329_TAREAS||[]).find(function(t){return String(t.id)===String(o.id);});if(cache&&cache!==o)Object.assign(cache,r);
+  c510VerCosecha(o);
+  var el=document.getElementById('c523-estado-sync');
+  if(el)el.textContent='Actualizado '+new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})+' · '+(o.surcos_completados||[]).length+' surcos confirmados'+((o.surcos_completados||[]).length===anteriores?' · Sin cambios nuevos':' · Nuevas confirmaciones');
+  return o;
+ }catch(e){var el=document.getElementById('c523-estado-sync');if(el)el.textContent='No se pudo actualizar: '+(e&&e.message||e);if(silencioso)throw e;}
 }
 function c335IniciarDesdeModal(id){
   var t=(window.C329_TAREAS||[]).find(function(x){return String(x.id)===String(id);});
