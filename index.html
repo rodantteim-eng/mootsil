@@ -19218,6 +19218,17 @@ function c520PedirPinSurco(n,nombre){
   inp.onkeydown=function(e){if(e.key==='Enter')ok.click();};inp.focus();
  });
 }
+// C524: candado por TABLA COMPLETA, no por cosechador.
+async function c524EstadoTabla(o){
+ if(!navigator.onLine)throw new Error('Sin internet no se puede autorizar el cambio de tabla');
+ var data=await from('ordenes_trabajo').select('id,tabla_id,fecha_asignacion,estado,formula_id,notas_encargado,surcos_asignados,surcos_completados').eq('tabla_id',o.tabla_id).eq('fecha_asignacion',o.fecha_asignacion).get();
+ var rows=(Array.isArray(data)?data:data&&data.data||[]).filter(function(x){return x.estado!=='cancelada'&&!x.formula_id&&String(x.notas_encargado||'').indexOf('[PLAN_COSECHA]')===0;});
+ var tabla=(cats.tablas||[]).find(function(t){return String(t.id)===String(o.tabla_id);})||o.tabla||{};
+ var total=Number(tabla.numero_surcos||tabla.total_surcos||tabla.surcos||tabla.cantidad_surcos||0);
+ if(!Number.isInteger(total)||total<1)throw new Error('No se conoce el número total de surcos de esta tabla. No se desbloqueó.');
+ var done={};rows.forEach(function(r){(r.surcos_completados||[]).forEach(function(n){n=Number(n);if(n>=1&&n<=total)done[n]=true;});});
+ return {total:total,confirmados:Object.keys(done).length,completa:Object.keys(done).length===total};
+}
 // C522: avance secuencial por cosechador y jornada; no modifica titulares permanentes.
 var C522_SIGUIENTE={};
 function c522OrdenarTablas(a,b){
@@ -19252,7 +19263,8 @@ async function c522IrSiguiente(ordenId){
  try{
   await c510ActualizarCosecha(true);
   o=ordenEjecutando;
-  if(!c522Completa(o)){alert('Galera todavía no ha confirmado todos tus surcos de esta tabla.');return;}
+  var estadoTabla=await c524EstadoTabla(o);
+  if(!estadoTabla.completa){alert('Esta tabla aún tiene '+(estadoTabla.total-estadoTabla.confirmados)+' surcos sin confirmar. Todos deben terminarse antes de pasar a otra tabla.');return;}
   var sec=await c522ConsultarSecuencia(o);
   if(!sec.next){alert('Todos tus surcos programados para hoy están confirmados o no existe otra tabla asignada. Solicita al encargado una nueva asignación.');return;}
   var siguiente=(window.C329_TAREAS||[]).find(function(x){return String(x.id)===String(sec.next.id);});
@@ -19265,11 +19277,11 @@ async function c522IrSiguiente(ordenId){
   ordenEjecutando=siguiente;c510VerCosecha(siguiente);
   await c510ActualizarCosecha(true);
  }catch(e){alert('No se pudo abrir la siguiente tabla: '+(e&&e.message||e));}
- finally{var x=document.getElementById('c522-siguiente');if(x){x.disabled=false;x.textContent='Continuar a la siguiente tabla →';}}
+ finally{var x=document.getElementById('c522-siguiente');if(x){x.disabled=false;x.textContent='Verificar cierre de tabla y continuar →';}}
 }
 function c522ActualizarDesbloqueo(o){
  var btn=document.getElementById('c522-siguiente');if(!btn)return;
- // No ocultar la acción por errores de red ni por una consulta adicional.
+ // Mostrar consulta al terminar sus surcos; servidor verifica la tabla completa antes de avanzar.
  btn.hidden=!c522Completa(o);
 }
 // C510: cosecha formal — el cosechador consulta; Galera confirma los surcos.
@@ -19299,9 +19311,9 @@ function c510VerCosecha(o){
     '<div class="c225-detail-card"><div><small>Fecha</small><strong>'+c225Esc(o.fecha_asignacion||'')+'</strong></div><div><small>Mis surcos</small><strong>'+c225Esc(propios.join(', ')||'Sin asignación')+'</strong></div><div><small>Confirmados por Galera</small><strong>'+completados.length+' / '+propios.length+'</strong></div><div><small>Pendientes de confirmar</small><strong>'+c225Esc(faltan.join(', ')||'Ninguno')+'</strong></div></div>'+
     (emp.length?'<div class="c225-instruction"><small>SEPARACIÓN Y EMPAQUE</small><strong>'+emp.map(c225Esc).join('<br>')+'</strong></div>':'')+
     (plan.indicaciones?'<div class="c225-instruction"><small>INDICACIONES DEL INGENIERO</small><strong>'+c225Esc(plan.indicaciones)+'</strong></div>':'')+
-    '<div class="c336-info" style="margin:12px 0">'+(terminado?'✓ Todos tus surcos están confirmados por Galera. Espera indicaciones del encargado para cualquier apoyo.':'Cuando termines un surco, toca su tarjeta e introduce tu PIN para registrarlo oficialmente. También puedes hacerlo desde Galera.')+'</div>'+
+    '<div class="c336-info" style="margin:12px 0">'+(terminado?'✓ Tus surcos están confirmados. Permanece en esta tabla hasta que Galera confirme todos los surcos, incluidos los apoyos.':'Cuando termines un surco, toca su tarjeta e introduce tu PIN para registrarlo oficialmente. También puedes hacerlo desde Galera.')+'</div>'+
     (o.estado==='pendiente'?'<button class="c225-start" style="margin-bottom:10px" onclick="c514IniciarCosecha()">▶ Iniciar mi participación</button>':'')+
-    '<button id="c522-siguiente" hidden class="c225-start" style="margin-bottom:10px" data-orden-id="'+c225Esc(String(o.id))+'" onclick="c522IrSiguiente(this.dataset.ordenId)">Continuar a la siguiente tabla →</button>'+ 
+    '<button id="c522-siguiente" hidden class="c225-start" style="margin-bottom:10px" data-orden-id="'+c225Esc(String(o.id))+'" onclick="c522IrSiguiente(this.dataset.ordenId)">Verificar cierre de tabla y continuar →</button>'+ 
     '<button class="c225-start" onclick="c510ActualizarCosecha()">↻ Actualizar confirmaciones de Galera</button>'+
     '<div id="c523-estado-sync" role="status" style="font-size:12px;color:#40644e;margin:8px 0">Toca Actualizar para consultar el avance en Supabase.</div>'+
     '<p class="hint" style="margin-top:12px">La producción y el cierre de la cosecha completa se controlan en Galera. No se muestran cantidades ni pagos estimados.</p></div>';
@@ -19315,7 +19327,7 @@ async function c514IniciarCosecha(){
  if(!navigator.onLine){alert('Para iniciar esta participación necesitas conexión. No se modificó la orden.');return;}
  try{
   var sec=await c522ConsultarSecuencia(o);
-  if(sec&&sec.blocker){alert('Primero termina los surcos asignados de tu tabla anterior. Galera debe confirmarlos.');return;}
+  if(sec&&sec.blocker){var anterior=await c524EstadoTabla(sec.blocker);if(!anterior.completa){alert('La tabla anterior todavía tiene '+(anterior.total-anterior.confirmados)+' surcos pendientes.');return;}}
  }catch(e){alert('No se pudo verificar el avance de tus tablas. Intenta nuevamente con internet.');return;}
  if(!confirm('¿Iniciar tu participación en esta cosecha? El primer surco pendiente aparecerá en amarillo.'))return;
  try{
