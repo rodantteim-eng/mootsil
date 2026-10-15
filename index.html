@@ -22954,42 +22954,95 @@ function c497AbrirGalera(){
       '</section>';
    var stat=function(n,label,color,ico){return '<div style="min-width:170px;flex:1;background:white;border:1px solid #e0e8e2;border-top:4px solid '+color+';border-radius:13px;padding:14px 16px;box-shadow:0 3px 12px #153f2910;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:25px;font-weight:900;color:#124c39">'+n+'</div><div style="font-size:13px">'+label+'</div></div><span style="font-size:25px;color:'+color+'">'+ico+'</span></div>';};
    var c518Orders=(window.C518_ORDENES_GALERA||[]).filter(function(o){return String(o.tabla_id)===String(t.id)&&o.estado!=='cancelada'&&String(o.notas_encargado||'').indexOf('[PLAN_COSECHA]')===0;});
+   // C525: las coberturas se reconstruyen desde las órdenes de la jornada; nunca alteran los titulares.
+   c518Orders.forEach(function(o){(o.surcos_asignados||[]).forEach(function(n){n=Number(n);if(!owner[n])owner[n]={id:o.operario_id,name:names[String(o.operario_id)]||'Cosechador de apoyo',apoyo:true};});});
    var c518Hechos={};c518Orders.forEach(function(o){(o.surcos_completados||[]).forEach(function(n){c518Hechos[Number(n)]=true;});});
    var c518Count=Object.keys(c518Hechos).length;
    out.innerHTML='<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:15px">'+
     '<div style="flex:2;min-width:270px;background:white;border:1px solid #dce9e1;border-top:4px solid '+accent+';border-radius:14px;padding:15px 18px;box-shadow:0 3px 12px #153f2910"><div style="color:#64796c;font-size:12px;font-weight:700;margin-bottom:4px">'+cosEsc((wk?'Semana '+wk+' · ':'')+fechaTexto)+'</div><div style="font-size:22px;font-weight:850;color:#124c39">Cosecha programada · '+cosEsc(plant+' · '+t.nombre)+'</div><div style="font-size:12px;color:#657b6d;margin-top:5px">Consecutivo pendiente de vinculación con el registro oficial</div></div>'+
     stat(assigned,'Surcos con titular','#e4aa19','♙')+stat(Math.max(0,total-assigned),'Surcos sin asignar','#e32a32','♙')+stat(c518Count+' / '+total,'Surcos confirmados','#07875b','✓')+'</div>'+empaqueBlock+
-    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:10px">'+Array.from({length:total},function(_,i){var n=i+1,r=owner[n],name=r?r.name:'Sin asignar',edge=r?'#e4aa19':'#e32a32',label=r?'● Pendiente':'● Pendiente de apoyo';return '<button type="button" data-c498-surco="'+n+'" style="text-align:left;padding:13px 14px;border:1.7px solid '+edge+';border-radius:13px;background:white;min-height:91px;box-shadow:0 2px 8px #103c2610;cursor:pointer;color:#19231f"><div style="display:flex;justify-content:space-between;gap:8px"><b style="font-size:16px">Surco '+n+'</b></div><div style="margin-top:4px;font-size:14px">'+cosEsc(name)+'</div><div style="font-size:12px;color:'+(r?'#708076':'#e32a32')+';margin-top:6px">'+label+'</div></button>';}).join('')+'</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:10px">'+Array.from({length:total},function(_,i){var n=i+1,r=owner[n],name=r?(r.apoyo?'Apoyo · '+r.name:r.name):'Sin asignar',edge=r?(r.apoyo?'#9139b2':'#e4aa19'):'#e32a32',label=c518Hechos[n]?'● Terminado':r?(r.apoyo?'● En apoyo':'● Pendiente'):'● Pendiente de apoyo';return '<button type="button" data-c498-surco="'+n+'" style="text-align:left;padding:13px 14px;border:1.7px solid '+edge+';border-radius:13px;background:white;min-height:91px;box-shadow:0 2px 8px #103c2610;cursor:pointer;color:#19231f"><div style="display:flex;justify-content:space-between;gap:8px"><b style="font-size:16px">Surco '+n+'</b></div><div style="margin-top:4px;font-size:14px">'+cosEsc(name)+'</div><div style="font-size:12px;color:'+(r?'#708076':'#e32a32')+';margin-top:6px">'+label+'</div></button>';}).join('')+'</div>'+
     '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-top:15px;padding:13px;border:1px solid #e0e8e2;border-radius:12px;background:white;font-size:12px"><span>🟡 Con titular · pendiente</span><span>🔴 Sin asignar</span><span>🟣 En apoyo (cuando se registre cobertura)</span><span>🟢 Terminado (cuando exista registro)</span></div>'+
     '<div style="padding:12px 14px;margin-top:10px;background:#fff8e9;border:1px solid #e7c981;border-radius:11px;font-size:13px;color:#775414">⚠️ Solo se marca en verde cuando Supabase confirma el registro. Sin internet, conserva el respaldo manual.</div>';
    // C518: confirmación oficial en línea mediante RPC atómica y PIN, sin marcar antes de guardar.
    var stats=out.querySelectorAll('div');
-   out.querySelectorAll('[data-c498-surco]').forEach(function(b){var n=Number(b.dataset.c498Surco);if(c518Hechos[n]){b.style.background='#e1f4e7';b.style.borderColor='#37945c';b.title='Terminado oficialmente';}});
+   out.querySelectorAll('[data-c498-surco]').forEach(function(b){var n=Number(b.dataset.c498Surco);if(c518Hechos[n]){b.style.background='#e1f4e7';b.style.borderColor='#37945c';b.title='Terminado oficialmente';var estado=b.querySelector('div:last-child');if(estado){estado.textContent='● Terminado';estado.style.color='#176b3c';}}});
    var c518Info=document.createElement('div');c518Info.style.cssText='margin:12px 0;padding:11px;background:#e8f3ed;border-radius:10px;color:#174b32;font-weight:700';
    c518Info.textContent='Registro oficial · '+c518Count+' surcos confirmados en Supabase. Requiere internet.';out.appendChild(c518Info);
+   // C526: distribuir automáticamente un surco por cosechador disponible; requiere autorización de Galera.
+   var autoBar=document.createElement('div');autoBar.style.cssText='display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:12px 0';
+   autoBar.innerHTML='<button type="button" id="c526-distribuir" style="border:0;border-radius:10px;background:#7237a5;color:white;font-weight:800;padding:12px 16px;cursor:pointer">↪ Distribuir apoyos automáticamente</button><span id="c526-estado" style="font-size:13px;color:#456456">Asigna un surco disponible a cada cosechador que ya terminó sus surcos.</span>';
+   out.appendChild(autoBar);
+   async function c526Distribuir(pin){
+     var ack=await rpc('c526_distribuir_apoyos',{p_tabla_id:String(t.id),p_fecha:date.value,p_pin:pin});
+     if(!ack||ack.ok!==true)throw new Error('Supabase no confirmó la distribución');
+     return ack;
+   }
+   autoBar.querySelector('#c526-distribuir').onclick=async function(){
+     if(!navigator.onLine){alert('Se requiere internet para distribuir apoyos oficialmente.');return;}
+     var pin=await c520PedirPinSurco('apoyos','Autorizar distribución automática · '+plant+' · '+t.nombre);
+     if(pin===null)return;
+     var btn=this;btn.disabled=true;
+     try{
+       var ack=await c526Distribuir(pin);
+       autoBar.querySelector('#c526-estado').textContent=ack.asignados+' surcos de apoyo asignados; '+ack.pendientes+' aún sin asignar.';
+       // Reconsultar órdenes para reflejar inmediatamente los apoyos morados.
+       refresh();
+     }catch(e){alert('No se distribuyeron apoyos: '+(e.message||e));}
+     finally{pin=null;btn.disabled=false;}
+   };
+
    out.querySelectorAll('[data-c498-surco]').forEach(function(b){b.onclick=async function(){
      var n=Number(b.dataset.c498Surco),r=owner[n];
-     if(!r){alert('Surco sin titular: requiere asignación de apoyo autorizada.');return;}
      if(c518Hechos[n]){alert('Este surco ya está confirmado.');return;}
-     if(!navigator.onLine){alert('Sin conexión. No se puede validar el PIN de forma segura. Conserva el registro manual.');return;}
-     var ord=c518Orders.find(function(o){return String(o.operario_id)===String(r.id)&&(o.surcos_asignados||[]).map(Number).includes(n);});
-     if(!ord){alert('No se encontró una orden de cosecha válida para este titular y surco.');return;}
-     var nip=await c520PedirPinSurco(n,r.name);
-     if(nip===null)return;
+     if(!navigator.onLine){alert('La asignación y confirmación oficial requieren conexión. No se ha guardado ningún cambio.');return;}
+     var ord=c518Orders.find(function(o){return r&&String(o.operario_id)===String(r.id)&&(o.surcos_asignados||[]).map(Number).includes(n);});
+     var operacion='confirmar';
+     if(!r){
+       var candidatos=c518Orders.filter(function(o){return o.operario_id&&o.estado!=='cancelada';});
+       var unique={};candidatos=candidatos.filter(function(o){if(unique[o.operario_id])return false;unique[o.operario_id]=true;return true;});
+       if(!candidatos.length){alert('No hay cosechadores con orden activa en esta tabla.');return;}
+       var menu=candidatos.map(function(o,i){return (i+1)+'. '+(names[String(o.operario_id)]||'Cosechador')+' · '+(o.surcos_completados||[]).length+'/'+(o.surcos_asignados||[]).length;}).join('\n');
+       var choice=prompt('Asignar apoyo temporal para surco '+n+'\nSelecciona número de cosechador:\n'+menu);
+       if(choice===null)return;
+       var ix=Number(choice)-1;if(!Number.isInteger(ix)||ix<0||ix>=candidatos.length){alert('Selección inválida');return;}
+       ord=candidatos[ix];operacion='apoyo';
+     }else if(!ord){alert('No se encontró una orden de cosecha válida para este titular.');return;}
+     var pin=await c520PedirPinSurco(n,(operacion==='apoyo'?'Autorizar apoyo · ':'Confirmar por Galera · ')+(names[String(ord.operario_id)]||r&&r.name||''));
+     if(pin===null)return;
      b.disabled=true;
-     try{var ack=await rpc('c519_confirmar_surco',{p_orden_id:ord.id,p_surco:n,p_pin:nip});if(!ack||ack.ok!==true)throw new Error('Sin confirmación válida');
-       c518Hechos[n]=true;ord.surcos_completados=ack.surcos_completados;b.style.background='#e1f4e7';b.style.borderColor='#37945c';b.title='Terminado oficialmente';
-       c518Info.textContent='Registro oficial · '+Object.keys(c518Hechos).length+' surcos confirmados en Supabase.';
-       var label=b.querySelector('div:last-child');if(label){label.textContent='● Terminado';label.style.color='#176b3c';}
-     }catch(err){alert('NO SE GUARDÓ el surco: '+(err.message||err)+'\nComprueba la conexión con Supabase.');}
-     finally{b.disabled=false;nip=null;}
+     try{
+       var ack=await rpc('c525_galera_gestion',{p_operacion:operacion,p_orden_id:ord.id,p_surco:n,p_pin:pin});
+       if(!ack||ack.ok!==true)throw new Error('El servidor no confirmó la operación');
+       if(operacion==='apoyo'){
+         ord.surcos_asignados=(ord.surcos_asignados||[]).concat([n]);
+         owner[n]={id:ord.operario_id,name:names[String(ord.operario_id)]||'Cosechador de apoyo',apoyo:true};
+         b.style.background='#f0e1fa';b.style.borderColor='#9139b2';
+         b.querySelector('div:nth-child(2)').textContent='Apoyo · '+owner[n].name;
+         b.querySelector('div:last-child').textContent='● En apoyo';
+         c518Info.textContent='Surco '+n+' asignado como apoyo. Toca de nuevo para confirmar su terminación.';
+       }else{
+         c518Hechos[n]=true;ord.surcos_completados=ack.surcos_completados;
+         b.style.background='#e1f4e7';b.style.borderColor='#37945c';b.title='Terminado oficialmente';
+         var label=b.querySelector('div:last-child');if(label){label.textContent='● Terminado';label.style.color='#176b3c';}
+         c518Info.textContent='Registro oficial · '+Object.keys(c518Hechos).length+' surcos confirmados en Supabase.';
+         // C526: al confirmar el último surco, entregar automáticamente el siguiente apoyo
+         // a todos los cosechadores que estén libres. Se reutiliza el PIN del responsable.
+         try{
+           var dist=await c526Distribuir(pin);
+           if(dist.asignados>0){c518Info.textContent+=' · '+dist.asignados+' apoyos asignados automáticamente.';refresh();}
+         }catch(autoError){c518Info.textContent+=' · Distribución pendiente: '+(autoError.message||autoError);}
+
+       }
+     }catch(err){alert('NO SE GUARDÓ: '+(err.message||err));}
+     finally{b.disabled=false;pin=null;}
    };});
    // C517: bitácora de respaldo LOCAL para jornada en curso; no es confirmación oficial.
    var c517Key='mootsil:c517:respaldo-galera:'+String(date.value||'')+':'+String(t.id);
    var c517Leer=function(){try{var v=JSON.parse(localStorage.getItem(c517Key)||'[]');return Array.isArray(v)?v:[];}catch(e){return [];}};
    var c517Pintar=function(){
      var registros=c517Leer(),nums=registros.map(function(x){return Number(x.surco);});
-     out.querySelectorAll('[data-c498-surco]').forEach(function(b){var n=Number(b.getAttribute('data-c498-surco'));if(c518Hechos[n]){b.style.background='#e1f4e7';b.style.borderColor='#37945c';b.title='Confirmado oficialmente en Supabase';}else if(nums.includes(n)){b.style.background='#fff4d7';b.style.borderColor='#bb8125';b.title='Respaldo local NO oficial';}else{b.style.background='white';}});
+     out.querySelectorAll('[data-c498-surco]').forEach(function(b){var n=Number(b.getAttribute('data-c498-surco'));if(c518Hechos[n]){b.style.background='#e1f4e7';b.style.borderColor='#37945c';b.title='Confirmado oficialmente en Supabase';}else if(nums.includes(n)){b.style.background='#fff4d7';b.style.borderColor='#bb8125';b.title='Respaldo local NO oficial';}else{var o=owner[n];b.style.background=o&&o.apoyo?'#f0e1fa':'white';if(o&&o.apoyo)b.style.borderColor='#9139b2';}});
      var st=out.querySelector('#c517-estado');if(st)st.textContent=registros.length+' registros de respaldo guardados SOLO en este dispositivo. NO sincronizados con Supabase.';
    };
    var c517Area=document.createElement('section');c517Area.style.cssText='padding:13px;border:2px solid #bb8125;border-radius:12px;background:#fff8e9;margin-top:15px';
