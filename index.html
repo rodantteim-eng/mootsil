@@ -22895,12 +22895,26 @@ function c497AbrirGalera(){
  '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:15px 0"><label for="c497-date" style="font-weight:700">Fecha</label><input id="c497-date" type="date" style="padding:11px;border:1px solid #c9dfd0;border-radius:10px"><span style="color:#6c7d71;font-size:13px">Tablas con cosecha programada</span></div>'+
  '<div id="c497-tabs" role="group" aria-label="Tablas con cosecha programada" style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px"></div><div id="c497-body" aria-live="polite"></div></section>';
  document.body.appendChild(layer);
+ layer.addEventListener('click',function(e){e.stopPropagation();});
  layer.querySelector('#c497-close').onclick=function(){layer.remove();};
  layer.addEventListener('click',function(e){if(e.target===layer)layer.remove();});
  var c529ScrollPanel=layer.querySelector('section[role="dialog"]');
  var c529Scroll=0;
+ var c530AutoPin=null,c530AutoBusy=false,c530AutoTimer=null; // Solo memoria de esta ventana de Galera; no se almacena en disco.
  function c529KeepPosition(){c529Scroll=c529ScrollPanel.scrollTop;}
  function c529RestorePosition(){requestAnimationFrame(function(){if(layer.isConnected)c529ScrollPanel.scrollTop=c529Scroll;});}
+ function c531RefrescarTabla(){
+  if(!layer.isConnected)return;
+  c529KeepPosition();
+  var target=selectedId,day=date.value;
+  var lb=(cats.tiposLabor||[]).find(function(l){return l.es_cosecha;});
+  if(!lb)return;
+  from('ordenes_trabajo').select('id,operario_id,tabla_id,surcos_asignados,surcos_completados,notas_encargado,estado').eq('tipo_labor_id',lb.id).eq('fecha_asignacion',day).get().then(function(orders){
+   if(!layer.isConnected||selectedId!==target||date.value!==day)return;
+   window.C518_ORDENES_GALERA=orders||[];
+   render();
+  }).catch(function(e){var el=out.querySelector('#c526-estado');if(el)el.textContent='No se pudo actualizar la tabla: '+e.message;});
+ }
  var tabs=layer.querySelector('#c497-tabs'),out=layer.querySelector('#c497-body'),date=layer.querySelector('#c497-date'),selectedId='',tablas=[],generation=0,programaciones={};
  date.value=fechaHoyLocal();
  function refresh(){
@@ -22934,7 +22948,7 @@ function c497AbrirGalera(){
   tabs.querySelectorAll('button[data-c497-tab]').forEach(function(btn){btn.onclick=function(){if(selectedId===btn.getAttribute('data-c497-tab'))return;selectedId=btn.getAttribute('data-c497-tab');renderTabs();render();};});
  }
  function render(){
-  c529KeepPosition();
+  // C531: refresh already saved scroll before clearing the board.
   var t=tablas.find(function(x){return String(x.id)===selectedId;});if(!t)return;
   var token=++generation;out.innerHTML='<div style="padding:20px;color:#526b5c">Cargando titulares y nombres…</div>';
   Promise.all([rpc('c475_listar_titulares',{p_tabla_id:String(t.id)}),from('usuarios').select('id,nombre').get()]).then(function(res){
@@ -22981,19 +22995,21 @@ function c497AbrirGalera(){
    var autoBar=document.createElement('div');autoBar.style.cssText='display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:12px 0';
    autoBar.innerHTML='<button type="button" id="c526-distribuir" style="border:0;border-radius:10px;background:#7237a5;color:white;font-weight:800;padding:12px 16px;cursor:pointer">↪ Distribuir apoyos automáticamente</button><span id="c526-estado" style="font-size:13px;color:#456456">Asigna un surco disponible a cada cosechador que ya terminó sus surcos.</span>';
    out.appendChild(autoBar);
-   var c528PinTemporal=null,c528Busy=false,c528Timer=null;
+   // C530: estado de autorización compartido por todas las reconstrucciones de la tabla.
+   var c528PinTemporal=c530AutoPin;
    function c528Status(msg){var el=out.querySelector('#c526-estado');if(el)el.textContent=msg;}
    async function c528AutoRevisar(){
-     if(!c528PinTemporal||c528Busy||!navigator.onLine||!layer.isConnected)return;
-     c528Busy=true;
+     if(!c530AutoPin||c530AutoBusy||!navigator.onLine||!layer.isConnected)return;
+     c530AutoBusy=true;
      try{
-       var ack=await c526Distribuir(c528PinTemporal);
-       if(ack.asignados>0){c528Status(ack.asignados+' apoyos asignados automáticamente.');c529KeepPosition();refresh();}
-     }catch(e){c528PinTemporal=null;c528Status('Distribución automática detenida: '+(e.message||e));}
-     finally{c528Busy=false;}
+       var ack=await c526Distribuir(c530AutoPin);
+       if(ack.asignados>0){c528Status(ack.asignados+' apoyos asignados automáticamente.');c531RefrescarTabla();}
+       else if(ack.pendientes>0)c528Status('Esperando que terminen los apoyos actuales para repartir los '+ack.pendientes+' surcos restantes.');
+     }catch(e){c530AutoPin=null;c528Status('Distribución automática detenida: '+(e.message||e));}
+     finally{c530AutoBusy=false;}
    }
-   if(window.C528_GALERA_TIMER)clearInterval(window.C528_GALERA_TIMER);
-   window.C528_GALERA_TIMER=setInterval(function(){if(!layer.isConnected){clearInterval(window.C528_GALERA_TIMER);c528PinTemporal=null;return;}c528AutoRevisar();},20000);
+   if(c530AutoTimer)clearInterval(c530AutoTimer);
+   c530AutoTimer=setInterval(function(){if(!layer.isConnected){clearInterval(c530AutoTimer);c530AutoPin=null;return;}c528AutoRevisar();},20000);
    async function c526Distribuir(pin){
      var ack=await rpc('c526_distribuir_apoyos',{p_tabla_id:String(t.id),p_fecha:date.value,p_pin:pin});
      if(!ack||ack.ok!==true)throw new Error('Supabase no confirmó la distribución');
@@ -23006,9 +23022,10 @@ function c497AbrirGalera(){
      var btn=this;btn.disabled=true;
      try{
        var ack=await c526Distribuir(pin);
+       c530AutoPin=pin;
        var message='Distribución automática activada mientras Galera esté abierta. '+ack.asignados+' surcos asignados; '+ack.pendientes+' aún sin asignar.'+(ack.asignados===0?' No hay cosechadores disponibles según las órdenes de esta fecha. Comprueba la fecha y las terminaciones oficiales.':'');
        autoBar.querySelector('#c526-estado').textContent=message;
-       if(ack.asignados>0){c529KeepPosition();refresh();setTimeout(function(){var el=document.querySelector('#c526-estado');if(el)el.textContent=message;},600);}
+       if(ack.asignados>0){c531RefrescarTabla();setTimeout(function(){var el=document.querySelector('#c526-estado');if(el)el.textContent=message;},600);}
      }catch(e){alert('No se distribuyeron apoyos: '+(e.message||e));}
      finally{pin=null;btn.disabled=false;}
    };
@@ -23054,6 +23071,7 @@ function c497AbrirGalera(){
          b.querySelector('div:last-child').textContent='● En apoyo';
          c518Info.textContent='Surco '+n+' asignado como apoyo y guardado en Supabase. Toca de nuevo para confirmar su terminación.';
        }else{
+         c529KeepPosition();
          c518Hechos[n]=true;ord.surcos_completados=ack.surcos_completados;
          b.style.background='#e1f4e7';b.style.borderColor='#37945c';b.title='Terminado oficialmente';
          var label=b.querySelector('div:last-child');if(label){label.textContent='● Terminado';label.style.color='#176b3c';}
@@ -23062,7 +23080,8 @@ function c497AbrirGalera(){
          // a todos los cosechadores que estén libres. Se reutiliza el PIN del responsable.
          try{
            var dist=await c526Distribuir(pin);
-           if(dist.asignados>0){c518Info.textContent+=' · '+dist.asignados+' apoyos asignados automáticamente.';c529KeepPosition();refresh();}
+           if(dist.asignados>0){c518Info.textContent+=' · '+dist.asignados+' apoyos asignados automáticamente.';c531RefrescarTabla();}
+           else if(dist.pendientes>0){c518Info.textContent+=' · '+dist.pendientes+' surcos sin asignar; los apoyos actuales deben terminarse para liberar más personal.';}
          }catch(autoError){c518Info.textContent+=' · Distribución pendiente: '+(autoError.message||autoError);}
 
        }
