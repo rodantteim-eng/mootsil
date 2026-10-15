@@ -3343,7 +3343,8 @@ function em135Seguimiento(uid,nombre,telefono){
     document.getElementById('c135-seg-guardar').onclick=function(){var btn=this;btn.disabled=true;var file=document.getElementById('c136-boleto-file').files[0],file2=document.getElementById('c140-boleto2-file').files[0];Promise.all([c136Upload(file),c140Upload2(file2)]).then(function(urls){var url=urls[0],url2=urls[1];var costo=parseFloat(document.getElementById('c136-costo').value||0)||0,pct=parseInt(document.getElementById('c136-apoyo').value||0,10)||0,rancho=Math.round(costo*pct)/100;return c133AdminRpc('c136_admin_actualizar_incorporacion',{p_usuario_id:uid,p_pasaje_estado:document.getElementById('c135-pasaje-estado').value,p_pasaje_url:url,p_pasaje_detalle:document.getElementById('c135-pasaje-detalle').value||null,p_instrucciones_viaje:c140EmpaquetaViaje(document.getElementById('c135-viaje').value||'',{recogida:document.getElementById('c140-traslado-tipo').value==='recogida'?(document.getElementById('c140-recogida').value||''):null,tramo2_url:document.getElementById('c140-traslado-tipo').value==='boleto'?url2:null,tramo2_origen:document.getElementById('c140-origen2').value||null,tramo2_destino:document.getElementById('c140-destino2').value||null,tramo2_detalle:document.getElementById('c140-detalle2').value||null}),p_reglas_texto:x.reglas_texto||null,p_pasaje_linea:document.getElementById('c136-linea').value||null,p_pasaje_origen:document.getElementById('c136-origen').value||null,p_pasaje_destino:document.getElementById('c136-destino').value||null,p_pasaje_salida:document.getElementById('c136-salida').value||null,p_pasaje_costo_total:costo,p_pasaje_apoyo_pct:pct,p_pasaje_cuenta:document.getElementById('c136-cuenta').value,p_marcar_incorporado:false}).then(function(){if(rancho>0&&(!x.pasaje_caja_registrado_en||Number(x.pasaje_apoyo_monto||0)!==rancho)){try{var cj=ca21Load();cj.movimientos.push({id:'pasaje-'+uid+'-'+Date.now(),fecha:fechaHoyLocal(),hora:ca21Now(),tipo:'salida',cuenta:document.getElementById('c136-cuenta').value,monto:rancho,categoria:'Incorporación de personal',concepto:'Pasaje '+nombre+' · '+pct+'% apoyo',persona:nombre,forma:document.getElementById('c136-cuenta').value,origen:'Incorporación',estado:'Pagado',usuario:(usuario&&usuario.nombre)||'Usuario',incorporacion_usuario_id:uid});ca21Save(cj);}catch(e){console.warn(e)}}showToast('✅ Seguimiento y pasaje actualizados');em69Close();});}).catch(function(e){alert(e.message);btn.disabled=false;});};
     document.getElementById('c135-incorporado').onclick=function(){
       if(!confirm('¿Confirmar que '+nombre+' ya ingresó a trabajar al Rancho?\n\nEsto cerrará su incorporación y habilitará su expediente como Activo.'))return;
-      var btn=this;btn.disabled=true;btn.textContent='Confirmando...';
+      c528PinTemporal=pin; // Solo en memoria mientras Galera permanezca abierta.
+     var btn=this;btn.disabled=true;btn.textContent='Confirmando...';
       c133AdminRpc('c135_admin_actualizar_incorporacion',{p_usuario_id:uid,p_pasaje_estado:x.pasaje_estado||'pendiente',p_pasaje_url:x.pasaje_url||null,p_pasaje_detalle:x.pasaje_detalle||null,p_instrucciones_viaje:x.instrucciones_viaje||null,p_reglas_texto:x.reglas_texto||null,p_marcar_incorporado:true}).then(function(){
         showToast('✅ Ingreso confirmado · colaborador activo');
         em69Close();
@@ -19207,6 +19208,7 @@ function c520PedirPinSurco(n,nombre){
  return new Promise(function(resolve){
   var bg=document.createElement('div');bg.style.cssText='position:fixed;inset:0;z-index:2147483640;background:#091d17aa;display:flex;align-items:center;justify-content:center;padding:16px';
   bg.innerHTML='<div role="dialog" aria-modal="true" style="background:white;border-radius:17px;max-width:410px;width:100%;padding:24px;box-shadow:0 15px 50px #0005"><h3 style="margin:0 0 9px;color:#164c37">Confirmar surco '+n+'</h3><p id="c520-nombre" style="font-size:14px;margin-bottom:16px"></p><label style="font-size:13px;font-weight:700" for="c520-pin">PIN personal del cosechador</label><input id="c520-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" style="box-sizing:border-box;width:100%;padding:13px;border:1px solid #aac7b4;border-radius:9px;margin:8px 0 10px;font-size:19px"><div id="c520-error" role="alert" style="color:#b12727;font-size:12px;min-height:18px"></div><div style="display:flex;justify-content:flex-end;gap:9px;margin-top:12px"><button type="button" id="c520-cancel" style="padding:12px;border-radius:9px;border:1px solid #ddd;background:#f5f5f5">Cancelar</button><button type="button" id="c520-ok" style="padding:12px;border-radius:9px;border:0;background:#07875b;color:white;font-weight:800">Confirmar terminación</button></div></div>';
+  if(String(n)==='apoyos'){bg.querySelector('h3').textContent='Autorizar distribución de apoyos';bg.querySelector('label').textContent='PIN del encargado o galerista';bg.querySelector('#c520-ok').textContent='Asignar apoyos';}
   bg.querySelector('#c520-nombre').textContent=nombre;
   document.body.appendChild(bg);
   var inp=bg.querySelector('#c520-pin'),ok=bg.querySelector('#c520-ok'),cancel=bg.querySelector('#c520-cancel'),err=bg.querySelector('#c520-error');
@@ -22895,10 +22897,15 @@ function c497AbrirGalera(){
  document.body.appendChild(layer);
  layer.querySelector('#c497-close').onclick=function(){layer.remove();};
  layer.addEventListener('click',function(e){if(e.target===layer)layer.remove();});
+ var c529ScrollPanel=layer.querySelector('section[role="dialog"]');
+ var c529Scroll=0;
+ function c529KeepPosition(){c529Scroll=c529ScrollPanel.scrollTop;}
+ function c529RestorePosition(){requestAnimationFrame(function(){if(layer.isConnected)c529ScrollPanel.scrollTop=c529Scroll;});}
  var tabs=layer.querySelector('#c497-tabs'),out=layer.querySelector('#c497-body'),date=layer.querySelector('#c497-date'),selectedId='',tablas=[],generation=0,programaciones={};
  date.value=fechaHoyLocal();
  function refresh(){
-  var wanted=date.value,token=++generation;selectedId='';tabs.textContent='Cargando tablas programadas…';out.textContent='Consultando cosechas programadas…';
+  c529KeepPosition();
+  var wanted=date.value,previousSelected=selectedId,token=++generation;tabs.textContent='Cargando tablas programadas…';out.textContent='Consultando cosechas programadas…';
   var lb=(cats.tiposLabor||[]).find(function(l){return l.es_cosecha;});
   if(!lb){out.textContent='No se pudo identificar el tipo de labor Cosecha.';return;}
   from('ordenes_trabajo').select('id,operario_id,tabla_id,surcos_asignados,surcos_completados,notas_encargado,estado').eq('tipo_labor_id',lb.id).eq('fecha_asignacion',wanted).get().then(function(orders){
@@ -22919,7 +22926,7 @@ function c497AbrirGalera(){
    });
    tablas=(cats.tablas||[]).filter(function(t){return ids[String(t.id)];}).sort(function(a,b){var pa=/jade/i.test(c491Plantacion(a))?1:0,pb=/jade/i.test(c491Plantacion(b))?1:0;return pa-pb||Number((a.nombre||'').match(/\d+/)?.[0]||0)-Number((b.nombre||'').match(/\d+/)?.[0]||0);});
    if(!tablas.length){tabs.innerHTML='';out.innerHTML='<div style="padding:24px;background:white;border-radius:12px">No hay cosechas programadas para esta fecha.</div>';return;}
-   selectedId=String(tablas[0].id);renderTabs();render();
+   selectedId=tablas.some(function(t){return String(t.id)===previousSelected;})?previousSelected:String(tablas[0].id);renderTabs();render();
   }).catch(function(e){if(layer.isConnected&&token===generation)out.textContent='No se pudieron consultar las cosechas programadas: '+e.message;});
  }
  function renderTabs(){
@@ -22927,6 +22934,7 @@ function c497AbrirGalera(){
   tabs.querySelectorAll('button[data-c497-tab]').forEach(function(btn){btn.onclick=function(){if(selectedId===btn.getAttribute('data-c497-tab'))return;selectedId=btn.getAttribute('data-c497-tab');renderTabs();render();};});
  }
  function render(){
+  c529KeepPosition();
   var t=tablas.find(function(x){return String(x.id)===selectedId;});if(!t)return;
   var token=++generation;out.innerHTML='<div style="padding:20px;color:#526b5c">Cargando titulares y nombres…</div>';
   Promise.all([rpc('c475_listar_titulares',{p_tabla_id:String(t.id)}),from('usuarios').select('id,nombre').get()]).then(function(res){
@@ -22973,6 +22981,19 @@ function c497AbrirGalera(){
    var autoBar=document.createElement('div');autoBar.style.cssText='display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:12px 0';
    autoBar.innerHTML='<button type="button" id="c526-distribuir" style="border:0;border-radius:10px;background:#7237a5;color:white;font-weight:800;padding:12px 16px;cursor:pointer">↪ Distribuir apoyos automáticamente</button><span id="c526-estado" style="font-size:13px;color:#456456">Asigna un surco disponible a cada cosechador que ya terminó sus surcos.</span>';
    out.appendChild(autoBar);
+   var c528PinTemporal=null,c528Busy=false,c528Timer=null;
+   function c528Status(msg){var el=out.querySelector('#c526-estado');if(el)el.textContent=msg;}
+   async function c528AutoRevisar(){
+     if(!c528PinTemporal||c528Busy||!navigator.onLine||!layer.isConnected)return;
+     c528Busy=true;
+     try{
+       var ack=await c526Distribuir(c528PinTemporal);
+       if(ack.asignados>0){c528Status(ack.asignados+' apoyos asignados automáticamente.');c529KeepPosition();refresh();}
+     }catch(e){c528PinTemporal=null;c528Status('Distribución automática detenida: '+(e.message||e));}
+     finally{c528Busy=false;}
+   }
+   if(window.C528_GALERA_TIMER)clearInterval(window.C528_GALERA_TIMER);
+   window.C528_GALERA_TIMER=setInterval(function(){if(!layer.isConnected){clearInterval(window.C528_GALERA_TIMER);c528PinTemporal=null;return;}c528AutoRevisar();},20000);
    async function c526Distribuir(pin){
      var ack=await rpc('c526_distribuir_apoyos',{p_tabla_id:String(t.id),p_fecha:date.value,p_pin:pin});
      if(!ack||ack.ok!==true)throw new Error('Supabase no confirmó la distribución');
@@ -22985,9 +23006,9 @@ function c497AbrirGalera(){
      var btn=this;btn.disabled=true;
      try{
        var ack=await c526Distribuir(pin);
-       autoBar.querySelector('#c526-estado').textContent=ack.asignados+' surcos de apoyo asignados; '+ack.pendientes+' aún sin asignar.';
-       // Reconsultar órdenes para reflejar inmediatamente los apoyos morados.
-       refresh();
+       var message='Distribución automática activada mientras Galera esté abierta. '+ack.asignados+' surcos asignados; '+ack.pendientes+' aún sin asignar.'+(ack.asignados===0?' No hay cosechadores disponibles según las órdenes de esta fecha. Comprueba la fecha y las terminaciones oficiales.':'');
+       autoBar.querySelector('#c526-estado').textContent=message;
+       if(ack.asignados>0){c529KeepPosition();refresh();setTimeout(function(){var el=document.querySelector('#c526-estado');if(el)el.textContent=message;},600);}
      }catch(e){alert('No se distribuyeron apoyos: '+(e.message||e));}
      finally{pin=null;btn.disabled=false;}
    };
@@ -23002,13 +23023,24 @@ function c497AbrirGalera(){
        var candidatos=c518Orders.filter(function(o){return o.operario_id&&o.estado!=='cancelada';});
        var unique={};candidatos=candidatos.filter(function(o){if(unique[o.operario_id])return false;unique[o.operario_id]=true;return true;});
        if(!candidatos.length){alert('No hay cosechadores con orden activa en esta tabla.');return;}
-       var menu=candidatos.map(function(o,i){return (i+1)+'. '+(names[String(o.operario_id)]||'Cosechador')+' · '+(o.surcos_completados||[]).length+'/'+(o.surcos_asignados||[]).length;}).join('\n');
-       var choice=prompt('Asignar apoyo temporal para surco '+n+'\nSelecciona número de cosechador:\n'+menu);
-       if(choice===null)return;
-       var ix=Number(choice)-1;if(!Number.isInteger(ix)||ix<0||ix>=candidatos.length){alert('Selección inválida');return;}
+       var ix=await new Promise(function(resolve){
+         var overlay=document.createElement('div');overlay.style.cssText='position:fixed;inset:0;z-index:2147483641;background:#0b2118a9;display:flex;align-items:center;justify-content:center;padding:15px';
+         var panel=document.createElement('div');panel.style.cssText='background:white;border-radius:15px;padding:23px;width:100%;max-width:450px;box-shadow:0 12px 45px #0005';
+         var heading=document.createElement('h3');heading.textContent='Asignar apoyo · Surco '+n;heading.style.margin='0 0 12px';panel.appendChild(heading);
+         var hint=document.createElement('p');hint.textContent='Selecciona el cosechador que cubrirá este surco. El apoyo es temporal y no cambia al titular.';panel.appendChild(hint);
+         var select=document.createElement('select');select.style.cssText='width:100%;padding:13px;border-radius:9px;margin:10px 0';
+         candidatos.forEach(function(o,i){var option=document.createElement('option');option.value=String(i);option.textContent=(names[String(o.operario_id)]||'Cosechador')+' · '+(o.surcos_completados||[]).length+'/'+(o.surcos_asignados||[]).length+' confirmados';select.appendChild(option);});panel.appendChild(select);
+         var actions=document.createElement('div');actions.style.cssText='display:flex;gap:10px;justify-content:flex-end;margin-top:12px';
+         var cancel=document.createElement('button');cancel.textContent='Cancelar';cancel.style.padding='11px';
+         var accept=document.createElement('button');accept.textContent='Continuar con PIN del encargado';accept.style.cssText='padding:11px;border:0;border-radius:8px;background:#7136a5;color:white';
+         function finish(v){overlay.remove();resolve(v);}
+         cancel.onclick=function(){finish(null);};accept.onclick=function(){finish(Number(select.value));};
+         actions.appendChild(cancel);actions.appendChild(accept);panel.appendChild(actions);overlay.appendChild(panel);document.body.appendChild(overlay);
+       });
+       if(ix===null)return;
        ord=candidatos[ix];operacion='apoyo';
      }else if(!ord){alert('No se encontró una orden de cosecha válida para este titular.');return;}
-     var pin=await c520PedirPinSurco(n,(operacion==='apoyo'?'Autorizar apoyo · ':'Confirmar por Galera · ')+(names[String(ord.operario_id)]||r&&r.name||''));
+     var pin=await c520PedirPinSurco(operacion==='apoyo'?'apoyos':n,(operacion==='apoyo'?'Asignar surco '+n+' a ':'Confirmar surco '+n+' de ')+(names[String(ord.operario_id)]||r&&r.name||''));
      if(pin===null)return;
      b.disabled=true;
      try{
@@ -23020,7 +23052,7 @@ function c497AbrirGalera(){
          b.style.background='#f0e1fa';b.style.borderColor='#9139b2';
          b.querySelector('div:nth-child(2)').textContent='Apoyo · '+owner[n].name;
          b.querySelector('div:last-child').textContent='● En apoyo';
-         c518Info.textContent='Surco '+n+' asignado como apoyo. Toca de nuevo para confirmar su terminación.';
+         c518Info.textContent='Surco '+n+' asignado como apoyo y guardado en Supabase. Toca de nuevo para confirmar su terminación.';
        }else{
          c518Hechos[n]=true;ord.surcos_completados=ack.surcos_completados;
          b.style.background='#e1f4e7';b.style.borderColor='#37945c';b.title='Terminado oficialmente';
@@ -23030,7 +23062,7 @@ function c497AbrirGalera(){
          // a todos los cosechadores que estén libres. Se reutiliza el PIN del responsable.
          try{
            var dist=await c526Distribuir(pin);
-           if(dist.asignados>0){c518Info.textContent+=' · '+dist.asignados+' apoyos asignados automáticamente.';refresh();}
+           if(dist.asignados>0){c518Info.textContent+=' · '+dist.asignados+' apoyos asignados automáticamente.';c529KeepPosition();refresh();}
          }catch(autoError){c518Info.textContent+=' · Distribución pendiente: '+(autoError.message||autoError);}
 
        }
@@ -23057,6 +23089,7 @@ function c497AbrirGalera(){
      try{localStorage.setItem(c517Key,JSON.stringify(arr));c517Pintar();alert('Respaldo local guardado. PENDIENTE de registro oficial en Supabase.');}catch(e){alert('No se pudo guardar en este dispositivo. Anota el surco manualmente.');}
    };});
    c517Pintar();
+   c529RestorePosition();
   }).catch(function(e){if(layer.isConnected&&token===generation)out.textContent='No se pudieron cargar los titulares o sus nombres: '+e.message;});
  }
  date.onchange=refresh;refresh();
