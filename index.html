@@ -3015,6 +3015,14 @@ function c231Icon(name, cls){
 #c496h-print-layer table{width:100%;border-collapse:collapse}#c496h-print-layer th,#c496h-print-layer td{text-align:left;border-bottom:1px solid #ddd;padding:7px;font-size:12px}
 @media print{body>*:not(#c496h-print-layer){display:none!important}#c496h-print-layer{position:static!important;display:block!important;background:white!important;padding:0!important}#c496h-print-layer .c496h-sheet{max-height:none!important;overflow:visible!important;width:100%!important;padding:0!important}#c496h-print-layer .c496h-tools{display:none!important}#c496h-print-layer .c496h-page{break-after:page;border:0!important}}
 </style>
+<style id="c540-autorizar-diseno">
+.c540-auth-row{display:flex;justify-content:flex-start;margin-top:12px}
+.c540-auth-button{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:10px 16px;border:1px solid #087c53;border-radius:10px;background:#087c53;color:#fff;font-size:12px;font-weight:800;line-height:1.25;font-family:inherit;cursor:pointer;box-shadow:0 3px 10px rgba(8,124,83,.14);transition:background .15s ease,transform .15s ease}
+.c540-auth-button:hover{background:#086944;transform:translateY(-1px)}
+.c540-auth-button:focus-visible{outline:3px solid #a7d9bf;outline-offset:2px}
+.c540-auth-button:disabled{opacity:.55;cursor:wait;transform:none}
+@media(max-width:560px){.c540-auth-button{width:100%;min-height:44px}}
+</style>
 </head>
 <body>
 <div class="screen active" id="screen-login">
@@ -7263,7 +7271,7 @@ function c297PintarEdicion(f){
         '<div id="c298-picker-wrap"></div>'+
         '<div id="c297-stock-alert"></div>'+
         (C297_EDIT_AUTH?'<div class="c300-existing-auth">⚠️ Existe autorización previa. Si cambias cantidades, vuelve a autorizar.</div>':'')+
-        '<button type="button" class="c296-secondary" id="c539-auth" onclick="c539AutorizarFaltante()" style="margin-top:10px">🔐 Autorizar faltante con PIN</button>'+
+        '<div class="c540-auth-row"><button type="button" class="c540-auth-button" id="c539-auth" onclick="c539AutorizarFaltante()">🔐 Autorizar faltante con PIN</button></div>'+
       '</div>'+
       '<div class="c296-actions"><button class="c296-secondary" onclick="c296GestionarAplicacion(&quot;'+f.id+'&quot;)">Volver a Gestionar</button><button class="c296-primary" onclick="c297GuardarEdicion()">Guardar cambios</button></div>'+
     '</div></div>';
