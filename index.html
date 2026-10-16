@@ -19194,7 +19194,7 @@ async function c515DetalleSurco(ordenId,n){
  var nip=await c520PedirPinSurco(n,'Surco '+n+' · confirmación desde tu celular');
  if(nip===null)return;
  try{
-  var ack=await rpc('c519_confirmar_surco',{p_orden_id:o.id,p_surco:Number(n),p_pin:nip});
+  var ack=await rpc('c532_confirmar_y_asignar',{p_orden_id:o.id,p_surco:Number(n),p_pin:nip});
   if(!ack||ack.ok!==true)throw new Error('El servidor no confirmó el registro');
   o.surcos_completados=ack.surcos_completados||[];
   C515_SURCO_ACTIVO[String(o.id)]=null;
@@ -19208,7 +19208,7 @@ function c520PedirPinSurco(n,nombre){
  return new Promise(function(resolve){
   var bg=document.createElement('div');bg.style.cssText='position:fixed;inset:0;z-index:2147483640;background:#091d17aa;display:flex;align-items:center;justify-content:center;padding:16px';
   bg.innerHTML='<div role="dialog" aria-modal="true" style="background:white;border-radius:17px;max-width:410px;width:100%;padding:24px;box-shadow:0 15px 50px #0005"><h3 style="margin:0 0 9px;color:#164c37">Confirmar surco '+n+'</h3><p id="c520-nombre" style="font-size:14px;margin-bottom:16px"></p><label style="font-size:13px;font-weight:700" for="c520-pin">PIN personal del cosechador</label><input id="c520-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" style="box-sizing:border-box;width:100%;padding:13px;border:1px solid #aac7b4;border-radius:9px;margin:8px 0 10px;font-size:19px"><div id="c520-error" role="alert" style="color:#b12727;font-size:12px;min-height:18px"></div><div style="display:flex;justify-content:flex-end;gap:9px;margin-top:12px"><button type="button" id="c520-cancel" style="padding:12px;border-radius:9px;border:1px solid #ddd;background:#f5f5f5">Cancelar</button><button type="button" id="c520-ok" style="padding:12px;border-radius:9px;border:0;background:#07875b;color:white;font-weight:800">Confirmar terminación</button></div></div>';
-  if(String(n)==='apoyos'){bg.querySelector('h3').textContent='Autorizar distribución de apoyos';bg.querySelector('label').textContent='PIN del encargado o galerista';bg.querySelector('#c520-ok').textContent='Asignar apoyos';}
+  if(String(n)==='apoyos'){bg.querySelector('h3').textContent='Autorizar distribución de apoyos';bg.querySelector('label').textContent='PIN del encargado o galerista';bg.querySelector('#c520-ok').textContent='Asignar apoyos';}else{bg.querySelector('label').textContent='PIN del cosechador asignado o del encargado autorizado';}
   bg.querySelector('#c520-nombre').textContent=nombre;
   document.body.appendChild(bg);
   var inp=bg.querySelector('#c520-pin'),ok=bg.querySelector('#c520-ok'),cancel=bg.querySelector('#c520-cancel'),err=bg.querySelector('#c520-error');
@@ -22884,16 +22884,16 @@ function c366ReportarLaborIncidencia(){
 </script>
 
 <script id="c453-editar-compra-caja">/* C453 · Editar compra desde Tesorería y mantener proveedor en movimiento de Caja. */
-/* C500 — Galera: contador por tabla y preparación de terminaciones. La confirmación real requiere
-   una operación transaccional de servidor, aún no disponible en C497F. */
+/* C500 — Galera: contador por tabla y preparación de terminaciones. La confirmación real utiliza operaciones transaccionales de Supabase. */
 function c497AbrirGalera(){
  var old=document.getElementById('c497-galera');if(old)old.remove();
  var layer=document.createElement('div');layer.id='c497-galera';
  layer.style.cssText='position:fixed;inset:0;z-index:100002;background:#082a1dcc;padding:14px;display:flex;justify-content:center;align-items:center';
  layer.innerHTML='<section role="dialog" aria-modal="true" aria-label="Galera" style="width:min(1370px,100%);max-height:94vh;overflow:auto;background:#f8faf9;border-radius:20px;padding:22px;box-shadow:0 18px 70px #071f184d">'+
  '<div style="display:flex;justify-content:space-between;align-items:start;gap:12px;border-bottom:1px solid #dce9e1;padding-bottom:12px"><div><h2 style="margin:0;color:#0d4934">🏠 Galera · Control de cosecha</h2><p style="margin:5px 0;color:#60786c">Registro oficial de surcos mediante PIN personal y conexión a Supabase.</p></div><button id="c497-close" type="button" style="padding:9px 14px;border:1px solid #d7e5db;border-radius:10px;background:white;cursor:pointer">✕ Cerrar</button></div>'+
+ '<div id="c532-menu" style="display:flex;gap:10px;flex-wrap:wrap;margin:14px 0"><button id="c532-surcos" type="button" style="padding:13px 19px;border:0;border-radius:12px;background:#087c53;color:white;font-weight:800">🌱 Registro de surcos</button><button id="c532-cajas" type="button" style="padding:13px 19px;border:1px solid #8e58b0;border-radius:12px;background:white;color:#7237a5;font-weight:800">📦 Registro de cajas</button></div><div id="c532-cajas-panel" style="display:none"></div><div id="c532-surcos-panel">'+
  '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:15px 0"><label for="c497-date" style="font-weight:700">Fecha</label><input id="c497-date" type="date" style="padding:11px;border:1px solid #c9dfd0;border-radius:10px"><span style="color:#6c7d71;font-size:13px">Tablas con cosecha programada</span></div>'+
- '<div id="c497-tabs" role="group" aria-label="Tablas con cosecha programada" style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px"></div><div id="c497-body" aria-live="polite"></div></section>';
+ '<div id="c497-tabs" role="group" aria-label="Tablas con cosecha programada" style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px"></div><div id="c497-body" aria-live="polite"></div></div></section>';
  document.body.appendChild(layer);
  layer.addEventListener('click',function(e){e.stopPropagation();});
  layer.querySelector('#c497-close').onclick=function(){layer.remove();};
@@ -22914,6 +22914,38 @@ function c497AbrirGalera(){
    window.C518_ORDENES_GALERA=orders||[];
    render();
   }).catch(function(e){var el=out.querySelector('#c526-estado');if(el)el.textContent='No se pudo actualizar la tabla: '+e.message;});
+ }
+ var c532SurcosPanel=layer.querySelector('#c532-surcos-panel'),c532CajasPanel=layer.querySelector('#c532-cajas-panel');
+ layer.querySelector('#c532-surcos').onclick=function(){c532SurcosPanel.style.display='block';c532CajasPanel.style.display='none';};
+ layer.querySelector('#c532-cajas').onclick=function(){c532SurcosPanel.style.display='none';c532CajasPanel.style.display='block';c532CajasMostrar();};
+ function c532CajasMostrar(){
+  c532CajasPanel.innerHTML='<div style="max-width:880px"><h3 style="color:#174c39;margin:4px 0 6px">📦 Registro de cajas</h3><p style="font-size:13px;color:#526a5e">Selecciona un cosechador activo. Las entradas quedan pendientes de pesaje y no generan pago.</p><div id="c534-active-header" style="font-size:14px;font-weight:800;color:#087c53;margin:10px 0"></div><div id="c533-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:10px"></div><div id="c533-status" role="status" style="margin-top:12px"></div></div><div id="c533-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2147483600;align-items:center;justify-content:center;padding:15px"><div style="background:#fff;width:min(360px,100%);border-radius:16px;padding:20px;box-shadow:0 14px 45px #0003"><div style="display:flex;justify-content:space-between;align-items:center"><h3 style="margin:0;color:#174c39">📦 Registrar cajas</h3><button type="button" id="c533-close" style="background:white;border:1px solid #ddd;border-radius:9px;padding:8px">✕</button></div><div id="c533-person" style="margin:14px 0;background:#f2f8f4;border-radius:10px;padding:12px;font-weight:800"></div><label for="c533-qty">Cajas entregadas</label><div style="display:flex;gap:10px;align-items:center;margin:8px 0 16px"><button type="button" id="c533-minus" style="padding:12px;border-radius:10px;border:1px solid #ddd">−</button><input id="c533-qty" type="number" min="1" max="999" value="1" style="width:100%;min-width:0;text-align:center;font-size:22px;padding:10px;border:1px solid #cadbd0;border-radius:9px"><button type="button" id="c533-plus" style="padding:12px;border-radius:10px;border:1px solid #ddd">+</button></div><label for="c533-pin">PIN de confirmación</label><input id="c533-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="4 dígitos" style="width:100%;box-sizing:border-box;padding:12px;margin:7px 0;border:1px solid #cadbd0;border-radius:9px"><div style="font-size:12px;color:#526a5e;margin-bottom:14px">PIN del cosechador seleccionado o del personal autorizado de Galera.</div><button type="button" id="c533-save" style="width:100%;background:#087c53;color:white;border:0;border-radius:10px;padding:13px;font-weight:800">Confirmar entrada</button><div id="c533-result" role="status" style="margin-top:12px;font-size:13px"></div></div></div>';
+  var cards=layer.querySelector('#c533-cards'),status=layer.querySelector('#c533-status'),overlay=layer.querySelector('#c533-overlay'),chosen=null;
+  var qty=layer.querySelector('#c533-qty'),pin=layer.querySelector('#c533-pin'),result=layer.querySelector('#c533-result');
+  function close(){overlay.style.display='none';pin.value='';chosen=null;}
+  layer.querySelector('#c533-close').onclick=close;
+  overlay.onclick=function(e){if(e.target===overlay)close();};
+  layer.querySelector('#c533-minus').onclick=function(){qty.value=Math.max(1,Number(qty.value||1)-1);};
+  layer.querySelector('#c533-plus').onclick=function(){qty.value=Math.min(999,Number(qty.value||0)+1);};
+  cards.innerHTML='<div>Consultando cosechadores activos…</div>';
+  var jornada=date.value||fechaHoyLocal();
+  Promise.all([from('ordenes_trabajo').select('id,operario_id,tabla_id,notas_encargado,estado,formula_id').eq('fecha_asignacion',jornada).get(),from('usuarios').select('id,nombre').get()]).then(function(rs){
+   var names={};(rs[1]||[]).forEach(function(u){names[u.id]=u.nombre;});
+   // C534: solo la tabla seleccionada en el tablero Galera; no mezclar tablas ni duplicar personas.
+   var tablaActiva=(cats.tablas||[]).find(function(t){return String(t.id)===String(selectedId);});
+   var orders=(rs[0]||[]).filter(function(o){return o.operario_id&&o.formula_id==null&&o.estado!=='cancelada'&&String(o.tabla_id)===String(selectedId)&&String(o.notas_encargado||'').indexOf('[PLAN_COSECHA]')===0;});
+   var seen={};orders=orders.filter(function(o){var key=String(o.operario_id);if(seen[key])return false;seen[key]=true;return true;});
+   cards.innerHTML='';
+   var header=layer.querySelector('#c534-active-header');
+   if(header)header.textContent=tablaActiva?('Cosecha seleccionada: '+c491Plantacion(tablaActiva)+' · '+tablaActiva.nombre+' · '+jornada):'No hay tabla de cosecha seleccionada';
+   if(!tablaActiva||!orders.length){status.textContent='No hay cosechadores asignados a la tabla seleccionada para '+jornada+'. Revisa la tabla activa en Registro de surcos.';return;}
+   orders.forEach(function(o){var t=tablaActiva;var name=names[o.operario_id]||'Cosechador';var btn=document.createElement('button');btn.type='button';btn.style.cssText='background:#fff;border:1px solid #cde1d3;border-radius:12px;padding:16px;text-align:left;cursor:pointer;min-height:82px;box-shadow:0 2px 8px #0001';var plant=c491Plantacion(t)||'Plantación sin identificar';
+   var jade=/jade/i.test(plant),tone=jade?'#7541a4':'#087c53',pale=jade?'#f5effa':'#edf8f0';
+   btn.style.borderLeft='5px solid '+tone;
+   btn.innerHTML='<strong style="color:#174c39">'+cosEsc(name)+'</strong><div style="color:'+tone+';font-size:12px;font-weight:800;margin-top:7px">'+cosEsc(plant)+' · '+cosEsc(t?t.nombre:'Tabla sin identificar')+'</div><div style="color:#61766a;font-size:12px;margin-top:4px">Registrar cajas</div>';
+   btn.onclick=function(){chosen=o;var identity=layer.querySelector('#c533-person');identity.style.background=pale;identity.style.borderLeft='5px solid '+tone;identity.innerHTML='<div style="font-size:15px">'+cosEsc(name)+'</div><div style="color:'+tone+';font-size:13px;margin-top:6px">'+cosEsc(plant)+' · '+cosEsc(t?t.nombre:'Tabla sin identificar')+'</div><div style="color:#61766a;font-size:12px;margin-top:4px">Cosecha: '+cosEsc(jornada)+'</div>';qty.value='1';pin.value='';result.textContent='';overlay.style.display='flex';qty.focus();};cards.appendChild(btn);});
+  }).catch(function(e){cards.innerHTML='';status.textContent='No se pudieron consultar los cosechadores: '+e.message;});
+  layer.querySelector('#c533-save').onclick=async function(){var n=Number(qty.value),p=pin.value;if(!chosen||!Number.isInteger(n)||n<1||n>999||!/^[0-9]{4}$/.test(p)){result.textContent='Ingresa una cantidad válida y PIN de 4 dígitos.';return;}if(!navigator.onLine){result.textContent='Se requiere internet para confirmar la entrada.';return;}var btn=this;btn.disabled=true;result.textContent='Validando y registrando…';try{var ack=await rpc('c532_registrar_cajas',{p_orden_id:chosen.id,p_cantidad:n,p_pin:p});if(!ack||ack.ok!==true)throw Error('No se confirmó la recepción');result.textContent='✓ '+n+' cajas recibidas. Pendientes de pesaje. Folio: '+ack.id;pin.value='';setTimeout(function(){if(overlay.style.display==='flex')close();},1500);}catch(e){result.textContent='NO SE GUARDÓ: '+(e.message||e);}finally{btn.disabled=false;}};
  }
  var tabs=layer.querySelector('#c497-tabs'),out=layer.querySelector('#c497-body'),date=layer.querySelector('#c497-date'),selectedId='',tablas=[],generation=0,programaciones={};
  date.value=fechaHoyLocal();
@@ -22940,12 +22972,13 @@ function c497AbrirGalera(){
    });
    tablas=(cats.tablas||[]).filter(function(t){return ids[String(t.id)];}).sort(function(a,b){var pa=/jade/i.test(c491Plantacion(a))?1:0,pb=/jade/i.test(c491Plantacion(b))?1:0;return pa-pb||Number((a.nombre||'').match(/\d+/)?.[0]||0)-Number((b.nombre||'').match(/\d+/)?.[0]||0);});
    if(!tablas.length){tabs.innerHTML='';out.innerHTML='<div style="padding:24px;background:white;border-radius:12px">No hay cosechas programadas para esta fecha.</div>';return;}
-   selectedId=tablas.some(function(t){return String(t.id)===previousSelected;})?previousSelected:String(tablas[0].id);renderTabs();render();
+   var incomplete=tablas.find(function(t){return (orders||[]).some(function(o){return String(o.tabla_id)===String(t.id)&&o.estado!=='cancelada'&&Array.isArray(o.surcos_asignados)&&o.surcos_asignados.some(function(n){return !((o.surcos_completados||[]).map(String)).includes(String(n));});});});
+   selectedId=tablas.some(function(t){return String(t.id)===previousSelected;})?previousSelected:String((incomplete||tablas[0]).id);renderTabs();render();
   }).catch(function(e){if(layer.isConnected&&token===generation)out.textContent='No se pudieron consultar las cosechas programadas: '+e.message;});
  }
  function renderTabs(){
   tabs.innerHTML=tablas.map(function(t){var id=String(t.id),jade=/jade/i.test(c491Plantacion(t)),accent=jade?'#8731a6':'#07875b',active=id===selectedId;return '<button type="button" data-c497-tab="'+cosEsc(id)+'" aria-pressed="'+active+'" style="padding:11px 15px;border:2px solid '+(active?accent:'#d9e6de')+';border-radius:11px;background:'+(active?accent:jade?'#fbf4ff':'white')+';color:'+(active?'white':jade?'#743094':'#174c39')+';font-weight:750;cursor:pointer;box-shadow:'+(active?'0 3px 11px #143b261a':'none')+'">'+cosEsc(c491Plantacion(t)+' · '+t.nombre)+(active?' ✓':'')+'</button>';}).join('');
-  tabs.querySelectorAll('button[data-c497-tab]').forEach(function(btn){btn.onclick=function(){if(selectedId===btn.getAttribute('data-c497-tab'))return;selectedId=btn.getAttribute('data-c497-tab');renderTabs();render();};});
+  tabs.querySelectorAll('button[data-c497-tab]').forEach(function(btn){btn.onclick=function(){if(selectedId===btn.getAttribute('data-c497-tab'))return;selectedId=btn.getAttribute('data-c497-tab');renderTabs();render();if(c532CajasPanel.style.display==='block')c532CajasMostrar();};});
  }
  function render(){
   // C531: refresh already saved scroll before clearing the board.
@@ -23061,7 +23094,7 @@ function c497AbrirGalera(){
      if(pin===null)return;
      b.disabled=true;
      try{
-       var ack=await rpc('c525_galera_gestion',{p_operacion:operacion,p_orden_id:ord.id,p_surco:n,p_pin:pin});
+       var ack=await rpc(operacion==='confirmar'?'c532_confirmar_y_asignar':'c525_galera_gestion',operacion==='confirmar'?{p_orden_id:ord.id,p_surco:n,p_pin:pin}:{p_operacion:operacion,p_orden_id:ord.id,p_surco:n,p_pin:pin});
        if(!ack||ack.ok!==true)throw new Error('El servidor no confirmó la operación');
        if(operacion==='apoyo'){
          ord.surcos_asignados=(ord.surcos_asignados||[]).concat([n]);
@@ -23076,13 +23109,9 @@ function c497AbrirGalera(){
          b.style.background='#e1f4e7';b.style.borderColor='#37945c';b.title='Terminado oficialmente';
          var label=b.querySelector('div:last-child');if(label){label.textContent='● Terminado';label.style.color='#176b3c';}
          c518Info.textContent='Registro oficial · '+Object.keys(c518Hechos).length+' surcos confirmados en Supabase.';
-         // C526: al confirmar el último surco, entregar automáticamente el siguiente apoyo
-         // a todos los cosechadores que estén libres. Se reutiliza el PIN del responsable.
-         try{
-           var dist=await c526Distribuir(pin);
-           if(dist.asignados>0){c518Info.textContent+=' · '+dist.asignados+' apoyos asignados automáticamente.';c531RefrescarTabla();}
-           else if(dist.pendientes>0){c518Info.textContent+=' · '+dist.pendientes+' surcos sin asignar; los apoyos actuales deben terminarse para liberar más personal.';}
-         }catch(autoError){c518Info.textContent+=' · Distribución pendiente: '+(autoError.message||autoError);}
+         // C532: el servidor ya distribuye apoyos en la misma transacción; no se reutiliza el PIN del cosechador para autorizar gestión.
+         if(ack.asignados>0)c518Info.textContent+=' · '+ack.asignados+' apoyos asignados automáticamente.';
+         c531RefrescarTabla();
 
        }
      }catch(err){alert('NO SE GUARDÓ: '+(err.message||err));}
