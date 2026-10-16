@@ -7222,9 +7222,11 @@ function c296EditarFormulaAplicacion(){
     var f=r[0]&&r[0][0], comps=(r[1]||[]).filter(function(c){return c.estado_faltante!=='sustituido';});
     if(!f){alert('No se encontró la aplicación.');return;}
     C297_EDIT_COMPONENTS=comps.map(function(c){
-      return {id:c.id,item_id:c.item_id,cantidad:Number(c.cantidad_base||0),nombre:c.item?c.item.nombre:'',unidad:c.item?c.item.unidad:'',stock:c.item?Number(c.item.stock_actual||0):0};
+      return {id:c.id,item_id:c.item_id,cantidad:Number(c.cantidad_base||0),nombre:c.item?c.item.nombre:'',unidad:c.item?c.item.unidad:'',stock:c.item?Number(c.item.stock_actual||0):0,_originalAmount:Number(c.cantidad_base||0)};
     });
     C297_EDIT_AUTH=comps.some(function(c){return c.estado_faltante==='autorizado';});
+    C297_EDIT_COMPONENTS.forEach(function(c){var prev=comps.find(function(x){return x.id===c.id;});c._authorized=!!(prev&&prev.estado_faltante==='autorizado');c._authorizedAmount=prev?Number(prev.cantidad_base||0):0;});
+
     c297PintarEdicion(f);
   }).catch(function(e){alert('Error al editar aplicación: '+e.message);});
 }
@@ -7260,7 +7262,8 @@ function c297PintarEdicion(f){
         '<button type="button" class="c298-add" onclick="c298AbrirPicker(-1)">＋ Agregar producto</button>'+
         '<div id="c298-picker-wrap"></div>'+
         '<div id="c297-stock-alert"></div>'+
-        (C297_EDIT_AUTH?'<div class="c300-existing-auth">⚠️ Esta aplicación ya fue autorizada previamente con faltante de inventario.</div>':'')+
+        (C297_EDIT_AUTH?'<div class="c300-existing-auth">⚠️ Existe autorización previa. Si cambias cantidades, vuelve a autorizar.</div>':'')+
+        '<button type="button" class="c296-secondary" id="c539-auth" onclick="c539AutorizarFaltante()" style="margin-top:10px">🔐 Autorizar faltante con PIN</button>'+
       '</div>'+
       '<div class="c296-actions"><button class="c296-secondary" onclick="c296GestionarAplicacion(&quot;'+f.id+'&quot;)">Volver a Gestionar</button><button class="c296-primary" onclick="c297GuardarEdicion()">Guardar cambios</button></div>'+
     '</div></div>';
@@ -7425,13 +7428,38 @@ function c297RevisarStock(){
   if(!faltas.length){box.innerHTML='';return;}
   var lista=faltas.map(function(c){return c.nombre+' (faltan '+Math.max(0,c.cantidad-c.stock)+' '+c.unidad+')';}).join(', ');
   if(C297_EDIT_AUTH)box.innerHTML='<div class="c297-warn"><b>Inventario insuficiente:</b> '+lista+'<br><span style="font-weight:600;">Esta aplicación ya cuenta con autorización de faltante.</span></div>';
-  else box.innerHTML='<div class="c297-warn"><b>Inventario insuficiente:</b> '+lista+'<br><span style="font-weight:600;">Corrige producto o cantidad. La autorización con faltante sólo se toma durante la creación.</span></div>';
+  else box.innerHTML='<div class="c297-warn"><b>Inventario insuficiente:</b> '+lista+'<br><span style="font-weight:600;">Corrige producto o cantidad. Utiliza «Autorizar faltante con PIN» para habilitar la aplicación existente.</span></div>';
 }
 function c297ToggleAuth(){
   C297_EDIT_AUTH=!C297_EDIT_AUTH;
   var b=document.getElementById('c297-auth-btn');if(!b)return;
   b.classList.toggle('on',C297_EDIT_AUTH);
   b.textContent=C297_EDIT_AUTH?'✅ Aplicar con faltante autorizado':'⚠️ Autorizar aplicar con faltante';
+}
+async function c539AutorizarFaltante(){
+ var id=C296_APP_MANAGE_ID;if(!id)return;
+ var inputs=C297_EDIT_COMPONENTS.filter(function(c,i){
+  if(c._remove)return false;
+  var q=document.querySelector('[data-c297-cant="'+i+'"]');
+  if(q)c.cantidad=Number(q.value||0);
+  return true;
+ });
+ var faltas=inputs.filter(function(c){return c.cantidad>c.stock;});
+ if(!faltas.length){alert('No hay faltantes de inventario para autorizar.');return;}
+ if(inputs.some(function(c){return c._new||c.cantidad!==c._originalAmount})){
+  alert('Primero guarda las modificaciones de cantidades o productos sin faltantes. La autorización con PIN se aplica a las dosis actualmente guardadas.');return;
+ }
+ var pin=prompt('PIN del dueño o encargado autorizado para el faltante de esta aplicación:');
+ if(pin===null)return;
+ if(!/^\d{4}$/.test(pin)){alert('Introduce un PIN de 4 dígitos.');return;}
+ var b=document.getElementById('c539-auth');if(b)b.disabled=true;
+ try{
+  var result=await rpc('c539_autorizar_faltante_aplicacion',{p_formula_id:id,p_pin:pin});
+  if(!result||result.ok!==true)throw new Error('No se confirmó la autorización.');
+  alert('Faltante autorizado en Supabase. Se actualizará la aplicación.');
+  c296CerrarGestion();c296EditarFormulaAplicacion();
+ }catch(e){alert('No se autorizó: '+(e.message||e));}
+ finally{if(b)b.disabled=false;}
 }
 function c297GuardarEdicion(){
   var id=C296_APP_MANAGE_ID;if(!id)return;
@@ -7443,7 +7471,9 @@ function c297GuardarEdicion(){
   if(!activas.length){alert('La aplicación debe conservar al menos un producto.');return;}
   if(activas.some(function(c){return !c.item_id||c.cantidad<=0;})){alert('Revisa producto y cantidad.');return;}
   var faltas=activas.filter(function(c){return c.cantidad>c.stock;});
-  if(faltas.length&&!C297_EDIT_AUTH){alert('Hay inventario insuficiente. Corrige producto o cantidad; la autorización con faltante sólo se realiza al crear la aplicación.');return;}
+  if(faltas.some(function(c){return !c._authorized||c._new||c.cantidad!==c._authorizedAmount})){
+    alert('Hay inventario insuficiente sin autorización vigente para estas dosis. Utiliza «Autorizar faltante con PIN».');return;
+  }
   var fecha=(document.getElementById('c297-fecha')||{}).value||null;
   var notas=(document.getElementById('c297-notas')||{}).value||null;
 
@@ -7454,12 +7484,9 @@ function c297GuardarEdicion(){
     var falta=Math.max(0,c.cantidad-c.stock);
     var payload={
       item_id:c.item_id,cantidad_base:c.cantidad,
-      estado_faltante:(falta>0&&C297_EDIT_AUTH)?'autorizado':'ninguno',
-      faltante_detectado:falta,sustituto_de_item_id:null,
-      autorizado_por:(falta>0&&C297_EDIT_AUTH)?usuario.id:null,
-      autorizado_en:(falta>0&&C297_EDIT_AUTH)?new Date().toISOString():null
+      faltante_detectado:falta,sustituto_de_item_id:null
     };
-    if(c._new)ops.push(from('formula_componentes').insert(Object.assign({formula_id:id},payload)));
+    if(c._new)ops.push(from('formula_componentes').insert(Object.assign({formula_id:id,estado_faltante:'ninguno'},payload)));
     else ops.push(from('formula_componentes').eq('id',c.id).update(payload));
   });
 
