@@ -20941,10 +20941,23 @@ function c398CargarAsignaciones(id){
         '<option value="incorporacion" '+(a.estado==='incorporacion'?'selected':'')+'>En incorporación</option>'+
         '<option value="finalizado" '+(a.estado==='finalizado'?'selected':'')+'>Finalizado</option></select>';
       return '<div class="ex55-subcard" style="display:grid;grid-template-columns:minmax(170px,1.2fr) minmax(120px,.8fr) minmax(190px,1.1fr) auto;gap:10px;align-items:center;">'+
-        '<div><strong>'+ex54Esc(a.cargo)+'</strong><div class="ex55-mini">'+ex54Esc(a.tipo_colaborador||'Base')+'</div></div>'+
+        '<div><strong>'+ex54Esc(a.cargo)+'</strong><div style="margin-top:5px;"><select aria-label="Modalidad de contratación" title="Cambiar modalidad sin alterar cargo, periodo ni nómina" style="max-width:145px;padding:6px;border:1px solid #d8e1dc;border-radius:8px;background:white;font-size:.78rem;" onchange="c551CambiarTipoAsignacion(\''+id+'\',\''+a.id+'\',this,\''+(a.tipo_colaborador||'Base')+'\')">'+['Base','Eventual','Temporada'].map(function(t){return '<option value="'+t+'" '+(t===(a.tipo_colaborador||'Base')?'selected':'')+'>'+t+'</option>';}).join('')+'</select></div></div>'+
         '<div><strong style="color:'+st.c+'">'+st.t+'</strong></div><div class="ex55-mini">'+ex54Esc(periodo)+'</div><div>'+acts+'</div></div>';
     }).join('');
   }).catch(function(e){box.innerHTML='<div class="ex55-mini" style="color:#b42318">No se pudieron cargar cargos: '+ex54Esc(e.message||e)+'</div>';});
+}
+function c551CambiarTipoAsignacion(uid,aid,sel,anterior){
+  var nuevo=sel.value;
+  if(nuevo===anterior)return;
+  if(!confirm('¿Cambiar modalidad de '+anterior+' a '+nuevo+'?\nSe conservan cargo, fechas, asistencia y pagos.')){sel.value=anterior;return;}
+  sel.disabled=true;
+  rpc('c551_admin_editar_tipo_asignacion',{p_admin_id:usuario.id,p_admin_pin:String(pin||''),p_asignacion_id:aid,p_tipo_colaborador:nuevo}).then(function(r){
+    r=Array.isArray(r)?r[0]:r;
+    if(!r||r.ok!==true)throw new Error((r&&r.mensaje)||'No se pudo actualizar la modalidad.');
+    ex57AddHist(uid,'Modalidad de asignación',anterior,nuevo);
+    c398CargarAsignaciones(uid);
+    showToast('Modalidad actualizada: '+nuevo);
+  }).catch(function(e){sel.disabled=false;sel.value=anterior;alert('No se pudo cambiar la modalidad.\n'+(e.message||e));});
 }
 function c398GuardarAsignacion(id){
   var cargo=document.getElementById('c398-cargo').value, tipo=document.getElementById('c398-tipo').value,
