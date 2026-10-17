@@ -5194,7 +5194,7 @@ function renderGestionarLaborElegirOperario(modo,ordenId){
   var g=GESTION_LABOR_GRUPO;
   if(!g){renderAsignarEstatus();return;}
   var titulo=modo==='cambiar'?'🔄 Elige el nuevo operario':'➕ Elige a quién agregar';
-  var opO=cats.equipoDeCampo.map(function(o){return '<button type="button" class="op-chip" data-id="'+o.id+'">'+o.nombre+'</button>';}).join('');
+  var opO=(cats.equipoDeCampo||[]).concat(cats.cosechadores||[]).filter(function(o,i,a){return a.findIndex(function(x){return String(x.id)===String(o.id);})===i;}).map(function(o){return '<button type="button" class="op-chip" data-id="'+o.id+'">'+o.nombre+'</button>';}).join('');
   body.innerHTML='<div class="seccion-titulo">'+titulo+'</div><div class="form-card"><div style="display:flex;flex-wrap:wrap;gap:8px;">'+opO+'</div><button class="btn-primary" id="gl-op-continuar" style="margin-top:1rem;">Continuar →</button></div><button class="btn-back" style="margin-top:1rem;" onclick="pintarGestionLabor()">← Cancelar</button>';
   body.querySelectorAll('.op-chip').forEach(function(el){el.addEventListener('click',function(){seleccionUnica(this);});});
   document.getElementById('gl-op-continuar').addEventListener('click',function(){
@@ -20795,7 +20795,7 @@ function ex54FormHtml(mode,id,base,extra){
       '<div class="ex54-field"><label>Hora extra ($/h)</label><input type="number" min="0" step="1" id="ex54-extra" value="'+ex54Esc(extra.tarifa_hora_extra==null?'':extra.tarifa_hora_extra)+'" placeholder="Ej. 70"></div>'+
       '<div class="ex54-field"><label>PIN (4 dígitos)'+(isEdit?' · opcional':'')+'</label><input type="number" min="0" max="9999" id="ex54-pin" placeholder="'+(isEdit?'Dejar vacío para conservar':'1234')+'"></div>'+
     '</div></div>'+
-    (isEdit?'<div class="ex54-sec"><h3>Cargos y asignaciones</h3><div class="ex55-mini" style="margin-bottom:8px;">Un colaborador puede tener varios cargos. Cada cargo puede estar Activo o Inactivo de forma independiente; Finalizado conserva el historial del periodo.</div><div id="c398-asignaciones"><div class="loading">Cargando asignaciones...</div></div><div id="c398-asig-form" style="display:none;margin-top:10px;padding:12px;border:1px solid #dfe8e2;border-radius:12px;background:#fbfdfb;"><div class="ex54-grid"><div class="ex54-field"><label>Cargo</label><select id="c398-cargo">'+cargos.map(function(c){return '<option>'+c+'</option>';}).join('')+'</select></div><div class="ex54-field"><label>Tipo</label><select id="c398-tipo"><option>Base</option><option>Eventual</option><option>Temporada</option></select></div><div class="ex54-field"><label>Estatus</label><select id="c398-estado"><option value="activo">Activo</option><option value="inactivo">Inactivo</option><option value="incorporacion">En incorporación</option></select></div><div class="ex54-field"><label>Fecha de inicio</label><input type="date" id="c398-inicio" value="'+fechaHoyLocal()+'"></div></div><div style="display:flex;gap:8px;margin-top:10px;"><button type="button" class="ex55-btn primary" onclick="c398GuardarAsignacion(\''+id+'\')">Guardar asignación</button><button type="button" class="ex55-btn" onclick="document.getElementById(\'c398-asig-form\').style.display=\'none\'">Cancelar</button></div></div><button type="button" class="ex55-btn primary" style="margin-top:8px;" onclick="document.getElementById(\'c398-asig-form\').style.display=\'block\'">+ Agregar cargo / asignación</button></div>':'')+
+    (isEdit?'<div class="ex54-sec"><h3>Cargos y asignaciones</h3><div class="ex55-mini" style="margin-bottom:8px;">El cargo principal define el acceso. Los apoyos entre Cosecha y Labores se asignan desde la programación de tareas sin cambiar el cargo ni duplicar expedientes. Los cargos adicionales conservan su historial.</div><div id="c398-asignaciones"><div class="loading">Cargando asignaciones...</div></div><div id="c398-asig-form" style="display:none;margin-top:10px;padding:12px;border:1px solid #dfe8e2;border-radius:12px;background:#fbfdfb;"><div class="ex54-grid"><div class="ex54-field"><label>Cargo</label><select id="c398-cargo">'+cargos.map(function(c){return '<option>'+c+'</option>';}).join('')+'</select></div><div class="ex54-field"><label>Tipo</label><select id="c398-tipo"><option>Base</option><option>Eventual</option><option>Temporada</option></select></div><div class="ex54-field"><label>Estatus</label><select id="c398-estado"><option value="activo">Activo</option><option value="inactivo">Inactivo</option><option value="incorporacion">En incorporación</option></select></div><div class="ex54-field"><label>Fecha de inicio</label><input type="date" id="c398-inicio" value="'+fechaHoyLocal()+'"></div></div><div style="display:flex;gap:8px;margin-top:10px;"><button type="button" class="ex55-btn primary" onclick="c398GuardarAsignacion(\''+id+'\')">Guardar asignación</button><button type="button" class="ex55-btn" onclick="document.getElementById(\'c398-asig-form\').style.display=\'none\'">Cancelar</button></div></div><button type="button" class="ex55-btn primary" style="margin-top:8px;" onclick="document.getElementById(\'c398-asig-form\').style.display=\'block\'">+ Agregar cargo / asignación</button></div>':'')+
     '<div class="ex54-sec"><h3>Datos bancarios</h3><div class="ex54-grid">'+
       '<div class="ex54-field"><label>Banco</label><input id="ex56-banco" value="'+ex54Esc(extra.banco||'')+'" placeholder="Ej. Banamex"></div>'+
       '<div class="ex54-field span2"><label>Número de tarjeta</label><input id="ex56-tarjeta" value="'+ex54Esc(extra.numero_tarjeta||'')+'" placeholder="Número de tarjeta para depósitos"></div>'+
@@ -20929,6 +20929,7 @@ function c398FmtEstado(e){
   return {t:'Finalizado',c:'#7a7a7a'};
 }
 function c398CargarAsignaciones(id){
+  from('usuarios').select('id,rol').eq('id',id).get().then(function(rr){if(rr&&rr[0]&&rr[0].rol)C552_ROLES_PRINCIPALES[String(id)]=rr[0].rol;}).catch(function(){});
   var box=document.getElementById('c398-asignaciones'); if(!box)return;
   rpc('c398_admin_ver_asignaciones',{p_admin_id:usuario.id,p_admin_pin:String(pin||''),p_usuario_id:id}).then(function(rows){
     rows=Array.isArray(rows)?rows:[];
@@ -20959,18 +20960,20 @@ function c551CambiarTipoAsignacion(uid,aid,sel,anterior){
     showToast('Modalidad actualizada: '+nuevo);
   }).catch(function(e){sel.disabled=false;sel.value=anterior;alert('No se pudo cambiar la modalidad.\n'+(e.message||e));});
 }
+function c552TieneCargoPrincipal(id){return !!(C552_ROLES_PRINCIPALES[String(id)]);}
+var C552_ROLES_PRINCIPALES={};
 function c398GuardarAsignacion(id){
   var cargo=document.getElementById('c398-cargo').value, tipo=document.getElementById('c398-tipo').value,
       estado=document.getElementById('c398-estado').value, ini=document.getElementById('c398-inicio').value||fechaHoyLocal(),
       fin=(document.getElementById('c398-fin')&&document.getElementById('c398-fin').value)||null;
   if(fin && fin<ini){alert('La fecha de finalización no puede ser anterior al inicio.');return;}
-  rpc('c398_admin_agregar_asignacion',{p_admin_id:usuario.id,p_admin_pin:String(pin||''),p_usuario_id:id,p_cargo:cargo,p_tipo_colaborador:tipo,p_estado:estado,p_fecha_inicio:ini,p_fecha_fin:fin}).then(function(r){
+  from('usuarios').select('rol').eq('id',id).get().then(function(rr){if(rr&&rr[0]&&rr[0].rol)C552_ROLES_PRINCIPALES[String(id)]=rr[0].rol;return rpc('c398_admin_agregar_asignacion',{p_admin_id:usuario.id,p_admin_pin:String(pin||''),p_usuario_id:id,p_cargo:cargo,p_tipo_colaborador:tipo,p_estado:estado,p_fecha_inicio:ini,p_fecha_fin:fin});}).then(function(r){
     r=Array.isArray(r)?r[0]:r;
     if(!r||r.ok!==true)throw new Error((r&&r.mensaje)||'No se pudo guardar.');
     ex57AddHist(id,'Asignación de cargo','—',cargo+' · '+tipo+' · '+c398FmtEstado(estado).t);
     var rolAcceso=ex54CargoRol(cargo,tipo);
-    if(estado==='activo')c440GuardarRolAcceso(id,rolAcceso);
-    var aplicarAcceso=(estado==='activo')
+    if(estado==='activo'&&!c552TieneCargoPrincipal(id))c440GuardarRolAcceso(id,rolAcceso);
+    var aplicarAcceso=(estado==='activo'&&!c552TieneCargoPrincipal(id))
       ? from('usuarios').eq('id',id).update({rol:rolAcceso}).catch(function(){return null;})
       : Promise.resolve();
     return aplicarAcceso.then(function(){
