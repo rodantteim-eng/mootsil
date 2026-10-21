@@ -15598,8 +15598,8 @@ function renderGenerarNomina(fechaRef){
 
     var bonosDeLaSemana=bonosActivos.filter(function(b){
       if(b.periodo_fin<semanaInicio||b.periodo_inicio>semanaFin)return false;
-      var d=String(b.descripcion||'').toLowerCase();
-      if(d.indexOf('gasolina')>=0 && d.indexOf('[c092]')<0)return false;
+      // C553: los bonos económicos de gasolina registrados en Bonos
+      // se contabilizan igual que los demás bonos autorizados.
       return true;
     });
     // C080: los bonos de EQUIPO sí aplican al equipo completo.
