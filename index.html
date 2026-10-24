@@ -15586,8 +15586,19 @@ function renderGenerarNomina(fechaRef){
         idsConAsistencia[String(a.usuario_id)]=true;
       }
     });
+    // C555: H.E. aprobadas generan derecho a aparecer en el preliminar
+    // aunque el colaborador no tenga entrada ni jornal ordinario.
+    // No se generan asistencias ficticias ni días pagados.
+    var idsConHorasExtraAprobadas={};
+    horasExtraAsignadas.forEach(function(h){
+      if(h && h.operario_id!=null && h.estado==='aprobada' && Number(h.horas_max)>0){
+        idsConHorasExtraAprobadas[String(h.operario_id)]=true;
+      }
+    });
     var operarios=todosUsuarios.filter(function(o){
-      return !!idsConAsistencia[String(o.id)];
+      return !!idsConAsistencia[String(o.id)] ||
+             (!!idsConHorasExtraAprobadas[String(o.id)] &&
+              (o.activo===true || idsConAsignacionActiva[String(o.id)]));
     });
     // No inferir un jornal de Labores a partir de entradas de Cosecha.
     // calcularResumenAsistencia sólo contabiliza modalidad 'labores'.
