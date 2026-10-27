@@ -15691,6 +15691,8 @@ function renderGenerarNomina(fechaRef){
         var montoPrestamos=deduccionesOp.reduce(function(s,d){return s+parseFloat(d.monto||0);},0);
 
         var neto=Math.max(0,montoSueldo+montoExtra+montoBonos+montoApoyos-montoPrestamos);
+        // C556: bajas sin saldo no generan ficha ni botón Pagar; conservar bajas con devengos pendientes.
+        if(o.activo===false && neto<=0)return;
         var pagadoSueldo=estadoPorOp[o.id]&&estadoPorOp[o.id].estado==='pagado';
         var pagadoHE=!horasExtra||(estadoExtraPorOp[o.id]&&estadoExtraPorOp[o.id].estado==='pagado');
         var pagado=pagadoSueldo&&pagadoHE;
@@ -17012,7 +17014,20 @@ function c491AbrirAsignaciones(vistaInicial,tablaInicial){
  var layer=document.createElement('div');layer.id='c491-layer';layer.style.cssText='position:fixed;inset:0;z-index:99999;background:#09281c99;display:flex;align-items:center;justify-content:center;padding:16px';
  var state={vista:vistaInicial||'general',tabla:String(tablaInicial||''),persona:'',data:{},loaded:{},loading:{},error:{},edit:false};
  function tableName(t){return c491Plantacion(t)+' · '+t.nombre;}
- function refreshPersonal(){var base=cosPersonalDisponible(),seen={};personal=[];base.concat(c451PersonasUnicas().filter(function(x){return x&&x.id&&x.nombre&&x.activo!==false;}).map(function(x){return {id:x.id,nombre:x.nombre,grupo:'Personal activo'};})).forEach(function(x){if(!seen[String(x.id)]){seen[String(x.id)]=true;personal.push(x);}});personal.sort(function(a,b){return a.nombre.localeCompare(b.nombre,'es');});}
+ var c557PersonalVigente=null;
+ function refreshPersonal(){
+  var base=c557PersonalVigente!==null?c557PersonalVigente:cosPersonalDisponible(),seen={};personal=[];
+  base.forEach(function(x){if(x&&x.id&&x.nombre&&!seen[String(x.id)]){seen[String(x.id)]=true;personal.push(x);}});
+  // Mantener visible el titular histórico de un surco aunque esté de baja, sin ofrecerlo para nuevas asignaciones.
+  Object.keys(state.data).forEach(function(k){(state.data[k]||[]).forEach(function(r){var id=String(r.usuario_id||'');if(id&&!seen[id]){seen[id]=true;personal.push({id:id,nombre:'Titular histórico (inactivo)',historico:true});}});});
+  personal.sort(function(a,b){return a.nombre.localeCompare(b.nombre,'es');});
+ }
+ function c557ActualizarPersonal(){
+  return from('usuarios').select('id,nombre,rol,activo').eq('activo',true).order('nombre').get().then(function(rows){
+   c557PersonalVigente=(rows||[]).filter(function(x){return x&&x.id&&x.nombre&&!['admin','dueño','dueno','inversionista'].includes(String(x.rol||'').toLowerCase());}).map(function(x){return {id:x.id,nombre:x.nombre,grupo:'Personal activo'};});
+   if(layer.isConnected)render();
+  }).catch(function(e){console.warn('C557: no se pudo actualizar personal de cosecha',e);});
+ }
  function ownerName(id){var u=personal.find(function(x){return String(x.id)===String(id);});return u?u.nombre:'Colaborador no disponible';}
  function load(t){var id=String(t.id);if(state.loaded[id]||state.loading[id])return;state.loading[id]=true;render();rpc('c475_listar_titulares',{p_tabla_id:id}).then(function(rows){state.data[id]=rows||[];state.loaded[id]=true;delete state.error[id];}).catch(function(e){state.error[id]=e.message||'No se pudo consultar';}).finally(function(){delete state.loading[id];if(document.getElementById('c491-layer'))render();});}
  function loadAll(){tablas.forEach(load);}
@@ -17064,7 +17079,7 @@ function c491AbrirAsignaciones(vistaInicial,tablaInicial){
   var cancel=layer.querySelector('#c491-cancel-edit');if(cancel)cancel.onclick=function(){state.edit=false;render();};
   var save=layer.querySelector('#c491-save');if(save)save.onclick=function(){var t=selectedTable(),map={};rows(t).forEach(function(r){map[Number(r.surco)]=String(r.usuario_id);});var changes=[];layer.querySelectorAll('[data-c491-own]').forEach(function(sel){var n=Number(sel.dataset.c491Own),old=map[n]||'',now=sel.value||'';if(old!==now)changes.push({surco:n,usuario_id:now||null});});if(!changes.length){state.edit=false;render();return;}if(!personal.length){alert('No se ha cargado el personal activo. Intenta de nuevo.');return;}if(!confirm('¿Guardar '+changes.length+' cambios permanentes en '+tableName(t)+'? Se conservará el historial.'))return;save.disabled=true;save.textContent='Guardando…';rpc('c475_guardar_titulares',{p_admin_id:usuario.id,p_admin_pin:pin,p_tabla_id:String(t.id),p_cambios:changes}).then(function(){state.loaded[String(t.id)]=false;state.edit=false;load(t);if(C467_STATE){C467_STATE.c475Loaded[String(t.id)]=false;C467_STATE.c475Owners[String(t.id)]=[];c467Tabla(String(t.id)).asignaciones={};c475CargarTitulares(String(t.id));}}).catch(function(e){alert('No se guardaron los titulares: '+e.message);save.disabled=false;save.textContent='Guardar cambios';});};
  }
- document.body.appendChild(layer);if(state.vista==='tabla'&&state.tabla){var first=selectedTable();if(first)load(first);}else loadAll();render();
+ document.body.appendChild(layer); c557ActualizarPersonal();if(state.vista==='tabla'&&state.tabla){var first=selectedTable();if(first)load(first);}else loadAll();render();
  // C492: el catálogo de personal puede no haberse consultado todavía desde Cosecha.
  // Se carga antes de habilitar edición, y se vuelve a pintar el listado al concluir.
  if(!C451_CARGOS_CARGADOS){c451CargarCargosPersonal().then(function(){if(layer.isConnected){refreshPersonal();render();}}).catch(function(e){if(layer.isConnected){var notice=layer.querySelector('#c492-personal-error');if(notice)notice.textContent='No se pudo cargar el personal: '+(e.message||e);}});}
@@ -20495,7 +20510,15 @@ function ex54CargoRol(cargo,tipo){
     cargo==='Contador'?'contador':'operario';
 }
 function ex54Esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+var c556ExpedientesVista='activos';
+function c556CambiarExpedientes(vista){
+  c556ExpedientesVista=vista==='bajas'?'bajas':'activos';
+  document.querySelectorAll('[data-c556-exp-tab]').forEach(function(b){var sel=b.getAttribute('data-c556-exp-tab')===c556ExpedientesVista;b.style.background=sel?'#e8f3ec':'#f5f5f3';b.style.borderColor=sel?'#2b8054':'#b9c8be';b.style.color=sel?'#145c38':'#6d7770';b.setAttribute('aria-selected',sel?'true':'false');});
+  document.querySelectorAll('[data-c556-exp-estado]').forEach(function(r){r.style.display=r.getAttribute('data-c556-exp-estado')===c556ExpedientesVista?'':'none';});
+  var n=document.getElementById('c556-exp-empty');if(n){var c=document.querySelectorAll('[data-c556-exp-estado=\"'+c556ExpedientesVista+'\"]');n.style.display=c.length?'none':'block';}
+}
 function renderAltasBajas(){
+  c556ExpedientesVista='activos';
   var body=document.getElementById('enc-body');
   body.innerHTML='<div class="loading">Cargando expedientes...</div>';
   from('usuarios').select('id,nombre,rol,activo,certificado_ambas,sueldo_base,fecha_ingreso,fecha_nacimiento').order('nombre').get().then(function(users){
@@ -20511,7 +20534,8 @@ function renderAltasBajas(){
     function c397DupKey(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toLowerCase();}
     var c396NameCounts={}; users.forEach(function(z){var k=c397DupKey(z.nombre);c396NameCounts[k]=(c396NameCounts[k]||0)+1;});
     var c397HasDup=users.some(function(z){return c396NameCounts[c397DupKey(z.nombre)]>1;});
-    var html='<div class="ex54-head"><div><div class="ex54-eyebrow">Administración · Empleados · C416</div><div class="ex54-title">Expedientes</div><div class="ex54-sub">Información personal, laboral y condiciones de pago de cada colaborador.</div></div><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">'+(c397HasDup?'<button class="btn-sm" style="border-color:#c8b7df;background:#f7f2fb;color:#6c3c91" onclick="c397AbrirDuplicados()">Unificar duplicados</button>':'')+'<button class="em59-back" onclick="renderAdministracionMenu()">← Empleados</button><button class="btn-sm btn-completar" onclick="renderNuevoUsuario()">+ Nuevo expediente</button></div></div><div class="ex54-list">';
+    var html='<div class="ex54-head"><div><div class="ex54-eyebrow">Administración · Empleados · C559</div><div class="ex54-title">Expedientes</div><div class="ex54-sub">Información personal, laboral y condiciones de pago de cada colaborador.</div></div><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">'+(c397HasDup?'<button class="btn-sm" style="border-color:#c8b7df;background:#f7f2fb;color:#6c3c91" onclick="c397AbrirDuplicados()">Unificar duplicados</button>':'')+'<button class="em59-back" onclick="renderAdministracionMenu()">← Empleados</button><button class="btn-sm btn-completar" onclick="renderNuevoUsuario()">+ Nuevo expediente</button></div></div>'+
+      '<div class="ex54-list">';
     html+=users.map(function(u){
       var ex=ex54Get(u.id),cargo=ex.cargo||(ROLES[u.rol]||u.rol),tipo=ex.tipo_colaborador||(u.rol==='labores_eventual'?'Eventual':'Base');
       // Cosecha es por periodo; no mostramos EVENTUAL como etiqueta dominante.
@@ -20525,9 +20549,23 @@ function renderAltasBajas(){
       if(!enInc) acciones+=(u.activo?'<button class="btn-sm ex55-action-baja" onclick="bajaUsuario(\''+u.id+'\')">Dar de baja</button>':'<button class="btn-sm btn-iniciar" onclick="altaUsuario(\''+u.id+'\')">Reactivar</button>');
       if(c396NameCounts[c397DupKey(u.nombre)]>1) acciones+='<button class="btn-sm" style="border-color:#c8b7df;background:#f7f2fb;color:#6c3c91" onclick="c396FusionarDuplicado(\''+u.id+'\',\''+ex54Esc(u.nombre).replace(/'/g,"\\'")+'\')">Unificar</button>';
       acciones+='<button class="btn-sm" style="border-color:#efb8b2;background:#fff4f2;color:#b42318" onclick="eliminarExpediente(\''+u.id+'\',\''+ex54Esc(u.nombre).replace(/'/g,"\\'")+'\')">Eliminar</button>';
-      return '<div class="ex54-row"><div><div class="ex54-name">'+u.nombre+badge+'</div><div class="ex54-role">'+cargo+(u.fecha_ingreso?' · '+ingresoLbl+u.fecha_ingreso:'')+'</div></div><div><div class="ex54-status" style="color:'+estadoColor+';">'+estado+'</div><div class="ex54-role">'+(cargo==='Cosecha'?'Pago por caja · se define en Cosecha':'Sueldo base: $'+(parseFloat(u.sueldo_base)||0).toFixed(2))+'</div></div><div class="orden-actions">'+acciones+'</div></div>';
+      return '<div class="ex54-row" data-c556-exp-estado="'+(u.activo===false?'bajas':'activos')+'"><div><div class="ex54-name">'+u.nombre+badge+'</div><div class="ex54-role">'+cargo+(u.fecha_ingreso?' · '+ingresoLbl+u.fecha_ingreso:'')+'</div></div><div><div class="ex54-status" style="color:'+estadoColor+';">'+estado+'</div><div class="ex54-role">'+(cargo==='Cosecha'?'Pago por caja · se define en Cosecha':'Sueldo base: $'+(parseFloat(u.sueldo_base)||0).toFixed(2))+'</div></div><div class="orden-actions">'+acciones+'</div></div>';
     }).join('');
-    body.innerHTML=html+'</div><button class="em59-back" style="margin-top:.8rem;" onclick="renderAdministracionMenu()">← Empleados</button>';
+    body.innerHTML=html+'</div><div id="c556-exp-empty" class="empty" style="display:none">No hay expedientes en esta sección.</div><button class="em59-back" style="margin-top:.8rem;" onclick="renderAdministracionMenu()">← Empleados</button>';
+    // C559: montar pestañas directamente sobre el DOM final, sin depender de HTML concatenado.
+    var list=body.querySelector('.ex54-list');
+    if(list){
+      var activos=users.filter(function(u){return u.activo!==false;}).length;
+      var bajas=users.length-activos;
+      var tabs=document.createElement('div');
+      tabs.id='c559-filtro-expedientes';
+      tabs.style.cssText='display:flex;gap:10px;flex-wrap:wrap;padding:12px;margin:14px 0;background:#eef4ef;border:1px solid #bcd4c4;border-radius:12px';
+      tabs.innerHTML='<button type="button" data-c556-exp-tab="activos" class="btn-sm" style="padding:12px 20px;font-weight:800">Activos ('+activos+')</button><button type="button" data-c556-exp-tab="bajas" class="btn-sm" style="padding:12px 20px;font-weight:800">Dados de baja ('+bajas+')</button>';
+      var heading=document.createElement('div');heading.textContent='FILTRAR EXPEDIENTES POR ESTADO';heading.style.cssText='font-size:12px;font-weight:800;color:#2a6547;margin-top:14px';
+      list.parentNode.insertBefore(heading,list);list.parentNode.insertBefore(tabs,list);
+      tabs.querySelectorAll('button').forEach(function(btn){btn.addEventListener('click',function(){c556CambiarExpedientes(btn.getAttribute('data-c556-exp-tab'));});});
+    }
+    c556CambiarExpedientes('activos');
   }).catch(function(e){body.innerHTML='<div class="loading">Error: '+ex54Esc(e.message||e)+'</div>';});
 }
 
